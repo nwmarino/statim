@@ -26,29 +26,29 @@ void logger_log(SkLoggerSeverity severity, char* msg) {
 }
 
 void skLogInfo(char* msg) {
-    assert(logger_out != SK_NULL);
-    assert(msg != SK_NULL);
+    assert(logger_out != NULL);
+    assert(msg != NULL);
 
     fprintf(logger_out, "[INFO] %s\n", msg);
 }
 
 void skLogWarning(char* msg) {
-    assert(logger_out != SK_NULL);
-    assert(msg != SK_NULL);
+    assert(logger_out != NULL);
+    assert(msg != NULL);
 
     fprintf(logger_out, "[WARN] %s\n", msg);
 }
 
 void skLogError(char* msg) {
-    assert(logger_out != SK_NULL);
-    assert(msg != SK_NULL);
+    assert(logger_out != NULL);
+    assert(msg != NULL);
 
     fprintf(logger_out, "[ERROR] %s\n", msg);
 }
 
 void skLogFatal(char* msg) {
-    assert(logger_out != SK_NULL);
-    assert(msg != SK_NULL);
+    assert(logger_out != NULL);
+    assert(msg != NULL);
     
     fprintf(logger_out, "[FATAL] %s\n", msg);
     exit(EXIT_FAILURE);

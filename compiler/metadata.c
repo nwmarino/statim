@@ -4,26 +4,23 @@
 #include <assert.h>
 #include <stdlib.h>
 
-SkResult skInitInputFile(char* path, char* src, SkInputFile* pFile) {
-    assert(pFile != SK_NULL);
+SkResult skInitInputFile(SkString path, SkString contents, SkInputFile* pFile) {
+    assert(pFile != NULL);
 
-    *pFile = malloc(sizeof(SkInputFile));
+    *pFile = malloc(sizeof(**pFile));
     if (!*pFile)
         return SK_FAILURE_OUT_OF_MEMORY;
 
     (*pFile)->path = path;
-    (*pFile)->src = src;
+    (*pFile)->contents = contents;
     return SK_SUCCESS;
 }
 
 SkResult skDestroyInputFile(SkInputFile* pFile) {
-    assert(pFile != SK_NULL);
+    assert(pFile != NULL);
 
     if (!*pFile)
         return SK_FAILURE_BAD_HANDLE;
-
-    (*pFile)->path = NULL;
-    (*pFile)->src = NULL;
 
     free(*pFile);
     *pFile = NULL;

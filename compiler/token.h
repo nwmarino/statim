@@ -47,11 +47,14 @@ typedef enum {
     SK_TOKEN_KIND_OR_OR,
     SK_TOKEN_KIND_OR_EQUALS,
     SK_TOKEN_KIND_XOR,
+    SK_TOKEN_KIND_XOR_EQUALS,
     SK_TOKEN_KIND_DOT,
     SK_TOKEN_KIND_COMMA,
     SK_TOKEN_KIND_COLON,
+    SK_TOKEN_KIND_PATH,
     SK_TOKEN_KIND_SEMICOLON,
     SK_TOKEN_KIND_APOSTROPHE,
+    SK_TOKEN_KIND_TILDE,
     SK_TOKEN_KIND_GRAVE,
     SK_TOKEN_KIND_LITERAL_INTEGER,
     SK_TOKEN_KIND_LITERAL_FLOAT,
@@ -61,8 +64,8 @@ typedef enum {
 
 typedef struct {
     SkTokenKind     kind;
-    SkMetadata      md;
-    char*           value;
+    SkMetadata      meta;
+    char*           pValue;
 } SkToken;
 
 #endif // SKVOZ_TOKEN_H_

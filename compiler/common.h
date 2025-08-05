@@ -1,6 +1,10 @@
 #ifndef SKVOZ_COMMON_H_
 #define SKVOZ_COMMON_H_
 
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+
 typedef unsigned char   u8;
 typedef unsigned short  u16;
 typedef unsigned int    u32;
@@ -14,11 +18,10 @@ typedef signed long     i64;
 typedef float           f32;
 typedef double          f64;
 
-enum {
-    SK_NULL = 0x0,
+typedef enum : i8 {
     SK_FALSE = 0x0,
     SK_TRUE = 0x1,
-};
+} SkBool8;
 
 typedef enum {
     SK_SUCCESS = 0x0,
@@ -26,5 +29,10 @@ typedef enum {
     SK_FAILURE_OUT_OF_MEMORY = 0x2,
     SK_FAILURE_BAD_HANDLE = 0x3,
 } SkResult;
+
+typedef struct {
+    char*   pData;
+    u32     size;
+} SkString;
 
 #endif // SKVOZ_COMMON_H_
