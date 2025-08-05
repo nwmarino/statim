@@ -6,7 +6,7 @@
 
 typedef struct {
     SkInputFile     file;
-    SkString*       pBuffer;
+    char*           pBuffer;
     SkMetadata      meta;
     u32             position;
 }* SkLexer;

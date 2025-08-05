@@ -4,15 +4,15 @@
 #include "common.h"
 
 typedef struct {
-    SkString    path;
-    SkString    contents;
+    char*   pPath;
+    char*   pContents;
 }* SkInputFile;
 
-SkResult skInitInputFile(SkString path, SkString src, SkInputFile* pFile);
+SkResult skInitInputFile(char* pPath, char* pContents, SkInputFile* pFile);
 SkResult skDestroyInputFile(SkInputFile* pFile);
 
 typedef struct {
-    SkInputFile     pFile;
+    SkInputFile     file;
     u32             line;
     u32             column;
 } SkMetadata;

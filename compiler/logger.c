@@ -12,44 +12,56 @@ void logger_initialize(FILE* out) {
         logger_out = out;
 }
 
-void logger_log(SkLoggerSeverity severity, char* msg) {
+void logger_log(SkLoggerSeverity severity, char* msg, SkMetadata* pMeta) {
     switch (severity) {
     case SK_LOGGER_SEVERITY_INFO:
-        return skLogInfo(msg);
+        return skLogInfo(msg, pMeta);
     case SK_LOGGER_SEVERITY_WARN:
-        return skLogWarning(msg);
+        return skLogWarning(msg, pMeta);
     case SK_LOGGER_SEVERITY_ERROR:
-        return skLogError(msg);
+        return skLogError(msg, pMeta);
     case SK_LOGGER_SEVERITY_FATAL:
-        return skLogFatal(msg);
+        return skLogFatal(msg, pMeta);
     }
 }
 
-void skLogInfo(char* msg) {
+void skLogInfo(char* msg, SkMetadata* pMeta) {
     assert(logger_out != NULL);
     assert(msg != NULL);
 
-    fprintf(logger_out, "[INFO] %s\n", msg);
+    if (pMeta)
+        fprintf(logger_out, "%s:%d:%d: ", pMeta->file->pPath, pMeta->line, pMeta->column);
+    
+    fprintf(logger_out, "info: %s\n", msg);
 }
 
-void skLogWarning(char* msg) {
+void skLogWarning(char* msg, SkMetadata* pMeta) {
     assert(logger_out != NULL);
     assert(msg != NULL);
 
-    fprintf(logger_out, "[WARN] %s\n", msg);
+    if (pMeta)
+        fprintf(logger_out, "%s:%d:%d: ", pMeta->file->pPath, pMeta->line, pMeta->column);
+
+    fprintf(logger_out, "warning: %s\n", msg);
 }
 
-void skLogError(char* msg) {
+void skLogError(char* msg, SkMetadata* pMeta) {
     assert(logger_out != NULL);
     assert(msg != NULL);
 
-    fprintf(logger_out, "[ERROR] %s\n", msg);
+    if (pMeta)
+        fprintf(logger_out, "%s:%d:%d: ", pMeta->file->pPath, pMeta->line, pMeta->column);
+
+    fprintf(logger_out, "error: %s\n", msg);
 }
 
-void skLogFatal(char* msg) {
+void skLogFatal(char* msg, SkMetadata* pMeta) {
     assert(logger_out != NULL);
     assert(msg != NULL);
     
-    fprintf(logger_out, "[FATAL] %s\n", msg);
+    if (pMeta)
+        fprintf(logger_out, "%s:%d:%d: ", pMeta->file->pPath, pMeta->line, pMeta->column);
+
+    fprintf(logger_out, "fatal: %s\n", msg);
     exit(EXIT_FAILURE);
 }

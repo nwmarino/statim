@@ -30,9 +30,4 @@ typedef enum {
     SK_FAILURE_BAD_HANDLE = 0x3,
 } SkResult;
 
-typedef struct {
-    char*   pData;
-    u32     size;
-} SkString;
-
 #endif // SKVOZ_COMMON_H_

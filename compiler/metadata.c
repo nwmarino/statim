@@ -4,15 +4,15 @@
 #include <assert.h>
 #include <stdlib.h>
 
-SkResult skInitInputFile(SkString path, SkString contents, SkInputFile* pFile) {
+SkResult skInitInputFile(char* pPath, char* pContents, SkInputFile* pFile) {
     assert(pFile != NULL);
 
     *pFile = malloc(sizeof(**pFile));
     if (!*pFile)
         return SK_FAILURE_OUT_OF_MEMORY;
 
-    (*pFile)->path = path;
-    (*pFile)->contents = contents;
+    (*pFile)->pPath = pPath;
+    (*pFile)->pContents = pContents;
     return SK_SUCCESS;
 }
 

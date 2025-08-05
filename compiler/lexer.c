@@ -13,11 +13,11 @@ inline static SkBool8 is_octal(char c) {
 }
 
 inline static SkBool8 is_eof(SkLexer lexer) {
-    return lexer->position >= lexer->pBuffer->size;
+    return lexer->position >= strlen(lexer->pBuffer);
 }
 
 inline static i8 curr(SkLexer lexer) {
-    return lexer->pBuffer->pData[lexer->position];
+    return lexer->pBuffer[lexer->position];
 }
 
 static void move(SkLexer lexer, u32 n) {
@@ -26,10 +26,10 @@ static void move(SkLexer lexer, u32 n) {
 }
 
 static i8 peek(SkLexer lexer, u32 n) {
-    if (lexer->position + n >= lexer->pBuffer->size)
+    if (lexer->position + n >= strlen(lexer->pBuffer))
         return '\0';
 
-    return lexer->pBuffer->pData[lexer->position + n];
+    return lexer->pBuffer[lexer->position + n];
 }
 
 SkResult skInitLexer(SkInputFile file, SkLexer* pLexer) {
@@ -40,12 +40,12 @@ SkResult skInitLexer(SkInputFile file, SkLexer* pLexer) {
         return SK_FAILURE_OUT_OF_MEMORY;
 
     SkMetadata meta;
-    meta.pFile = file;
+    meta.file = file;
     meta.line = 0;
     meta.column = 0;
 
     (*pLexer)->file = file;
-    (*pLexer)->pBuffer = &file->contents;
+    (*pLexer)->pBuffer = file->pContents;
     (*pLexer)->meta = meta;
     (*pLexer)->position = 0;
     return SK_SUCCESS;
