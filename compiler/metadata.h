@@ -9,7 +9,7 @@ typedef struct {
 }* SkInputFile;
 
 SkResult skInitInputFile(char* pPath, char* pContents, SkInputFile* pFile);
-SkResult skDestroyInputFile(SkInputFile* pFile);
+void skDestroyInputFile(SkInputFile* pFile);
 
 typedef struct {
     SkInputFile     file;

@@ -5,7 +5,8 @@
 #include <stdlib.h>
 
 SkResult skInitInputFile(char* pPath, char* pContents, SkInputFile* pFile) {
-    assert(pFile != NULL);
+    if (!pFile)
+        return SK_FAILURE_BAD_HANDLE;
 
     *pFile = malloc(sizeof(**pFile));
     if (!*pFile)
@@ -16,13 +17,9 @@ SkResult skInitInputFile(char* pPath, char* pContents, SkInputFile* pFile) {
     return SK_SUCCESS;
 }
 
-SkResult skDestroyInputFile(SkInputFile* pFile) {
+void skDestroyInputFile(SkInputFile* pFile) {
     assert(pFile != NULL);
-
-    if (!*pFile)
-        return SK_FAILURE_BAD_HANDLE;
 
     free(*pFile);
     *pFile = NULL;
-    return SK_SUCCESS;
 }
