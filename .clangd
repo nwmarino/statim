@@ -1,4 +1,4 @@
 CompileFlags:
   Add: [
-    "-Icompiler",
+    "-Icompiler/include",
   ]

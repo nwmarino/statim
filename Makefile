@@ -1,13 +1,13 @@
 CC := clang
-CFLAGS := -g -O0 -Icompiler
+CFLAGS := -g -O0 -Icompiler/include
 LDFLAGS := -lm
 
-MAIN := compiler/skvoz.c
+MAIN := compiler/stmc.c
 MAIN_OBJ := $(MAIN:.c=.o)
 SRC := $(filter-out $(MAIN), $(shell find compiler -name "*.c"))
 OBJ := $(SRC:.c=.o)
 
-TARGET := skvoz
+TARGET := stmc
 
 all: $(TARGET)
 

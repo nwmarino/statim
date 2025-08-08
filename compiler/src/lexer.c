@@ -1,75 +1,91 @@
-#include "lexer.h"
-#include "common.h"
-#include "metadata.h"
-#include "token.h"
+#include "../include/lexer.h"
+#include "../include/logger.h"
+#include "../include/token.h"
 
-#include <assert.h>
 #include <ctype.h>
-#include <stdlib.h>
-#include <string.h>
 
-inline static SkBool8 is_octal(char c) {
+struct StmLexer_T {
+    StmInputFile*   pFile;
+    char*           pBuffer;
+    StmToken        current;
+    StmMetadata     meta;
+    u32             position;
+};
+
+inline static StmBool8 is_octal(char c) {
     return c >= '0' && c <= '7';
 }
 
-inline static SkBool8 is_eof(SkLexer lexer) {
+inline static StmBool8 is_eof(StmLexer lexer) {
     return lexer->position >= strlen(lexer->pBuffer);
 }
 
-inline static i8 curr(SkLexer lexer) {
+inline static i8 curr(StmLexer lexer) {
     return lexer->pBuffer[lexer->position];
 }
 
-static void move(SkLexer lexer, u32 n) {
+static void move(StmLexer lexer, u32 n) {
     lexer->position += n;
     lexer->meta.column += n;
 }
 
-static i8 peek(SkLexer lexer, u32 n) {
+static i8 peek(StmLexer lexer, u32 n) {
     if (lexer->position + n >= strlen(lexer->pBuffer))
         return '\0';
 
     return lexer->pBuffer[lexer->position + n];
 }
 
-SkResult skInitLexer(SkInputFile file, SkLexer* pLexer) {
-    assert(pLexer != NULL);
+STM_API_ATTR StmResult STM_API_CALL stmInitLexer(StmInputFile* pFile, StmLexer* pLexer) {
+    assert(pLexer != NULL && "(stmInitLexer) lexer destination cannot be null.");
 
-    *pLexer = malloc(sizeof(**pLexer));
+    *pLexer = malloc(sizeof(struct StmLexer_T));
     if (!*pLexer)
-        return SK_FAILURE_OUT_OF_MEMORY;
+        return STM_FAILURE_OUT_OF_MEMORY;
 
-    SkMetadata meta;
-    meta.file = file;
+    StmMetadata meta;
+    meta.pFile = pFile;
     meta.line = 0;
     meta.column = 0;
 
-    (*pLexer)->file = file;
-    (*pLexer)->pBuffer = file->pContents;
+    StmToken token;
+    token.kind = STM_TOKEN_KIND_END_OF_FILE;
+    token.meta = meta;
+    token.pValue = NULL;
+
+    (*pLexer)->pFile = pFile;
+    (*pLexer)->pBuffer = pFile->pContents;
+    (*pLexer)->current = token;
     (*pLexer)->meta = meta;
     (*pLexer)->position = 0;
-    return SK_SUCCESS;
+    return STM_SUCCESS;
 }
 
-SkResult skDestroyLexer(SkLexer* pLexer) {
-    assert(pLexer != NULL);
+STM_API_ATTR StmResult STM_API_CALL stmDestroyLexer(StmLexer* pLexer) {
+    assert(pLexer != NULL && "(stmDestroyLexer) lexer cannot be null.");
 
-    if (!*pLexer)
-        return SK_FAILURE_BAD_HANDLE;
+    if ((*pLexer)->current.pValue != NULL) {
+        free((*pLexer)->current.pValue);
+        (*pLexer)->current.pValue = NULL;
+    }
 
     free(*pLexer);
     *pLexer = NULL;
-    return SK_SUCCESS;
+    return STM_SUCCESS;
 }
 
-SkToken skLexToken(SkLexer lexer) {
+STM_API_ATTR const StmToken* STM_API_CALL stmLexToken(StmLexer lexer) {
     while (curr(lexer) == ' ' || curr(lexer) == '\t')
         move(lexer, 1);
 
-    SkToken token;
-    token.kind = SK_TOKEN_KIND_END_OF_FILE;
-    token.meta = lexer->meta;
-    token.pValue = NULL;
+    StmToken* token = &lexer->current;
+
+    if (token->pValue != NULL)
+        free(token->pValue);
+
+    token->kind = STM_TOKEN_KIND_END_OF_FILE;
+    token->meta = lexer->meta;
+    token->pValue = NULL;
 
     if (is_eof(lexer))
         return token;
@@ -77,231 +93,231 @@ SkToken skLexToken(SkLexer lexer) {
         move(lexer, 1);
         lexer->meta.line++;
         lexer->meta.column = 1;
-        return skLexToken(lexer);
+        return stmLexToken(lexer);
     }
 
     switch (curr(lexer)) {
     case '+':
         if (peek(lexer, 1) == '+') {
-            token.kind = SK_TOKEN_KIND_PLUS_PLUS;
+            token->kind = STM_TOKEN_KIND_PLUS_PLUS;
             move(lexer, 2);
         } else if (peek(lexer, 1) == '=') {
-            token.kind = SK_TOKEN_KIND_PLUS_EQUALS;
+            token->kind = STM_TOKEN_KIND_PLUS_EQUALS;
             move(lexer, 2);
         } else {
-            token.kind = SK_TOKEN_KIND_PLUS;
+            token->kind = STM_TOKEN_KIND_PLUS;
             move(lexer, 1);
         }
         break;
 
     case '-':
         if (peek(lexer, 1) == '-') {
-            token.kind = SK_TOKEN_KIND_MINUS_MINUS;
+            token->kind = STM_TOKEN_KIND_MINUS_MINUS;
             move(lexer, 2);
         } else if (peek(lexer, 1) == '=') {
-            token.kind = SK_TOKEN_KIND_MINUS_EQUALS;
+            token->kind = STM_TOKEN_KIND_MINUS_EQUALS;
             move(lexer, 2);
         } else {
-            token.kind = SK_TOKEN_KIND_MINUS;
+            token->kind = STM_TOKEN_KIND_MINUS;
             move(lexer, 1);
         }
         break;
 
     case '*':
         if (peek(lexer, 1) == '=') {
-            token.kind = SK_TOKEN_KIND_STAR_EQUALS;
+            token->kind = STM_TOKEN_KIND_STAR_EQUALS;
             move(lexer, 2);
         } else {
-            token.kind = SK_TOKEN_KIND_STAR;
+            token->kind = STM_TOKEN_KIND_STAR;
             move(lexer, 1);
         }
         break;
 
     case '/':
         if (peek(lexer, 1) == '=') {
-            token.kind = SK_TOKEN_KIND_SLASH_EQUALS;
+            token->kind = STM_TOKEN_KIND_SLASH_EQUALS;
             move(lexer, 2);
         } else if (peek(lexer, 1) == '/') {
             move(lexer, 2);
             while (curr(lexer) != '\n' && !is_eof(lexer))
                 move(lexer, 1);
 
-            return skLexToken(lexer);
+            return stmLexToken(lexer);
         } else {
-            token.kind = SK_TOKEN_KIND_SLASH;
+            token->kind = STM_TOKEN_KIND_SLASH;
             move(lexer, 1);
         }
         break;
 
     case '<':
         if (peek(lexer, 1) == '<') {
-            token.kind = SK_TOKEN_KIND_LEFT_LEFT;
+            token->kind = STM_TOKEN_KIND_LEFT_LEFT;
             move(lexer, 2);
         } else if (peek(lexer, 1) == '=') {
-            token.kind = SK_TOKEN_KIND_LEFT_EQUALS;
+            token->kind = STM_TOKEN_KIND_LEFT_EQUALS;
             move(lexer, 2);
         } else {
-            token.kind = SK_TOKEN_KIND_LEFT;
+            token->kind = STM_TOKEN_KIND_LEFT;
             move(lexer, 1);
         }
         break;
 
     case '>':
         if (peek(lexer, 1) == '>') {
-            token.kind = SK_TOKEN_KIND_RIGHT_RIGHT;
+            token->kind = STM_TOKEN_KIND_RIGHT_RIGHT;
             move(lexer, 2);
         } else if (peek(lexer, 1) == '=') {
-            token.kind = SK_TOKEN_KIND_RIGHT_EQUALS;
+            token->kind = STM_TOKEN_KIND_RIGHT_EQUALS;
             move(lexer, 2);
         } else {
-            token.kind = SK_TOKEN_KIND_RIGHT;
+            token->kind = STM_TOKEN_KIND_RIGHT;
             move(lexer, 1);
         }
         break;
 
     case '&':
         if (peek(lexer, 1) == '&') {
-            token.kind = SK_TOKEN_KIND_AND_AND;
+            token->kind = STM_TOKEN_KIND_AND_AND;
             move(lexer, 2);
         } else if (peek(lexer, 1) == '=') {
-            token.kind = SK_TOKEN_KIND_AND_EQUALS;
+            token->kind = STM_TOKEN_KIND_AND_EQUALS;
             move(lexer, 2);
         } else {
-            token.kind = SK_TOKEN_KIND_AND;
+            token->kind = STM_TOKEN_KIND_AND;
             move(lexer, 1);
         }
         break;
 
     case '|':
         if (peek(lexer, 1) == '|') {
-            token.kind = SK_TOKEN_KIND_OR_OR;
+            token->kind = STM_TOKEN_KIND_OR_OR;
             move(lexer, 2);
         } else if (peek(lexer, 1) == '=') {
-            token.kind = SK_TOKEN_KIND_OR_EQUALS;
+            token->kind = STM_TOKEN_KIND_OR_EQUALS;
             move(lexer, 2);
         } else {
-            token.kind = SK_TOKEN_KIND_OR;
+            token->kind = STM_TOKEN_KIND_OR;
             move(lexer, 1);
         }
         break;
 
     case '^':
         if (peek(lexer, 1) == '=') {
-            token.kind = SK_TOKEN_KIND_XOR_EQUALS;
+            token->kind = STM_TOKEN_KIND_XOR_EQUALS;
             move(lexer, 2);
         } else {
-            token.kind = SK_TOKEN_KIND_XOR;
+            token->kind = STM_TOKEN_KIND_XOR;
             move(lexer, 1);
         }
         break;
 
     case '%':
         if (peek(lexer, 1) == '=') {
-            token.kind = SK_TOKEN_KIND_PERCENT_EQUALS;
+            token->kind = STM_TOKEN_KIND_PERCENT_EQUALS;
             move(lexer, 2);
         } else {
-            token.kind = SK_TOKEN_KIND_PERCENT;
+            token->kind = STM_TOKEN_KIND_PERCENT;
             move(lexer, 1);
         }
         break;
 
     case '=':
         if (peek(lexer, 1) == '=') {
-            token.kind = SK_TOKEN_KIND_EQUALS_EQUALS;
+            token->kind = STM_TOKEN_KIND_EQUALS_EQUALS;
             move(lexer, 2);
         } else {
-            token.kind = SK_TOKEN_KIND_EQUALS;
+            token->kind = STM_TOKEN_KIND_EQUALS;
             move(lexer, 1);
         }
         break;
 
     case '!':
         if (peek(lexer, 1) == '=') {
-            token.kind = SK_TOKEN_KIND_BANG_EQUALS;
+            token->kind = STM_TOKEN_KIND_BANG_EQUALS;
             move(lexer, 2);
         } else {
-            token.kind = SK_TOKEN_KIND_BANG;
+            token->kind = STM_TOKEN_KIND_BANG;
             move(lexer, 1);
         }
         break;
     
     case ':':
         if (peek(lexer, 1) == ':') {
-            token.kind = SK_TOKEN_KIND_PATH;
+            token->kind = STM_TOKEN_KIND_PATH;
             move(lexer, 2);
         } else {
-            token.kind = SK_TOKEN_KIND_COLON;
+            token->kind = STM_TOKEN_KIND_COLON;
             move(lexer, 1);
         }
         break;
 
     case '~':
-        token.kind = SK_TOKEN_KIND_TILDE;
+        token->kind = STM_TOKEN_KIND_TILDE;
         move(lexer, 1);
         break;
 
     case '(':
-        token.kind = SK_TOKEN_KIND_SET_PAREN;
+        token->kind = STM_TOKEN_KIND_SET_PAREN;
         move(lexer, 1);
         break;
 
     case ')':
-        token.kind = SK_TOKEN_KIND_END_PAREN;
+        token->kind = STM_TOKEN_KIND_END_PAREN;
         move(lexer, 1);
         break;
 
     case '{':
-        token.kind = SK_TOKEN_KIND_SET_BRACE;
+        token->kind = STM_TOKEN_KIND_SET_BRACE;
         move(lexer, 1);
         break;
 
     case '}':
-        token.kind = SK_TOKEN_KIND_END_BRACE;
+        token->kind = STM_TOKEN_KIND_END_BRACE;
         move(lexer, 1);
         break;
 
     case '[':
-        token.kind = SK_TOKEN_KIND_SET_BRACKET;
+        token->kind = STM_TOKEN_KIND_SET_BRACKET;
         move(lexer, 1);
         break;
 
     case ']':
-        token.kind = SK_TOKEN_KIND_END_BRACKET;
+        token->kind = STM_TOKEN_KIND_END_BRACKET;
         move(lexer, 1);
         break;
 
     case '.':
-        token.kind = SK_TOKEN_KIND_DOT;
+        token->kind = STM_TOKEN_KIND_DOT;
         move(lexer, 1);
         break;
 
     case ',':
-        token.kind = SK_TOKEN_KIND_COMMA;
+        token->kind = STM_TOKEN_KIND_COMMA;
         move(lexer, 1);
         break;
 
     case '@':
-        token.kind = SK_TOKEN_KIND_AT;
+        token->kind = STM_TOKEN_KIND_AT;
         move(lexer, 1);
         break;
         
     case '#':
-        token.kind = SK_TOKEN_KIND_HASH;
+        token->kind = STM_TOKEN_KIND_HASH;
         move(lexer, 1);
         break;
 
     case '$':
-        token.kind = SK_TOKEN_KIND_SIGN;
+        token->kind = STM_TOKEN_KIND_SIGN;
         move(lexer, 1);
         break;
 
     case ';':
-        token.kind = SK_TOKEN_KIND_SEMICOLON;
+        token->kind = STM_TOKEN_KIND_SEMICOLON;
         move(lexer, 1);
         break;
 
     case '\'': {
-        token.kind = SK_TOKEN_KIND_LITERAL_CHARACTER;
+        token->kind = STM_TOKEN_KIND_LITERAL_CHARACTER;
         move(lexer, 1);
 
         char c = curr(lexer);
@@ -320,18 +336,18 @@ SkToken skLexToken(SkLexer lexer) {
             case '\'': c = '\''; break;
             case '\"': c = '\"'; break;
             default:
-                //skLogFatal("unknown escape sequence ")
+                stmLogFatal("unknown escape sequence in character literal", &lexer->meta);
                 break;
             }
 
-            token.pValue = strdup(&c);
+            token->pValue = strdup(&c);
         } else {
-            token.pValue = strdup(&c);
+            token->pValue = strdup(&c);
         }
 
         if (peek(lexer, 1) != '\'') {
-            token.kind = SK_TOKEN_KIND_APOSTROPHE;
-            token.pValue = NULL;
+            token->kind = STM_TOKEN_KIND_APOSTROPHE;
+            token->pValue = NULL;
         } else {
             move(lexer, 2);
         }
@@ -339,7 +355,7 @@ SkToken skLexToken(SkLexer lexer) {
     }
 
     case '"': {
-        token.kind = SK_TOKEN_KIND_LITERAL_STRING;
+        token->kind = STM_TOKEN_KIND_LITERAL_STRING;
         move(lexer, 1);
 
         char buf[1024];
@@ -361,7 +377,7 @@ SkToken skLexToken(SkLexer lexer) {
                 case '\'': buf[size] = '\''; break;
                 case '\"': buf[size] = '\"'; break;
                 default:
-                    //skLogFatal();
+                    stmLogFatal("unknown escape sequence in string literal", &lexer->meta);
                     break;
                 }
             } else {
@@ -376,14 +392,14 @@ SkToken skLexToken(SkLexer lexer) {
         buf[size] = '\0';
         move(lexer, 1);
 
-        token.pValue = calloc(sizeof(char), size);
-        strncpy(token.pValue, buf, size);
+        token->pValue = calloc(sizeof(char), size);
+        strncpy(token->pValue, buf, size);
         break;
     }
 
     default: {
         if (isdigit(curr(lexer)) || curr(lexer) == '-') {
-            token.kind = SK_TOKEN_KIND_LITERAL_INTEGER;
+            token->kind = STM_TOKEN_KIND_LITERAL_INTEGER;
 
             char buf[1024];
             u32 size = 0;
@@ -396,20 +412,20 @@ SkToken skLexToken(SkLexer lexer) {
 
             while (isdigit(curr(lexer)) || curr(lexer) == '.') {
                 if (curr(lexer) == '.') {
-                    if (!isdigit(peek(lexer, 1)) || token.kind == SK_TOKEN_KIND_LITERAL_FLOAT)
+                    if (!isdigit(peek(lexer, 1)) || token->kind == STM_TOKEN_KIND_LITERAL_FLOAT)
                         break;
 
-                    token.kind = SK_TOKEN_KIND_LITERAL_FLOAT;
+                    token->kind = STM_TOKEN_KIND_LITERAL_FLOAT;
                 }
 
                 buf[size++] = curr(lexer);
                 move(lexer, 1);
             }
 
-            token.pValue = calloc(sizeof(char), size);
-            strncpy(token.pValue, buf, size);
+            token->pValue = calloc(sizeof(char), size);
+            strncpy(token->pValue, buf, size);
         } else if (isalpha(curr(lexer)) || curr(lexer) == '_') {
-            token.kind = SK_TOKEN_KIND_IDENTIFIER;
+            token->kind = STM_TOKEN_KIND_IDENTIFIER;
 
             char buf[1024];
             u32 size = 0;
@@ -419,10 +435,10 @@ SkToken skLexToken(SkLexer lexer) {
                 move(lexer, 1);
             }
 
-            token.pValue = calloc(sizeof(char), size);
-            strncpy(token.pValue, buf, size);
+            token->pValue = calloc(sizeof(char), size);
+            strncpy(token->pValue, buf, size);
         } else {
-            // skLogFatal();
+            stmLogFatal("unknown token", &lexer->meta);
         }
     }
 
