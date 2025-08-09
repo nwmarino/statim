@@ -1,14 +1,5 @@
-#include "../include/ast.h"
-#include "../include/scope.h"
-
 #include "ast.h"
-
-/// A node in a scope tree, linked to scoped AST nodes.
-struct StmScope_T {
-    struct StmScope_T*   pParent;
-    StmScopeProps        props;
-    StmArray             decls;
-};
+#include "scope.h"
 
 STM_API_ATTR StmResult STM_API_CALL skInitScope(StmScope parent, StmScopeProps props, StmScope* pScope) {
     assert(pScope && "(stmInitScope) scope destination cannot be null.");
@@ -32,14 +23,14 @@ STM_API_ATTR void STM_API_CALL stmDestroyScope(StmScope* pScope) {
     *pScope = NULL;
 }
 
-STM_API_ATTR StmResult STM_API_CALL skScopeAddDecl(StmScope pScope, StmDecl decl) {
+STM_API_ATTR StmResult STM_API_CALL stmScopeAddDecl(StmScope pScope, StmDecl decl) {
     assert(pScope != NULL && "(skScopeAddDecl) scope cannot be null.");
     assert(decl != NULL && "(skScopeAddDecl) declaration cannot be null.");
 
     return stmArrayPush(pScope->decls, decl);
 }
 
-STM_API_ATTR StmDecl STM_API_CALL skScopeGetDecl(StmScope pScope, char* pName) {
+STM_API_ATTR StmDecl STM_API_CALL stmScopeGetDecl(StmScope pScope, char* pName) {
     assert(pScope != NULL && "(skScopeGetDecl) scope cannot be null.");
     
     for (u32 idx = 0, e = stmArrayGetSize(pScope->decls); idx != e; ++idx) {
@@ -49,7 +40,7 @@ STM_API_ATTR StmDecl STM_API_CALL skScopeGetDecl(StmScope pScope, char* pName) {
     }
 
     if (pScope->pParent)
-        return skScopeGetDecl(pScope->pParent, pName);
+        return stmScopeGetDecl(pScope->pParent, pName);
 
     return NULL;
 }

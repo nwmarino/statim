@@ -61,6 +61,11 @@ STM_API_ATTR void STM_API_CALL stmDestroyRoot(StmRoot* pRoot) {
     *pRoot = NULL;
 }
 
+STM_API_ATTR StmPrimitiveType STM_API_CALL stmGetVoidType(StmRoot root) {
+    assert(root != NULL && "(stmGetVoidType) root cannot be null.");
+    return root->pTypeVoid;
+}
+
 STM_API_ATTR StmPrimitiveType STM_API_CALL stmGetBoolType(StmRoot root) {
     assert(root != NULL && "(stmGetBoolType) root cannot be null.");
     return root->pTypeBool;

@@ -83,6 +83,7 @@ typedef struct StmIntegerExprCreateInfo {
 STM_API_ATTR StmResult STM_API_CALL stmInitRoot(StmTranslationUnit unit, StmRoot* pRoot);
 STM_API_ATTR void STM_API_CALL stmDestroyRoot(StmRoot* pRoot);
 
+STM_API_ATTR StmPrimitiveType STM_API_CALL stmGetVoidType(StmRoot root);
 STM_API_ATTR StmPrimitiveType STM_API_CALL stmGetBoolType(StmRoot root);
 STM_API_ATTR StmPrimitiveType STM_API_CALL stmGetCharType(StmRoot root);
 STM_API_ATTR StmPrimitiveType STM_API_CALL stmGetSint8Type(StmRoot root);

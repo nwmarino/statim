@@ -74,21 +74,21 @@ STM_API_ATTR StmResult STM_API_CALL stmDestroyLexer(StmLexer* pLexer) {
     return STM_SUCCESS;
 }
 
-STM_API_ATTR const StmToken* STM_API_CALL stmLexToken(StmLexer lexer) {
+STM_API_ATTR StmToken STM_API_CALL stmLexToken(StmLexer lexer) {
     while (curr(lexer) == ' ' || curr(lexer) == '\t')
         move(lexer, 1);
 
     StmToken* token = &lexer->current;
 
-    if (token->pValue != NULL)
-        free(token->pValue);
+    //if (token->pValue != NULL)
+    //    free(token->pValue);
 
     token->kind = STM_TOKEN_KIND_END_OF_FILE;
     token->meta = lexer->meta;
     token->pValue = NULL;
 
     if (is_eof(lexer))
-        return token;
+        return *token;
     else if (curr(lexer) == '\n') {
         move(lexer, 1);
         lexer->meta.line++;
@@ -116,6 +116,9 @@ STM_API_ATTR const StmToken* STM_API_CALL stmLexToken(StmLexer lexer) {
             move(lexer, 2);
         } else if (peek(lexer, 1) == '=') {
             token->kind = STM_TOKEN_KIND_MINUS_EQUALS;
+            move(lexer, 2);
+        } else if (peek(lexer, 1) == '>') {
+            token->kind = STM_TOKEN_KIND_SKINNY_ARROW;
             move(lexer, 2);
         } else {
             token->kind = STM_TOKEN_KIND_MINUS;
@@ -224,6 +227,9 @@ STM_API_ATTR const StmToken* STM_API_CALL stmLexToken(StmLexer lexer) {
     case '=':
         if (peek(lexer, 1) == '=') {
             token->kind = STM_TOKEN_KIND_EQUALS_EQUALS;
+            move(lexer, 2);
+        } else if (peek(lexer, 2) == '>') {
+            token->kind = STM_TOKEN_KIND_FAT_ARROW;
             move(lexer, 2);
         } else {
             token->kind = STM_TOKEN_KIND_EQUALS;
@@ -444,5 +450,5 @@ STM_API_ATTR const StmToken* STM_API_CALL stmLexToken(StmLexer lexer) {
 
     }
 
-    return token;
+    return *token;
 }
