@@ -1,10 +1,29 @@
-#include "../include/core.h"
+#include "core.h"
 
 struct StmArray_T {
     const void**    pData;
     u32             size;
     u32             capacity;
 };
+
+STM_API_ATTR StmResult STM_API_CALL stmInitTranslationUnit(StmInputFile* pFile, StmTranslationUnit* pUnit) {
+    assert(pUnit != NULL && "(stmInitTranslationUnit) unit destination cannot be null.");
+
+    *pUnit = malloc(sizeof(struct StmTranslationUnit_T));
+    if (!*pUnit)
+        return STM_FAILURE_OUT_OF_MEMORY;
+
+    (*pUnit)->pFile = pFile;
+    (*pUnit)->pRoot = NULL;
+    return STM_SUCCESS;
+}
+
+STM_API_ATTR void STM_API_CALL stmDestroyTranslationUnit(StmTranslationUnit* pUnit) {
+    assert(pUnit != NULL && "(stmDestroyTranslationUnit) unit cannot be null.");
+
+    free(*pUnit);
+    *pUnit = NULL;
+}
 
 STM_API_ATTR StmResult STM_API_CALL stmInitArray(u32 capacity, StmArray* pArray) {
     assert(pArray != NULL && "(stmInitArray) array destination cannot be null.");

@@ -4,6 +4,7 @@ static u32 tid = 0;
 
 static const char* get_primitive_name(StmPrimitiveTypeKind kind) {
     switch (kind) {
+    case STM_PRIMITIVE_TYPE_KIND_VOID: return "void";
     case STM_PRIMITIVE_TYPE_KIND_BOOL: return "bool";
     case STM_PRIMITIVE_TYPE_KIND_CHAR: return "char";
     case STM_PRIMITIVE_TYPE_KIND_SINT8: return "i8";
@@ -42,7 +43,38 @@ STM_API_ATTR void STM_API_CALL stmDestroyPrimitiveType(StmPrimitiveType* pType) 
     *pType = NULL;
 }
 
-STM_API_ATTR StmResult STM_API_CALL skInitDeferredType(StmTypeContext* pContext, StmDeferredType* pType) {
+STM_API_ATTR StmResult STM_API_CALL stmInitFunctionType(StmType retType, StmArray paramTypes, StmFunctionType* pType) {
+    assert(pType != NULL && "(stmInitFunctionType) type destination cannot be null.");
+
+    *pType = malloc(sizeof(struct StmFunctionType_T));
+    if (!*pType)
+        return STM_FAILURE_OUT_OF_MEMORY;
+
+    struct StmType_T base;
+    base.tid = tid++;
+    base.kind = STM_TYPE_KIND_FUNCTION;
+
+    (*pType)->base = base;
+    (*pType)->pReturn = retType;
+    (*pType)->params = paramTypes;
+    return STM_SUCCESS;
+}
+
+STM_API_ATTR void STM_API_CALL stmDestroyFunctionType(StmFunctionType* pType) {
+    assert(pType != NULL && "(stmDestroyFunctionType) type cannot be null.");
+
+    if ((*pType)->params != NULL) {
+        stmDestroyArray(&(*pType)->params);
+        (*pType)->params = NULL;
+    }
+
+    (*pType)->pReturn = NULL;
+
+    free(*pType);
+    *pType = NULL;
+}
+
+STM_API_ATTR StmResult STM_API_CALL stmInitDeferredType(StmTypeContext* pContext, StmDeferredType* pType) {
     assert(pContext != NULL && "(stmInitDeferredType) context cannot be null.");
     assert(pType != NULL && "(stmInitDeferredType) type destination cannot be null.");
 
