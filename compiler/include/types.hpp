@@ -16,6 +16,12 @@ using u64 = unsigned long;
 using f32 = float;
 using f64 = double;
 
+/// Possible result codes of a function call.
+enum class Result : u8 {
+    Success,
+    Duplicate,
+};
+
 } // namespace stm
 
 #endif // STATIM_TYPES_HPP_
