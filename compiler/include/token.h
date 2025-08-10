@@ -49,6 +49,8 @@ typedef enum StmTokenKind {
     STM_TOKEN_KIND_OR_EQUALS,
     STM_TOKEN_KIND_XOR,
     STM_TOKEN_KIND_XOR_EQUALS,
+    STM_TOKEN_KIND_SKINNY_ARROW,
+    STM_TOKEN_KIND_FAT_ARROW,
     STM_TOKEN_KIND_DOT,
     STM_TOKEN_KIND_COMMA,
     STM_TOKEN_KIND_COLON,
@@ -69,5 +71,7 @@ typedef struct StmToken {
     StmMetadata      meta;
     char*           pValue;
 } StmToken;
+
+STM_API_ATTR const char* STM_API_CALL stmStringifyToken(StmTokenKind kind);
 
 #endif // STATIM_TOKEN_H_

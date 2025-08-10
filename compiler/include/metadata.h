@@ -3,12 +3,6 @@
 
 #include "core.h"
 
-/// Representation of an input file to the compiler.
-typedef struct StmInputFile {
-    char*   pPath;
-    char*   pContents;
-} StmInputFile;
-
 /// File-based source metadata attached to IR nodes.
 typedef struct StmMetadata {
     StmInputFile*    pFile;

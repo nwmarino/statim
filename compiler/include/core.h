@@ -18,6 +18,9 @@
     extern "C" {
 #endif // __cplusplus
 
+typedef struct StmArray_T* StmArray;
+typedef struct StmTranslationUnit_T* StmTranslationUnit;
+
 typedef signed char i8;
 typedef signed short i16;
 typedef signed int i32;
@@ -39,10 +42,18 @@ typedef enum StmBool8 : i8 {
 typedef enum StmResult : i32 {
     STM_SUCCESS = 0x0,
     STM_FAILURE_UNKNOWN,
+    STM_FAILURE_INTERNAL,
     STM_FAILURE_OUT_OF_MEMORY,
 } StmResult;
 
-typedef struct StmArray_T* StmArray;
+/// Representation of an input file to the compiler.
+typedef struct StmInputFile {
+    char*   pPath;
+    char*   pContents;
+} StmInputFile;
+
+STM_API_ATTR StmResult STM_API_CALL stmInitTranslationUnit(StmInputFile* pFile, StmTranslationUnit* pUnit);
+STM_API_ATTR void STM_API_CALL stmDestroyTranslationUnit(StmTranslationUnit* pUnit);
 
 STM_API_ATTR StmResult STM_API_CALL stmInitArray(u32 capacity, StmArray* pArray);
 STM_API_ATTR void STM_API_CALL stmDestroyArray(StmArray* pArray);

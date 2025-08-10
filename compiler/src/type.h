@@ -15,6 +15,13 @@ struct StmPrimitiveType_T {
     StmPrimitiveTypeKind    kind;
 };
 
+/// The type defined by a function signature.
+struct StmFunctionType_T {
+    struct StmType_T    base;
+    struct StmType_T*   pReturn;
+    StmArray            params;
+};
+
 /// A deferred type, to be resolved later.
 struct StmDeferredType_T {
     struct StmType_T    base;

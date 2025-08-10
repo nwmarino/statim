@@ -14,6 +14,7 @@ typedef struct StmRoot_T* StmRoot;
 
 typedef struct StmDecl_T* StmDecl;
 typedef struct StmFunctionDecl_T* StmFunctionDecl;
+typedef struct StmParamDecl_T* StmParamDecl;
 
 typedef struct StmStmt_T* StmStmt;
 typedef struct StmBlockStmt_T* StmBlockStmt;
@@ -25,9 +26,7 @@ typedef struct StmIntegerExpr_T* StmIntegerExpr;
 /// Different kinds of AST declarations.
 typedef enum StmDeclKind {
     STM_DECL_KIND_FUNCTION,
-    STM_DECL_KIND_VARIABLE,
-    STM_DECL_KIND_STRUCTURE,
-    STM_DECL_KIND_ENUM,
+    STM_DECL_KIND_PARAMETER,
 } StmDeclKind;
 
 /// Different kinds of AST statements.
@@ -52,10 +51,16 @@ typedef struct StmFunctionDeclCreateInfo {
     StmMetadata     meta;
     char*           pName;
     StmArray        params;
-    StmType         type;
+    StmFunctionType type;
     StmScope        scope;
     StmStmt         stmt;
 } StmFunctionDeclCreateInfo;
+
+typedef struct StmParamDeclCreateInfo {
+    StmMetadata     meta;
+    char*           pName;
+    StmType         type;
+} StmParamDeclCreateInfo;
 
 typedef struct StmBlockStmtCreateInfo {
     StmMetadata     meta;
@@ -75,8 +80,41 @@ typedef struct StmIntegerExprCreateInfo {
     i64             value;
 } StmIntegerExprCreateInfo;
 
+STM_API_ATTR StmResult STM_API_CALL stmInitRoot(StmTranslationUnit unit, StmRoot* pRoot);
+STM_API_ATTR void STM_API_CALL stmDestroyRoot(StmRoot* pRoot);
+
+STM_API_ATTR StmPrimitiveType STM_API_CALL stmGetVoidType(StmRoot root);
+STM_API_ATTR StmPrimitiveType STM_API_CALL stmGetBoolType(StmRoot root);
+STM_API_ATTR StmPrimitiveType STM_API_CALL stmGetCharType(StmRoot root);
+STM_API_ATTR StmPrimitiveType STM_API_CALL stmGetSint8Type(StmRoot root);
+STM_API_ATTR StmPrimitiveType STM_API_CALL stmGetSint16ype(StmRoot root);
+STM_API_ATTR StmPrimitiveType STM_API_CALL stmGetSint32Type(StmRoot root);
+STM_API_ATTR StmPrimitiveType STM_API_CALL stmGetSint64Type(StmRoot root);
+STM_API_ATTR StmPrimitiveType STM_API_CALL stmGetUint8Type(StmRoot root);
+STM_API_ATTR StmPrimitiveType STM_API_CALL stmGetUint16ype(StmRoot root);
+STM_API_ATTR StmPrimitiveType STM_API_CALL stmGetUint32Type(StmRoot root);
+STM_API_ATTR StmPrimitiveType STM_API_CALL stmGetUint64Type(StmRoot root);
+STM_API_ATTR StmPrimitiveType STM_API_CALL stmGetFloat32Type(StmRoot root);
+STM_API_ATTR StmPrimitiveType STM_API_CALL stmGetFloat64Type(StmRoot root);
+
+STM_API_ATTR void STM_API_CALL stmDestroyDecl(StmDecl* pDecl);
+
 STM_API_ATTR StmResult STM_API_CALL stmInitFunctionDecl(StmRoot root, StmFunctionDeclCreateInfo* pCreateInfo, StmFunctionDecl* pDecl);
 STM_API_ATTR void STM_API_CALL stmDestroyFunctionDecl(StmFunctionDecl* pDecl);
+STM_API_ATTR StmResult STM_API_CALL stmInitParamDecl(StmRoot root, StmParamDeclCreateInfo* pCreateInfo, StmParamDecl* pDecl);
+STM_API_ATTR void STM_API_CALL stmDestroyParamDecl(StmParamDecl* pDecl);
+
+STM_API_ATTR void STM_API_CALL stmDestroyStmt(StmStmt* pStmt);
+
+STM_API_ATTR StmResult STM_API_CALL stmInitBlockStmt(StmRoot root, StmBlockStmtCreateInfo* pCreateInfo, StmBlockStmt* pStmt);
+STM_API_ATTR void STM_API_CALL stmDestroyBlockStmt(StmBlockStmt* pDecl);
+STM_API_ATTR StmResult STM_API_CALL stmInitRetStmt(StmRoot root, StmRetStmtCreateInfo* pCreateInfo, StmRetStmt* pStmt);
+STM_API_ATTR void STM_API_CALL stmDestroyRetStmt(StmRetStmt* pDecl);
+
+STM_API_ATTR void STM_API_CALL stmDestroyExpr(StmExpr* pExpr);
+
+STM_API_ATTR StmResult STM_API_CALL stmInitIntegerExpr(StmRoot root, StmIntegerExprCreateInfo* pCreateInfo, StmIntegerExpr* pExpr);
+STM_API_ATTR void STM_API_CALL stmDestroyIntegerExpr(StmIntegerExpr* pExpr);
 
 #ifdef __cplusplus
     }

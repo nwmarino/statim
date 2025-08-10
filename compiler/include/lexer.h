@@ -12,7 +12,7 @@ typedef struct StmLexer_T* StmLexer;
 
 STM_API_ATTR StmResult STM_API_CALL stmInitLexer(StmInputFile* pFile, StmLexer* pLexer);
 STM_API_ATTR StmResult STM_API_CALL stmDestroyLexer(StmLexer* pLexer);
-STM_API_ATTR const StmToken* STM_API_CALL stmLexToken(StmLexer lexer);
+STM_API_ATTR StmToken STM_API_CALL stmLexToken(StmLexer lexer);
 
 #ifdef __cplusplus
     }
