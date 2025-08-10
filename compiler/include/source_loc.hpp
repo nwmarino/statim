@@ -1,0 +1,50 @@
+#ifndef STATIM_SOURCE_LOC_HPP_
+#define STATIM_SOURCE_LOC_HPP_
+
+#include "types.hpp"
+
+#include <cstring>
+
+namespace stm {
+
+/// Represents a location in source code.
+struct SourceLocation final {
+    char*   pFile;
+    u32     line;
+    u32     column;
+
+    bool operator == (const SourceLocation& other) const {
+        return !std::strcmp(pFile, other.pFile) && line == other.line 
+            && column == other.column;
+    }
+
+    bool operator < (const SourceLocation& other) const {
+        return line < other.line && column < other.column;
+    }
+
+    bool operator > (const SourceLocation& other) const {
+        return line > other.line && column > other.column;
+    }
+};
+
+/// Represents the span of source between two locations in source.
+struct Span final {
+    SourceLocation begin;
+    SourceLocation end;
+
+    bool operator == (const Span& other) const {
+        return begin == other.begin && end == other.end;
+    }
+
+    bool operator < (const Span& other) const {
+        return begin < other.begin && end < other.end;
+    }
+
+    bool operator > (const Span& other) const {
+        return begin > other.begin && end > other.end;
+    }
+};
+
+} // namespace stm
+
+#endif // SourceLocation
