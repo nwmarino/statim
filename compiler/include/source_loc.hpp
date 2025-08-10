@@ -3,18 +3,18 @@
 
 #include "types.hpp"
 
-#include <cstring>
-
 namespace stm {
+
+struct InputFile;
 
 /// Represents a location in source code.
 struct SourceLocation final {
-    char*   pFile;
-    u32     line;
-    u32     column;
+    InputFile&  file;
+    u32         line;
+    u32         column;
 
     bool operator == (const SourceLocation& other) const {
-        return !std::strcmp(pFile, other.pFile) && line == other.line 
+        return &file == &other.file && line == other.line 
             && column == other.column;
     }
 

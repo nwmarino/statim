@@ -1,3 +1,4 @@
+#include "../include/input_file.hpp"
 #include "../include/logger.hpp"
 
 #include <cassert>
@@ -33,7 +34,7 @@ void stm::logger_info(const std::string& msg, const SourceLocation* pLoc) {
         return;
 
     if (pLoc)
-        *pOutput << pLoc->pFile << ':' << pLoc->line << ':' << pLoc->column << ": ";
+        *pOutput << pLoc->file.filename() << ':' << pLoc->line << ':' << pLoc->column << ": ";
     else
         *pOutput << "stmc: ";
 
@@ -45,7 +46,7 @@ void stm::logger_warn(const std::string& msg, const SourceLocation* pLoc) {
         return;
 
     if (pLoc)
-        *pOutput << pLoc->pFile << ':' << pLoc->line << ':' << pLoc->column << ": ";
+        *pOutput << pLoc->file.filename() << ':' << pLoc->line << ':' << pLoc->column << ": ";
     else
         *pOutput << "stmc: ";
 
@@ -57,7 +58,7 @@ void stm::logger_error(const std::string& msg, const SourceLocation* pLoc) {
         return;
 
     if (pLoc)
-        *pOutput << pLoc->pFile << ':' << pLoc->line << ':' << pLoc->column << ": ";
+        *pOutput << pLoc->file.filename() << ':' << pLoc->line << ':' << pLoc->column << ": ";
     else
         *pOutput << "stmc: ";
 
@@ -68,7 +69,7 @@ __attribute__((noreturn))
 void stm::logger_fatal(const std::string& msg, const SourceLocation* pLoc) {
     if (pOutput) {
         if (pLoc)
-            *pOutput << pLoc->pFile << ':' << pLoc->line << ':' << pLoc->column << ": ";
+            *pOutput << pLoc->file.filename() << ':' << pLoc->line << ':' << pLoc->column << ": ";
         else
             *pOutput << "stmc: ";
 
