@@ -123,4 +123,11 @@ use, for example `use Utils = "utils.stm"`, can later by scoped into like `Utils
 This model allows for only shallow namespacing while letting source code choose how to namespace
 code in a clever way, relevant to the use case. 
 
+## Runes
+
+Runes are a language construct that give way to much of the planned metaprogramming and
+decorative abilities (things like safety knows, privacy modifiers, etc.) in the language.
+
+### `$asm`
+
 ## Bytecode

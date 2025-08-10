@@ -6,6 +6,7 @@
 
 namespace stm {
 
+/// Represents an input file given to the compiler.
 struct InputFile final {
     const char* pPath;
 
