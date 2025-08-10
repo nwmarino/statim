@@ -22,7 +22,7 @@ public:
     const Token& last() const;
 
     /// Get the token lexed \p n iterations ago.
-    const Token& last(u32 n = 0) const;
+    const Token& last(u32 n) const;
 
     /// Lex a new token.
     const Token& lex();

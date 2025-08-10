@@ -392,7 +392,7 @@ bool Lexer::is_eof() const {
 }
 
 char Lexer::curr() const { 
-    return mBuf.at(mPos); 
+    return peek(0); 
 }
 
 char Lexer::peek(u32 n) const {
