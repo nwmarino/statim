@@ -1,5 +1,6 @@
 #include "../include/lexer.hpp"
 #include "../include/logger.hpp"
+#include "token.hpp"
 
 #include <cassert>
 
@@ -27,9 +28,13 @@ const Token& Lexer::last(u32 n) const {
 }
 
 const Token& Lexer::lex() {
-    if (is_eof())
+    if (is_eof()) {
+        if (mLexed.back().kind != TOKEN_KIND_END_OF_FILE)
+            mLexed.push_back(Token { mLoc, TOKEN_KIND_END_OF_FILE });
+
         return mLexed.back();
-    
+    }
+
     if (curr() == '\n') {
         mPos++;
         end_line();
