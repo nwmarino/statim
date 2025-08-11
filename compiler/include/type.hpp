@@ -60,20 +60,47 @@ private:
     Kind kind;
 
 public:
-    static BuiltinType& get(Root& root, Kind kind);
+    static const BuiltinType* get(Root& root, Kind kind);
 
     ~BuiltinType() override = default;
+
+    Kind get_kind() const { return kind; }
 };
 
 /// Represents the type defined by a function signature.
 class FunctionType final : public Type {
-    Type&             ret;
-    std::vector<Type> params;
-}
+    const Type*                 pReturn;
+    std::vector<const Type*>    params;
+
+public:
+    static const FunctionType* get(
+        Root& root, 
+        const Type *pReturn, 
+        const std::vector<const Type*>& params);
+    
+    ~FunctionType() override = default;
+
+    const Type* get_return_type() const { return pReturn; }
+
+    const Type* get_param_type(u32 idx) const {
+        return params.at(idx);
+    }
+
+    const std::vector<const Type*>& get_param_types() const {
+        return params;
+    }
+};
 
 /// Represents the encapsulation of a type as a pointer.
 class PointerType final : public Type {
+    const Type* pPointee;
 
+public:
+    static const PointerType* get(Root& root, const Type* pPointee);
+
+    ~PointerType() override = default;
+
+    const Type* get_pointee() const { return pPointee; }
 };
 
 } // namespace stm
