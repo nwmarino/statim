@@ -5,6 +5,7 @@
 #include "source_loc.hpp"
 #include "type.hpp"
 
+#include <ostream>
 #include <pthread.h>
 #include <string>
 #include <unordered_map>
@@ -106,6 +107,8 @@ public:
 
     const BuiltinType* get_fp64_type() const 
     { return context.get(BuiltinType::Kind::Float64); }
+
+    void print(std::ostream& os) const;
 };
 
 class Decl {
@@ -118,6 +121,8 @@ public:
     Decl(const Span& span, const std::string& name, const std::vector<Rune*>& decorators);
 
     virtual ~Decl() = default;
+
+    virtual void print(std::ostream& os) const = 0;
 
     const Span& get_span() const { return span; }
 
@@ -161,6 +166,8 @@ public:
     bool has_params() const { return params.empty(); }
 
     bool has_body() const { return pBody != nullptr; }
+
+    void print(std::ostream& os) const override;
 };
 
 class ParameterDecl final : public Decl {
@@ -174,6 +181,8 @@ public:
         const Type* pType);
 
     const Type* get_type() const { return pType; }
+
+    void print(std::ostream& os) const override;
 };
 
 class VariableDecl final : public Decl {
@@ -194,6 +203,8 @@ public:
     const Expr* get_init() const { return pInit; }
 
     bool has_init() const { return pInit != nullptr; }
+
+    void print(std::ostream& os) const override;
 };
 
 class Stmt {
@@ -206,6 +217,8 @@ public:
     virtual ~Stmt() = default;
 
     const Span& get_span() const { return span; }
+
+    virtual void print(std::ostream& os) const = 0;
 };
 
 class BlockStmt final : public Stmt {
@@ -229,16 +242,22 @@ public:
     const Scope* get_scope() const { return pScope; }
 
     bool is_empty() const { return stmts.empty(); }
+
+    void print(std::ostream& os) const override;
 };
 
 class BreakStmt final : public Stmt {
 public:
     BreakStmt(const Span& span) : Stmt(span) {};
+
+    void print(std::ostream& os) const override;
 };
 
 class ContinueStmt final : public Stmt {
 public:
     ContinueStmt(const Span& span) : Stmt(span) {};
+
+    void print(std::ostream& os) const override;
 };
 
 class DeclStmt final : public Stmt {
@@ -249,6 +268,8 @@ public:
     ~DeclStmt() override;
 
     const Decl* get_decl() const { return pDecl; }
+
+    void print(std::ostream& os) const override;
 };
 
 class IfStmt final : public Stmt {
@@ -267,6 +288,8 @@ public:
     const Stmt* get_else() const { return pElse; }
 
     bool has_else() const { return pElse != nullptr; }
+
+    void print(std::ostream& os) const override;
 };
 
 class WhileStmt final : public Stmt {
@@ -282,6 +305,8 @@ public:
     const Stmt* get_body() const { return pBody; }
 
     bool has_body() const { return pBody != nullptr; }
+
+    void print(std::ostream& os) const override;
 };
 
 class RetStmt final : public Stmt {
@@ -294,6 +319,8 @@ public:
     const Expr* get_expr() const { return pExpr; }
 
     bool has_expr() const { return pExpr != nullptr; }
+
+    void print(std::ostream& os) const override;
 };
 
 class Rune : public Stmt {
@@ -320,6 +347,8 @@ public:
     Kind get_kind() const { return kind; }
 
     const std::vector<Expr*>& get_args() const { return args; }
+
+    void print(std::ostream& os) const override;
 };
 
 class Expr : public Stmt {
@@ -339,6 +368,8 @@ public:
 
     virtual bool is_constant() const { return true; }
 
+    virtual void print(std::ostream& os) const = 0;
+
     const Type* get_type() const { return pType; }
 
     ValueKind get_value_kind() const { return vkind; }
@@ -352,6 +383,8 @@ public:
         : Expr(span, pType, ValueKind::RValue), value(value) {};
 
     bool get_value() const { return value; }
+
+    void print(std::ostream& os) const override;
 };
 
 class IntegerLiteral final : public Expr {
@@ -362,6 +395,8 @@ public:
         : Expr(span, pType, ValueKind::RValue), value(value) {};
     
     i64 get_value() const { return value; }
+
+    void print(std::ostream& os) const override;
 };
 
 class FloatLiteral final : public Expr {
@@ -372,6 +407,8 @@ public:
         : Expr(span, pType, ValueKind::RValue), value(value) {};
 
     f64 get_value() const { return value; }
+
+    void print(std::ostream& os) const override;
 };
 
 class CharLiteral final : public Expr {
@@ -382,6 +419,8 @@ public:
         : Expr(span, pType, ValueKind::RValue), value(value) {};
 
     char get_value() const { return value; }
+
+    void print(std::ostream& os) const override;
 };
 
 class StringLiteral final : public Expr {
@@ -392,12 +431,16 @@ public:
         : Expr(span, pType, ValueKind::RValue), value(value) {};
 
     const std::string& get_value() const { return value; }
+
+    void print(std::ostream& os) const override;
 };
 
 class NilLiteral final : public Expr {
 public:
     NilLiteral(const Span& span, const Type* pType) 
         : Expr(span, pType, ValueKind::RValue) {};
+
+    void print(std::ostream& os) const override;
 };
 
 class BinaryExpr final : public Expr {
@@ -443,6 +486,8 @@ public:
     const Expr* get_lhs() const { return pLeft; }
 
     const Expr* get_rhs() const { return pRight; }
+
+    void print(std::ostream& os) const override;
 };
 
 class UnaryExpr final : public Expr {
@@ -481,6 +526,8 @@ public:
     bool is_prefix() const { return !postfix; }
 
     bool is_postfix() const { return postfix; }
+
+    void print(std::ostream& os) const override;
 };
 
 class CastExpr final : public Expr {
@@ -498,6 +545,8 @@ public:
     bool is_constant() const override { return pExpr->is_constant(); }
 
     const Expr* get_expr() const { return pExpr; }
+    
+    void print(std::ostream& os) const override;
 };
 
 class ParenExpr final : public Expr {
@@ -513,6 +562,8 @@ public:
     bool is_constant() const override { return pExpr->is_constant(); }
 
     const Expr* get_expr() const { return pExpr; }
+
+    void print(std::ostream& os) const override;
 };
 
 class SizeofExpr final : public Expr {
@@ -525,6 +576,8 @@ public:
         const Type* pTarget);
 
     const Type* get_target() const { return pTarget; }
+
+    void print(std::ostream& os) const override;
 };
 
 class SubscriptExpr final : public Expr {
@@ -546,9 +599,12 @@ public:
     const Expr* get_base() const { return pBase; }
 
     const Expr* get_index() const { return pIndex; }
+
+    void print(std::ostream& os) const override;
 };
 
 class ReferenceExpr : public Expr {
+protected:
     std::string ref;
 
 public:
@@ -561,6 +617,8 @@ public:
     bool is_constant() const override { return false; }
 
     const std::string& get_reference() const { return ref; }
+
+    void print(std::ostream& os) const override;
 };
 
 class MemberExpr final : public ReferenceExpr {
@@ -579,6 +637,8 @@ public:
     bool is_constant() const override { return false; }
 
     const Expr* get_base() const { return pBase; }
+
+    void print(std::ostream& os) const override;
 };
 
 class CallExpr final : public ReferenceExpr {
@@ -596,6 +656,8 @@ public:
     bool is_constant() const override { return false; }
 
     const std::vector<Expr*>& get_arguments() const { return args; }
+
+    void print(std::ostream& os) const override;
 };
 
 class RuneExpr final : public Expr {
@@ -613,6 +675,8 @@ public:
     bool is_constant() const override;
 
     const Rune* get_rune() const { return pRune; }
+
+    void print(std::ostream& os) const override;
 };
 
 } // namespace stm
