@@ -50,12 +50,9 @@ class Root final {
     std::vector<const Decl*>    exports;
 
 public:
-    Root(InputFile& file, Scope* pScope, const std::vector<Decl*>& decls);
+    Root(InputFile& file, Scope* pScope);
     
     ~Root();
-
-    Root(const Root&) = delete;
-    Root& operator = (const Root&) = delete;
 
     InputFile& get_file() { return file; }
 
@@ -64,6 +61,8 @@ public:
     Scope* get_scope() { return pScope; }
 
     const Scope* get_scope() const { return pScope; }
+
+    void add_decl(Decl* pDecl) { decls.push_back(pDecl); }
 
     const std::vector<const Decl*>& get_imports() const { return imports; }
 
@@ -447,11 +446,14 @@ class BinaryExpr final : public Expr {
 public:
     /// Different kinds of binary operators.
     enum class Operator : u8 {
+        Unknown = 0x0,
+        Assign,
         Add, Add_Assign,
         Sub, Sub_Assign,
         Mul, Mul_Assign,
         Div, Div_Assign,
         Mod, Mod_Assign,
+        Equals, Not_Equals,
         Less_Than, Less_Than_Equals,
         Greater_Than, Greater_Than_Equals,
         Bitwise_And, Bitwise_And_Assign,
@@ -493,6 +495,7 @@ public:
 class UnaryExpr final : public Expr {
 public:
     enum class Operator : u8 {
+        Unknown = 0x0,
         Increment,
         Decrement,
         Dereference,
@@ -500,6 +503,20 @@ public:
         Logical_Not,
         Bitwise_Not,
     };
+
+    static bool is_prefix(Operator op) {
+        return op != Operator::Unknown;
+    }
+
+    static bool is_postfix(Operator op) {
+        switch (op) {
+        case Operator::Increment:
+        case Operator::Decrement:
+            return true;
+        default:
+            return false;
+        }
+    }
 
 private:
     Operator    op;

@@ -1,21 +1,53 @@
 #include "ast.hpp"
 
+#include <cstring>
+
 using namespace stm;
 
-static u32 gIndent = 0;
+static u32  gIndent = 0;
+static bool gLastChild = 0;
+static bool gPipe[16] = {};
 
-static std::string indent() {
-    return std::string(gIndent * 2, ' ');
+static void print_indent(std::ostream& os) {
+    os << std::string(gIndent * 2, ' ');
+}
+
+static void print_piping(std::ostream& os) {
+    for (u32 idx = 1; idx < gIndent; ++idx)
+        os << (gPipe[idx] ? "│ " : "  ");
+
+    if (gLastChild)
+        os << "`-";
+    else
+        os << "|-";
 }
 
 static std::string span_string(const Span& span) {
-    return '<' + span.begin.file.filename() + ':' + std::to_string(span.begin.line) + ':' 
-    + std::to_string(span.begin.column) + " - " + std::to_string(span.end.line) + ':' 
-    + std::to_string(span.end.column) + '>';
+    return '<' + std::to_string(span.begin.line) + ':' + 
+        std::to_string(span.begin.column) + "/" + 
+        std::to_string(span.end.line) + ':' + 
+        std::to_string(span.end.column) + '>';
+}
+
+void Root::print(std::ostream& os) const {
+    std::memset(gPipe, false, 16);
+    
+    os << "AST <" << file.pPath << ">\n";
+
+    gPipe[gIndent++] = true;
+
+    for (u32 idx = 0, e = decls.size(); idx != e; ++idx) {
+        gLastChild = idx + 1 == e;
+        decls[idx]->print(os);
+    }
+
+    gPipe[--gIndent] = false;
 }
 
 void FunctionDecl::print(std::ostream& os) const {
-    os << "Function " << span_string(span) << " '" << name << "' " << pType->to_string() << '\n';
+    print_piping(os);
+    os << "Function " << span_string(span) << ' ' << name << " '" << 
+        pType->to_string() << "'\n";
 
     gIndent++;
     for (auto& param : params)
@@ -26,11 +58,15 @@ void FunctionDecl::print(std::ostream& os) const {
 }
 
 void ParameterDecl::print(std::ostream& os) const {
-    os << "Parameter " << span_string(span) << " '" << name << "' " << pType->to_string() << '\n';
+    print_piping(os);
+    os << "Parameter " << span_string(span) << " '" << name << "' " << 
+        pType->to_string() << '\n';
 }
 
 void VariableDecl::print(std::ostream& os) const {
-    os << "Variable " << span_string(span) << " '" << name << "' " << pType->to_string() << '\n';
+    print_piping(os);
+    os << "Variable " << span_string(span) << " '" << name << "' " << 
+        pType->to_string() << '\n';
 
     if (has_init()) {
         gIndent++;
@@ -40,6 +76,7 @@ void VariableDecl::print(std::ostream& os) const {
 }
 
 void BlockStmt::print(std::ostream& os) const {
+    print_piping(os);
     os << "Block " << span_string(span) << '\n';
 
     gIndent++;
@@ -48,10 +85,12 @@ void BlockStmt::print(std::ostream& os) const {
 }
 
 void BreakStmt::print(std::ostream& os) const {
+    print_piping(os);
     os << "Break " << span_string(span) << '\n';
 }
 
 void ContinueStmt::print(std::ostream& os) const {
+    print_piping(os);
     os << "Continue " << span_string(span) << '\n';
 }
 
@@ -60,6 +99,7 @@ void DeclStmt::print(std::ostream& os) const {
 }
 
 void IfStmt::print(std::ostream& os) const {
+    print_piping(os);
     os << "If " << span_string(span) << '\n';
 
     gIndent++;
@@ -73,6 +113,7 @@ void IfStmt::print(std::ostream& os) const {
 }
 
 void WhileStmt::print(std::ostream& os) const {
+    print_piping(os);
     os << "While " << span_string(span) << '\n';
 
     gIndent++;
@@ -82,6 +123,7 @@ void WhileStmt::print(std::ostream& os) const {
 }
 
 void RetStmt::print(std::ostream& os) const {
+    print_piping(os);
     os << "Return " << span_string(span) << '\n';
 
     if (has_expr()) {
@@ -96,30 +138,42 @@ void Rune::print(std::ostream& os) const {
 }
 
 void BoolLiteral::print(std::ostream& os) const {
-    os << "Boolean " << span_string(span) << " '" << std::to_string(value) << "' " << pType->to_string() << '\n'; 
+    print_piping(os);
+    os << "Boolean " << span_string(span) << ' ' << std::to_string(value) 
+        << " '" << pType->to_string() << "'\n"; 
 }
 
 void IntegerLiteral::print(std::ostream& os) const {
-    os << "Integer "  << span_string(span) << " '" << std::to_string(value) << "' " << pType->to_string() << '\n'; 
+    print_piping(os);
+    os << "Integer "  << span_string(span) << ' ' << std::to_string(value) 
+        << " '" << pType->to_string() << "'\n"; 
 }
 
 void FloatLiteral::print(std::ostream& os) const {
-    os << "Float " << span_string(span) << " '" << std::to_string(value) << "' " << pType->to_string() << '\n'; 
+    print_piping(os);
+    os << "Float " << span_string(span) << ' ' << std::to_string(value) 
+        << " '" << pType->to_string() << "'\n"; 
 }
 
 void CharLiteral::print(std::ostream& os) const {
-    os << "Character " << span_string(span) << " '" << value << "' " << pType->to_string() << '\n'; 
+    print_piping(os);
+    os << "Character " << span_string(span) << " '" << value << "' '" 
+        << pType->to_string() << "'\n"; 
 }
 
 void StringLiteral::print(std::ostream& os) const {
-    os << "String " << span_string(span) << " \"" << value << "\" " << pType->to_string() << '\n'; 
+    print_piping(os);
+    os << "String " << span_string(span) << " \"" << value << "\" '" 
+        << pType->to_string() << "'\n"; 
 }
 
 void NilLiteral::print(std::ostream& os) const {
+    print_piping(os);
     os << "Nil " << span_string(span) << pType->to_string() << '\n';
 }
 
 void BinaryExpr::print(std::ostream& os) const {
+    print_piping(os);
     os << "BinaryOp " << span_string(span) << ' ';
 
     switch (op) {
@@ -149,6 +203,10 @@ void BinaryExpr::print(std::ostream& os) const {
         case Operator::Left_Shift_Assign: os << "<<="; break;
         case Operator::Right_Shift: os << ">>"; break;
         case Operator::Right_Shift_Assign: os << ">>="; break;
+        case Operator::Assign: os << "="; break;
+        case Operator::Equals: os << "=="; break;
+        case Operator::Not_Equals: os << "!="; break;
+        default: break;
     }
 
     os << ' ' << pType->to_string() << '\n';
@@ -169,6 +227,7 @@ void UnaryExpr::print(std::ostream& os) const {
         case Operator::Address_Of: os << "&"; break;
         case Operator::Logical_Not: os << "!"; break;
         case Operator::Bitwise_Not: os << "~"; break;
+        default: break;
     }
 
     os << ' ' << pType->to_string() << '\n';

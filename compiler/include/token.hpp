@@ -67,6 +67,8 @@ enum TokenKind : u8 {
     TOKEN_KIND_STRING,
 };
 
+std::string token_kind_to_string(TokenKind kind);
+
 /// Represents a token lexed from source.
 struct Token final {
     SourceLocation  loc;

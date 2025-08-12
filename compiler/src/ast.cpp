@@ -58,8 +58,8 @@ TypeContext::~TypeContext() {
     pointers.clear();
 }
 
-Root::Root(InputFile& file, Scope* pScope, const std::vector<Decl*>& decls)
-    : file(file), context(), pScope(pScope), decls(decls), imports(), exports() {};
+Root::Root(InputFile& file, Scope* pScope)
+    : file(file), context(), pScope(pScope), decls(), imports(), exports() {};
 
 Root::~Root() {
     delete pScope;

@@ -27,10 +27,10 @@ public:
     /// Lex a new token.
     const Token& lex();
 
-private:
     /// Test if the end of the buffer has been reached.
     bool is_eof() const;
 
+private:
     /// Get the current character in the stream.
     char curr() const;
 

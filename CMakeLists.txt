@@ -26,10 +26,13 @@ include_directories(
 
 set(COMPILER_SOURCES
     compiler/src/ast.cpp
+    compiler/src/ast_print.cpp
     compiler/src/input_file.cpp
     compiler/src/lexer.cpp
     compiler/src/logger.cpp
+    compiler/src/parser.cpp
     compiler/src/scope.cpp
+    compiler/src/token.cpp
     compiler/src/type.cpp
 )
 

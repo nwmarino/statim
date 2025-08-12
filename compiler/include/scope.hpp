@@ -12,7 +12,7 @@ class Decl;
 
 class Scope final {
 public:
-    enum class Props : u8 {
+    enum class Context : u8 {
         Global, 
         Function, 
         Block,
@@ -20,15 +20,15 @@ public:
 
 private:
     Scope*                          pParent;
-    Props                           props;
+    Context                         context;
     std::map<std::string, Decl*>    symbols;
 
 public:
-    Scope(Props props, Scope* pParent = nullptr);
+    Scope(Context context, Scope* pParent = nullptr);
 
     Scope* get_parent() const { return pParent; }
 
-    Props get_props() const { return props; }
+    Context get_props() const { return context; }
 
     const std::map<std::string, Decl*> &get_symbols() const { return symbols; }
 

@@ -3,7 +3,7 @@
 
 using namespace stm;
 
-Scope::Scope(Props props, Scope* pParent) : props(props), pParent(pParent) {};
+Scope::Scope(Context context, Scope* pParent) : context(context), pParent(pParent) {};
 
 Decl* Scope::get(const std::string& name) {
     for (auto& [ sym_name, sym ] : symbols)

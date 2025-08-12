@@ -34,6 +34,8 @@ struct Span final {
     SourceLocation begin;
     SourceLocation end;
 
+    Span(const SourceLocation& loc) : begin(loc), end(loc) {};
+
     Span(const SourceLocation& begin, const SourceLocation& end) : begin(begin), end(end) {};
 
     bool operator == (const Span& other) const {
