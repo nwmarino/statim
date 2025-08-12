@@ -1,6 +1,8 @@
 #ifndef STATIM_TYPE_HPP_
 #define STATIM_TYPE_HPP_
 
+#include "scope.hpp"
+#include "source_loc.hpp"
 #include "types.hpp"
 
 #include <string>
@@ -16,34 +18,60 @@ protected:
     friend class Root;
 
     using id_t = u32;
+
     id_t tid;
+    bool mut;
 
 private:
     static id_t it;
 
 public:
-    Type() : tid(it++) {};
+    Type(bool mut = false) : tid(it++), mut(mut) {};
 
     virtual ~Type() = default;
 
     bool operator == (const Type& other) const {
         return tid == other.tid;
     }
-};
 
-/// Contextual properties for a type reference.
-struct TypeContext final {
-    std::string base;
-    u32         indirection;
+    bool is_mut() const { return mut; }
+
+    virtual bool is_void() const { return false; }
+
+    virtual std::string to_string() const = 0;
 };
 
 /// A deferred type, to be resolved after name resolution.
 class DeferredType final : public Type {
-    TypeContext context;
+    friend class TypeContext;
+
+public:
+    /// Contextual properties for a type reference.
+    struct Context final {
+        std::string     base;
+        SourceLocation  meta;
+        bool            mut;
+        const Scope*    pScope;
+        u32             indirection;
+    };
+
+private:
+    Context context;
+
+    DeferredType(const Context& context) : context(context) {};
+
+public:
+    static const DeferredType* get(Root& root, const Context& context);
+
+    const Context& get_context() const { return context; }
+
+    std::string to_string() const override;
 };
 
 /// Represents a type built-in to the language.
 class BuiltinType final : public Type {
+    friend class TypeContext;
+
 public:
     /// Recognized built-in types.
     enum class Kind : u8 {
@@ -54,31 +82,37 @@ public:
     };
 
     /// Get the name as it is reserved in the language by \p kind.
-    static std::string get_name(Kind kind);
+    static const char* get_name(Kind kind);
 
 private:
     Kind kind;
 
+    BuiltinType(Kind kind) : kind(kind) {};
+
 public:
     static const BuiltinType* get(Root& root, Kind kind);
 
-    ~BuiltinType() override = default;
-
     Kind get_kind() const { return kind; }
+
+    bool is_void() const override { return kind == Kind::Void; }
+
+    std::string to_string() const override;
 };
 
 /// Represents the type defined by a function signature.
 class FunctionType final : public Type {
+    friend class TypeContext;
+
     const Type*                 pReturn;
     std::vector<const Type*>    params;
+
+    FunctionType(const Type* pReturn, const std::vector<const Type*>& params);
 
 public:
     static const FunctionType* get(
         Root& root, 
         const Type *pReturn, 
         const std::vector<const Type*>& params);
-    
-    ~FunctionType() override = default;
 
     const Type* get_return_type() const { return pReturn; }
 
@@ -89,18 +123,27 @@ public:
     const std::vector<const Type*>& get_param_types() const {
         return params;
     }
+
+    std::string to_string() const override;
 };
 
 /// Represents the encapsulation of a type as a pointer.
 class PointerType final : public Type {
+    friend class TypeContext;
+    
     const Type* pPointee;
+
+    PointerType(const Type* pPointee) : pPointee(pPointee) {};
 
 public:
     static const PointerType* get(Root& root, const Type* pPointee);
 
-    ~PointerType() override = default;
-
     const Type* get_pointee() const { return pPointee; }
+
+    /// Get the level of indirection of this pointer type.
+    u32 get_indirection() const;
+
+    std::string to_string() const override;
 };
 
 } // namespace stm

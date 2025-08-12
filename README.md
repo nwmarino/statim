@@ -178,10 +178,6 @@ Mark a function or type as deprecated, presenting a configurable warning or erro
 
 Pretty-print the bytecode of a function at compile-time for potentially debugging purposes.
 
-### `$path`
-
-Evaluates to the path of the current file as a string.
-
 ### `$if`
 
 Compile-time if statement.
@@ -208,14 +204,18 @@ Mark a function as not to be optimized at any point during compilation.
 
 Mark a function as non-returning.
 
+### `$no_scope`
+
+Make it so that the following list of statements enclosed by braces {, } does not define a new
+scope.
+
 ### `$packed`
 
 Specify for a struct that no padding should be added to its members.
 
-### `$print`
+### `$path`
 
-Print a formatted string of varying arguments to stdout. At compile-time, gets expanded to
-multiple print calls based on the types of the provided arguments.
+Evaluates to the path of the current file as a string.
 
 ### `$public`
 
@@ -226,13 +226,14 @@ Marks a declaration as public to any file that imports the one which the marked 
 Marks a declaration as private to the file it is defined in. By default, any and all declarations
 are private.
 
+### `$print`
+
+Print a formatted string of varying arguments to stdout. At compile-time, gets expanded to
+multiple print calls based on the types of the provided arguments.
+
 ### `$println`
 
 Same as `$print`, but with an automatic newline.
-
-### `$sizeof(T)`
-
-Evaluates to the size of type `T` in bytes.
 
 ### `$unsafe`
 

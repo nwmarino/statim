@@ -25,9 +25,12 @@ include_directories(
 )
 
 set(COMPILER_SOURCES
+    compiler/src/ast.cpp
     compiler/src/input_file.cpp
     compiler/src/lexer.cpp
     compiler/src/logger.cpp
+    compiler/src/scope.cpp
+    compiler/src/type.cpp
 )
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
