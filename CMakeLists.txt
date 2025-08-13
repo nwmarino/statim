@@ -32,6 +32,9 @@ set(COMPILER_SOURCES
     compiler/src/logger.cpp
     compiler/src/parser.cpp
     compiler/src/scope.cpp
+    compiler/src/sema.cpp
+    compiler/src/source_loc.cpp
+    compiler/src/syma.cpp
     compiler/src/token.cpp
     compiler/src/type.cpp
 )
@@ -53,6 +56,7 @@ enable_testing()
 add_executable(stmc_test
     test/test_index.cpp
     test/test_lexer.cpp
+    test/test_parser.cpp
     ${COMPILER_SOURCES}
 )
 

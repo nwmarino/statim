@@ -17,7 +17,7 @@ std::string DeferredType::to_string() const {
     return str + context.base;
 }
 
-const char* BuiltinType::get_name(Kind kind) {
+std::string BuiltinType::get_name(Kind kind) {
     switch (kind) {
         case Kind::Void: return "void";
         case Kind::Bool: return "bool";

@@ -4,6 +4,7 @@
 #include "input_file.hpp"
 #include "source_loc.hpp"
 #include "type.hpp"
+#include "visitor.hpp"
 
 #include <ostream>
 #include <pthread.h>
@@ -23,11 +24,13 @@ class TypeContext final {
     friend class FunctionType;
     friend class PointerType;
 
+    std::unordered_map<std::string, const Type*>        types {};
     std::unordered_map<BuiltinType::Kind, BuiltinType*> builtins {};
     std::unordered_map<const Type*, PointerType*>       pointers {};
     std::vector<DeferredType*>                          deferred {};
     std::vector<FunctionType*>                          functions {};
 
+    const Type* get(const std::string& name) const;
     const BuiltinType* get(BuiltinType::Kind kind) const;
     const PointerType* get(const Type* pPointee);
     const DeferredType* get(const DeferredType::Context& context);
@@ -42,6 +45,9 @@ public:
 };
 
 class Root final {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
     InputFile&                  file;
     TypeContext                 context;
     Scope*                      pScope;
@@ -107,6 +113,16 @@ public:
     const BuiltinType* get_fp64_type() const 
     { return context.get(BuiltinType::Kind::Float64); }
 
+    /// Validate this AST, preparing it for semantic analysis passes.
+    ///
+    /// This function mainly resolves all deferred types within its context,
+    /// and does some small adjustments to make passes over the tree simpler.s
+    void validate();
+
+    void accept(Visitor& visitor) {
+        visitor.visit(*this);
+    }
+
     void print(std::ostream& os) const;
 };
 
@@ -121,6 +137,8 @@ public:
 
     virtual ~Decl() = default;
 
+    virtual void accept(Visitor& visitor) = 0;
+
     virtual void print(std::ostream& os) const = 0;
 
     const Span& get_span() const { return span; }
@@ -131,6 +149,9 @@ public:
 };
 
 class FunctionDecl final : public Decl {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
     const FunctionType*         pType;
     std::vector<ParameterDecl*> params; 
     Scope*                      pScope;
@@ -166,10 +187,17 @@ public:
 
     bool has_body() const { return pBody != nullptr; }
 
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
     void print(std::ostream& os) const override;
 };
 
 class ParameterDecl final : public Decl {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
     const Type* pType;
 
 public:
@@ -181,10 +209,17 @@ public:
 
     const Type* get_type() const { return pType; }
 
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
     void print(std::ostream& os) const override;
 };
 
 class VariableDecl final : public Decl {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
     const Type* pType;
     Expr*       pInit;
 
@@ -203,6 +238,10 @@ public:
 
     bool has_init() const { return pInit != nullptr; }
 
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
     void print(std::ostream& os) const override;
 };
 
@@ -217,10 +256,15 @@ public:
 
     const Span& get_span() const { return span; }
 
+    virtual void accept(Visitor& visitor) = 0;
+
     virtual void print(std::ostream& os) const = 0;
 };
 
 class BlockStmt final : public Stmt {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
     std::vector<Rune*>  runes;
     std::vector<Stmt*>  stmts;
     Scope*              pScope;
@@ -242,24 +286,45 @@ public:
 
     bool is_empty() const { return stmts.empty(); }
 
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
     void print(std::ostream& os) const override;
 };
 
 class BreakStmt final : public Stmt {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
 public:
     BreakStmt(const Span& span) : Stmt(span) {};
+
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
 
     void print(std::ostream& os) const override;
 };
 
 class ContinueStmt final : public Stmt {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
 public:
     ContinueStmt(const Span& span) : Stmt(span) {};
+
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
 
     void print(std::ostream& os) const override;
 };
 
 class DeclStmt final : public Stmt {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
     Decl* pDecl;
 
 public:
@@ -268,10 +333,17 @@ public:
 
     const Decl* get_decl() const { return pDecl; }
 
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
     void print(std::ostream& os) const override;
 };
 
 class IfStmt final : public Stmt {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
     Expr* pCond;
     Stmt* pThen;
     Stmt* pElse;
@@ -288,10 +360,17 @@ public:
 
     bool has_else() const { return pElse != nullptr; }
 
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
     void print(std::ostream& os) const override;
 };
 
 class WhileStmt final : public Stmt {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
     Expr* pCond;
     Stmt* pBody;
 
@@ -305,10 +384,17 @@ public:
 
     bool has_body() const { return pBody != nullptr; }
 
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
     void print(std::ostream& os) const override;
 };
 
 class RetStmt final : public Stmt {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
     Expr* pExpr;
 
 public:
@@ -319,10 +405,17 @@ public:
 
     bool has_expr() const { return pExpr != nullptr; }
 
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
     void print(std::ostream& os) const override;
 };
 
 class Rune : public Stmt {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
 public:
     enum class Kind : u8 {
         ABI, Abort, Alignas, Asm, Assert,
@@ -347,10 +440,17 @@ public:
 
     const std::vector<Expr*>& get_args() const { return args; }
 
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
     void print(std::ostream& os) const override;
 };
 
 class Expr : public Stmt {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
 public:
     enum class ValueKind : u8 {
         LValue, RValue
@@ -367,6 +467,8 @@ public:
 
     virtual bool is_constant() const { return true; }
 
+    virtual void accept(Visitor& visitor) = 0;
+
     virtual void print(std::ostream& os) const = 0;
 
     const Type* get_type() const { return pType; }
@@ -375,6 +477,9 @@ public:
 };
 
 class BoolLiteral final : public Expr {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
     bool value;
 
 public:
@@ -383,10 +488,17 @@ public:
 
     bool get_value() const { return value; }
 
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
     void print(std::ostream& os) const override;
 };
 
 class IntegerLiteral final : public Expr {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
     i64 value;
 
 public:
@@ -395,10 +507,17 @@ public:
     
     i64 get_value() const { return value; }
 
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
     void print(std::ostream& os) const override;
 };
 
 class FloatLiteral final : public Expr {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
     f64 value;
 
 public:
@@ -407,10 +526,17 @@ public:
 
     f64 get_value() const { return value; }
 
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
     void print(std::ostream& os) const override;
 };
 
 class CharLiteral final : public Expr {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
     char value;
 
 public:
@@ -419,10 +545,17 @@ public:
 
     char get_value() const { return value; }
 
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
     void print(std::ostream& os) const override;
 };
 
 class StringLiteral final : public Expr {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
     std::string value;
 
 public:
@@ -431,18 +564,32 @@ public:
 
     const std::string& get_value() const { return value; }
 
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
     void print(std::ostream& os) const override;
 };
 
 class NilLiteral final : public Expr {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
 public:
     NilLiteral(const Span& span, const Type* pType) 
         : Expr(span, pType, ValueKind::RValue) {};
+
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
 
     void print(std::ostream& os) const override;
 };
 
 class BinaryExpr final : public Expr {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
 public:
     /// Different kinds of binary operators.
     enum class Operator : u8 {
@@ -463,6 +610,12 @@ public:
         Left_Shift, Left_Shift_Assign,
         Right_Shift, Right_Shift_Assign,
     };
+
+    static bool is_comparison(Operator op);
+
+    static bool is_assignment(Operator op);
+
+    static bool supports_ptr_arith(Operator op);
 
 private:
     Operator    op;
@@ -489,10 +642,17 @@ public:
 
     const Expr* get_rhs() const { return pRight; }
 
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
     void print(std::ostream& os) const override;
 };
 
 class UnaryExpr final : public Expr {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
 public:
     enum class Operator : u8 {
         Unknown = 0x0,
@@ -500,6 +660,7 @@ public:
         Decrement,
         Dereference,
         Address_Of,
+        Negate,
         Logical_Not,
         Bitwise_Not,
     };
@@ -509,13 +670,7 @@ public:
     }
 
     static bool is_postfix(Operator op) {
-        switch (op) {
-        case Operator::Increment:
-        case Operator::Decrement:
-            return true;
-        default:
-            return false;
-        }
+        return op == Operator::Increment || op == Operator::Decrement;
     }
 
 private:
@@ -544,10 +699,17 @@ public:
 
     bool is_postfix() const { return postfix; }
 
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
     void print(std::ostream& os) const override;
 };
 
 class CastExpr final : public Expr {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
     Expr* pExpr;
 
 public:
@@ -562,11 +724,18 @@ public:
     bool is_constant() const override { return pExpr->is_constant(); }
 
     const Expr* get_expr() const { return pExpr; }
+
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
     
     void print(std::ostream& os) const override;
 };
 
 class ParenExpr final : public Expr {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
     Expr* pExpr;
 
 public:
@@ -580,10 +749,17 @@ public:
 
     const Expr* get_expr() const { return pExpr; }
 
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
     void print(std::ostream& os) const override;
 };
 
 class SizeofExpr final : public Expr {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
     const Type* pTarget;
 
 public:
@@ -594,10 +770,17 @@ public:
 
     const Type* get_target() const { return pTarget; }
 
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
     void print(std::ostream& os) const override;
 };
 
 class SubscriptExpr final : public Expr {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
     Expr* pBase;
     Expr* pIndex;
 
@@ -617,28 +800,47 @@ public:
 
     const Expr* get_index() const { return pIndex; }
 
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
     void print(std::ostream& os) const override;
 };
 
 class ReferenceExpr : public Expr {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
 protected:
-    std::string ref;
+    std::string name;
+    const Decl* pDecl;
 
 public:
     ReferenceExpr(
         const Span& span, 
         const Type* pType, 
         ValueKind vkind, 
-        const std::string& ref);
+        const std::string& name);
     
     bool is_constant() const override { return false; }
 
-    const std::string& get_reference() const { return ref; }
+    const std::string& get_name() const { return name; }
+
+    const Decl* get_decL() const { return pDecl; }
+
+    void set_decl(const Decl* pDecl) { this->pDecl = pDecl; }
+
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
 
     void print(std::ostream& os) const override;
 };
 
 class MemberExpr final : public ReferenceExpr {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
     Expr* pBase;
 
 public:
@@ -655,10 +857,17 @@ public:
 
     const Expr* get_base() const { return pBase; }
 
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
     void print(std::ostream& os) const override;
 };
 
 class CallExpr final : public ReferenceExpr {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
     std::vector<Expr*> args;
 
 public:
@@ -672,12 +881,21 @@ public:
 
     bool is_constant() const override { return false; }
 
-    const std::vector<Expr*>& get_arguments() const { return args; }
+    const std::vector<Expr*>& get_args() const { return args; }
+
+    u32 num_args() const { return args.size(); }
+
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
 
     void print(std::ostream& os) const override;
 };
 
 class RuneExpr final : public Expr {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+    
     Rune* pRune;
 
 public:
@@ -692,6 +910,10 @@ public:
     bool is_constant() const override;
 
     const Rune* get_rune() const { return pRune; }
+
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
 
     void print(std::ostream& os) const override;
 };

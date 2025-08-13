@@ -6,6 +6,8 @@
 
 namespace stm {
 
+class Span;
+
 /// Represents an input file given to the compiler.
 struct InputFile final {
     const char* pPath;
@@ -24,6 +26,9 @@ public:
 
     /// Get the source code of this input file as a string.
     const std::string& source();
+
+    /// Get the source code of this input file between two locations.
+    const std::string& source(const Span& span);
 };
 
 } // namespace stm

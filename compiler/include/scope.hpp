@@ -32,7 +32,7 @@ public:
 
     const std::map<std::string, Decl*> &get_symbols() const { return symbols; }
 
-    Decl* get(const std::string& name);
+    Decl* get(const std::string& name) const;
 
     Result add(Decl* pDecl);
 };

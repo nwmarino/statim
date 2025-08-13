@@ -3,9 +3,10 @@
 
 using namespace stm;
 
-Scope::Scope(Context context, Scope* pParent) : context(context), pParent(pParent) {};
+Scope::Scope(Context context, Scope* pParent) 
+    : context(context), pParent(pParent) {};
 
-Decl* Scope::get(const std::string& name) {
+Decl* Scope::get(const std::string& name) const {
     for (auto& [ sym_name, sym ] : symbols)
         if (sym_name == name)
             return sym;

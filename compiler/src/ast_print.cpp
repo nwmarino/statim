@@ -268,11 +268,13 @@ void SubscriptExpr::print(std::ostream& os) const {
 }
 
 void ReferenceExpr::print(std::ostream& os) const {
-    os << "Reference " << span_string(span) << " '" << ref << "' " << pType->to_string() << '\n';
+    os << "Reference " << span_string(span) << " '" << name << "' " << 
+        pType->to_string() << '\n';
 }
 
 void MemberExpr::print(std::ostream& os) const {
-    os << "Access " << span_string(span) << " '" << ref << "' " << pType->to_string() << '\n';
+    os << "Access " << span_string(span) << " '" << name << "' " << 
+        pType->to_string() << '\n';
 
     gIndent++;
     pBase->print(os);
@@ -280,7 +282,8 @@ void MemberExpr::print(std::ostream& os) const {
 }
 
 void CallExpr::print(std::ostream& os) const {
-    os << "Call " << span_string(span) << " '" << ref << "' " << pType->to_string() << '\n';
+    os << "Call " << span_string(span) << " '" << name << "' " << 
+        pType->to_string() << '\n';
 
     gIndent++;
     for (auto& arg : args) arg->print(os);

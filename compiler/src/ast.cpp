@@ -1,9 +1,18 @@
 #include "ast.hpp"
+#include "logger.hpp"
 #include "type.hpp"
 
 #include <cassert>
 
 using namespace stm;
+
+const Type* TypeContext::get(const std::string& name) const {
+    auto it = types.find(name);
+    if (it != types.end())
+        return it->second;
+
+    return nullptr;
+}
 
 const BuiltinType* TypeContext::get(BuiltinType::Kind kind) const {
     return builtins.at(kind);
@@ -35,7 +44,9 @@ TypeContext::TypeContext() {
     for (auto kind = BuiltinType::Kind::Void; 
           kind != BuiltinType::Kind::Float64; 
           kind = BuiltinType::Kind(u8(kind) + 1)) {
-        builtins.emplace(kind, new BuiltinType(kind));
+        BuiltinType* type = new BuiltinType(kind);
+        builtins.emplace(kind, type);
+        types.emplace(BuiltinType::get_name(kind), type);
     }
 }
 
@@ -71,6 +82,25 @@ Root::~Root() {
     decls.clear();
     imports.clear();
     exports.clear();
+}
+
+void Root::validate() {
+    // For each type which was deferred at parse-time, we need to resolve it
+    // based on the context in which it was parsed.
+    for (auto& deferred : context.deferred) {
+        const DeferredType::Context& ctx = deferred->get_context();
+
+        // Try to resolve the base of the type.
+        const Type* type = context.get(ctx.base);
+        if (!type)
+            logger_fatal("unresolved type: " + ctx.base, &ctx.meta);
+
+        // Add however much indirection is needed for the type.
+        for (u32 idx = 0; idx != ctx.indirection; ++idx)
+            type = PointerType::get(*this, type);
+
+        deferred->set_resolved(type);
+    }
 }
 
 Decl::Decl(const Span& span, const std::string& name, const std::vector<Rune*>& decorators)
@@ -229,6 +259,53 @@ BinaryExpr::~BinaryExpr() {
     }
 }
 
+bool BinaryExpr::is_comparison(Operator op) {
+    switch (op) {
+    case Operator::Equals:
+    case Operator::Not_Equals:
+    case Operator::Less_Than:
+    case Operator::Less_Than_Equals:
+    case Operator::Greater_Than:
+    case Operator::Greater_Than_Equals:
+    case Operator::Logical_And:
+    case Operator::Logical_Or:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool BinaryExpr::is_assignment(Operator op) {
+    switch (op) {
+    case Operator::Assign:
+    case Operator::Add_Assign:
+    case Operator::Sub_Assign:
+    case Operator::Mul_Assign:
+    case Operator::Div_Assign:
+    case Operator::Mod_Assign:
+    case Operator::Bitwise_And_Assign:
+    case Operator::Bitwise_Or_Assign:
+    case Operator::Bitwise_Xor_Assign:
+    case Operator::Left_Shift_Assign:
+    case Operator::Right_Shift_Assign:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool BinaryExpr::supports_ptr_arith(Operator op) {
+    switch (op) {
+    case Operator::Add:
+    case Operator::Add_Assign:
+    case Operator::Sub:
+    case Operator::Sub_Assign:
+        return true;
+    default:
+        return false;
+    }
+}
+
 UnaryExpr::UnaryExpr(
         const Span& span, 
         const Type* pType, 
@@ -308,8 +385,8 @@ ReferenceExpr::ReferenceExpr(
         const Span& span, 
         const Type* pType, 
         ValueKind vkind, 
-        const std::string& ref)
-    : Expr(span, pType, vkind), ref(ref) {};
+        const std::string& name)
+    : Expr(span, pType, vkind), name(name) {};
 
 MemberExpr::MemberExpr(
         const Span& span, 

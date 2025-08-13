@@ -56,14 +56,20 @@ public:
     };
 
 private:
-    Context context;
+    Context     context;
+    const Type* pResolved;
 
-    DeferredType(const Context& context) : context(context) {};
+    DeferredType(const Context& context) 
+        : context(context), pResolved(nullptr) {};
 
 public:
     static const DeferredType* get(Root& root, const Context& context);
 
     const Context& get_context() const { return context; }
+
+    const Type* get_resolved() const { return pResolved; }
+
+    void set_resolved(const Type* pType) { pResolved = pType; }
 
     std::string to_string() const override;
 };
@@ -82,7 +88,7 @@ public:
     };
 
     /// Get the name as it is reserved in the language by \p kind.
-    static const char* get_name(Kind kind);
+    static std::string get_name(Kind kind);
 
 private:
     Kind kind;
