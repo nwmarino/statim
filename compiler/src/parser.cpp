@@ -5,6 +5,7 @@
 #include "token.hpp"
 #include "type.hpp"
 
+#include <cassert>
 #include <string>
 
 using namespace stm;
@@ -15,9 +16,7 @@ Parser::Parser(InputFile& file) : lexer(file), runes() {
 
     while (!lexer.is_eof()) {
         Decl* decl = parse_decl();
-        if (!decl)
-            logger_fatal("expected declaration", &lexer.last().loc);
-
+        assert(decl && "could not parse declaration");
         root->add_decl(decl);
     }
 }
@@ -31,11 +30,6 @@ bool Parser::match(const char* kw) const {
     return (tk.kind == TOKEN_KIND_IDENTIFIER && tk.value == kw);
 }
 
-void Parser::expect(TokenKind kind) const {
-    if (lexer.last().kind != kind)
-        logger_fatal("expected '" + token_kind_to_string(kind) + "'", &lexer.last().loc);
-}
-
 void Parser::next() {
     lexer.lex();
 }
@@ -43,6 +37,10 @@ void Parser::next() {
 void Parser::skip(u32 n) {
     for (u32 idx = 0; idx != n; ++idx)
         lexer.lex();
+}
+
+Span Parser::since(const SourceLocation& loc) {
+    return Span(loc, lexer.last().loc);
 }
 
 Scope* Parser::enter_scope(Scope::Context context) {
@@ -151,6 +149,7 @@ UnaryExpr::Operator Parser::unop(TokenKind kind) const {
     switch (kind) {
     case TOKEN_KIND_BANG: return UnaryExpr::Operator::Logical_Not;
     case TOKEN_KIND_PLUS_PLUS: return UnaryExpr::Operator::Increment;
+    case TOKEN_KIND_MINUS: return UnaryExpr::Operator::Negate;
     case TOKEN_KIND_MINUS_MINUS: return UnaryExpr::Operator::Decrement;
     case TOKEN_KIND_STAR: return UnaryExpr::Operator::Dereference;
     case TOKEN_KIND_AND: return UnaryExpr::Operator::Address_Of;
@@ -179,7 +178,9 @@ const Type* Parser::parse_type() {
         next(); // '*'
     }
 
-    expect(TOKEN_KIND_IDENTIFIER);
+    if (!match(TOKEN_KIND_IDENTIFIER))
+        Logger::fatal("expected type identifier");
+
     context.base = lexer.last().value;
     next(); // identifier
 
@@ -190,12 +191,15 @@ Decl* Parser::parse_decl() {
     if (match(TOKEN_KIND_SIGN))
         parse_rune_decorators();
 
-    expect(TOKEN_KIND_IDENTIFIER);
+    if (!match(TOKEN_KIND_IDENTIFIER))
+        Logger::fatal("expected declaration name");
    
     const Token name = lexer.last();
     next();
 
-    expect(TOKEN_KIND_PATH);
+    if (!match(TOKEN_KIND_PATH))
+        Logger::fatal("expected '::' after declaration name");
+
     next();
 
     switch (lexer.last().kind) {
@@ -217,18 +221,27 @@ FunctionDecl* Parser::parse_function(const Token& name) {
 
     while (!match(TOKEN_KIND_END_PAREN)) {
         ParameterDecl* param = parse_parameter();
-        if (!param)
-            logger_fatal("expected parameter");
-
+        assert(param && "could not parse function parameter");
         params.push_back(param);
 
-        expect(TOKEN_KIND_COMMA);
+        if (match(TOKEN_KIND_END_PAREN))
+            break;
+
+        if (!match(TOKEN_KIND_COMMA)) {
+            Logger::fatal("expected ',' after function parameter", 
+                since(param->get_span().begin));
+        }
+
         next(); // ','
     }
 
     next(); // ')'
 
-    expect(TOKEN_KIND_ARROW);
+    if (!match(TOKEN_KIND_ARROW)) {
+        Logger::fatal("expected '->' to define function return type", 
+            since(name.loc));
+    }
+
     next(); // '->'
     const Type* return_type = parse_type();
 
@@ -239,10 +252,13 @@ FunctionDecl* Parser::parse_function(const Token& name) {
     const FunctionType* type = FunctionType::get(
         *root, return_type, param_types);
     
-    expect(TOKEN_KIND_SET_BRACE);
+    if (!match(TOKEN_KIND_SET_BRACE)) {
+        Logger::fatal("expected '{' after function signature", 
+            since(name.loc));
+    }
+
     body = parse_stmt();
-    if (!body)
-        logger_fatal("expected function body");
+    assert(body && "could not parse function body");
 
     exit_scope();
     FunctionDecl* function = new FunctionDecl(
@@ -263,11 +279,15 @@ FunctionDecl* Parser::parse_function(const Token& name) {
 ///
 /// <name> ':' <...type>
 ParameterDecl* Parser::parse_parameter() {
-    expect(TOKEN_KIND_IDENTIFIER);
+    if (!match(TOKEN_KIND_IDENTIFIER))
+        Logger::fatal("expected parameter name");
+    
     const Token& name = lexer.last();
     next(); // identifier
 
-    expect(TOKEN_KIND_COLON);
+    if (!match(TOKEN_KIND_COLON))
+        Logger::fatal("expected ':' after parameter name", since(name.loc));
+
     next(); // ':'
 
     const Type* type = parse_type();
@@ -315,8 +335,7 @@ BlockStmt* Parser::parse_block() {
 
     while (!match(TOKEN_KIND_END_BRACE)) {
         Stmt* stmt = parse_stmt();
-        if (!stmt)
-            logger_fatal("expected statement", &lexer.last().loc);
+        assert(stmt && "could not parse statement");
 
         while (match(TOKEN_KIND_SEMICOLON))
             next(); // ';'
@@ -361,13 +380,13 @@ RetStmt* Parser::parse_ret() {
     Expr* expr = nullptr;
     if (!match(TOKEN_KIND_SEMICOLON)) {
         expr = parse_expr();
-        if (!expr) {
-            logger_error("expected expression after 'ret'", &lexer.last().loc);
-            return nullptr;
-        }
+        if (!expr)
+            Logger::fatal("expected expression after 'ret'", since(begin));
     }
 
-    expect(TOKEN_KIND_SEMICOLON);
+    if (!match(TOKEN_KIND_SEMICOLON))
+        Logger::fatal("expected ';' after 'ret' statement", since(begin));
+
     SourceLocation end = lexer.last().loc;
     next(); // ';'
     return new RetStmt(Span(begin, end), expr);
@@ -375,11 +394,7 @@ RetStmt* Parser::parse_ret() {
 
 Expr* Parser::parse_expr() {
     Expr* base = parse_unary_prefix();
-    if (!base) {
-        logger_error("expected expression", &lexer.last().loc);
-        return nullptr;
-    }
-
+    assert(base && "could not parse expression base");
     return parse_binary(base, 0);
 }
 
@@ -425,14 +440,12 @@ Expr* Parser::parse_binary(Expr* pBase, i32 precedence) {
 
         next(); // op
         Expr* right = parse_unary_prefix();
-        if (!right)
-            logger_fatal("expected binary right side expression", &lexer.last().loc);
+        assert(right && "could not parse primary binary right operand");
 
         i32 next_prec = binop_precedence(lexer.last().kind);
         if (tok_prec < next_prec) {
             right = parse_binary(right, precedence + 1);
-            if (right)
-                logger_fatal("expected binary expression", &lexer.last().loc);
+            assert(right && "could not parse secondary binary right operand");
         }
 
         pBase = new BinaryExpr(
@@ -454,8 +467,7 @@ Expr* Parser::parse_unary_prefix() {
         next(); // op
 
         Expr* base = parse_unary_prefix();
-        if (!base)
-            logger_fatal("expected unary prefix expression", &lexer.last().loc);
+        assert(base && "could not parse prefix unary operand");
 
         return new UnaryExpr(
             Span(begin, base->get_span().end),
@@ -471,10 +483,7 @@ Expr* Parser::parse_unary_prefix() {
 
 Expr* Parser::parse_unary_postfix() {
     Expr* expr = parse_primary();
-    if (!expr) {
-        logger_error("expected primary expression", &lexer.last().loc);
-        return nullptr;
-    }
+    assert(expr && "could not parse primary expression");
 
     while (true) {
         SourceLocation begin = lexer.last().loc;
@@ -569,9 +578,11 @@ ParenExpr* Parser::parse_paren() {
 
     Expr* expr = parse_expr();
     if (!expr)
-        logger_fatal("expected expression after '('", &begin);
+        Logger::fatal("expected exprssion after '('", since(begin));
 
-    expect(TOKEN_KIND_END_PAREN);
+    if (!match(TOKEN_KIND_END_PAREN))
+        Logger::fatal("expected ')' to enclose parentheses", since(begin));
+
     SourceLocation end = lexer.last().loc;
     next(); // ')'
 
@@ -585,12 +596,16 @@ SizeofExpr* Parser::parse_sizeof() {
     SourceLocation begin = lexer.last().loc;
     next(); // 'sizeof'
 
-    expect(TOKEN_KIND_SET_PAREN);
+    if (!match(TOKEN_KIND_SET_PAREN))
+        Logger::fatal("expected '(' after 'sizeof' operator", since(begin));
+
     next(); // '('
 
     const Type* type = parse_type();
 
-    expect(TOKEN_KIND_END_PAREN);
+    if (!match(TOKEN_KIND_END_PAREN))
+        Logger::fatal("expected ')' after 'sizeof' operator type", since(begin));
+
     SourceLocation end = lexer.last().loc;
     next(); // ')'
 

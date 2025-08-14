@@ -298,7 +298,7 @@ const Token& Lexer::lex() {
                 case '\'': token.value = "\'"; break;
                 case '\"': token.value = "\""; break;
                 default: 
-                    logger_fatal("unknown escape sequence: " + std::to_string(curr()), &mLoc);
+                    Logger::fatal("unknown character escape sequence.");
             }
         } else
             token.value = curr();
@@ -343,7 +343,7 @@ const Token& Lexer::lex() {
                             token.value += static_cast<char>(oct_val);
                             continue;
                         } else {
-                            logger_fatal("unknown escape sequence: " + std::to_string(curr()), &mLoc);
+                            Logger::fatal("unknown string escape sequence.");
                         }
                     }
                 }
@@ -383,7 +383,7 @@ const Token& Lexer::lex() {
                 move();
             }
         } else {
-            logger_fatal("unrecognized token: " + std::to_string(curr()), &mLoc);
+            Logger::fatal("unrecognized token.");
         }
     }
 

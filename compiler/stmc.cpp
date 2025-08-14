@@ -6,7 +6,7 @@
 using namespace stm;
 
 i32 main(i32 argc, char **argv) {
-    logger_init();
+    Logger::init();
 
     Options options;
 

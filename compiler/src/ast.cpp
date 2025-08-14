@@ -93,7 +93,7 @@ void Root::validate() {
         // Try to resolve the base of the type.
         const Type* type = context.get(ctx.base);
         if (!type)
-            logger_fatal("unresolved type: " + ctx.base, &ctx.meta);
+            Logger::fatal("unresolved type: " + ctx.base);
 
         // Add however much indirection is needed for the type.
         for (u32 idx = 0; idx != ctx.indirection; ++idx)

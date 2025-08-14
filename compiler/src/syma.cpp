@@ -1,4 +1,5 @@
 #include "ast.hpp"
+#include "logger.hpp"
 #include "type.hpp"
 #include "visitor.hpp"
 
@@ -31,7 +32,7 @@ void SymbolAnalysis::visit(VariableDecl& node) {
     // If the variable has no type specifier, it needs an initializer in order
     // to infer it.
     if (!node.has_init())
-        node.get_span().fatal("cannot infer variable type without initializer");
+        Logger::fatal("cannot infer variable type without initializer", node.span);
 
     node.pType = node.get_init()->get_type();
 }
@@ -87,14 +88,14 @@ void SymbolAnalysis::visit(UnaryExpr& node) {
                 node.get_expr()->get_type())) {
             node.pType = ptr->get_pointee();
         } else {
-            node.pExpr->get_span().fatal("cannot apply '*' operator to non-pointer");
+            Logger::fatal("cannot apply '*' operator to non-pointer", node.span);
         }
 
         break;
 
     case UnaryExpr::Operator::Address_Of:
         if (node.get_expr()->get_value_kind() != Expr::ValueKind::LValue)
-            node.pExpr->get_span().fatal("cannot apply '&' operator to non-lvalue");
+            Logger::fatal("cannot apply '&' operator to non-lvalue", node.span);
         
         node.pType = PointerType::get(root, node.get_expr()->get_type());
         break;
@@ -124,12 +125,12 @@ void SymbolAnalysis::visit(SubscriptExpr& node) {
 void SymbolAnalysis::visit(ReferenceExpr& node) {
     Decl* decl = pScope->get(node.get_name());
     if (!decl)
-        node.get_span().fatal("unresolved reference: " + node.get_name());
+        Logger::fatal("unresolved reference: '" + node.name + "'", node.span);
 
     if (auto var = dynamic_cast<VariableDecl*>(decl)) {
         node.pType = var->get_type();
     } else {
-        node.get_span().fatal("reference is not a variable: " + node.get_name());
+        Logger::fatal("reference is not a variable: '" + node.name + "'", node.span);
     }
 
     node.set_decl(decl);
@@ -146,12 +147,11 @@ void SymbolAnalysis::visit(CallExpr& node) {
     // Try to resolve the callee and ensure it's a function.
     auto decl = pScope->get(node.get_name());
     if (!decl)
-        node.get_span().fatal("unresolved reference: " + node.get_name());
+        Logger::fatal("unresolved reference: '" + node.name + "'", node.span);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
     if (!function) {
-        node.get_span().fatal("reference exists, but is not a function: " + 
-            node.get_name());
+        Logger::fatal("reference exists, but is not a function: '" + node.name + "'", node.span);
     }
 
     // Propogate the call expression reference.
@@ -160,9 +160,8 @@ void SymbolAnalysis::visit(CallExpr& node) {
 
     // Check that the number of arguments match the number of function params.
     if (node.num_args() != function->num_params()) {
-        node.get_span().fatal("call argument count mismatch, expected " + 
-            std::to_string(function->num_params()) + ", but got " + 
-            std::to_string(node.num_args()));
+        Logger::fatal("call argument count mismatch, expected " + 
+            std::to_string(function->num_params()), node.span);
     }
 }
 

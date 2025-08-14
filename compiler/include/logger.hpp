@@ -9,32 +9,38 @@
 
 namespace stm {
 
-/// Different kinds of severity for logging functions.
-enum LoggerSeverity : u8 {
-    LOGGER_SEVERITY_INFO,
-    LOGGER_SEVERITY_WARNING,
-    LOGGER_SEVERITY_ERROR,
-    LOGGER_SEVERITY_FATAL,
+class Logger final {
+    static std::ostream*    pOutput;
+    static bool             color;
+
+    static void log_src(const Span& span);
+
+public:
+    enum class Severity : u8 {
+        Info, 
+        Warning, 
+        Fatal,
+    };
+
+    Logger() = delete;
+
+    static void init(std::ostream& output = std::cerr);
+
+    static void log(Severity severity, const std::string& msg);
+    static void log(Severity severity, const std::string& msg, const Span& span);
+
+    static void info(const std::string& msg);
+    static void info(const std::string& msg, const Span& span);
+
+    static void warn(const std::string& msg);
+    static void warn(const std::string& msg, const Span &span);
+
+    __attribute__((noreturn))
+    static void fatal(const std::string& msg);
+
+    __attribute__((noreturn))
+    static void fatal(const std::string& msg, const Span &span);
 };
-
-/// Initializer the logger with the given \p output stream.
-void logger_init(std::ostream& output = std::cerr);
-
-/// Log a \p msg at the specified \p severity.
-void logger_log(LoggerSeverity severity, const std::string& msg, const SourceLocation* pLoc = nullptr);
-
-/// Log an informative message \p msg with an optional source location \p pLoc.
-void logger_info(const std::string& msg, const SourceLocation* pLoc = nullptr);
-
-/// Log a warning error message \p msg with an optional source location \p pLoc.
-void logger_warn(const std::string& msg, const SourceLocation* pLoc = nullptr);
-
-/// Log a non-fatal error message \p msg, with an optional source location \p pLoc.
-void logger_error(const std::string& msg, const SourceLocation* pLoc = nullptr);
-
-/// Log a fatal error message \p msg, with an optional source location \p pLoc.
-__attribute__((noreturn))
-void logger_fatal(const std::string& msg, const SourceLocation* pLoc = nullptr);
 
 } // namespace stm
 

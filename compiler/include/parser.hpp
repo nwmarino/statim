@@ -4,6 +4,7 @@
 #include "ast.hpp"
 #include "input_file.hpp"
 #include "lexer.hpp"
+#include "source_loc.hpp"
 
 #include <memory>
 
@@ -25,11 +26,11 @@ private:
     
     bool match(const char* kw) const;
 
-    void expect(TokenKind kind) const;
-
     void next();
 
     void skip(u32 n);
+
+    Span since(const SourceLocation& loc);
 
     Scope* enter_scope(Scope::Context context);
 

@@ -52,14 +52,6 @@ struct Span final {
     bool operator > (const Span& other) const {
         return begin > other.begin && end > other.end;
     }
-
-    void info(const std::string& msg) const;
-    
-    void warn(const std::string& msg) const;
-
-    void error(const std::string& msg) const;
-
-    void fatal(const std::string& msg) const;
 };
 
 } // namespace stm

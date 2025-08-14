@@ -1,4 +1,5 @@
 #include "ast.hpp"
+#include "logger.hpp"
 #include "type.hpp"
 #include "visitor.hpp"
 
@@ -51,9 +52,7 @@ void SemanticAnalysis::visit(VariableDecl& node) {
                 Expr::ValueKind::RValue,
                 node.pInit);
         } else if (tc == TypeCheckResult::Failure) {
-            node.get_span().fatal("variable type mismatch, expected '" + 
-                node.get_type()->to_string() + "', but got '" + 
-                node.get_init()->get_type()->to_string() + "'");
+            Logger::fatal("variable type mismatch", node.span);
         }
     }
 }
@@ -65,12 +64,12 @@ void SemanticAnalysis::visit(BlockStmt& node) {
 
 void SemanticAnalysis::visit(BreakStmt& node) {
     if (loop == Loop::None)
-        node.get_span().fatal("'break' statement outside of loop");
+        Logger::fatal("'break' statement outside of loop.", node.span);
 }
 
 void SemanticAnalysis::visit(ContinueStmt& node) {
     if (loop == Loop::None)
-        node.get_span().fatal("'continue' statement outside of loop");
+        Logger::fatal("'continue' statement outside of loop.", node.span);
 }
 
 void SemanticAnalysis::visit(DeclStmt& node) {
@@ -81,13 +80,13 @@ void SemanticAnalysis::visit(IfStmt& node) {
     node.pCond->accept(*this);
 
     if (dynamic_cast<DeclStmt*>(node.pThen))
-        node.pThen->get_span().fatal("declaration must be within a scope");
+        Logger::fatal("declaration must be scoped.", node.pThen->span);
 
     node.pThen->accept(*this);
 
     if (node.has_else()) {
         if (dynamic_cast<DeclStmt*>(node.pElse))
-            node.pElse->get_span().fatal("declaration must be within a scope");
+            Logger::fatal("declaration must be scoped.", node.pElse->span);
 
         node.pElse->accept(*this);
     }
@@ -97,7 +96,7 @@ void SemanticAnalysis::visit(WhileStmt& node) {
     node.pCond->accept(*this);
 
     if (dynamic_cast<DeclStmt*>(node.pBody))
-        node.pBody->get_span().fatal("declaration must be within a scope");
+        Logger::fatal("declaration must be scoped.", node.pBody->get_span());
 
     Loop prev = loop;
     loop = Loop::While;
@@ -107,7 +106,7 @@ void SemanticAnalysis::visit(WhileStmt& node) {
 
 void SemanticAnalysis::visit(RetStmt& node) {
     if (!pFunction)
-        node.get_span().fatal("'ret' statement outside function'");
+        Logger::fatal("'ret' statement outside of function.", node.span);
 
     if (node.has_expr()) {
         node.pExpr->accept(*this);
@@ -124,12 +123,10 @@ void SemanticAnalysis::visit(RetStmt& node) {
                 Expr::ValueKind::RValue,
                 node.pExpr);
         } else if (tc == TypeCheckResult::Failure) {
-            node.get_span().fatal("return type mismatch, expected '" + 
-                pFunction->get_type()->get_return_type()->to_string() + 
-                "', but got '" + node.get_expr()->get_type()->to_string() + "'");
+            Logger::fatal("return type mismatch", node.span);
         }
     } else if (!pFunction->get_type()->get_return_type()->is_void()) {
-        node.get_span().fatal("function does not return 'void'");
+        Logger::fatal("function '" + pFunction->name + "' does not return void.", node.span);
     }
 }
 
@@ -158,7 +155,7 @@ void SemanticAnalysis::visit(BinaryExpr& node) {
             Expr::ValueKind::RValue,
             node.pRight);
     } else if (tc == TypeCheckResult::Failure) {
-        node.get_span().fatal("binary operand type mismatch");
+        Logger::fatal("binary operand type mismatch", node.span);
     }
 
     if (BinaryExpr::is_comparison(node.op)) {
@@ -170,7 +167,7 @@ void SemanticAnalysis::visit(BinaryExpr& node) {
 
     if (BinaryExpr::is_assignment(node.op) 
             && node.get_lhs()->get_value_kind() != Expr::ValueKind::LValue) {
-        node.get_span().fatal("cannot assign to non-lvalue");
+        Logger::fatal("cannot assign to non-lvalue left operand.", node.span);
     }
 }
 

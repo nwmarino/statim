@@ -127,6 +127,9 @@ public:
 };
 
 class Decl {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+    
 protected:
     Span                span;
     std::string         name;
@@ -246,6 +249,9 @@ public:
 };
 
 class Stmt {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+
 protected:
     Span span;
 

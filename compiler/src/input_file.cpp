@@ -31,7 +31,7 @@ const std::string& InputFile::source() {
     try {
         absolute_path = boost::filesystem::canonical(pPath).string();
     } catch (const boost::filesystem::filesystem_error& err) {
-        logger_fatal("file does not exist: " + std::string(pPath));
+        Logger::fatal("file does not exist: '" + std::string(pPath) + "'");
     }
 
     try {
@@ -41,13 +41,13 @@ const std::string& InputFile::source() {
 
         std::ifstream file(pPath, std::ios::binary);
         if (!file)
-            logger_fatal("failed to open file for reading: " + std::string(pPath));
+            Logger::fatal("failed to opeh source file: '" + std::string(pPath) + "'");
 
         file.read(src.data(), size);
         if (file.gcount() != static_cast<std::streamsize>(size))
-            logger_fatal("failed to read entire source file: " + std::string(pPath));
+            Logger::fatal("failed to read source file: '" + std::string(pPath) + "'");
     } catch (const std::exception& e) {
-        logger_fatal("failed to parse input file: " + std::string(pPath));
+        Logger::fatal("failed to parse source file: '" + std::string(pPath) + "'");
     }
 
     return src;

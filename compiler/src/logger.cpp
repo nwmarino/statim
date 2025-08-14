@@ -1,80 +1,153 @@
 #include "../include/input_file.hpp"
+#include "source_loc.hpp"
 #include "../include/logger.hpp"
 
 #include <cassert>
+#include <cstdlib>
+#include <vector>
 
 using namespace stm;
 
-static std::ostream* pOutput = nullptr;
+static std::vector<std::string> source(const Span& span) {
+    std::vector<std::string> lines { span.end.line - span.begin.line };
+    const std::string& full = span.begin.file.source();
 
-void stm::logger_init(std::ostream& output) {
-    pOutput = &output;
-}
-
-void stm::logger_log(LoggerSeverity severity, const std::string& msg, const SourceLocation* pLoc) {
-    if (!pOutput)
-        return;
-
-    switch (severity) {
-    case LOGGER_SEVERITY_INFO:
-        return logger_info(msg, pLoc);
-    case LOGGER_SEVERITY_WARNING:
-        return logger_warn(msg, pLoc);
-    case LOGGER_SEVERITY_ERROR:
-        return logger_error(msg, pLoc);
-    case LOGGER_SEVERITY_FATAL:
-        return logger_fatal(msg, pLoc);
+    std::size_t line = 1;
+    std::size_t start = 0;
+    for (std::size_t idx = 0; idx <= full.length(); ++idx) {
+        if (idx == full.length() || full[idx] == '\n') {
+            if (line >= span.begin.line && line <= span.end.line) {
+                lines.push_back(full.substr(start, idx - start));
+            }
+            start = idx + 1;
+            line++;
+        }
     }
 
-    assert(false && "unknown logger severity kind");
+    return lines;
 }
 
-void stm::logger_info(const std::string& msg, const SourceLocation* pLoc) {
-    if (!pOutput)
-        return;
+std::ostream* Logger::pOutput = nullptr;
+bool Logger::color = false;
 
-    if (pLoc)
-        *pOutput << pLoc->file.filename() << ':' << pLoc->line << ':' << pLoc->column << ": ";
-    else
-        *pOutput << "stmc: ";
+void Logger::log_src(const Span& span) {
+    *pOutput << "   ┌─[" << span.begin.file.pPath << "]\n";
 
-    *pOutput << "info: " << msg << '\n';
+    u32 line_n = span.begin.line;
+    for (auto line : source(span)) {
+        if (Logger::color) {
+            *pOutput << "\e[38;5;240m" << line_n++ << "\033[0m  │ " << line << '\n';
+        } else {
+            *pOutput << line_n++ << ' ' << line << '\n';
+        }
+    }
+
+    *pOutput << "   ╰──\n";
 }
 
-void stm::logger_warn(const std::string& msg, const SourceLocation* pLoc) {
-    if (!pOutput)
-        return;
-
-    if (pLoc)
-        *pOutput << pLoc->file.filename() << ':' << pLoc->line << ':' << pLoc->column << ": ";
-    else
-        *pOutput << "stmc: ";
-
-    *pOutput << "warning: " << msg << '\n';
+void Logger::init(std::ostream& output) {
+    Logger::pOutput = &output;
+    Logger::color = pOutput == &std::cout || pOutput == &std::cerr;
 }
 
-void stm::logger_error(const std::string& msg, const SourceLocation* pLoc) {
-    if (!pOutput)
-        return;
+void Logger::log(Severity severity, const std::string& msg) {
+    switch (severity) {
+    case Severity::Info:
+        return info(msg);
+    case Severity::Warning:
+        return warn(msg);
+    case Severity::Fatal:
+        return fatal(msg);
+    }
+}
 
-    if (pLoc)
-        *pOutput << pLoc->file.filename() << ':' << pLoc->line << ':' << pLoc->column << ": ";
-    else
-        *pOutput << "stmc: ";
+void Logger::log(Severity severity, const std::string& msg, const Span& span) {
+    switch (severity) {
+    case Severity::Info:
+        return info(msg, span);
+    case Severity::Warning:
+        return warn(msg, span);
+    case Severity::Fatal:
+        return fatal(msg, span);
+    }
+}
 
-    *pOutput << "error: " << msg << '\n';
+void Logger::info(const std::string& msg) {
+    *pOutput << "stmc: ";
+    
+    if (Logger::color) {
+        *pOutput << "\033[1;35minfo:\033[0m ";
+    } else {
+        *pOutput << "info: ";
+    }
+
+    *pOutput << msg << '\n';
+}
+
+void Logger::info(const std::string& msg, const Span& span) {
+    if (Logger::color) {
+        *pOutput << "\033[1;35m !\033[0m ";
+    } else {
+        *pOutput << " ! ";
+    }
+
+    const SourceLocation& begin = span.begin;
+    InputFile& file = begin.file;
+    *pOutput << msg << '\n';
+    log_src(span);
+}
+
+void Logger::warn(const std::string& msg) {
+    *pOutput << "stmc: ";
+    
+    if (Logger::color) {
+        *pOutput << "\033[1;33mwarning:\033[0m ";
+    } else {
+        *pOutput << "warning: ";
+    }
+
+    *pOutput << msg << '\n';
+}
+
+void Logger::warn(const std::string& msg, const Span &span) {
+    if (Logger::color) {
+        *pOutput << "\033[1;33m ⚠︎\033[0m ";
+    } else {
+        *pOutput << " ⚠︎ ";
+    }
+
+    const SourceLocation& begin = span.begin;
+    InputFile& file = begin.file;
+    *pOutput << msg << '\n';
+    log_src(span);
 }
 
 __attribute__((noreturn))
-void stm::logger_fatal(const std::string& msg, const SourceLocation* pLoc) {
-    if (pOutput) {
-        if (pLoc)
-            *pOutput << pLoc->file.filename() << ':' << pLoc->line << ':' << pLoc->column << ": ";
-        else
-            *pOutput << "stmc: ";
-
-        *pOutput << "fatal: " << msg << std::endl;
+void Logger::fatal(const std::string& msg) {
+    *pOutput << "stmc: ";
+    
+    if (Logger::color) {
+        *pOutput << "\033[1;31mfatal:\033[0m ";
+    } else {
+        *pOutput << "fatal: ";
     }
+
+    *pOutput << msg << std::endl;
+    std::exit(EXIT_FAILURE);
+}
+
+__attribute__((noreturn))
+void Logger::fatal(const std::string& msg, const Span &span) {
+    if (Logger::color) {
+        *pOutput << "\033[1;31m ˣ\033[0m ";
+    } else {
+        *pOutput << " ˣ ";
+    }
+
+    const SourceLocation& begin = span.begin;
+    InputFile& file = begin.file;
+    *pOutput << msg << '\n';
+    log_src(span);
 
     std::exit(EXIT_FAILURE);
 }

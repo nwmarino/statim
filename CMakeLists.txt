@@ -33,7 +33,6 @@ set(COMPILER_SOURCES
     compiler/src/parser.cpp
     compiler/src/scope.cpp
     compiler/src/sema.cpp
-    compiler/src/source_loc.cpp
     compiler/src/syma.cpp
     compiler/src/token.cpp
     compiler/src/type.cpp
