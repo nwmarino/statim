@@ -1,6 +1,7 @@
 #include "include/logger.hpp"
 #include "input_file.hpp"
 #include "parser.hpp"
+#include "translation_unit.hpp"
 #include "visitor.hpp"
 
 using namespace stm;
@@ -13,18 +14,22 @@ i32 main(i32 argc, char **argv) {
     InputFile file;
     file.pPath = "samples/return_zero.stm";
 
+    TranslationUnit unit { file };
+
     Parser parser { file };
-    std::unique_ptr<Root> root = parser.get_root();
 
-    root->validate();
+    unit.set_root(parser.get_root());
 
-    SymbolAnalysis syma { options, *root };
-    root->accept(syma);
+    Root& root = unit.get_root();
+    root.validate();
 
-    SemanticAnalysis sema { options, *root };
-    root->accept(sema);
+    SymbolAnalysis syma { options, root };
+    root.accept(syma);
 
-    root->print(std::cout);
+    SemanticAnalysis sema { options, root };
+    root.accept(sema);
+
+    root.print(std::cout);
 
     return 0;
 }
