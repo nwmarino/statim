@@ -51,6 +51,8 @@ void Logger::init(std::ostream& output) {
 }
 
 void Logger::log(Severity severity, const std::string& msg) {
+    if (!pOutput) return;
+    
     switch (severity) {
     case Severity::Info:
         return info(msg);
@@ -62,6 +64,8 @@ void Logger::log(Severity severity, const std::string& msg) {
 }
 
 void Logger::log(Severity severity, const std::string& msg, const Span& span) {
+    if (!pOutput) return;
+
     switch (severity) {
     case Severity::Info:
         return info(msg, span);
@@ -73,6 +77,8 @@ void Logger::log(Severity severity, const std::string& msg, const Span& span) {
 }
 
 void Logger::info(const std::string& msg) {
+    if (!pOutput) return;
+
     *pOutput << "stmc: ";
     
     if (Logger::color) {
@@ -85,6 +91,8 @@ void Logger::info(const std::string& msg) {
 }
 
 void Logger::info(const std::string& msg, const Span& span) {
+    if (!pOutput) return;
+
     if (Logger::color) {
         *pOutput << "\033[1;35m !\033[0m ";
     } else {
@@ -98,6 +106,8 @@ void Logger::info(const std::string& msg, const Span& span) {
 }
 
 void Logger::warn(const std::string& msg) {
+    if (!pOutput) return;
+
     *pOutput << "stmc: ";
     
     if (Logger::color) {
@@ -110,6 +120,8 @@ void Logger::warn(const std::string& msg) {
 }
 
 void Logger::warn(const std::string& msg, const Span &span) {
+    if (!pOutput) return;
+
     if (Logger::color) {
         *pOutput << "\033[1;33m ⚠︎\033[0m ";
     } else {
@@ -124,30 +136,35 @@ void Logger::warn(const std::string& msg, const Span &span) {
 
 __attribute__((noreturn))
 void Logger::fatal(const std::string& msg) {
-    *pOutput << "stmc: ";
-    
-    if (Logger::color) {
-        *pOutput << "\033[1;31mfatal:\033[0m ";
-    } else {
-        *pOutput << "fatal: ";
+    if (pOutput) {
+        *pOutput << "stmc: ";
+        
+        if (Logger::color) {
+            *pOutput << "\033[1;31mfatal:\033[0m ";
+        } else {
+            *pOutput << "fatal: ";
+        }
+
+        *pOutput << msg << std::endl;
     }
 
-    *pOutput << msg << std::endl;
     std::exit(EXIT_FAILURE);
 }
 
 __attribute__((noreturn))
 void Logger::fatal(const std::string& msg, const Span &span) {
-    if (Logger::color) {
-        *pOutput << "\033[1;31m ˣ\033[0m ";
-    } else {
-        *pOutput << " ˣ ";
-    }
+    if (pOutput) {
+        if (Logger::color) {
+            *pOutput << "\033[1;31m ˣ\033[0m ";
+        } else {
+            *pOutput << " ˣ ";
+        }
 
-    const SourceLocation& begin = span.begin;
-    InputFile& file = begin.file;
-    *pOutput << msg << '\n';
-    log_src(span);
+        const SourceLocation& begin = span.begin;
+        InputFile& file = begin.file;
+        *pOutput << msg << '\n';
+        log_src(span);
+    }
 
     std::exit(EXIT_FAILURE);
 }

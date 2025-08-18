@@ -59,15 +59,39 @@ Operand Operand::get_string(const char* pString) {
     return operand;
 }
 
+Operand Operand::get_block(BasicBlock* pBlock) {
+    Operand operand;
+    operand.kind = Kind::Block;
+    operand.type = ValueType::None;
+    operand.pBlock = pBlock;
+
+    return operand;
+}
+
+Operand Operand::get_function(Function* pFunction) {
+    Operand operand;
+    operand.kind = Kind::Function;
+    operand.type = ValueType::None;
+    operand.pFunction = pFunction;
+
+    return operand;
+}
+
 Instruction::Instruction(
-        Opcode op, 
-        const std::vector<Operand>& operands, 
-        const InstDescriptor& desc, 
-        const Metadata& meta) 
-    : op(op), operands(operands), desc(desc), meta(meta) {}; 
+    u64 position,
+    Opcode op, 
+    const std::vector<Operand>& operands, 
+    const InstDescriptor& desc, 
+    const Metadata& meta,
+    BasicBlock* pParent) 
+        : position(position), op(op), operands(operands), desc(desc), 
+          meta(meta), pParent(pParent) {
+    if (pParent)
+        pParent->append(this);
+}; 
 
 bool Instruction::is_terminator() const {
-    return op == Opcode::Branch || op == Opcode::Return;
+    return op == Opcode::Branch || op == Opcode::BranchIf || op == Opcode::Return;
 }
 
 BasicBlock::BasicBlock(Function* pParent) : pParent(pParent) {
@@ -75,10 +99,14 @@ BasicBlock::BasicBlock(Function* pParent) : pParent(pParent) {
         pParent->append(this);
 }
 
+BasicBlock::~BasicBlock() {
+
+}
+
 bool BasicBlock::terminates() const {
     // Start at the back of the block, since it is more likely to include 
     // terminators.
-    for (const Instruction* curr = pBack; curr; curr = curr->get_prev())
+    for (const Instruction* curr = pBack; curr; curr = curr->prev())
         if (curr->is_terminator()) return true;
 
     return false;
@@ -86,10 +114,27 @@ bool BasicBlock::terminates() const {
 
 u32 BasicBlock::terminators() const {
     u32 terminators = 0;
-    for (const Instruction* curr = pFront; curr; curr = curr->get_next())
+    for (const Instruction* curr = pFront; curr; curr = curr->next())
         if (curr->is_terminator()) terminators++;
 
     return terminators;
+}
+
+u32 BasicBlock::size() const {
+    u32 size = 0;
+    for (const Instruction* curr = pFront; curr; curr = curr->next()) size++;
+    return size;
+}
+
+u32 BasicBlock::get_number() const {
+    u32 number = 0;
+    BasicBlock* prev = pPrev;
+    while (prev) {
+        number++;
+        prev = prev->prev();
+    }
+
+    return number;
 }
 
 void BasicBlock::prepend(Instruction* pInst) {
@@ -124,6 +169,16 @@ Function::Function(
         ValueType ret)
     : name(name), args(args), ret(ret) {};
 
+Function::~Function() {
+    
+}
+
+u32 Function::num_blocks() const {
+    u32 size = 0;
+    for (const BasicBlock* curr = pFront; curr; curr = curr->next()) size++;
+    return size;
+}
+
 void Function::prepend(BasicBlock* pBlock) {
     assert(pBlock && "basic block cannot be null");
 
@@ -148,4 +203,8 @@ void Function::append(BasicBlock* pBlock) {
         pFront = pBlock;
         pBack = pBlock;
     }
+}
+
+Frame::~Frame() {
+    
 }

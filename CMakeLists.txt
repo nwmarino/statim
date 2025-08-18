@@ -27,6 +27,8 @@ include_directories(
 set(COMPILER_SOURCES
     compiler/src/ast.cpp
     compiler/src/ast_print.cpp
+    compiler/src/btc_codegen.cpp
+    compiler/src/btc_print.cpp
     compiler/src/bytecode.cpp
     compiler/src/input_file.cpp
     compiler/src/lexer.cpp

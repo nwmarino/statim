@@ -21,7 +21,7 @@ public:
 private:
     Scope*                          pParent;
     Context                         context;
-    std::map<std::string, Decl*>    symbols;
+    std::map<std::string, Decl*>    symbols {};
 
 public:
     Scope(Context context, Scope* pParent = nullptr);
@@ -30,7 +30,7 @@ public:
 
     Context get_props() const { return context; }
 
-    const std::map<std::string, Decl*> &get_symbols() const { return symbols; }
+    const std::map<std::string, Decl*>& get_symbols() const { return symbols; }
 
     Decl* get(const std::string& name) const;
 

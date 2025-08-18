@@ -10,6 +10,7 @@ class Span;
 
 /// Represents an input file given to the compiler.
 struct InputFile final {
+    
     const char* pPath;
 
     bool operator == (const InputFile& other) const {
@@ -29,6 +30,9 @@ public:
 
     /// Get the source code of this input file between two locations.
     const std::string& source(const Span& span);
+
+    /// Overwrite the source code of this input file, for devel purposes.
+    void overwrite(const std::string& src) { this->src = src; }
 };
 
 } // namespace stm

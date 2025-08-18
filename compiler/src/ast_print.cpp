@@ -42,6 +42,7 @@ void Root::print(std::ostream& os) const {
     }
 
     gPipe[--gIndent] = false;
+    os << '\n';
 }
 
 void FunctionDecl::print(std::ostream& os) const {
@@ -167,7 +168,7 @@ void StringLiteral::print(std::ostream& os) const {
         << pType->to_string() << "'\n"; 
 }
 
-void NilLiteral::print(std::ostream& os) const {
+void NullLiteral::print(std::ostream& os) const {
     print_piping(os);
     os << "Nil " << span_string(span) << pType->to_string() << '\n';
 }

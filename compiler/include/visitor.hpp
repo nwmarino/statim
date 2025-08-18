@@ -1,11 +1,18 @@
 #ifndef STATIM_VISITOR_HPP_
 #define STATIM_VISITOR_HPP_
 
+#include "bytecode.hpp"
 #include "options.hpp"
 #include "scope.hpp"
+#include "types.hpp"
+
+#include <memory>
+#include <optional>
 
 namespace stm {
 
+class TranslationUnit;
+class Frame;
 class Root;
 
 class Decl;
@@ -30,7 +37,7 @@ class IntegerLiteral;
 class FloatLiteral;
 class CharLiteral;
 class StringLiteral;
-class NilLiteral;
+class NullLiteral;
 class BinaryExpr;
 class UnaryExpr;
 class CastExpr;
@@ -66,7 +73,7 @@ public:
     virtual void visit(FloatLiteral& node) = 0;
     virtual void visit(CharLiteral& node) = 0;
     virtual void visit(StringLiteral& node) = 0;
-    virtual void visit(NilLiteral& node) = 0;
+    virtual void visit(NullLiteral& node) = 0;
     virtual void visit(BinaryExpr& node) = 0;
     virtual void visit(UnaryExpr& node) = 0;
     virtual void visit(CastExpr& node) = 0;
@@ -107,7 +114,7 @@ public:
     void visit(FloatLiteral& node) override {};
     void visit(CharLiteral& node) override {};
     void visit(StringLiteral& node) override {};
-    void visit(NilLiteral& node) override {};
+    void visit(NullLiteral& node) override {};
     void visit(BinaryExpr& node) override;
     void visit(UnaryExpr& node) override;
     void visit(CastExpr& node) override;
@@ -119,7 +126,6 @@ public:
     void visit(CallExpr& node) override;
     void visit(RuneExpr& node) override;
 };
-
 
 class SemanticAnalysis final : public Visitor {
     enum class Loop : u8 {
@@ -155,7 +161,59 @@ public:
     void visit(FloatLiteral& node) override {};
     void visit(CharLiteral& node) override {};
     void visit(StringLiteral& node) override {};
-    void visit(NilLiteral& node) override {};
+    void visit(NullLiteral& node) override {};
+    void visit(BinaryExpr& node) override;
+    void visit(UnaryExpr& node) override;
+    void visit(CastExpr& node) override;
+    void visit(ParenExpr& node) override;
+    void visit(SizeofExpr& node) override;
+    void visit(SubscriptExpr& node) override;
+    void visit(ReferenceExpr& node) override;
+    void visit(MemberExpr& node) override;
+    void visit(CallExpr& node) override;
+    void visit(RuneExpr& node) override;
+};
+
+class Codegen final : public Visitor {
+    enum class Phase : u8 {
+        Declare, Define,
+    };
+    
+    Phase                   phase;
+    Options&                opts;
+    Root&                   root;
+    std::unique_ptr<Frame>  frame = nullptr;
+    Function*               pFunction = nullptr;
+    BasicBlock*             pInsert = nullptr;
+    std::optional<Operand>  tmp = std::nullopt;
+    u64                     instr = 0;
+
+public:
+    Codegen(Options& opts, Root& root) : opts(opts), root(root) {};
+
+    void run(TranslationUnit& unit);
+
+    void visit(Root& node) override;
+
+    void visit(FunctionDecl& node) override;
+    void visit(ParameterDecl& node) override;
+    void visit(VariableDecl& node) override;
+
+    void visit(BlockStmt& node) override;
+    void visit(BreakStmt& node) override;
+    void visit(ContinueStmt& node) override;
+    void visit(DeclStmt& node) override;
+    void visit(IfStmt& node) override;
+    void visit(WhileStmt& node) override;
+    void visit(RetStmt& node) override;
+    void visit(Rune& node) override;
+
+    void visit(BoolLiteral& node) override;
+    void visit(IntegerLiteral& node) override;
+    void visit(FloatLiteral& node) override;
+    void visit(CharLiteral& node) override;
+    void visit(StringLiteral& node) override;
+    void visit(NullLiteral& node) override;
     void visit(BinaryExpr& node) override;
     void visit(UnaryExpr& node) override;
     void visit(CastExpr& node) override;

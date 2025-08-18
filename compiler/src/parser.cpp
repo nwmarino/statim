@@ -10,15 +10,22 @@
 
 using namespace stm;
 
-Parser::Parser(InputFile& file) : lexer(file), runes() {
-    root = std::make_unique<Root>(file, enter_scope(Scope::Context::Global));
+Parser::Parser(InputFile& file) : file(file), lexer(file), runes() {
     lexer.lex();
+}
+
+void Parser::parse(TranslationUnit& unit) {
+    root = std::make_unique<Root>(
+        file, enter_scope(Scope::Context::Global));
 
     while (!lexer.is_eof()) {
         Decl* decl = parse_decl();
         assert(decl && "could not parse declaration");
         root->add_decl(decl);
     }
+
+    unit.set_root(std::move(root));
+    root = nullptr;
 }
 
 bool Parser::match(TokenKind kind) const {
@@ -54,36 +61,66 @@ void Parser::exit_scope() {
 
 BinaryExpr::Operator Parser::binop(TokenKind kind) const {
     switch (kind) {
-    case TOKEN_KIND_EQUALS: return BinaryExpr::Operator::Assign;
-    case TOKEN_KIND_EQUALS_EQUALS: return BinaryExpr::Operator::Equals;
-    case TOKEN_KIND_BANG_EQUALS: return BinaryExpr::Operator::Not_Equals;
-    case TOKEN_KIND_PLUS: return BinaryExpr::Operator::Add;
-    case TOKEN_KIND_PLUS_EQUALS: return BinaryExpr::Operator::Add_Assign;
-    case TOKEN_KIND_MINUS: return BinaryExpr::Operator::Sub;
-    case TOKEN_KIND_MINUS_EQUALS: return BinaryExpr::Operator::Sub_Assign;
-    case TOKEN_KIND_STAR: return BinaryExpr::Operator::Mul;
-    case TOKEN_KIND_STAR_EQUALS: return BinaryExpr::Operator::Mul_Assign;
-    case TOKEN_KIND_SLASH: return BinaryExpr::Operator::Div;
-    case TOKEN_KIND_SLASH_EQUALS: return BinaryExpr::Operator::Div_Assign;
-    case TOKEN_KIND_PERCENT: return BinaryExpr::Operator::Mod;
-    case TOKEN_KIND_PERCENT_EQUALS: return BinaryExpr::Operator::Mod_Assign;
-    case TOKEN_KIND_AND: return BinaryExpr::Operator::Bitwise_And;
-    case TOKEN_KIND_AND_AND: return BinaryExpr::Operator::Logical_And;
-    case TOKEN_KIND_AND_EQUALS: return BinaryExpr::Operator::Bitwise_And_Assign;
-    case TOKEN_KIND_OR: return BinaryExpr::Operator::Bitwise_Or;
-    case TOKEN_KIND_OR_OR: return BinaryExpr::Operator::Logical_Or;
-    case TOKEN_KIND_OR_EQUALS: return BinaryExpr::Operator::Bitwise_Or_Assign;
-    case TOKEN_KIND_XOR: return BinaryExpr::Operator::Bitwise_Xor;
-    case TOKEN_KIND_XOR_EQUALS: return BinaryExpr::Operator::Bitwise_Xor_Assign;
-    case TOKEN_KIND_LEFT: return BinaryExpr::Operator::Less_Than;
-    case TOKEN_KIND_LEFT_LEFT: return BinaryExpr::Operator::Left_Shift;
-    case TOKEN_KIND_LEFT_LEFT_EQUALS: return BinaryExpr::Operator::Left_Shift_Assign;
-    case TOKEN_KIND_LEFT_EQUALS: return BinaryExpr::Operator::Less_Than_Equals;
-    case TOKEN_KIND_RIGHT: return BinaryExpr::Operator::Greater_Than;
-    case TOKEN_KIND_RIGHT_RIGHT: return BinaryExpr::Operator::Right_Shift;
-    case TOKEN_KIND_RIGHT_RIGHT_EQUALS: return BinaryExpr::Operator::Right_Shift_Assign;
-    case TOKEN_KIND_RIGHT_EQUALS: return BinaryExpr::Operator::Greater_Than;
-    default: return BinaryExpr::Operator::Unknown;
+    case TOKEN_KIND_EQUALS: 
+        return BinaryExpr::Operator::Assign;
+    case TOKEN_KIND_EQUALS_EQUALS: 
+        return BinaryExpr::Operator::Equals;
+    case TOKEN_KIND_BANG_EQUALS: 
+        return BinaryExpr::Operator::Not_Equals;
+    case TOKEN_KIND_PLUS: 
+        return BinaryExpr::Operator::Add;
+    case TOKEN_KIND_PLUS_EQUALS: 
+        return BinaryExpr::Operator::Add_Assign;
+    case TOKEN_KIND_MINUS: 
+        return BinaryExpr::Operator::Sub;
+    case TOKEN_KIND_MINUS_EQUALS: 
+        return BinaryExpr::Operator::Sub_Assign;
+    case TOKEN_KIND_STAR: 
+        return BinaryExpr::Operator::Mul;
+    case TOKEN_KIND_STAR_EQUALS: 
+        return BinaryExpr::Operator::Mul_Assign;
+    case TOKEN_KIND_SLASH: 
+        return BinaryExpr::Operator::Div;
+    case TOKEN_KIND_SLASH_EQUALS: 
+        return BinaryExpr::Operator::Div_Assign;
+    case TOKEN_KIND_PERCENT: 
+        return BinaryExpr::Operator::Mod;
+    case TOKEN_KIND_PERCENT_EQUALS: 
+        return BinaryExpr::Operator::Mod_Assign;
+    case TOKEN_KIND_AND: 
+        return BinaryExpr::Operator::Bitwise_And;
+    case TOKEN_KIND_AND_AND: 
+        return BinaryExpr::Operator::Logical_And;
+    case TOKEN_KIND_AND_EQUALS: 
+        return BinaryExpr::Operator::Bitwise_And_Assign;
+    case TOKEN_KIND_OR: 
+        return BinaryExpr::Operator::Bitwise_Or;
+    case TOKEN_KIND_OR_OR: 
+        return BinaryExpr::Operator::Logical_Or;
+    case TOKEN_KIND_OR_EQUALS: 
+        return BinaryExpr::Operator::Bitwise_Or_Assign;
+    case TOKEN_KIND_XOR: 
+        return BinaryExpr::Operator::Bitwise_Xor;
+    case TOKEN_KIND_XOR_EQUALS: 
+        return BinaryExpr::Operator::Bitwise_Xor_Assign;
+    case TOKEN_KIND_LEFT: 
+        return BinaryExpr::Operator::Less_Than;
+    case TOKEN_KIND_LEFT_LEFT: 
+        return BinaryExpr::Operator::Left_Shift;
+    case TOKEN_KIND_LEFT_LEFT_EQUALS: 
+        return BinaryExpr::Operator::Left_Shift_Assign;
+    case TOKEN_KIND_LEFT_EQUALS: 
+        return BinaryExpr::Operator::Less_Than_Equals;
+    case TOKEN_KIND_RIGHT: 
+        return BinaryExpr::Operator::Greater_Than;
+    case TOKEN_KIND_RIGHT_RIGHT: 
+        return BinaryExpr::Operator::Right_Shift;
+    case TOKEN_KIND_RIGHT_RIGHT_EQUALS: 
+        return BinaryExpr::Operator::Right_Shift_Assign;
+    case TOKEN_KIND_RIGHT_EQUALS: 
+        return BinaryExpr::Operator::Greater_Than;
+    default: 
+        return BinaryExpr::Operator::Unknown;
     }
 }
 
@@ -93,40 +130,30 @@ i32 Parser::binop_precedence(TokenKind kind) const {
     case TOKEN_KIND_SLASH:
     case TOKEN_KIND_PERCENT:
         return 11;
-
     case TOKEN_KIND_PLUS:
     case TOKEN_KIND_MINUS:
         return 10;
-
     case TOKEN_KIND_LEFT_LEFT:
     case TOKEN_KIND_RIGHT_RIGHT:
         return 9;
-
     case TOKEN_KIND_LEFT:
     case TOKEN_KIND_LEFT_EQUALS:
     case TOKEN_KIND_RIGHT:
     case TOKEN_KIND_RIGHT_EQUALS:
         return 8;
-
     case TOKEN_KIND_EQUALS_EQUALS:
     case TOKEN_KIND_BANG_EQUALS:
         return 7;
-    
     case TOKEN_KIND_AND:
         return 6;
-    
     case TOKEN_KIND_XOR:
         return 5;
-    
     case TOKEN_KIND_OR:
         return 4;
-        
     case TOKEN_KIND_AND_AND:
         return 3;
-
     case TOKEN_KIND_OR_OR:
         return 2;
-        
     case TOKEN_KIND_EQUALS:
     case TOKEN_KIND_PLUS_EQUALS:
     case TOKEN_KIND_MINUS_EQUALS:
@@ -139,7 +166,6 @@ i32 Parser::binop_precedence(TokenKind kind) const {
     case TOKEN_KIND_LEFT_LEFT_EQUALS:
     case TOKEN_KIND_RIGHT_RIGHT_EQUALS:
         return 1;
-
     default: 
         return -1;
     }
@@ -147,14 +173,22 @@ i32 Parser::binop_precedence(TokenKind kind) const {
 
 UnaryExpr::Operator Parser::unop(TokenKind kind) const {
     switch (kind) {
-    case TOKEN_KIND_BANG: return UnaryExpr::Operator::Logical_Not;
-    case TOKEN_KIND_PLUS_PLUS: return UnaryExpr::Operator::Increment;
-    case TOKEN_KIND_MINUS: return UnaryExpr::Operator::Negate;
-    case TOKEN_KIND_MINUS_MINUS: return UnaryExpr::Operator::Decrement;
-    case TOKEN_KIND_STAR: return UnaryExpr::Operator::Dereference;
-    case TOKEN_KIND_AND: return UnaryExpr::Operator::Address_Of;
-    case TOKEN_KIND_TILDE: return UnaryExpr::Operator::Bitwise_Not;
-    default: return UnaryExpr::Operator::Unknown;
+    case TOKEN_KIND_BANG: 
+        return UnaryExpr::Operator::Logical_Not;
+    case TOKEN_KIND_PLUS_PLUS: 
+        return UnaryExpr::Operator::Increment;
+    case TOKEN_KIND_MINUS: 
+        return UnaryExpr::Operator::Negate;
+    case TOKEN_KIND_MINUS_MINUS: 
+        return UnaryExpr::Operator::Decrement;
+    case TOKEN_KIND_STAR: 
+        return UnaryExpr::Operator::Dereference;
+    case TOKEN_KIND_AND: 
+        return UnaryExpr::Operator::Address_Of;
+    case TOKEN_KIND_TILDE: 
+        return UnaryExpr::Operator::Bitwise_Not;
+    default: 
+        return UnaryExpr::Operator::Unknown;
     }
 }
 
@@ -559,8 +593,8 @@ StringLiteral* Parser::parse_string() {
     return string;
 }
 
-NilLiteral* Parser::parse_nil() {
-    NilLiteral* nil = new NilLiteral(
+NullLiteral* Parser::parse_nil() {
+    NullLiteral* nil = new NullLiteral(
         Span(lexer.last().loc),
         PointerType::get(*root, root->get_void_type())
     );

@@ -7,7 +7,7 @@ Scope::Scope(Context context, Scope* pParent)
     : context(context), pParent(pParent) {};
 
 Decl* Scope::get(const std::string& name) const {
-    for (auto& [ sym_name, sym ] : symbols)
+    for (auto [ sym_name, sym ] : symbols)
         if (sym_name == name)
             return sym;
 

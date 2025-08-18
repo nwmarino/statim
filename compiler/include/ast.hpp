@@ -47,6 +47,7 @@ public:
 class Root final {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
     InputFile&                  file;
     TypeContext                 context;
@@ -67,6 +68,10 @@ public:
     Scope* get_scope() { return pScope; }
 
     const Scope* get_scope() const { return pScope; }
+
+    const std::vector<Decl*>& get_decls() const { return decls; }
+
+    u32 num_decls() const { return decls.size(); }
 
     void add_decl(Decl* pDecl) { decls.push_back(pDecl); }
 
@@ -129,6 +134,7 @@ public:
 class Decl {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
     
 protected:
     Span                span;
@@ -154,6 +160,7 @@ public:
 class FunctionDecl final : public Decl {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
     const FunctionType*         pType;
     std::vector<ParameterDecl*> params; 
@@ -200,6 +207,7 @@ public:
 class ParameterDecl final : public Decl {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
     const Type* pType;
 
@@ -222,6 +230,7 @@ public:
 class VariableDecl final : public Decl {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
     const Type* pType;
     Expr*       pInit;
@@ -251,6 +260,7 @@ public:
 class Stmt {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
 protected:
     Span span;
@@ -270,6 +280,7 @@ public:
 class BlockStmt final : public Stmt {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
     std::vector<Rune*>  runes;
     std::vector<Stmt*>  stmts;
@@ -288,6 +299,8 @@ public:
 
     const std::vector<Stmt*>& get_stmts() const { return stmts; }
 
+    u32 size() const { return stmts.size(); }
+
     const Scope* get_scope() const { return pScope; }
 
     bool is_empty() const { return stmts.empty(); }
@@ -302,6 +315,7 @@ public:
 class BreakStmt final : public Stmt {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
 public:
     BreakStmt(const Span& span) : Stmt(span) {};
@@ -316,6 +330,7 @@ public:
 class ContinueStmt final : public Stmt {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
 public:
     ContinueStmt(const Span& span) : Stmt(span) {};
@@ -330,6 +345,7 @@ public:
 class DeclStmt final : public Stmt {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
     Decl* pDecl;
 
@@ -349,6 +365,7 @@ public:
 class IfStmt final : public Stmt {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
     Expr* pCond;
     Stmt* pThen;
@@ -376,6 +393,7 @@ public:
 class WhileStmt final : public Stmt {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
     Expr* pCond;
     Stmt* pBody;
@@ -400,6 +418,7 @@ public:
 class RetStmt final : public Stmt {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
     Expr* pExpr;
 
@@ -421,6 +440,7 @@ public:
 class Rune : public Stmt {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
 public:
     enum class Kind : u8 {
@@ -456,6 +476,7 @@ public:
 class Expr : public Stmt {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
 public:
     enum class ValueKind : u8 {
@@ -485,6 +506,7 @@ public:
 class BoolLiteral final : public Expr {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
     bool value;
 
@@ -504,6 +526,7 @@ public:
 class IntegerLiteral final : public Expr {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
     i64 value;
 
@@ -523,6 +546,7 @@ public:
 class FloatLiteral final : public Expr {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
     f64 value;
 
@@ -542,6 +566,7 @@ public:
 class CharLiteral final : public Expr {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
     char value;
 
@@ -561,6 +586,7 @@ public:
 class StringLiteral final : public Expr {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
     std::string value;
 
@@ -577,12 +603,13 @@ public:
     void print(std::ostream& os) const override;
 };
 
-class NilLiteral final : public Expr {
+class NullLiteral final : public Expr {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
 public:
-    NilLiteral(const Span& span, const Type* pType) 
+    NullLiteral(const Span& span, const Type* pType) 
         : Expr(span, pType, ValueKind::RValue) {};
 
     void accept(Visitor& visitor) override {
@@ -595,6 +622,7 @@ public:
 class BinaryExpr final : public Expr {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
 public:
     /// Different kinds of binary operators.
@@ -658,6 +686,7 @@ public:
 class UnaryExpr final : public Expr {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
 public:
     enum class Operator : u8 {
@@ -715,6 +744,7 @@ public:
 class CastExpr final : public Expr {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
     Expr* pExpr;
 
@@ -741,6 +771,7 @@ public:
 class ParenExpr final : public Expr {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
     Expr* pExpr;
 
@@ -765,6 +796,7 @@ public:
 class SizeofExpr final : public Expr {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
     const Type* pTarget;
 
@@ -786,6 +818,7 @@ public:
 class SubscriptExpr final : public Expr {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
     Expr* pBase;
     Expr* pIndex;
@@ -816,6 +849,7 @@ public:
 class ReferenceExpr : public Expr {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
 protected:
     std::string name;
@@ -846,6 +880,7 @@ public:
 class MemberExpr final : public ReferenceExpr {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
     Expr* pBase;
 
@@ -873,6 +908,7 @@ public:
 class CallExpr final : public ReferenceExpr {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
 
     std::vector<Expr*> args;
 
@@ -901,6 +937,7 @@ public:
 class RuneExpr final : public Expr {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
+    friend class Codegen;
     
     Rune* pRune;
 

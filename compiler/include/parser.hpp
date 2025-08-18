@@ -5,21 +5,23 @@
 #include "input_file.hpp"
 #include "lexer.hpp"
 #include "source_loc.hpp"
+#include "translation_unit.hpp"
 
 #include <memory>
 
 namespace stm {
 
 class Parser final {
+    InputFile&              file;
     Lexer                   lexer;
     std::unique_ptr<Root>   root;
     std::vector<Rune*>      runes;
-    Scope*                  pScope;
+    Scope*                  pScope = nullptr;
 
 public:
     Parser(InputFile& file);
     
-    std::unique_ptr<Root> get_root() { return std::move(root); }
+    void parse(TranslationUnit& unit);
 
 private:
     bool match(TokenKind kind) const;
@@ -72,7 +74,7 @@ private:
     FloatLiteral* parse_float();
     CharLiteral* parse_char();
     StringLiteral* parse_string();
-    NilLiteral* parse_nil();
+    NullLiteral* parse_nil();
 
     CastExpr* parse_cast();
     ParenExpr* parse_paren();
