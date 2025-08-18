@@ -166,9 +166,9 @@ public:
     void visit(UnaryExpr& node) override;
     void visit(CastExpr& node) override;
     void visit(ParenExpr& node) override;
-    void visit(SizeofExpr& node) override;
+    void visit(SizeofExpr& node) override {};
     void visit(SubscriptExpr& node) override;
-    void visit(ReferenceExpr& node) override;
+    void visit(ReferenceExpr& node) override {};
     void visit(MemberExpr& node) override;
     void visit(CallExpr& node) override;
     void visit(RuneExpr& node) override;

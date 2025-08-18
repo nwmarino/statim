@@ -38,6 +38,13 @@ public:
 
     virtual bool is_void() const { return false; }
 
+    virtual bool is_int() const { return false; }
+
+    virtual bool is_float() const { return false; }
+
+    virtual bool can_cast(const Type* other, bool impl = false) const
+    { return false; }
+
     virtual std::string to_string() const = 0;
 };
 
@@ -71,6 +78,12 @@ public:
 
     void set_resolved(const Type* pType) { pResolved = pType; }
 
+    bool is_int() const override;
+
+    bool is_float() const override;
+
+    bool can_cast(const Type* other, bool impl = false) const override;
+
     std::string to_string() const override;
 };
 
@@ -101,6 +114,12 @@ public:
     Kind get_kind() const { return kind; }
 
     bool is_void() const override { return kind == Kind::Void; }
+
+    bool is_int() const override;
+
+    bool is_float() const override;
+
+    bool can_cast(const Type* other, bool impl = false) const override;
 
     std::string to_string() const override;
 };
@@ -148,6 +167,8 @@ public:
 
     /// Get the level of indirection of this pointer type.
     u32 get_indirection() const;
+
+    bool can_cast(const Type* other, bool impl = false) const override;
 
     std::string to_string() const override;
 };

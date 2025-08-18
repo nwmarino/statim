@@ -183,7 +183,7 @@ public:
 
     const std::vector<ParameterDecl*>& get_params() const { return params; }
 
-    const ParameterDecl* get_param(u32 idx) { return params.at(idx); }
+    const ParameterDecl* get_param(u32 idx) const { return params.at(idx); }
 
     u32 num_params() const { return params.size(); }
 
@@ -867,7 +867,7 @@ public:
 
     const std::string& get_name() const { return name; }
 
-    const Decl* get_decL() const { return pDecl; }
+    const Decl* get_decl() const { return pDecl; }
 
     void set_decl(const Decl* pDecl) { this->pDecl = pDecl; }
 

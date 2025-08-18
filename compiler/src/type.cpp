@@ -1,12 +1,29 @@
 #include "ast.hpp"
 #include "type.hpp"
 
+#include <cassert>
+
 using namespace stm;
 
 Type::id_t Type::it = 0;
 
 const DeferredType* DeferredType::get(Root& root, const Context& context) {
     return root.get_context().get(context);
+}
+
+bool DeferredType::can_cast(const Type* other, bool impl) const {
+    assert(pResolved && "deferred type unresolved");
+    return pResolved->can_cast(other, impl);
+}
+
+bool DeferredType::is_int() const {
+    assert(pResolved && "deferred type unresolved");
+    return pResolved->is_int();
+}
+
+bool DeferredType::is_float() const {
+    assert(pResolved && "deferred type unresolved");
+    return pResolved->is_float();
 }
 
 std::string DeferredType::to_string() const {
@@ -19,37 +36,118 @@ std::string DeferredType::to_string() const {
 
 std::string BuiltinType::get_name(Kind kind) {
     switch (kind) {
-        case Kind::Void: return "void";
-        case Kind::Bool: return "bool";
-        case Kind::Char: return "char";
-        case Kind::SInt8: return "i8";
-        case Kind::SInt16: return "i16";
-        case Kind::SInt32: return "i32";
-        case Kind::SInt64: return "i64";
-        case Kind::UInt8: return "u8";
-        case Kind::UInt16: return "u16";
-        case Kind::UInt32: return "u32";
-        case Kind::UInt64: return "u64";
-        case Kind::Float32: return "f32";
-        case Kind::Float64: return "f64";
+    case Kind::Void: 
+        return "void";
+    case Kind::Bool: 
+        return "bool";
+    case Kind::Char: 
+        return "char";
+    case Kind::SInt8: 
+        return "i8";
+    case Kind::SInt16: 
+        return "i16";
+    case Kind::SInt32: 
+        return "i32";
+    case Kind::SInt64: 
+        return "i64";
+    case Kind::UInt8: 
+        return "u8";
+    case Kind::UInt16: 
+        return "u16";
+    case Kind::UInt32: 
+        return "u32";
+    case Kind::UInt64: 
+        return "u64";
+    case Kind::Float32: 
+        return "f32";
+    case Kind::Float64: 
+        return "f64";
     }
 }
 
 const BuiltinType* BuiltinType::get(Root& root, Kind kind) {
     switch (kind) {
-        case Kind::Void: return root.get_void_type();
-        case Kind::Bool: return root.get_bool_type();
-        case Kind::Char: return root.get_char_type();
-        case Kind::SInt8: return root.get_si8_type();
-        case Kind::SInt16: return root.get_si16_type();
-        case Kind::SInt32: return root.get_si32_type();
-        case Kind::SInt64: return root.get_si64_type();
-        case Kind::UInt8: return root.get_ui8_type();
-        case Kind::UInt16: return root.get_ui16_type();
-        case Kind::UInt32: return root.get_ui32_type();
-        case Kind::UInt64: return root.get_ui64_type();
-        case Kind::Float32: return root.get_fp32_type();
-        case Kind::Float64: return root.get_fp64_type();
+    case Kind::Void: 
+        return root.get_void_type();
+    case Kind::Bool: 
+        return root.get_bool_type();
+    case Kind::Char: 
+        return root.get_char_type();
+    case Kind::SInt8: 
+        return root.get_si8_type();
+    case Kind::SInt16: 
+        return root.get_si16_type();
+    case Kind::SInt32: 
+        return root.get_si32_type();
+    case Kind::SInt64: 
+        return root.get_si64_type();
+    case Kind::UInt8: 
+        return root.get_ui8_type();
+    case Kind::UInt16: 
+        return root.get_ui16_type();
+    case Kind::UInt32: 
+        return root.get_ui32_type();
+    case Kind::UInt64: 
+        return root.get_ui64_type();
+    case Kind::Float32: 
+        return root.get_fp32_type();
+    case Kind::Float64: 
+        return root.get_fp64_type();
+    }
+}
+
+bool BuiltinType::is_int() const {
+    switch (kind) {
+    case Kind::Bool:
+    case Kind::Char:
+    case Kind::SInt8:
+    case Kind::SInt16:
+    case Kind::SInt32:
+    case Kind::SInt64:
+    case Kind::UInt8:
+    case Kind::UInt16:
+    case Kind::UInt32:
+    case Kind::UInt64:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool BuiltinType::is_float() const {
+    switch (kind) {
+    case Kind::Float32:
+    case Kind::Float64:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool BuiltinType::can_cast(const Type* other, bool impl) const {
+    assert(other && "other type cannot be null");
+
+    if (impl) {
+        if (auto deferred = dynamic_cast<const DeferredType*>(other))
+            return can_cast(deferred->get_resolved(), true);
+
+        auto builtin = dynamic_cast<const BuiltinType*>(other);
+        if (!builtin)
+            return false;
+
+        if (is_float() && other->is_int())
+            return false;
+    
+        return is_void() == other->is_void();
+    } else {
+        if (auto builtin = dynamic_cast<const BuiltinType*>(other))
+            return is_void() == other->is_void();
+        else if (auto ptr = dynamic_cast<const PointerType*>(other))
+            return is_int();
+        else if (auto deferred = dynamic_cast<const DeferredType*>(other))
+            return can_cast(deferred->get_resolved(), false);
+
+        return false;
     }
 }
 
@@ -86,6 +184,26 @@ u32 PointerType::get_indirection() const {
         indir += ptr->get_indirection();
 
     return indir;
+}
+
+bool PointerType::can_cast(const Type* other, bool impl) const {
+    assert(other && "other type cannot be null");
+
+    if (impl) {
+        if (pPointee->is_void())
+            return true;
+        else if (auto ptr = dynamic_cast<const PointerType*>(other))
+            return ptr->get_pointee()->is_void();
+        else if (auto deferred = dynamic_cast<const DeferredType*>(other))
+            return can_cast(deferred->get_resolved(), true);
+
+        return false;
+    } else {
+        if (dynamic_cast<const PointerType*>(other))
+            return true;
+
+        return other->is_int();
+    }
 }
 
 std::string PointerType::to_string() const {

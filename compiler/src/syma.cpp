@@ -119,7 +119,21 @@ void SymbolAnalysis::visit(ParenExpr& node) {
 }
 
 void SymbolAnalysis::visit(SubscriptExpr& node) {
+    node.pBase->accept(*this);
+    node.pIndex->accept(*this);
 
+    const Type* base_type = node.get_base()->get_type();
+    if (!dynamic_cast<const PointerType*>(base_type)) {
+        Logger::fatal(
+            "subscript operator '[]' base type must be a pointer", 
+            node.get_span());
+    }
+
+    if (!node.get_index()->get_type()->is_int()) {
+        Logger::fatal(
+            "subscript operator '[]' index type must be an integer", 
+            node.get_span());
+    }
 }
 
 void SymbolAnalysis::visit(ReferenceExpr& node) {
@@ -146,12 +160,18 @@ void SymbolAnalysis::visit(CallExpr& node) {
 
     // Try to resolve the callee and ensure it's a function.
     auto decl = pScope->get(node.get_name());
-    if (!decl)
-        Logger::fatal("unresolved reference: '" + node.name + "'", node.span);
+    if (!decl) {
+        Logger::fatal(
+            "unresolved reference: '" + node.get_name() + "'", 
+            node.get_span());
+    }
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
     if (!function) {
-        Logger::fatal("reference exists, but is not a function: '" + node.name + "'", node.span);
+        Logger::fatal(
+            "reference exists, but is not a function: '" + 
+                node.get_name() + "'", 
+            node.get_span());
     }
 
     // Propogate the call expression reference.
@@ -160,8 +180,10 @@ void SymbolAnalysis::visit(CallExpr& node) {
 
     // Check that the number of arguments match the number of function params.
     if (node.num_args() != function->num_params()) {
-        Logger::fatal("call argument count mismatch, expected " + 
-            std::to_string(function->num_params()), node.span);
+        Logger::fatal(
+            "call argument count mismatch, expected " + 
+                std::to_string(function->num_params()), 
+                node.get_span());
     }
 }
 

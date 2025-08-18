@@ -5,34 +5,68 @@
 
 using namespace stm;
 
-enum class TypeCheckResult : u8 {
-    Success,
-    ImplicitCast,
-    Failure,
-};
-
+/// Different type-checking mode severities.
 enum class TypeCheckMode : u8 {
-    Exact,
-    AllowImplicit,
-    Loose,  
+    Exact, AllowImplicit, Loose
 };
 
+/// Different results of type-checking.
+enum class TypeCheckResult : u8 {
+    Mismatch, Match, Cast
+};
+
+/// Perform a type check between a given type and the expected type.
+/// \returns The result of the check, either a match, mismatch, or if an
+/// implicit cast should be injected at the site of the given typed node.
 static TypeCheckResult type_check(
-        const Type* pActual, const Type* pExpected, TypeCheckMode mode) {
-    return TypeCheckResult::Success;
+        const Type* pActual, 
+        const Type* pExpected, 
+        TypeCheckMode mode) {
+    if (*pActual == *pExpected)
+        return TypeCheckResult::Match;
+
+    switch (mode) {
+    case TypeCheckMode::Exact:
+        // The types already failed the strict comparison, so it's a mismatch.
+        return TypeCheckResult::Mismatch;
+
+    case TypeCheckMode::AllowImplicit:
+        // If we can cast the actual type to the desired type, then respond
+        // with a cast injection.
+        if (pActual->can_cast(pExpected, true))
+            return TypeCheckResult::Cast;
+
+        return TypeCheckResult::Mismatch;
+        
+    case TypeCheckMode::Loose: {
+        if (pActual->can_cast(pExpected, true))
+            return TypeCheckResult::Cast;
+        
+        // Since pointer -> int and int -> pointer casts cannot be done 
+        // implicitly, this loose matching allows for it under rare 
+        // circumstances like in pointer arithmetic.
+        if (dynamic_cast<const PointerType*>(pActual) && pExpected->is_int())
+            return TypeCheckResult::Match;
+        else if (dynamic_cast<const PointerType*>(pActual) && dynamic_cast<const PointerType*>(pExpected))
+            return TypeCheckResult::Match;
+        else if (pActual->is_int() && dynamic_cast<const PointerType*>(pExpected))
+            return TypeCheckResult::Match;
+
+        return TypeCheckResult::Mismatch;
+    }
+    
+    }
+    
+    return TypeCheckResult::Mismatch;
 }
 
 void SemanticAnalysis::visit(Root& node) {
-    for (auto decl : node.decls)
-        decl->accept(*this);
+    for (auto decl : node.decls) decl->accept(*this);
 }
 
 void SemanticAnalysis::visit(FunctionDecl& node) {
     pFunction = &node;
-
-    if (node.has_body())
-        node.pBody->accept(*this);
-
+    if (node.has_body()) node.pBody->accept(*this);
     pFunction = nullptr;
 }
 
@@ -40,36 +74,47 @@ void SemanticAnalysis::visit(VariableDecl& node) {
     if (node.has_init()) {
         node.pInit->accept(*this);
 
+        // Perform a type check to try and match the type of the initializer
+        // to the type presented in the variable declaration.
         TypeCheckResult tc = type_check(
             node.get_init()->get_type(), 
             node.get_type(), 
             TypeCheckMode::AllowImplicit);
 
-        if (tc == TypeCheckResult::ImplicitCast) {
+        if (tc == TypeCheckResult::Cast) {
             node.pInit = new CastExpr(
                 node.get_init()->get_span(),
                 node.get_type(),
                 Expr::ValueKind::RValue,
                 node.pInit);
-        } else if (tc == TypeCheckResult::Failure) {
-            Logger::fatal("variable type mismatch", node.span);
+        } else if (tc == TypeCheckResult::Mismatch) {
+            Logger::fatal(
+                "variable type mismatch, got '" + 
+                    node.get_init()->get_type()->to_string() + 
+                    "', but expected '" + node.get_type()->to_string() + "'", 
+                node.get_span());
         }
     }
 }
 
 void SemanticAnalysis::visit(BlockStmt& node) {
-    for (auto stmt : node.stmts)
-        stmt->accept(*this);
+    for (auto stmt : node.stmts) stmt->accept(*this);
 }
 
 void SemanticAnalysis::visit(BreakStmt& node) {
-    if (loop == Loop::None)
-        Logger::fatal("'break' statement outside of loop.", node.span);
+    if (loop == Loop::None) {
+        Logger::fatal(
+            "'break' statement outside of loop", 
+            node.get_span());
+    }
 }
 
 void SemanticAnalysis::visit(ContinueStmt& node) {
-    if (loop == Loop::None)
-        Logger::fatal("'continue' statement outside of loop.", node.span);
+    if (loop == Loop::None) {
+        Logger::fatal(
+            "'continue' statement outside of loop", 
+            node.get_span());
+    }
 }
 
 void SemanticAnalysis::visit(DeclStmt& node) {
@@ -79,14 +124,20 @@ void SemanticAnalysis::visit(DeclStmt& node) {
 void SemanticAnalysis::visit(IfStmt& node) {
     node.pCond->accept(*this);
 
-    if (dynamic_cast<DeclStmt*>(node.pThen))
-        Logger::fatal("declaration must be scoped.", node.pThen->span);
+    if (dynamic_cast<const DeclStmt*>(node.get_then())) {
+        Logger::fatal(
+            "declaration must be within a block statement", 
+            node.get_then()->get_span());
+    }
 
     node.pThen->accept(*this);
 
     if (node.has_else()) {
-        if (dynamic_cast<DeclStmt*>(node.pElse))
-            Logger::fatal("declaration must be scoped.", node.pElse->span);
+        if (dynamic_cast<const DeclStmt*>(node.get_else())) {
+            Logger::fatal(
+                "declaration must be witin a block statement", 
+                node.get_else()->get_span());
+        }
 
         node.pElse->accept(*this);
     }
@@ -95,9 +146,12 @@ void SemanticAnalysis::visit(IfStmt& node) {
 void SemanticAnalysis::visit(WhileStmt& node) {
     node.pCond->accept(*this);
 
-    if (dynamic_cast<DeclStmt*>(node.pBody))
-        Logger::fatal("declaration must be scoped.", node.pBody->get_span());
-
+    if (dynamic_cast<const DeclStmt*>(node.get_body())) {
+        Logger::fatal(
+            "declaration must be within a block statement", 
+            node.get_body()->get_span());
+    }
+    
     Loop prev = loop;
     loop = Loop::While;
     node.pBody->accept(*this);
@@ -105,28 +159,41 @@ void SemanticAnalysis::visit(WhileStmt& node) {
 }
 
 void SemanticAnalysis::visit(RetStmt& node) {
-    if (!pFunction)
-        Logger::fatal("'ret' statement outside of function.", node.span);
+    if (!pFunction) {
+        Logger::fatal(
+            "'ret' statement outside of function", 
+            node.get_span());
+    }
 
     if (node.has_expr()) {
         node.pExpr->accept(*this);
 
+        // Perform a type check between the type of the return expression and
+        // the function return type.
         TypeCheckResult tc = type_check(
             pFunction->get_type(), 
             node.get_expr()->get_type(), 
             TypeCheckMode::AllowImplicit);
 
-        if (tc == TypeCheckResult::ImplicitCast) {
+        if (tc == TypeCheckResult::Cast) {
             node.pExpr = new CastExpr(
                 node.get_expr()->get_span(),
                 pFunction->get_type()->get_return_type(),
                 Expr::ValueKind::RValue,
                 node.pExpr);
-        } else if (tc == TypeCheckResult::Failure) {
-            Logger::fatal("return type mismatch", node.span);
+        } else if (tc == TypeCheckResult::Mismatch) {
+            Logger::fatal(
+                "function return type mismatch, got '" + 
+                    node.get_expr()->get_type()->to_string() + 
+                    "', but expected '" + 
+                    pFunction->get_type()->get_return_type()->to_string() + "'", 
+                node.get_span());
         }
     } else if (!pFunction->get_type()->get_return_type()->is_void()) {
-        Logger::fatal("function '" + pFunction->name + "' does not return void.", node.span);
+        Logger::fatal(
+            "return statement is empty, but function '" + 
+                pFunction->get_name() + "' does not return void", 
+            node.get_span());
     }
 }
 
@@ -142,33 +209,50 @@ void SemanticAnalysis::visit(BinaryExpr& node) {
     auto right_type = node.get_rhs()->get_type();
 
     TypeCheckMode mode = TypeCheckMode::AllowImplicit;
-    if (BinaryExpr::supports_ptr_arith(node.op))
+    if (BinaryExpr::supports_ptr_arith(node.op)) {
+        // Since pointer arithmetic involves integers and pointers, but they
+        // cannot be implicitly casted to one another, looser type checking is
+        // necessary.
         mode = TypeCheckMode::Loose;
+    }
 
+    // Perform a type check between the two operands of the binary operator.
     TypeCheckResult tc = type_check(
         right_type, left_type, mode);
 
-    if (tc == TypeCheckResult::ImplicitCast) {
+    if (tc == TypeCheckResult::Cast) {
         node.pRight = new CastExpr(
             node.get_rhs()->get_span(),
             left_type,
             Expr::ValueKind::RValue,
             node.pRight);
-    } else if (tc == TypeCheckResult::Failure) {
-        Logger::fatal("binary operand type mismatch", node.span);
+    } else if (tc == TypeCheckResult::Mismatch) {
+        Logger::fatal(
+            "binary operand type mismatch, left side has type '" + 
+                left_type->to_string() + "', but right side is '" + 
+                right_type->to_string() + "'", 
+            node.get_span());
     }
 
-    if (BinaryExpr::is_comparison(node.op)) {
+    if (BinaryExpr::is_comparison(node.get_operator())) {
+        // The result of a comparison is always a boolean.
         node.pType = BuiltinType::get(root, BuiltinType::Kind::Bool);
         return;
     }
 
+    // Propogate the type of the binary expression to the be the type of the
+    // left hand side at this point.
     node.pType = left_type;
 
-    if (BinaryExpr::is_assignment(node.op) 
+    if (BinaryExpr::is_assignment(node.get_operator()) 
             && node.get_lhs()->get_value_kind() != Expr::ValueKind::LValue) {
-        Logger::fatal("cannot assign to non-lvalue left operand.", node.span);
+        // Ensure that assignment operators only assign to lvalues.
+        Logger::fatal(
+            "cannot assign to non-lvalue left operand", 
+            node.get_span());
     }
+
+    /// TODO: Perform mutability checks for assignment operators.
 }
 
 void SemanticAnalysis::visit(UnaryExpr& node) {
@@ -179,14 +263,16 @@ void SemanticAnalysis::visit(CastExpr& node) {
     node.pExpr->accept(*this);
 
     // if nested expr cannot cast to cast type, fatal
+    if (!node.get_expr()->get_type()->can_cast(node.get_type())) {
+        Logger::fatal(
+            "cannot cast type '" + node.get_expr()->get_type()->to_string() + 
+                "' to '" + node.get_type()->to_string() + "'",
+            node.get_span());
+    }
 }
 
 void SemanticAnalysis::visit(ParenExpr& node) {
     node.pExpr->accept(*this);
-}
-
-void SemanticAnalysis::visit(SizeofExpr& node) {
-
 }
 
 void SemanticAnalysis::visit(SubscriptExpr& node) {
@@ -194,16 +280,40 @@ void SemanticAnalysis::visit(SubscriptExpr& node) {
     node.pIndex->accept(*this);
 }
 
-void SemanticAnalysis::visit(ReferenceExpr& node) {
-
-}
-
 void SemanticAnalysis::visit(MemberExpr& node) {
-
+    /// TODO: Perform visibility checks based on field runes.
 }
 
 void SemanticAnalysis::visit(CallExpr& node) {
+    auto callee = static_cast<const FunctionDecl*>(node.get_decl());
 
+    for (u32 idx = 0, e = node.num_args(); idx != e; ++idx) {
+        auto arg = node.args[idx];
+        auto param = callee->get_param(idx);
+
+        arg->accept(*this);
+
+        // Perform a type check between the type of the call argument and the
+        // type of the corresponding parameter.
+        TypeCheckResult tc = type_check(
+            arg->get_type(), 
+            param->get_type(), 
+            TypeCheckMode::AllowImplicit);
+
+        if (tc == TypeCheckResult::Cast) {
+            node.args[idx] = new CastExpr(
+                arg->get_span(),
+                param->get_type(),
+                Expr::ValueKind::RValue,
+                arg);
+        } else if (tc == TypeCheckResult::Mismatch) {
+            Logger::fatal(
+                "call argument type mismatch, got '" + 
+                    arg->get_type()->to_string() + "', but expected '" + 
+                    param->get_type()->to_string() + "'", 
+                node.get_span());
+        }
+    }
 }
 
 void SemanticAnalysis::visit(RuneExpr& node) {
