@@ -123,6 +123,51 @@ use, for example `use Utils = "utils.stm"`, can later by scoped into like `Utils
 This model allows for only shallow namespacing while letting source code choose how to namespace
 code in a clever way, relevant to the use case. 
 
+### Structures and Methods
+
+Structs will exist, but in a more "barebones" fashion, allowing for more control
+over the layout and it's methods:
+
+```
+Box :: {
+    length: u32,
+    width: u32,
+    height: u32,
+
+    $[priv]
+    contents: *void,
+};
+```
+
+Only fields exist in the initial declaration. Methods can be amended later using
+an `impl`:
+
+```
+impl Box {
+    volume :: (self: *Box) -> u32 {
+        ...
+    }
+
+    ...
+}
+```
+
+This means that with the all familiar method call syntax `.()`, we can also
+add methods to built-in types:
+
+```
+impl i64 {
+    to_string :: (self: *i64) -> *char {
+        ...
+    }
+}
+```
+
+Another important note is that since the implementation of methods are clearly
+grouped, their name mangling can be clearly manipulated. For example, if methods
+should be free floating, an impl can be decorated with `$mangle("free")` to
+specify that. Methods only need a receiver `self` to be considered valid.
+
 ## Runes
 
 Runes are a language construct that give way to much of the planned metaprogramming and

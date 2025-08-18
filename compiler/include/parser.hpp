@@ -74,7 +74,7 @@ private:
     FloatLiteral* parse_float();
     CharLiteral* parse_char();
     StringLiteral* parse_string();
-    NullLiteral* parse_nil();
+    NullLiteral* parse_null();
 
     CastExpr* parse_cast();
     ParenExpr* parse_paren();

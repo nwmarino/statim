@@ -42,7 +42,7 @@ const PointerType* TypeContext::get(const Type* pPointee) {
 
 TypeContext::TypeContext() {
     for (auto kind = BuiltinType::Kind::Void; 
-          kind != BuiltinType::Kind::Float64; 
+          kind <= BuiltinType::Kind::Float64; 
           kind = BuiltinType::Kind(u8(kind) + 1)) {
         BuiltinType* type = new BuiltinType(kind);
         builtins.emplace(kind, type);
@@ -140,8 +140,9 @@ VariableDecl::VariableDecl(
         const Span& span,
         const std::string& name,
         const std::vector<Rune*>& decorators,
-        const Type* pType)
-    : Decl(span, name, decorators), pType(pType) {};
+        const Type* pType,
+        Expr* pInit)
+    : Decl(span, name, decorators), pType(pType), pInit(pInit) {};
 
 VariableDecl::~VariableDecl() {
     if (pInit != nullptr) {

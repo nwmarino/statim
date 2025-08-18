@@ -240,7 +240,8 @@ public:
         const Span& span,
         const std::string& name,
         const std::vector<Rune*>& decorators,
-        const Type* pType);
+        const Type* pType,
+        Expr* pInit);
 
     ~VariableDecl() override;
 

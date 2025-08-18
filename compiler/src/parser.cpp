@@ -42,8 +42,7 @@ void Parser::next() {
 }
 
 void Parser::skip(u32 n) {
-    for (u32 idx = 0; idx != n; ++idx)
-        lexer.lex();
+    for (u32 idx = 0; idx != n; ++idx) lexer.lex();
 }
 
 Span Parser::since(const SourceLocation& loc) {
@@ -229,12 +228,12 @@ Decl* Parser::parse_decl() {
         Logger::fatal("expected declaration name");
    
     const Token name = lexer.last();
-    next();
+    next(); // identifier
 
     if (!match(TOKEN_KIND_PATH))
         Logger::fatal("expected '::' after declaration name");
 
-    next();
+    next(); // '::'
 
     switch (lexer.last().kind) {
     case TOKEN_KIND_SET_PAREN:
@@ -337,7 +336,44 @@ ParameterDecl* Parser::parse_parameter() {
 }
 
 VariableDecl* Parser::parse_variable() {
-    return nullptr;
+    SourceLocation begin = lexer.last().loc;
+    next(); // 'let'
+
+    if (!match(TOKEN_KIND_IDENTIFIER))
+        Logger::fatal("expected variable name after 'let'", since(begin));
+
+    std::string name = lexer.last().value;
+    const Type* type = nullptr;
+    Expr* init = nullptr;
+
+    next(); // name
+    
+    if (match(TOKEN_KIND_COLON)) {
+        // After the variable name there is a ':', which means a type was given.
+        next(); // ':'
+        type = parse_type();
+    }
+
+    if (!match(TOKEN_KIND_EQUALS) && !match(TOKEN_KIND_SEMICOLON))
+        Logger::fatal("expected '=' or ';' after variable declaration", since(begin));
+
+    if (match(TOKEN_KIND_EQUALS)) {
+        next(); // '='
+        init = parse_expr();
+        assert(init && "could not parse variable initializer");
+    }
+
+    SourceLocation end = lexer.last().loc;
+
+    if (!match(TOKEN_KIND_SEMICOLON))
+        Logger::fatal("expected ';' after variable declaration", since(begin));
+
+    return new VariableDecl(
+        Span(begin, end),
+        name,
+        {},
+        type,
+        init);
 }
 
 Stmt* Parser::parse_stmt() {
@@ -388,23 +424,66 @@ BlockStmt* Parser::parse_block() {
 }
 
 BreakStmt* Parser::parse_break() {
-    return nullptr;
+    SourceLocation loc = lexer.last().loc;
+    next(); // 'break'
+
+    return new BreakStmt(Span(loc));
 }
 
 ContinueStmt* Parser::parse_continue() {
-    return nullptr;
+    SourceLocation loc = lexer.last().loc;
+    next(); // 'continue'
+
+    return new ContinueStmt(Span(loc));
 }
 
 DeclStmt* Parser::parse_decl_stmt() {
-    return nullptr;
+    Decl* decl = parse_variable();
+    assert(decl && "could not parse variable declaration");
+
+    if (match(TOKEN_KIND_SEMICOLON))
+        next(); // ';'
+
+    return new DeclStmt(decl->get_span(), decl);
 }
 
 IfStmt* Parser::parse_if() {
-    return nullptr;
+    SourceLocation begin = lexer.last().loc;
+    next(); // 'if'
+
+    Expr* condition = nullptr;
+    Stmt* then_body = nullptr;
+    Stmt* else_body = nullptr;
+
+    condition = parse_expr();
+    assert(condition && "could not parse 'if' condition");
+
+    then_body = parse_stmt();
+    assert(then_body && "could not parse 'if' then body");
+
+    if (match("else")) {
+        next(); // 'else'
+        else_body = parse_stmt();
+        assert(else_body && "could not parse 'if' else body");
+    }
+
+    return new IfStmt(since(begin), condition, then_body, else_body);
 }
 
 WhileStmt* Parser::parse_while() {
-    return nullptr;
+    SourceLocation begin = lexer.last().loc;
+    next(); // 'while'
+
+    Expr* cond = nullptr;
+    Stmt* body = nullptr;
+
+    cond = parse_expr();
+    assert(cond && "could not parse 'while' condition");
+
+    body = parse_stmt();
+    assert(body && "could not parse 'while' body");
+
+    return new WhileStmt(since(begin), cond, body);
 }
 
 RetStmt* Parser::parse_ret() {
@@ -452,14 +531,19 @@ Expr* Parser::parse_primary() {
 Expr* Parser::parse_identifier() {
     if (match("cast"))
         return parse_cast();
-    else if (match("nil"))
-        return parse_nil();
+    else if (match("null"))
+        return parse_null();
     else if (match("true") || match("false"))
         return parse_bool();
     else if (match("sizeof"))
         return parse_sizeof();
+    
+    next(); // identifier
+
+    if (match(TOKEN_KIND_SET_PAREN))
+        return parse_call();
     else
-        return nullptr;
+        return parse_ref();
 }
 
 Expr* Parser::parse_binary(Expr* pBase, i32 precedence) {
@@ -533,8 +617,37 @@ Expr* Parser::parse_unary_postfix() {
                 true);
         } else if (match(TOKEN_KIND_SET_BRACKET)) {
             // Token is not an operator, but a subscript '[' ... ']'
+            next(); // '['
+
+            Expr* index = parse_expr();
+            assert(index && "could not parse subscript index expression");
+
+            if (!match(TOKEN_KIND_END_BRACKET))
+                Logger::fatal("expected ']' after subscript expression", since(begin));
+
+            next(); // ']'
+            expr = new SubscriptExpr(
+                since(begin),
+                nullptr,
+                Expr::ValueKind::RValue,
+                expr,
+                index);
         } else if (match(TOKEN_KIND_DOT)) {
             // Token is not an operator, but a member access '.'
+            next(); // '.'
+
+            if (!match(TOKEN_KIND_IDENTIFIER))
+                Logger::fatal("expected struct member after '.' operator", since(begin));
+
+            std::string member = lexer.last().value;
+            next(); // identifier
+
+            expr = new MemberExpr(
+                since(begin),
+                nullptr,
+                Expr::ValueKind::RValue,
+                member,
+                expr);
         } else {
             break;
         }
@@ -579,7 +692,7 @@ CharLiteral* Parser::parse_char() {
         root->get_char_type(),
         lexer.last().value.at(0)
     );
-    next(); // char
+    next(); // '...'
     return character;
 }
 
@@ -589,21 +702,57 @@ StringLiteral* Parser::parse_string() {
         PointerType::get(*root, root->get_char_type()),
         lexer.last().value
     );
-    next(); // string
+    next(); // "..."
     return string;
 }
 
-NullLiteral* Parser::parse_nil() {
-    NullLiteral* nil = new NullLiteral(
+NullLiteral* Parser::parse_null() {
+    NullLiteral* null = new NullLiteral(
         Span(lexer.last().loc),
         PointerType::get(*root, root->get_void_type())
     );
-    next(); // 'nil'
-    return nil;
+    next(); // 'null'
+    return null;
 }
 
 CastExpr* Parser::parse_cast() {
-    return nullptr;
+    SourceLocation begin = lexer.last().loc;
+    next(); // 'cast'
+
+    const Type* type = nullptr;
+    Expr* expr = nullptr;
+    
+    if (!match(TOKEN_KIND_LEFT))
+        Logger::fatal("expected '<' after 'cast' keyword", since(begin));
+
+    next(); // '<'
+
+    type = parse_type();
+
+    if (!match(TOKEN_KIND_RIGHT))
+        Logger::fatal("expected '>' after cast type", since(begin));
+
+    next(); // '>'
+
+    if (!match(TOKEN_KIND_SET_PAREN))
+        Logger::fatal("expected '(' after cast type", since(begin));
+    
+    next(); // '('
+
+    expr = parse_expr();
+    assert(expr && "could not parse cast expression");
+
+    if (!match(TOKEN_KIND_END_PAREN))
+        Logger::fatal("expected ')' after cast expression", since(begin));
+
+    SourceLocation end = lexer.last().loc;
+    next(); // ')'
+
+    return new CastExpr(
+        Span(begin, end), 
+        type, 
+        Expr::ValueKind::RValue, 
+        expr);
 }
 
 ParenExpr* Parser::parse_paren() {
@@ -651,9 +800,40 @@ SizeofExpr* Parser::parse_sizeof() {
 }
 
 ReferenceExpr* Parser::parse_ref() {
-    return nullptr;
+    const Token& name = lexer.last(1);
+    Decl* decl = pScope->get(name.value);
+    return new ReferenceExpr(
+        Span(name.loc), 
+        nullptr, 
+        Expr::ValueKind::RValue, 
+        name.value);
 }
 
 CallExpr* Parser::parse_call() {
-    return nullptr;
+    const Token& callee = lexer.last(1);
+    next(); // '('
+
+    std::vector<Expr*> args;
+
+    while (!match(TOKEN_KIND_END_PAREN)) {
+        Expr* arg = parse_expr();
+        assert(arg && "could not parse call argument expression");
+
+        args.push_back(arg);
+
+        if (match(TOKEN_KIND_END_PAREN)) break;
+
+        if (!match(TOKEN_KIND_COMMA))
+            Logger::fatal("expected ',' after function call argument", since(callee.loc));
+
+        next(); // ','
+    }
+
+    SourceLocation end = lexer.last().loc;
+    next(); // ')'
+    return new CallExpr(
+        Span(callee.loc, end), 
+        nullptr, 
+        callee.value, 
+        args);
 }
