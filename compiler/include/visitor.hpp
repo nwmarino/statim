@@ -188,6 +188,9 @@ class Codegen final : public Visitor {
     std::optional<Operand>  tmp = std::nullopt;
     u64                     instr = 0;
 
+    BasicBlock*             pCond = nullptr;
+    BasicBlock*             pMerge = nullptr;
+
 public:
     Codegen(Options& opts, Root& root) : opts(opts), root(root) {};
 
@@ -196,7 +199,7 @@ public:
     void visit(Root& node) override;
 
     void visit(FunctionDecl& node) override;
-    void visit(ParameterDecl& node) override;
+    void visit(ParameterDecl& node) override {};
     void visit(VariableDecl& node) override;
 
     void visit(BlockStmt& node) override;

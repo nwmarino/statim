@@ -151,7 +151,7 @@ void SymbolAnalysis::visit(ReferenceExpr& node) {
 }
 
 void SymbolAnalysis::visit(MemberExpr& node) {
-
+    /// TODO: Check that the base has a structure type.
 }
 
 void SymbolAnalysis::visit(CallExpr& node) {

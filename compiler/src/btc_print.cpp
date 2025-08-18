@@ -81,11 +81,14 @@ void Instruction::print(std::ostream& os) const {
     case Opcode::Lea:
         os << "lea";
         break;
-    case Opcode::Arg:
-        os << "arg";
-        break;
     case Opcode::Copy:
         os << "cpy";
+        break;
+    case Opcode::Load_Arg:
+        os << "load_arg";
+        break;
+    case Opcode::Store_Arg:
+        os << "store_arg";
         break;
     case Opcode::Branch:
         os << "br";

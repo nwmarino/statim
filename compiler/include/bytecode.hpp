@@ -89,7 +89,9 @@ class Instruction final {
 public:
     enum class Opcode : u8 {
         Constant, String,
-        Move, Lea, Arg, Copy,
+        Move, Lea, Copy,
+        Load_Arg,
+        Store_Arg,
         Branch, BranchIf, Call, Return,
         SExt, ZExt, FExt,
         Trunc, FTrunc,

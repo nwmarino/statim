@@ -80,10 +80,6 @@ void Codegen::visit(FunctionDecl& node) {
     }
 }
 
-void Codegen::visit(ParameterDecl& node) {
-
-}
-
 void Codegen::visit(VariableDecl& node) {
 
 }
@@ -93,11 +89,27 @@ void Codegen::visit(BlockStmt& node) {
 }
 
 void Codegen::visit(BreakStmt& node) {
+    assert(pMerge && "no merge for break statement to branch to");
 
+    new Instruction(
+        instr++,
+        Instruction::Opcode::Branch,
+        { Operand::get_block(pMerge) },
+        {},
+        Metadata(node.get_span().begin.file, node.get_span().begin.line),
+        pInsert);
 }
 
 void Codegen::visit(ContinueStmt& node) {
+    assert(pCond && "no merge for continue statement to branch to");
 
+    new Instruction(
+        instr++,
+        Instruction::Opcode::Branch,
+        { Operand::get_block(pCond) },
+        {},
+        Metadata(node.get_span().begin.file, node.get_span().begin.line),
+        pInsert);
 }
 
 void Codegen::visit(DeclStmt& node) {

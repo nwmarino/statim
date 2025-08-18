@@ -59,6 +59,9 @@ add_executable(stmc_test
     test/test_index.cpp
     test/test_lexer.cpp
     test/test_parser.cpp
+    test/test_syma.cpp
+    test/test_sema.cpp
+    test/test_codegen.cpp
     ${COMPILER_SOURCES}
 )
 
