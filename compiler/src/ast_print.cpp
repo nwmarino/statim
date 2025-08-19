@@ -81,6 +81,48 @@ void VariableDecl::print(std::ostream& os) const {
     }
 }
 
+void FieldDecl::print(std::ostream& os) const {
+    print_piping(os);
+    os << "Field " << span_string(span) << ' ' << name << " '" <<
+        m_type->to_string() << "'\n";
+}
+
+void StructDecl::print(std::ostream& os) const {
+    print_piping(os);
+    os << "Structure " << span_string(span) << ' ' << name << " \n";
+
+    gPipe[++gIndent] = true;
+
+    for (u32 idx = 0, e = m_fields.size(); idx != e; ++idx) {
+        gLastChild = idx + 1 == e;
+        gPipe[gIndent] = !gLastChild;
+        m_fields[idx]->print(os);
+    }
+
+    gIndent--;
+}
+
+void EnumValueDecl::print(std::ostream& os) const {
+    print_indent(os);
+    os << "Value " << span_string(span) << ' ' << name << ' ' << 
+        std::to_string(m_value) << '\n';
+}
+
+void EnumDecl::print(std::ostream& os) const {
+    print_piping(os);
+    os << "Enum " << span_string(span) << ' ' << name << '\n';
+    
+    gPipe[++gIndent] = true;
+
+    for (u32 idx = 0, e = m_values.size(); idx != e; ++idx) {
+        gLastChild = idx + 1 == e;
+        gPipe[gIndent] = !gLastChild;
+        m_values[idx]->print(os);
+    }
+
+    gIndent--;
+}
+
 void BlockStmt::print(std::ostream& os) const {
     print_piping(os);
     os << "Block " << span_string(span) << '\n';

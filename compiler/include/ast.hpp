@@ -6,6 +6,7 @@
 #include "type.hpp"
 #include "visitor.hpp"
 
+#include <algorithm>
 #include <ostream>
 #include <pthread.h>
 #include <string>
@@ -23,18 +24,25 @@ class TypeContext final {
     friend class DeferredType;
     friend class FunctionType;
     friend class PointerType;
+    friend class StructType;
+    friend class EnumType;
 
-    std::unordered_map<std::string, const Type*>        types {};
+    std::unordered_map<std::string, const Type*> types {};
     std::unordered_map<BuiltinType::Kind, BuiltinType*> builtins {};
-    std::unordered_map<const Type*, PointerType*>       pointers {};
-    std::vector<DeferredType*>                          deferred {};
-    std::vector<FunctionType*>                          functions {};
+    std::unordered_map<const Type*, PointerType*> pointers {};
+    std::vector<DeferredType*> deferred {};
+    std::vector<FunctionType*> functions {};
+    std::vector<StructType*> structs {};
+    std::vector<EnumType*> enums {};
 
     const Type* get(const std::string& name) const;
     const BuiltinType* get(BuiltinType::Kind kind) const;
     const PointerType* get(const Type* pPointee);
     const DeferredType* get(const DeferredType::Context& context);
     const FunctionType* get(const Type* pReturn, const std::vector<const Type*> &params);
+
+    const StructType* create(const std::vector<const Type*>& fields, const StructDecl* decl);
+    const EnumType* create(const Type* underlying, const EnumDecl* decl);
 
 public:
     TypeContext();
@@ -250,6 +258,182 @@ public:
     const Expr* get_init() const { return pInit; }
 
     bool has_init() const { return pInit != nullptr; }
+
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
+    void print(std::ostream& os) const override;
+};
+
+/// Represents the declaration of a field within a structure.
+class FieldDecl final : public Decl {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+    friend class Codegen;
+
+    const Type* m_type;
+    const StructDecl* m_parent;
+    u32 m_index;
+
+public:
+    FieldDecl(
+        const Span& span,
+        const std::string& name,
+        const std::vector<Rune*>& runes,
+        const Type* type,
+        const StructDecl* parent,
+        u32 index);
+
+    /// \returns The type of this field.
+    const Type* get_type() const { return m_type; }
+
+    /// \returns The parent structure of this field.
+    const StructDecl* get_parent() const { return m_parent; }
+
+    /// Set the parent of this field to \p parent.
+    void set_parent(const StructDecl* parent) { m_parent = parent; }
+
+    /// \returns The index of this field in its parent structure.
+    u32 get_index() const { return m_index; }
+
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
+    void print(std::ostream& os) const override;
+};
+
+/// Represents the declaration of a structure.
+class StructDecl final : public Decl {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+    friend class Codegen;
+
+    const StructType* m_type;
+    std::vector<FieldDecl*> m_fields;
+
+public:
+    StructDecl(
+        const Span& span,
+        const std::string& name,
+        const std::vector<Rune*>& runes,
+        const StructType* type,
+        const std::vector<FieldDecl*>& fields);
+
+    ~StructDecl() override;
+
+    /// \returns The type of this structure.
+    const StructType* get_type() const { return m_type; }
+
+    /// Set the type of this structure to \p type.
+    void set_type(const StructType* type) { m_type = type; }
+
+    /// \returns The fields of this structure.
+    const std::vector<FieldDecl*>& get_fields() const { return m_fields; }
+
+    /// \returns A field of this structure by name, if it exists.
+    FieldDecl* get_field(const std::string& name) {
+        for (auto field : m_fields)
+            if (field->get_name() == name) return field;
+    
+        return nullptr;
+    }
+
+    /// \returns A field of this structure by name, if it exists.
+    const FieldDecl* get_field(const std::string& name) const {
+        for (auto field : m_fields)
+            if (field->get_name() == name) return field;
+    
+        return nullptr;
+    }
+
+    /// Appends \p field to this structure, if it is not a duplicate.
+    Result append_field(FieldDecl* field);
+
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
+    void print(std::ostream& os) const override;
+};
+
+/// Represents a valued variant of an enumeration. 
+class EnumValueDecl final : public Decl {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+    friend class Codegen;
+
+    const EnumType* m_type;
+    i64 m_value;
+
+public:
+    EnumValueDecl(
+        const Span& span,
+        const std::string& name,
+        const std::vector<Rune*>& runes,
+        const EnumType* type,
+        i64 value);
+
+    /// \returns The type of this enum variant.
+    const EnumType* get_type() const { return m_type; }
+
+    /// \returns The value of this enum variant.
+    i64 get_value() const { return m_value; }
+
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
+    void print(std::ostream& os) const override;
+};
+
+/// Represents the declaration of an enum and its variants.
+class EnumDecl final : public Decl {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+    friend class Codegen;
+
+    const EnumType* m_type;
+    std::vector<EnumValueDecl*> m_values;
+
+public:
+    EnumDecl(
+        const Span& span,
+        const std::string& name,
+        const std::vector<Rune*>& runes,
+        const EnumType* type,
+        const std::vector<EnumValueDecl*>& values);
+
+    ~EnumDecl() override;
+
+    /// \returns The type defined by this enum declaration.
+    const EnumType* get_type() const { return m_type; }
+
+    /// Set the type of this enum to \p type.
+    void set_type(const EnumType* type) { m_type = type; }
+
+    /// \returns All the variants of this enum.
+    const std::vector<EnumValueDecl*>& get_values() const { return m_values; }
+
+    /// \returns A variant of this enum by name, if it exists.
+    EnumValueDecl* get_value(const std::string& name) {
+        for (auto value : m_values)
+            if (value->get_name() == name) return value;
+    
+        return nullptr;
+    }
+
+    /// \returns A variant of this enum by name, if it exists.
+    const EnumValueDecl* get_value(const std::string& name) const {
+        for (auto value : m_values)
+            if (value->get_name() == name) return value;
+    
+        return nullptr;
+    }
+
+    /// Appends \p value to this enum, if it is not a duplicate.
+    Result append_value(EnumValueDecl* value);
 
     void accept(Visitor& visitor) override {
         visitor.visit(*this);

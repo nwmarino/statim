@@ -1,6 +1,7 @@
 #include "ast.hpp"
 #include "logger.hpp"
 #include "type.hpp"
+#include "types.hpp"
 
 #include <cassert>
 
@@ -151,6 +152,65 @@ VariableDecl::~VariableDecl() {
     }
 }
 
+FieldDecl::FieldDecl(
+        const Span& span,
+        const std::string& name,
+        const std::vector<Rune*>& runes,
+        const Type* type,
+        const StructDecl* parent,
+        u32 index)
+    : Decl(span, name, runes), m_type(type), m_parent(parent), m_index(index) {}
+
+StructDecl::StructDecl(
+        const Span& span,
+        const std::string& name,
+        const std::vector<Rune*>& runes,
+        const StructType* type,
+        const std::vector<FieldDecl*>& fields)
+    : Decl(span, name, runes), m_type(type), m_fields(fields) {}
+
+StructDecl::~StructDecl() {
+    for (auto field : m_fields) delete field;
+    m_fields.clear();
+}
+
+Result StructDecl::append_field(FieldDecl* field) {
+    if (get_field(field->get_name())) 
+        return Result::Duplicate;
+    
+    m_fields.push_back(field);
+    return Result::Success;
+}
+
+EnumValueDecl::EnumValueDecl(
+        const Span& span,
+        const std::string& name,
+        const std::vector<Rune*>& runes,
+        const EnumType* type,
+        i64 value)
+    : Decl(span, name, runes), m_type(type), m_value(value) {}
+
+EnumDecl::EnumDecl(
+        const Span& span,
+        const std::string& name,
+        const std::vector<Rune*>& runes,
+        const EnumType* type,
+        const std::vector<EnumValueDecl*>& values)
+    : Decl(span, name, runes), m_type(type), m_values(values) {}
+
+EnumDecl::~EnumDecl() {
+    for (auto value : m_values) delete value;
+    m_values.clear();
+}
+
+Result EnumDecl::append_value(EnumValueDecl* value) {
+    if (get_value(value->get_name()))
+        return Result::Duplicate;
+
+    m_values.push_back(value);
+    return Result::Success;
+}
+
 BlockStmt::BlockStmt(
         const Span& span, 
         const std::vector<Rune*>& runes, 
@@ -159,30 +219,25 @@ BlockStmt::BlockStmt(
     : Stmt(span), runes(runes), stmts(stmts), pScope(pScope) {};
 
 BlockStmt::~BlockStmt() {
-    for (Rune* rune : runes)
-        delete rune;
-
-    for (Stmt* stmt : stmts)
-        delete stmt;
+    for (Rune* rune : runes) delete rune;
+    runes.clear();
+    
+    for (Stmt* stmt : stmts) delete stmt;
+    stmts.clear();
 
     delete pScope;
     pScope = nullptr;
-
-    runes.clear();
-    stmts.clear();
 }
 
-DeclStmt::DeclStmt(const Span& span, Decl* pDecl) : Stmt(span), pDecl(pDecl) {};
+DeclStmt::DeclStmt(const Span& span, Decl* pDecl) : Stmt(span), pDecl(pDecl) {}
 
 DeclStmt::~DeclStmt() {
-    if (pDecl != nullptr) {
-        delete pDecl;
-        pDecl = nullptr;
-    }
+    delete pDecl;
+    pDecl = nullptr;
 }
 
 IfStmt::IfStmt(const Span& span, Expr* pCond, Stmt* pThen, Stmt* pElse)
-    : Stmt(span), pCond(pCond), pThen(pThen), pElse(pElse) {};
+    : Stmt(span), pCond(pCond), pThen(pThen), pElse(pElse) {}
 
 IfStmt::~IfStmt() {
     if (pCond != nullptr) {

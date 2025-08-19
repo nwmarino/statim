@@ -11,9 +11,9 @@ const DeferredType* DeferredType::get(Root& root, const Context& context) {
     return root.get_context().get(context);
 }
 
-bool DeferredType::can_cast(const Type* other, bool impl) const {
+bool DeferredType::is_void() const {
     assert(pResolved && "deferred type unresolved");
-    return pResolved->can_cast(other, impl);
+    return pResolved->is_void();
 }
 
 bool DeferredType::is_int() const {
@@ -24,6 +24,11 @@ bool DeferredType::is_int() const {
 bool DeferredType::is_float() const {
     assert(pResolved && "deferred type unresolved");
     return pResolved->is_float();
+}
+
+bool DeferredType::can_cast(const Type* other, bool impl) const {
+    assert(pResolved && "deferred type unresolved");
+    return pResolved->can_cast(other, impl);
 }
 
 std::string DeferredType::to_string() const {
@@ -208,4 +213,50 @@ bool PointerType::can_cast(const Type* other, bool impl) const {
 
 std::string PointerType::to_string() const {
     return "*" + this->pPointee->to_string();
+}
+
+const StructType* StructType::get(Root& root, const std::string& name) {
+    const Type* type = root.get_context().get(name);
+    if (!type)
+        return nullptr;
+
+    const StructType* st = dynamic_cast<const StructType*>(type);
+    if (!st)
+        return nullptr;
+
+    return st;
+}
+
+const StructType* StructType::create(
+        Root& root, 
+        const std::vector<const Type*>& fields, 
+        const StructDecl* decl) {
+    return root.get_context().create(fields, decl);
+}
+
+std::string StructType::to_string() const {
+    return m_decl->get_name();
+}
+
+const EnumType* EnumType::get(Root& root, const std::string& name) {
+    const Type* type = root.get_context().get(name);
+    if (!type)
+        return nullptr;
+
+    const EnumType* et = dynamic_cast<const EnumType*>(type);
+    if (!et)
+        return nullptr;
+
+    return et;
+}
+
+const EnumType* EnumType::create(
+        Root& root,
+        const Type* underlying,
+        const EnumDecl* decl) {
+    return root.get_context().create(underlying, decl);
+}
+
+std::string EnumType::to_string() const {
+    return m_decl->get_name();
 }

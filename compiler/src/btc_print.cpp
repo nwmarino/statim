@@ -179,7 +179,7 @@ void Instruction::print(std::ostream& os) const {
     }
 
     if (desc.size.has_value())
-        os << " :" << *desc.size << 'b';
+        os << " ~" << *desc.size;
 }
 
 void BasicBlock::print(std::ostream& os) const {

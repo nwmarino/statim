@@ -19,6 +19,10 @@ class Decl;
 class FunctionDecl;
 class ParameterDecl;
 class VariableDecl;
+class FieldDecl;
+class StructDecl;
+class EnumValueDecl;
+class EnumDecl;
 
 class Stmt;
 class BlockStmt;
@@ -58,6 +62,10 @@ public:
     virtual void visit(FunctionDecl& node) = 0;
     virtual void visit(ParameterDecl& node) = 0;
     virtual void visit(VariableDecl& node) = 0;
+    virtual void visit(FieldDecl& node) = 0;
+    virtual void visit(StructDecl& node) = 0;
+    virtual void visit(EnumValueDecl& node) = 0;
+    virtual void visit(EnumDecl& node) = 0;
 
     virtual void visit(BlockStmt& node) = 0;
     virtual void visit(BreakStmt& node) = 0;
@@ -99,6 +107,10 @@ public:
     void visit(FunctionDecl& node) override;
     void visit(ParameterDecl& node) override {};
     void visit(VariableDecl& node) override;
+    void visit(FieldDecl& node) override;
+    void visit(StructDecl& node) override;
+    void visit(EnumValueDecl& node) override;
+    void visit(EnumDecl& node) override;
 
     void visit(BlockStmt& node) override;
     void visit(BreakStmt& node) override {};
@@ -146,6 +158,10 @@ public:
     void visit(FunctionDecl& node) override;
     void visit(ParameterDecl& node) override {};
     void visit(VariableDecl& node) override;
+    void visit(FieldDecl& node) override;
+    void visit(StructDecl& node) override;
+    void visit(EnumValueDecl& node) override;
+    void visit(EnumDecl& node) override;
 
     void visit(BlockStmt& node) override;
     void visit(BreakStmt& node) override;
@@ -206,6 +222,10 @@ public:
     void visit(FunctionDecl& node) override;
     void visit(ParameterDecl& node) override {};
     void visit(VariableDecl& node) override;
+    void visit(FieldDecl& node) override;
+    void visit(StructDecl& node) override;
+    void visit(EnumValueDecl& node) override;
+    void visit(EnumDecl& node) override;
 
     void visit(BlockStmt& node) override;
     void visit(BreakStmt& node) override;
