@@ -160,6 +160,91 @@ TEST_F(ParserTest, parse_variable_local_with_init) {
     EXPECT_EQ(integer->get_value(), 1);
 }
 
+TEST_F(ParserTest, parse_struct) {
+    InputFile file;
+    file.pPath = "test";
+    file.overwrite("box :: { length: u32, width: i32, height: u64 }");
+
+    TranslationUnit unit { file };
+    Parser parser { file };
+    parser.parse(unit);
+    
+    Root& root = unit.get_root();
+    EXPECT_EQ(root.num_decls(), 1);
+
+    auto decl = root.get_decls()[0];
+    EXPECT_NE(decl, nullptr);
+    
+    auto structure = dynamic_cast<const StructDecl*>(decl);
+    EXPECT_NE(structure, nullptr);
+    EXPECT_EQ(structure->get_name(), "box");
+    EXPECT_EQ(structure->num_fields(), 3);
+
+    auto fields = structure->get_fields();
+
+    auto field1 = fields[0];
+    EXPECT_EQ(field1->get_name(), "length");
+    EXPECT_EQ(field1->get_type()->to_string(), "u32");
+    EXPECT_EQ(field1->get_index(), 0);
+    EXPECT_EQ(field1->get_parent(), structure);
+
+    auto field2 = fields[1];
+    EXPECT_EQ(field2->get_name(), "width");
+    EXPECT_EQ(field2->get_type()->to_string(), "i32");
+    EXPECT_EQ(field2->get_index(), 1);
+    EXPECT_EQ(field2->get_parent(), structure);
+
+    auto field3 = fields[2];
+    EXPECT_EQ(field3->get_name(), "height");
+    EXPECT_EQ(field3->get_type()->to_string(), "u64");
+    EXPECT_EQ(field3->get_index(), 2);
+    EXPECT_EQ(field3->get_parent(), structure);
+}
+
+TEST_F(ParserTest, parse_enum) {
+    InputFile file;
+    file.pPath = "test";
+    file.overwrite("colors :: i16 { RED, BLUE = 54, GREEN, Yellow = 1, ORANGE }");
+
+    TranslationUnit unit { file };
+    Parser parser { file };
+    parser.parse(unit);
+    
+    Root& root = unit.get_root();
+    EXPECT_EQ(root.num_decls(), 1);
+
+    auto decl = root.get_decls()[0];
+    EXPECT_NE(decl, nullptr);
+
+    auto enumeration = dynamic_cast<const EnumDecl*>(decl);
+    EXPECT_NE(enumeration, nullptr);
+    EXPECT_EQ(enumeration->get_name(), "colors");
+    EXPECT_EQ(enumeration->get_type()->get_underlying()->to_string(), "i16");
+    EXPECT_EQ(enumeration->num_values(), 5);
+
+    auto values = enumeration->get_values();
+
+    auto value1 = values[0];
+    EXPECT_EQ(value1->get_name(), "RED");
+    EXPECT_EQ(value1->get_value(), 0);
+
+    auto value2 = values[1];
+    EXPECT_EQ(value2->get_name(), "BLUE");
+    EXPECT_EQ(value2->get_value(), 54);
+
+    auto value3 = values[2];
+    EXPECT_EQ(value3->get_name(), "GREEN");
+    EXPECT_EQ(value3->get_value(), 55);
+
+    auto value4 = values[3];
+    EXPECT_EQ(value4->get_name(), "Yellow");
+    EXPECT_EQ(value4->get_value(), 1);
+
+    auto value5 = values[4];
+    EXPECT_EQ(value5->get_name(), "ORANGE");
+    EXPECT_EQ(value5->get_value(), 2);
+}
+
 TEST_F(ParserTest, parse_break_stmt) {
     InputFile file;
     file.pPath = "test";

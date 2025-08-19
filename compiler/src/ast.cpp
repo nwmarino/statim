@@ -41,6 +41,20 @@ const PointerType* TypeContext::get(const Type* pPointee) {
     return type;
 }
 
+const StructType* TypeContext::create(const std::vector<const Type*>& fields, const StructDecl* decl) {
+    StructType* type = new StructType(fields, decl);
+    types.emplace(decl->get_name(), type);
+    structs.push_back(type);
+    return type;
+}
+
+const EnumType* TypeContext::create(const Type* underlying, const EnumDecl* decl) {
+    EnumType* type = new EnumType(underlying, decl);
+    types.emplace(decl->get_name(), type);
+    enums.push_back(type);
+    return type;
+}
+
 TypeContext::TypeContext() {
     for (auto kind = BuiltinType::Kind::Void; 
           kind <= BuiltinType::Kind::Float64; 
@@ -167,7 +181,9 @@ StructDecl::StructDecl(
         const std::vector<Rune*>& runes,
         const StructType* type,
         const std::vector<FieldDecl*>& fields)
-    : Decl(span, name, runes), m_type(type), m_fields(fields) {}
+    : Decl(span, name, runes), m_type(type), m_fields(fields) {
+    for (auto field : fields) field->set_parent(this);
+}
 
 StructDecl::~StructDecl() {
     for (auto field : m_fields) delete field;
@@ -178,6 +194,8 @@ Result StructDecl::append_field(FieldDecl* field) {
     if (get_field(field->get_name())) 
         return Result::Duplicate;
     
+    field->set_parent(this);
+    field->set_index(m_fields.size());
     m_fields.push_back(field);
     return Result::Success;
 }

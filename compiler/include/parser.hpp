@@ -50,8 +50,9 @@ private:
 
     Decl*           parse_decl();
     FunctionDecl*   parse_function(const Token& name);
-    ParameterDecl*  parse_parameter();
     VariableDecl*   parse_variable();
+    StructDecl*     parse_struct(const Token& name);
+    EnumDecl*       parse_enum(const Token& name);
 
     Stmt*           parse_stmt();
     BlockStmt*      parse_block();

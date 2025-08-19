@@ -1,3 +1,11 @@
+colors :: i16 { 
+    RED, 
+    BLUE = 54, 
+    GREEN, 
+    Yellow = 1, 
+    ORANGE 
+}
+
 main :: () -> i64 {
     let x: i64 = 42;
 

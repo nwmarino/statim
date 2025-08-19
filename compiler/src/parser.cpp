@@ -4,6 +4,7 @@
 #include "source_loc.hpp"
 #include "token.hpp"
 #include "type.hpp"
+#include "types.hpp"
 
 #include <cassert>
 #include <string>
@@ -221,25 +222,36 @@ const Type* Parser::parse_type() {
 }
 
 Decl* Parser::parse_decl() {
-    if (match(TOKEN_KIND_SIGN))
-        parse_rune_decorators();
+    if (match(TOKEN_KIND_SIGN)) parse_rune_decorators();
 
-    if (!match(TOKEN_KIND_IDENTIFIER))
-        Logger::fatal("expected declaration name");
-   
+    if (!match(TOKEN_KIND_IDENTIFIER)) {
+        Logger::fatal(
+            "expected declaration name identifier",
+            Span(lexer.last().loc));
+    }
+
     const Token name = lexer.last();
     next(); // identifier
 
-    if (!match(TOKEN_KIND_PATH))
-        Logger::fatal("expected '::' after declaration name");
+    if (!match(TOKEN_KIND_PATH)) {
+        Logger::fatal(
+            "expected '::' operator after declaration name",
+            since(name.loc));
+    }
 
     next(); // '::'
 
     switch (lexer.last().kind) {
     case TOKEN_KIND_SET_PAREN:
         return parse_function(name);
+    case TOKEN_KIND_SET_BRACE:
+        return parse_struct(name);
+    case TOKEN_KIND_IDENTIFIER:
+        return parse_enum(name);
     default:
-        return nullptr;
+        Logger::fatal(
+            "expected declaration after binding operator '::'",
+            since(name.loc));
     }
 }
 
@@ -253,12 +265,41 @@ FunctionDecl* Parser::parse_function(const Token& name) {
     std::vector<ParameterDecl*> params {};
 
     while (!match(TOKEN_KIND_END_PAREN)) {
-        ParameterDecl* param = parse_parameter();
-        assert(param && "could not parse function parameter");
+        if (!match(TOKEN_KIND_IDENTIFIER)) {
+            Logger::fatal(
+                "expected parameter name identifier",
+                since(name.loc));
+        }
+
+        const Token& pname = lexer.last();
+        next(); // identifier
+
+        if (!match(TOKEN_KIND_COLON)) {
+            Logger::fatal(
+                "expected ':' after parameter name", 
+                since(pname.loc));
+        }
+
+        next(); // ':'
+
+        const Type* type = parse_type();
+        ParameterDecl* param = new ParameterDecl(
+            Span(pname.loc, lexer.last(1).loc),
+            pname.value,
+            {},
+            type
+        );
+
+        if (pScope->add(param) == Result::Duplicate) {
+            Logger::fatal(
+                "function parameter reuses existing name in scope: '" + 
+                    pname.value + "'",
+                since(name.loc));
+        }
+
         params.push_back(param);
 
-        if (match(TOKEN_KIND_END_PAREN))
-            break;
+        if (match(TOKEN_KIND_END_PAREN)) break;
 
         if (!match(TOKEN_KIND_COMMA)) {
             Logger::fatal("expected ',' after function parameter", 
@@ -304,35 +345,13 @@ FunctionDecl* Parser::parse_function(const Token& name) {
         body
     );
 
-    pScope->add(function);
+    if (pScope->add(function) == Result::Duplicate) {
+        Logger::fatal(
+            "function reuses existing name in scope: '" + name.value + "'",
+            since(name.loc));
+    }
+
     return function;
-}
-
-/// Parse a parameter that appears like:
-///
-/// <name> ':' <...type>
-ParameterDecl* Parser::parse_parameter() {
-    if (!match(TOKEN_KIND_IDENTIFIER))
-        Logger::fatal("expected parameter name");
-    
-    const Token& name = lexer.last();
-    next(); // identifier
-
-    if (!match(TOKEN_KIND_COLON))
-        Logger::fatal("expected ':' after parameter name", since(name.loc));
-
-    next(); // ':'
-
-    const Type* type = parse_type();
-    ParameterDecl* param = new ParameterDecl(
-        Span(name.loc, lexer.last(1).loc),
-        name.value,
-        {},
-        type
-    );
-
-    pScope->add(param);
-    return param;
 }
 
 VariableDecl* Parser::parse_variable() {
@@ -377,6 +396,163 @@ VariableDecl* Parser::parse_variable() {
 
     pScope->add(var);
     return var;
+}
+
+StructDecl* Parser::parse_struct(const Token& name) {
+    next(); // '{'
+
+    std::vector<FieldDecl*> fields;
+
+    while (!match(TOKEN_KIND_END_BRACE)) {
+        if (!match(TOKEN_KIND_IDENTIFIER)) {
+            Logger::fatal(
+                "expected field name identifier",
+                since(name.loc));
+        }
+
+        const Token& fname = lexer.last();
+        const Type* ftype = nullptr;
+        next(); // identifier
+
+        if (!match(TOKEN_KIND_COLON)) {
+            Logger::fatal(
+                "expected ':' after field name",
+                since(fname.loc));
+        }
+
+        next(); // ':'
+        ftype = parse_type();
+
+        fields.push_back(new FieldDecl(
+            since(fname.loc),
+            fname.value,
+            {},
+            ftype,
+            nullptr,
+            fields.size()));
+
+        if (match(TOKEN_KIND_END_BRACE)) break;
+
+        if (!match(TOKEN_KIND_COMMA)) {
+            Logger::fatal(
+                "expected ',' or '}' after structure field",
+                since(fname.loc));
+        }
+
+        next(); // ','
+    }
+
+    SourceLocation end = lexer.last().loc;
+    next(); // '}'
+
+    StructDecl* decl = new StructDecl(
+        Span(name.loc, end),
+        name.value,
+        {},
+        nullptr,
+        fields);
+
+    std::vector<const Type*> field_types { fields.size() };
+    for (auto field : fields) field_types.push_back(field->get_type());
+
+    const StructType* type = StructType::create(*root, field_types, decl);
+    decl->set_type(type);
+
+    if (pScope->add(decl) == Result::Duplicate) {
+        Logger::fatal(
+            "structure reuses existing name in scope: '" + name.value + "'",
+            since(name.loc));
+    }
+
+    return decl;
+}
+
+EnumDecl* Parser::parse_enum(const Token& name) {
+    const Type* underlying = parse_type();
+
+    if (!match(TOKEN_KIND_SET_BRACE)) {
+        Logger::fatal(
+            "expected '{' for enum declaration after type identifier",
+            since(name.loc));
+    }
+
+    next(); // '{'
+
+    EnumDecl* decl = new EnumDecl(
+        since(name.loc),
+        name.value,
+        {},
+        nullptr,
+        {});
+
+    const EnumType* type = EnumType::create(*root, underlying, decl);
+    decl->set_type(type);
+    
+    if (pScope->add(decl) == Result::Duplicate) {
+        Logger::fatal(
+            "enum reuses existing name in scope: '" + name.value + "'",
+            since(name.loc));
+    }
+
+    i64 current_value = 0;
+    while (!match(TOKEN_KIND_END_BRACE)) {
+        if (!match(TOKEN_KIND_IDENTIFIER)) {
+            Logger::fatal(
+                "expected enum value identifier",
+                since(name.loc));
+        }
+
+        const Token vname = lexer.last();
+        i64 value = current_value;
+
+        next(); // identifier
+
+        if (match(TOKEN_KIND_EQUALS)) {
+            next(); // '='
+
+            if (!match(TOKEN_KIND_INTEGER)) {
+                Logger::fatal(
+                    "expected integer enum value after '='",
+                    since(vname.loc));
+            }
+
+            value = std::stol(lexer.last().value);
+            current_value = value + 1;
+            next(); // value
+        } else {
+            current_value++;
+        }
+
+        EnumValueDecl* value_decl = new EnumValueDecl(
+            Span(vname.loc),
+            vname.value,
+            {},
+            type,
+            value);
+
+        if (pScope->add(value_decl) == Result::Duplicate) {
+            Logger::fatal(
+                "enum value reuses existing name in scope: '" + vname.value + "'",
+                since(vname.loc));
+        }
+
+        decl->append_value(value_decl);
+
+        if (match(TOKEN_KIND_END_BRACE))
+            break;
+
+        if (!match(TOKEN_KIND_COMMA)) {
+            Logger::fatal(
+                "expected ',' or '}' after enum value",
+                since(vname.loc));
+        }
+
+        next(); // ','
+    } 
+
+    next(); // '}'
+
+    return decl;
 }
 
 Stmt* Parser::parse_stmt() {

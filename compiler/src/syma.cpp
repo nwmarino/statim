@@ -37,6 +37,22 @@ void SymbolAnalysis::visit(VariableDecl& node) {
     node.pType = node.get_init()->get_type();
 }
 
+void SymbolAnalysis::visit(FieldDecl& node) {
+
+}
+
+void SymbolAnalysis::visit(StructDecl& node) {
+
+}
+
+void SymbolAnalysis::visit(EnumValueDecl& node) {
+
+}
+
+void SymbolAnalysis::visit(EnumDecl& node) {
+
+}
+
 void SymbolAnalysis::visit(BlockStmt& node) {
     pScope = node.get_scope();
     

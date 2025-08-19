@@ -123,6 +123,22 @@ void Codegen::visit(VariableDecl& node) {
     }
 }
 
+void Codegen::visit(FieldDecl& node) {
+
+}
+
+void Codegen::visit(StructDecl& node) {
+
+}
+
+void Codegen::visit(EnumValueDecl& node) {
+
+}
+
+void Codegen::visit(EnumDecl& node) {
+
+}
+
 void Codegen::visit(BlockStmt& node) {
     for (auto stmt : node.stmts) stmt->accept(*this);
 }

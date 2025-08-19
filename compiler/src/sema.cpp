@@ -101,6 +101,22 @@ void SemanticAnalysis::visit(VariableDecl& node) {
     }
 }
 
+void SemanticAnalysis::visit(FieldDecl& node) {
+
+}
+
+void SemanticAnalysis::visit(StructDecl& node) {
+
+}
+
+void SemanticAnalysis::visit(EnumValueDecl& node) {
+
+}
+
+void SemanticAnalysis::visit(EnumDecl& node) {
+
+}
+
 void SemanticAnalysis::visit(BlockStmt& node) {
     for (auto stmt : node.stmts) stmt->accept(*this);
 }

@@ -35,6 +35,8 @@ struct Span final {
     SourceLocation begin;
     SourceLocation end;
 
+    Span(const Span&) = default;
+
     Span(const SourceLocation& loc) 
         : begin(loc), end(loc) {};
 

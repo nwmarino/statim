@@ -147,10 +147,13 @@ class Decl {
 protected:
     Span                span;
     std::string         name;
-    std::vector<Rune*>  decorators {};
+    std::vector<Rune*>  decorators;
 
 public:
-    Decl(const Span& span, const std::string& name, const std::vector<Rune*>& decorators);
+    Decl(
+        const Span& span, 
+        const std::string& name, 
+        const std::vector<Rune*>& decorators);
 
     virtual ~Decl() = default;
 
@@ -158,8 +161,13 @@ public:
 
     virtual void print(std::ostream& os) const = 0;
 
+    /// \returns The span of source code this declaration covers.
+    Span& get_span() { return span; }
+
+    /// \returns The span of source code this declaration covers.
     const Span& get_span() const { return span; }
 
+    /// \returns The name of this declaration, if it is named.
     const std::string& get_name() const { return name; }
 
     const std::vector<Rune*>& get_decorators() const { return decorators; }
@@ -297,6 +305,9 @@ public:
     /// \returns The index of this field in its parent structure.
     u32 get_index() const { return m_index; }
 
+    /// Set the index of this field to \p index.
+    void set_index(u32 index) { m_index = index; }
+
     void accept(Visitor& visitor) override {
         visitor.visit(*this);
     }
@@ -347,6 +358,9 @@ public:
     
         return nullptr;
     }
+
+    /// \returns The number of fields in this structure.
+    u32 num_fields() const { return m_fields.size(); }
 
     /// Appends \p field to this structure, if it is not a duplicate.
     Result append_field(FieldDecl* field);
@@ -431,6 +445,9 @@ public:
     
         return nullptr;
     }
+
+    /// \returns The number of values in this enum.
+    u32 num_values() const { return m_values.size(); }
 
     /// Appends \p value to this enum, if it is not a duplicate.
     Result append_value(EnumValueDecl* value);
