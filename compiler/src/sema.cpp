@@ -22,6 +22,11 @@ static TypeCheckResult type_check(
         const Type* pActual, 
         const Type* pExpected, 
         TypeCheckMode mode) {
+    if (auto actual_deferred = dynamic_cast<const DeferredType*>(pActual))
+        return type_check(actual_deferred->get_resolved(), pExpected, mode);
+    else if (auto expected_deferred = dynamic_cast<const DeferredType*>(pExpected))
+        return type_check(pActual, expected_deferred->get_resolved(), mode);
+    
     if (*pActual == *pExpected)
         return TypeCheckResult::Match;
 
@@ -85,7 +90,6 @@ void SemanticAnalysis::visit(VariableDecl& node) {
             node.pInit = new CastExpr(
                 node.get_init()->get_span(),
                 node.get_type(),
-                Expr::ValueKind::RValue,
                 node.pInit);
         } else if (tc == TypeCheckResult::Mismatch) {
             Logger::fatal(
@@ -171,7 +175,7 @@ void SemanticAnalysis::visit(RetStmt& node) {
         // Perform a type check between the type of the return expression and
         // the function return type.
         TypeCheckResult tc = type_check(
-            pFunction->get_type(), 
+            pFunction->get_type()->get_return_type(), 
             node.get_expr()->get_type(), 
             TypeCheckMode::AllowImplicit);
 
@@ -179,7 +183,6 @@ void SemanticAnalysis::visit(RetStmt& node) {
             node.pExpr = new CastExpr(
                 node.get_expr()->get_span(),
                 pFunction->get_type()->get_return_type(),
-                Expr::ValueKind::RValue,
                 node.pExpr);
         } else if (tc == TypeCheckResult::Mismatch) {
             Logger::fatal(
@@ -224,7 +227,6 @@ void SemanticAnalysis::visit(BinaryExpr& node) {
         node.pRight = new CastExpr(
             node.get_rhs()->get_span(),
             left_type,
-            Expr::ValueKind::RValue,
             node.pRight);
     } else if (tc == TypeCheckResult::Mismatch) {
         Logger::fatal(
@@ -245,7 +247,7 @@ void SemanticAnalysis::visit(BinaryExpr& node) {
     node.pType = left_type;
 
     if (BinaryExpr::is_assignment(node.get_operator()) 
-            && node.get_lhs()->get_value_kind() != Expr::ValueKind::LValue) {
+            && !node.get_lhs()->is_lvalue()) {
         // Ensure that assignment operators only assign to lvalues.
         Logger::fatal(
             "cannot assign to non-lvalue left operand", 
@@ -304,7 +306,6 @@ void SemanticAnalysis::visit(CallExpr& node) {
             node.args[idx] = new CastExpr(
                 arg->get_span(),
                 param->get_type(),
-                Expr::ValueKind::RValue,
                 arg);
         } else if (tc == TypeCheckResult::Mismatch) {
             Logger::fatal(

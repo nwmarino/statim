@@ -5,7 +5,7 @@
 using namespace stm;
 
 static u32  gIndent = 0;
-static bool gLastChild = 0;
+static bool gLastChild = false;
 static bool gPipe[16] = {};
 
 static void print_indent(std::ostream& os) {
@@ -17,9 +17,9 @@ static void print_piping(std::ostream& os) {
         os << (gPipe[idx] ? "│ " : "  ");
 
     if (gLastChild)
-        os << "`-";
+        os << "╰─";
     else
-        os << "|-";
+        os << "├─";
 }
 
 static std::string span_string(const Span& span) {
@@ -50,11 +50,14 @@ void FunctionDecl::print(std::ostream& os) const {
     os << "Function " << span_string(span) << ' ' << name << " '" << 
         pType->to_string() << "'\n";
 
-    gIndent++;
+    gPipe[++gIndent] = true;
     for (auto& param : params)
         param->print(os);
 
+    gLastChild = true;
+    gPipe[gIndent] = false;
     pBody->print(os);
+    gLastChild = false;
     gIndent--;
 }
 
@@ -66,12 +69,14 @@ void ParameterDecl::print(std::ostream& os) const {
 
 void VariableDecl::print(std::ostream& os) const {
     print_piping(os);
-    os << "Variable " << span_string(span) << " '" << name << "' " << 
-        pType->to_string() << '\n';
+    os << "Variable " << span_string(span) << ' ' << name << " '" << 
+        pType->to_string() << "'\n";
 
     if (has_init()) {
         gIndent++;
+        gLastChild = true;
         pInit->print(os);
+        gLastChild = false;
         gIndent--;
     }
 }
@@ -80,8 +85,15 @@ void BlockStmt::print(std::ostream& os) const {
     print_piping(os);
     os << "Block " << span_string(span) << '\n';
 
-    gIndent++;
-    for (auto& stmt : stmts) stmt->print(os);
+    if (is_empty()) return;
+
+    gPipe[++gIndent] = true;
+    for (u32 idx = 0, e = stmts.size(); idx != e; ++idx) {
+        gLastChild = idx + 1 == e;
+        gPipe[gIndent] = !gLastChild;
+        stmts[idx]->print(os);
+    }
+
     gIndent--;
 }
 
@@ -103,12 +115,19 @@ void IfStmt::print(std::ostream& os) const {
     print_piping(os);
     os << "If " << span_string(span) << '\n';
 
-    gIndent++;
+    gPipe[++gIndent] = true;
     pCond->print(os);
-    pThen->print(os);
 
-    if (has_else())
-        pElse->print(os);
+    if (has_else()) {
+        get_then()->print(os);
+        gLastChild = true;
+        gPipe[gIndent] = false;
+        get_else()->print(os);
+    } else {
+        gLastChild = true;
+        gPipe[gIndent] = false;
+        get_then()->print(os);
+    }
 
     gIndent--;
 }
@@ -117,8 +136,12 @@ void WhileStmt::print(std::ostream& os) const {
     print_piping(os);
     os << "While " << span_string(span) << '\n';
 
-    gIndent++;
+    gPipe[++gIndent] = true;
+    gLastChild = false;
     pCond->print(os);
+
+    gPipe[gIndent] = false;
+    gLastChild = true;
     pBody->print(os);
     gIndent--;
 }
@@ -129,6 +152,7 @@ void RetStmt::print(std::ostream& os) const {
 
     if (has_expr()) {
         gIndent++;
+        gLastChild = true;
         pExpr->print(os);
         gIndent--;
     }
@@ -175,7 +199,7 @@ void NullLiteral::print(std::ostream& os) const {
 
 void BinaryExpr::print(std::ostream& os) const {
     print_piping(os);
-    os << "BinaryOp " << span_string(span) << ' ';
+    os << "Binary " << span_string(span) << ' ';
 
     switch (op) {
         case Operator::Add: os << "+"; break;
@@ -212,14 +236,19 @@ void BinaryExpr::print(std::ostream& os) const {
 
     os << ' ' << pType->to_string() << '\n';
 
-    gIndent++;
+    gLastChild = false;
+    gPipe[++gIndent] = true;
     pLeft->print(os);
+
+    gLastChild = true;
+    gPipe[gIndent] = false;
     pRight->print(os);
     gIndent--;
 }
 
 void UnaryExpr::print(std::ostream& os) const {
-    os << "UnaryOp " << span_string(span) << ' ';
+    print_piping(os);
+    os << "Unary " << span_string(span) << ' ';
 
     switch (op) {
         case Operator::Increment: os << "++"; break;
@@ -239,7 +268,8 @@ void UnaryExpr::print(std::ostream& os) const {
 }
 
 void CastExpr::print(std::ostream& os) const {
-    os << "Cast " << span_string(span) << ' ' << pType->to_string() << '\n';
+    print_piping(os);
+    os << "Cast " << span_string(span) << " '" << pType->to_string() << "'\n";
 
     gIndent++;
     pExpr->print(os);
@@ -247,6 +277,7 @@ void CastExpr::print(std::ostream& os) const {
 }
 
 void ParenExpr::print(std::ostream& os) const {
+    print_piping(os);
     os << "Paren " << span_string(span) << ' ' << pType->to_string() << '\n';
 
     gIndent++;
@@ -255,11 +286,13 @@ void ParenExpr::print(std::ostream& os) const {
 }
 
 void SizeofExpr::print(std::ostream& os) const {
+    print_piping(os);
     os << "Sizeof " << span_string(span) << " '" << pTarget->to_string() << "' " << 
         pType->to_string() << '\n';
 }
 
 void SubscriptExpr::print(std::ostream& os) const {
+    print_piping(os);
     os << "Subscript " << span_string(span) << '\n';
 
     gIndent++;
@@ -269,11 +302,13 @@ void SubscriptExpr::print(std::ostream& os) const {
 }
 
 void ReferenceExpr::print(std::ostream& os) const {
+    print_piping(os);
     os << "Reference " << span_string(span) << " '" << name << "' " << 
         pType->to_string() << '\n';
 }
 
 void MemberExpr::print(std::ostream& os) const {
+    print_piping(os);
     os << "Access " << span_string(span) << " '" << name << "' " << 
         pType->to_string() << '\n';
 
@@ -283,6 +318,7 @@ void MemberExpr::print(std::ostream& os) const {
 }
 
 void CallExpr::print(std::ostream& os) const {
+    print_piping(os);
     os << "Call " << span_string(span) << " '" << name << "' " << 
         pType->to_string() << '\n';
 

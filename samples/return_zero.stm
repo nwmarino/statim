@@ -1,3 +1,13 @@
 main :: () -> i64 {
-    let x: u32 = 42;
+    let x: i64 = 42;
+
+    if x {
+        x = 0;
+    }
+
+    while x {
+        x;
+    }
+
+    ret x;
 }

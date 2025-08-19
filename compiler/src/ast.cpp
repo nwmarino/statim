@@ -235,17 +235,15 @@ Rune::~Rune() {
     args.clear();
 }
 
-Expr::Expr(const Span& span, const Type* pType, ValueKind vkind) 
-    : Stmt(span), pType(pType), vkind(vkind) {};
+Expr::Expr(const Span& span, const Type* pType) : Stmt(span), pType(pType) {};
 
 BinaryExpr::BinaryExpr(
         const Span& span, 
         const Type* pType, 
-        ValueKind vkind, 
         Operator op, 
         Expr* pLeft, 
         Expr* pRight)
-    : Expr(span, pType, ValueKind::RValue), op(op), pLeft(pLeft), 
+    : Expr(span, pType), op(op), pLeft(pLeft), 
         pRight(pRight) {};
 
 BinaryExpr::~BinaryExpr() {
@@ -310,11 +308,10 @@ bool BinaryExpr::supports_ptr_arith(Operator op) {
 UnaryExpr::UnaryExpr(
         const Span& span, 
         const Type* pType, 
-        ValueKind vkind, 
         Operator op, 
         Expr* pExpr, 
         bool postfix)
-    : Expr(span, pType, vkind), op(op), pExpr(pExpr), postfix(postfix) {};
+    : Expr(span, pType), op(op), pExpr(pExpr), postfix(postfix) {};
     
 UnaryExpr::~UnaryExpr() {
     if (pExpr != nullptr) {
@@ -333,9 +330,8 @@ bool UnaryExpr::is_constant() const {
 CastExpr::CastExpr(
         const Span& span, 
         const Type* pType, 
-        ValueKind vkind, 
         Expr* pExpr)
-    : Expr(span, pType, vkind), pExpr(pExpr) {};
+    : Expr(span, pType), pExpr(pExpr) {};
 
 CastExpr::~CastExpr() {
     if (pExpr != nullptr) {
@@ -347,7 +343,7 @@ CastExpr::~CastExpr() {
 ParenExpr::ParenExpr(
         const Span& span,
         Expr* pExpr)
-    : Expr(span, pExpr->get_type(), pExpr->get_value_kind()), pExpr(pExpr) {};
+    : Expr(span, pExpr->get_type()), pExpr(pExpr) {};
 
 ParenExpr::~ParenExpr() {
     if (pExpr != nullptr) {
@@ -360,15 +356,14 @@ SizeofExpr::SizeofExpr(
         const Span& span,
         const Type* pType,
         const Type* pTarget)
-    : Expr(span, pType, ValueKind::RValue), pTarget(pTarget) {};
+    : Expr(span, pType), pTarget(pTarget) {};
 
 SubscriptExpr::SubscriptExpr(
         const Span& span, 
         const Type* pType,
-        ValueKind vkind, 
         Expr* pBase, 
         Expr* pIndex)
-    : Expr(span, pType, vkind), pBase(pBase), pIndex(pIndex) {};
+    : Expr(span, pType), pBase(pBase), pIndex(pIndex) {};
 
 SubscriptExpr::~SubscriptExpr() {
     if (pBase != nullptr) {
@@ -385,17 +380,15 @@ SubscriptExpr::~SubscriptExpr() {
 ReferenceExpr::ReferenceExpr(
         const Span& span, 
         const Type* pType, 
-        ValueKind vkind, 
         const std::string& name)
-    : Expr(span, pType, vkind), name(name) {};
+    : Expr(span, pType), name(name) {};
 
 MemberExpr::MemberExpr(
         const Span& span, 
         const Type* pType, 
-        ValueKind vkind, 
         const std::string& member, 
         Expr* pBase)
-    : ReferenceExpr(span, pType, vkind, member), pBase(pBase) {};
+    : ReferenceExpr(span, pType, member), pBase(pBase) {};
 
 MemberExpr::~MemberExpr() {
     if (pBase != nullptr) {
@@ -408,8 +401,8 @@ CallExpr::CallExpr(
         const Span& span, 
         const Type* pType, 
         const std::string& callee, 
-        const std::vector<Expr*> &args)
-    : ReferenceExpr(span, pType, ValueKind::RValue, callee), args(args) {};
+        const std::vector<Expr*>& args)
+    : ReferenceExpr(span, pType, callee), args(args) {};
 
 CallExpr::~CallExpr() {
     for (Expr* arg : args)
@@ -421,9 +414,8 @@ CallExpr::~CallExpr() {
 RuneExpr::RuneExpr(
         const Span& span, 
         const Type* pType, 
-        ValueKind vkind, 
         Rune* pRune)
-    : Expr(span, pType, vkind), pRune(pRune) {};
+    : Expr(span, pType), pRune(pRune) {};
 
 RuneExpr::~RuneExpr() {
     if (pRune != nullptr) {
@@ -434,11 +426,11 @@ RuneExpr::~RuneExpr() {
 
 bool RuneExpr::is_constant() const {
     switch (pRune->get_kind()) {
-        case Rune::Kind::Code:
-        case Rune::Kind::Comptime:
-        case Rune::Kind::Path:
-            return true;
-        default:
-            assert(false && "cannot use rune as value expression");
+    case Rune::Kind::Code:
+    case Rune::Kind::Comptime:
+    case Rune::Kind::Path:
+        return true;
+    default:
+        assert(false && "cannot use rune as value expression");
     }
 }

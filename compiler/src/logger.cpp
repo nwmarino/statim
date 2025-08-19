@@ -1,6 +1,5 @@
-#include "../include/input_file.hpp"
-#include "source_loc.hpp"
-#include "../include/logger.hpp"
+#include "input_file.hpp"
+#include "logger.hpp"
 
 #include <cassert>
 #include <cstdlib>
@@ -16,9 +15,9 @@ static std::vector<std::string> source(const Span& span) {
     std::size_t start = 0;
     for (std::size_t idx = 0; idx <= full.length(); ++idx) {
         if (idx == full.length() || full[idx] == '\n') {
-            if (line >= span.begin.line && line <= span.end.line) {
+            if (line >= span.begin.line && line <= span.end.line)
                 lines.push_back(full.substr(start, idx - start));
-            }
+            
             start = idx + 1;
             line++;
         }
@@ -31,15 +30,14 @@ std::ostream* Logger::pOutput = nullptr;
 bool Logger::color = false;
 
 void Logger::log_src(const Span& span) {
-    *pOutput << "   ┌─[" << span.begin.file.pPath << "]\n";
+    *pOutput << "   ┌─[" << span.begin.file.absolute() << ':' << span.begin.line << "]\n";
 
     u32 line_n = span.begin.line;
     for (auto line : source(span)) {
-        if (Logger::color) {
+        if (Logger::color)
             *pOutput << "\e[38;5;240m" << line_n++ << "\033[0m  │ " << line << '\n';
-        } else {
+        else
             *pOutput << line_n++ << ' ' << line << '\n';
-        }
     }
 
     *pOutput << "   ╰──\n";
@@ -81,11 +79,10 @@ void Logger::info(const std::string& msg) {
 
     *pOutput << "stmc: ";
     
-    if (Logger::color) {
+    if (Logger::color)
         *pOutput << "\033[1;35minfo:\033[0m ";
-    } else {
+    else
         *pOutput << "info: ";
-    }
 
     *pOutput << msg << '\n';
 }
@@ -93,11 +90,10 @@ void Logger::info(const std::string& msg) {
 void Logger::info(const std::string& msg, const Span& span) {
     if (!pOutput) return;
 
-    if (Logger::color) {
+    if (Logger::color)
         *pOutput << "\033[1;35m !\033[0m ";
-    } else {
+    else
         *pOutput << " ! ";
-    }
 
     const SourceLocation& begin = span.begin;
     InputFile& file = begin.file;
@@ -110,11 +106,10 @@ void Logger::warn(const std::string& msg) {
 
     *pOutput << "stmc: ";
     
-    if (Logger::color) {
+    if (Logger::color)
         *pOutput << "\033[1;33mwarning:\033[0m ";
-    } else {
+    else
         *pOutput << "warning: ";
-    }
 
     *pOutput << msg << '\n';
 }
@@ -122,11 +117,10 @@ void Logger::warn(const std::string& msg) {
 void Logger::warn(const std::string& msg, const Span &span) {
     if (!pOutput) return;
 
-    if (Logger::color) {
+    if (Logger::color)
         *pOutput << "\033[1;33m ⚠︎\033[0m ";
-    } else {
+    else
         *pOutput << " ⚠︎ ";
-    }
 
     const SourceLocation& begin = span.begin;
     InputFile& file = begin.file;
@@ -139,11 +133,10 @@ void Logger::fatal(const std::string& msg) {
     if (pOutput) {
         *pOutput << "stmc: ";
         
-        if (Logger::color) {
+        if (Logger::color)
             *pOutput << "\033[1;31mfatal:\033[0m ";
-        } else {
+        else
             *pOutput << "fatal: ";
-        }
 
         *pOutput << msg << std::endl;
     }
@@ -154,12 +147,11 @@ void Logger::fatal(const std::string& msg) {
 __attribute__((noreturn))
 void Logger::fatal(const std::string& msg, const Span &span) {
     if (pOutput) {
-        if (Logger::color) {
+        if (Logger::color)
             *pOutput << "\033[1;31m ˣ\033[0m ";
-        } else {
+        else
             *pOutput << " ˣ ";
-        }
-
+        
         const SourceLocation& begin = span.begin;
         InputFile& file = begin.file;
         *pOutput << msg << '\n';

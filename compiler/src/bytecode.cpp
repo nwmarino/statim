@@ -4,94 +4,41 @@
 
 using namespace stm;
 
-Operand Operand::get_register(ValueType type, vreg_t reg) {
-    Operand operand;
-    operand.kind = Kind::Register;
-    operand.type = type;
-    operand.reg = reg;
+Operand::Operand(Register reg)
+    : kind(Kind::Register), reg(reg) {};
 
-    return operand;
-}
+Operand::Operand(Immediate imm)
+    : kind(Kind::Immediate), imm(imm) {};
 
-Operand Operand::get_memory(ValueType type, vreg_t reg, i32 offset) {
-    Operand operand;
-    operand.kind = Kind::Memory;
-    operand.type = type;
-    operand.memory.reg = reg;
-    operand.memory.offset = offset;
+Operand::Operand(MemoryRef mem)
+    : kind(Kind::MemoryRef), mem(mem) {};
 
-    return operand;
-}
+Operand::Operand(StackRef stack)
+    : kind(Kind::StackRef), stack(stack) {};
 
-Operand Operand::get_stack(ValueType type, i32 offset) {
-    Operand operand;
-    operand.kind = Kind::Stack;
-    operand.type = type;
-    operand.stack.offset = offset;
+Operand::Operand(BlockRef block)
+    : kind(Kind::BlockRef), block(block) {};
 
-    return operand;
-}
+Operand::Operand(FunctionRef function) 
+    : kind(Kind::FunctionRef), function(function) {};
 
-Operand Operand::get_imm(ValueType type, i64 imm) {
-    Operand operand;
-    operand.kind = Kind::Integer;
-    operand.type = type;
-    operand.imm = imm;
-
-    return operand;
-}   
-
-Operand Operand::get_fp(ValueType type, f64 fp) {
-    Operand operand;
-    operand.kind = Kind::Float;
-    operand.type = type;
-    operand.fp = fp;
-
-    return operand;
-}
-
-Operand Operand::get_string(const char* pString) {
-    Operand operand;
-    operand.kind = Kind::String;
-    operand.type = ValueType::Pointer;
-    operand.pString = pString;
-
-    return operand;
-}
-
-Operand Operand::get_block(BasicBlock* pBlock) {
-    Operand operand;
-    operand.kind = Kind::Block;
-    operand.type = ValueType::None;
-    operand.pBlock = pBlock;
-
-    return operand;
-}
-
-Operand Operand::get_function(Function* pFunction) {
-    Operand operand;
-    operand.kind = Kind::Function;
-    operand.type = ValueType::None;
-    operand.pFunction = pFunction;
-
-    return operand;
-}
+u32 Instruction::s_position = 0;
 
 Instruction::Instruction(
-    u64 position,
-    Opcode op, 
-    const std::vector<Operand>& operands, 
-    const InstDescriptor& desc, 
-    const Metadata& meta,
-    BasicBlock* pParent) 
-        : position(position), op(op), operands(operands), desc(desc), 
-          meta(meta), pParent(pParent) {
+        Opcode op, 
+        const std::vector<Operand>& operands, 
+        const Metadata& meta,
+        const InstructionDesc& desc, 
+        BasicBlock* pParent) 
+    : pos(s_position++), op(op), operands(operands), meta(meta), desc(desc), 
+      pParent(pParent) {
     if (pParent)
         pParent->append(this);
 }; 
 
 bool Instruction::is_terminator() const {
-    return op == Opcode::Branch || op == Opcode::BranchIf || op == Opcode::Return;
+    return op == Opcode::Branch || op == Opcode::Jump || 
+        op == Opcode::Return;
 }
 
 BasicBlock::BasicBlock(Function* pParent) : pParent(pParent) {
@@ -163,6 +110,15 @@ void BasicBlock::append(Instruction* pInst) {
     }
 }
 
+StackSlot::StackSlot(
+        const std::string& name, 
+        u32 offset, 
+        Function* pParent)
+    : name(name), offset(offset), pParent(pParent) {
+    if (pParent)
+        pParent->add_slot(this);
+};
+
 Function::Function(
         const std::string& name, 
         const std::vector<ValueType>& args, 
@@ -171,6 +127,13 @@ Function::Function(
 
 Function::~Function() {
     
+}
+
+u32 Function::get_stack_size() const {
+    if (stack.empty())
+        return 0;
+
+    return stack.end()->second->get_offset();
 }
 
 u32 Function::num_blocks() const {

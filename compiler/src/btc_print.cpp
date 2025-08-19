@@ -1,4 +1,5 @@
 #include "bytecode.hpp"
+#include <iomanip>
 #include <string>
 
 using namespace stm;
@@ -34,46 +35,71 @@ static void print_valuetype(std::ostream& os, ValueType type) {
 void Operand::print(std::ostream& os) const {
     switch (kind) {
     case Kind::Register:
-        os << 'v' << std::to_string(reg);
+        os << 'v' << std::to_string(reg.id);
         break;
-    case Kind::Memory:
-        os << "[v" << std::to_string(memory.reg);
-        if (memory.offset != 0)
-            os << '+' << std::to_string(memory.offset);
+
+    case Kind::Immediate:
+        switch (imm.kind) {
+        case Immediate::Kind::Integer:
+            os << std::to_string(imm.i);
+            break;
+        case Immediate::Kind::Float:
+            os << std::to_string(imm.f);
+            break;
+        case Immediate::Kind::String:
+            os << std::string(imm.s);
+            break;
+        }
+        break;
+
+    case Kind::MemoryRef:
+        os << '[';
+        if (mem.base.id == 0)
+            os << "stack";
+        else
+            os << 'v' << std::to_string(mem.base.id);
+        
+        if (mem.offset != 0)
+            os << '+' << std::to_string(mem.offset);
 
         os << ']';
         break;
-    case Kind::Stack:
-        os << "";
+
+    case Kind::StackRef:
+        os << "stack+" + std::to_string(stack.offset);
         break;
-    case Kind::Integer:
-        os << std::to_string(imm);
+
+    case Kind::BlockRef:
+        os << "bb" << std::to_string(block.pBlock->get_number());
         break;
-    case Kind::Float:
-        os << std::to_string(fp);
-        break;
-    case Kind::String:
-        os << std::string(pString);
-        break;
-    case Kind::Block:
-        os << std::to_string(pBlock->get_number());
-        break;
-    case Kind::Function:
-        os << pFunction->get_name();
+
+    case Kind::FunctionRef:
+        os << '@' << function.pFunction->get_name();
         break;
     }
 }
 
 void Instruction::print(std::ostream& os) const {
-    os << meta.file.filename() << ':' << std::to_string(meta.line) << 
-        '\t' << std::to_string(position) << "|\t";
+    std::ostringstream oss;
+    oss << meta.file.filename() << ':' << meta.line;
+
+    constexpr i32 total_width = 25;
+    std::string left = oss.str();
+    std::string pos_str = std::to_string(pos);
+    i32 pad = total_width - static_cast<i32>(left.size() + pos_str.size());
+    if (pad < 0) pad = 0;
+
+    os << left << std::string(pad, ' ') << pos_str << "|" << std::setw(8);
 
     switch (op) {
     case Opcode::Constant:
-        os << "constant";
+        os << "const";
+        break;
+    case Opcode::Float:
+        os << "float";
         break;
     case Opcode::String:
-        os << "string";
+        os << "str";
         break;
     case Opcode::Move:
         os << "mov";
@@ -90,11 +116,11 @@ void Instruction::print(std::ostream& os) const {
     case Opcode::Store_Arg:
         os << "store_arg";
         break;
+    case Opcode::Jump:
+        os << "jmp";
+        break;
     case Opcode::Branch:
         os << "br";
-        break;
-    case Opcode::BranchIf:
-        os << "br_if";
         break;
     case Opcode::Call:
         os << "call";
@@ -140,26 +166,36 @@ void Instruction::print(std::ostream& os) const {
         break;
     }
 
-    os << ' ';
-    for (u32 idx = 0, e = num_operands(); idx != e; ++idx) {
+    os << "   ";
+
+    if (op == Opcode::Constant || op == Opcode::Float || op == Opcode::String) {
+        operands[1].print(os);
+        os << " = ";
+        operands[0].print(os);
+    } else for (u32 idx = 0, e = num_operands(); idx != e; ++idx) {
         operands[idx].print(os);
         if (idx + 1 != e)
             os << ", ";
     }
+
+    if (desc.size.has_value())
+        os << " :" << *desc.size << 'b';
 }
 
 void BasicBlock::print(std::ostream& os) const {
-    os << "--- Basic Block " << std::to_string(get_number()) << " ---\n\n";
+    os << "bb" << std::to_string(get_number()) << ":\n\n";
 
     for (const Instruction* curr = pFront; curr; curr = curr->next()) {
         curr->print(os);
         if (curr->next())
             os << "\n";
     }
+
+    os << '\n';
 }
 
 void Function::print(std::ostream& os) const {
-    os << name << " :: (";
+    os << "Bytecode for '" << name << " (";
 
     for (u32 idx = 0, e = args.size(); idx != e; ++idx) { 
         print_valuetype(os, args[idx]);
@@ -169,7 +205,14 @@ void Function::print(std::ostream& os) const {
 
     os << ") -> ";
     print_valuetype(os, ret);
-    os << "\n\n";
+    os << "'\n\n";
+
+    for (auto [ name, slot ] : stack) {
+        os << "    ... offset: " << std::to_string(slot->get_offset()) << 
+            ", name: " << name << '\n';
+    }
+
+    os << "\n";
 
     for (const BasicBlock* curr = pFront; curr; curr = curr->next()) {
         curr->print(os);
@@ -181,6 +224,8 @@ void Function::print(std::ostream& os) const {
 }
 
 void Frame::print(std::ostream& os) const {
+    os << std::right;
+
     for (auto [ name, function ] : functions)
         function->print(os);
 }

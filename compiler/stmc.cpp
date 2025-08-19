@@ -38,7 +38,7 @@ i32 main(i32 argc, char **argv) {
     SemanticAnalysis sema { options, root };
     root.accept(sema);
 
-    //root.print(std::cout);
+    root.print(std::cout);
 
     Codegen codegen { options, root };
     codegen.run(unit);

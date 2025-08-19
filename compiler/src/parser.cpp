@@ -368,12 +368,15 @@ VariableDecl* Parser::parse_variable() {
     if (!match(TOKEN_KIND_SEMICOLON))
         Logger::fatal("expected ';' after variable declaration", since(begin));
 
-    return new VariableDecl(
+    VariableDecl* var = new VariableDecl(
         Span(begin, end),
         name,
         {},
         type,
         init);
+
+    pScope->add(var);
+    return var;
 }
 
 Stmt* Parser::parse_stmt() {
@@ -569,7 +572,6 @@ Expr* Parser::parse_binary(Expr* pBase, i32 precedence) {
         pBase = new BinaryExpr(
             Span(pBase->get_span().begin, right->get_span().end),
             nullptr,
-            Expr::ValueKind::RValue,
             op,
             pBase,
             right);
@@ -590,7 +592,6 @@ Expr* Parser::parse_unary_prefix() {
         return new UnaryExpr(
             Span(begin, base->get_span().end),
             nullptr,
-            Expr::ValueKind::RValue,
             op,
             base,
             false);
@@ -611,7 +612,6 @@ Expr* Parser::parse_unary_postfix() {
             expr = new UnaryExpr(
                 Span(begin),
                 nullptr,
-                Expr::ValueKind::RValue,
                 op,
                 expr,
                 true);
@@ -629,7 +629,6 @@ Expr* Parser::parse_unary_postfix() {
             expr = new SubscriptExpr(
                 since(begin),
                 nullptr,
-                Expr::ValueKind::RValue,
                 expr,
                 index);
         } else if (match(TOKEN_KIND_DOT)) {
@@ -645,7 +644,6 @@ Expr* Parser::parse_unary_postfix() {
             expr = new MemberExpr(
                 since(begin),
                 nullptr,
-                Expr::ValueKind::RValue,
                 member,
                 expr);
         } else {
@@ -751,7 +749,6 @@ CastExpr* Parser::parse_cast() {
     return new CastExpr(
         Span(begin, end), 
         type, 
-        Expr::ValueKind::RValue, 
         expr);
 }
 
@@ -805,7 +802,6 @@ ReferenceExpr* Parser::parse_ref() {
     return new ReferenceExpr(
         Span(name.loc), 
         nullptr, 
-        Expr::ValueKind::RValue, 
         name.value);
 }
 

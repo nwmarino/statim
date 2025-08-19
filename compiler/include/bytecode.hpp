@@ -2,24 +2,28 @@
 #define STATIM_BYTECODE_HPP_
 
 #include "input_file.hpp"
+#include "source_loc.hpp"
 #include "types.hpp"
 
 #include <map>
+#include <optional>
 #include <ostream>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace stm {
 
 class BasicBlock;
+class StackSlot;
 class Function;
-
-using vreg_t = u32;
 
 struct Metadata final {
     InputFile& file;
     u32        line;  
+
+    Metadata(const Span& span) : file(span.begin.file), line(span.begin.line) {};
+
+    Metadata(const SourceLocation& loc) : file(loc.file), line(loc.line) {};
 };
 
 enum class ValueType : u8 {
@@ -29,70 +33,88 @@ enum class ValueType : u8 {
     Pointer,
 };
 
-struct Operand final {
+struct Register final {
+    u32 id;
+};
+
+struct Immediate final {
     enum class Kind : u8 {
-        Register, // v0
-        Memory, // (v0 + 8)
-        Stack, // stack + x
-        Integer, // 0
-        Float, // 3.14
-        String, // "Hey!"
-        Block, // #1
-        Function, // @foo
+        Integer, 
+        Float, 
+        String,
     } kind;
 
-    ValueType type;    
-
     union {
-        vreg_t reg;
-
-        struct {
-            vreg_t reg;
-            i32 offset;
-        } memory;
-
-        struct {
-            i32 offset;
-        } stack;
-
-        i64 imm;
-        
-        f64 fp;
-
-        const char* pString;
-
-        BasicBlock* pBlock;
-
-        Function* pFunction;
+        i64 i;
+        f64 f;
+        const char* s;
     };
 
-    static Operand get_register(ValueType type, vreg_t reg);
-    static Operand get_memory(ValueType type, vreg_t reg, i32 offset);
-    static Operand get_stack(ValueType type, i32 offset);
-    static Operand get_imm(ValueType type, i64 imm);
-    static Operand get_fp(ValueType type, f64 fp);
-    static Operand get_string(const char* pString);
-    static Operand get_block(BasicBlock* pBlock);
-    static Operand get_function(Function* pFunction);
+    Immediate(i64 i) : kind(Kind::Integer), i(i) {};
+    Immediate(f64 f) : kind(Kind::Float), f(f) {};
+    Immediate(const char* s) : kind(Kind::String), s(s) {};
+};
+
+struct MemoryRef final {
+    Register base;
+    i32 offset;
+};
+
+struct StackRef final {
+    i32 offset;
+};
+
+struct BlockRef final {
+    BasicBlock* pBlock;
+};
+
+struct FunctionRef final {
+    Function* pFunction;
+};
+
+struct Operand final {
+    enum class Kind : u8 {
+        Register,
+        Immediate,
+        MemoryRef,
+        StackRef,
+        BlockRef,
+        FunctionRef,
+    } kind;
+
+    union {
+        Register reg;
+        Immediate imm;
+        MemoryRef mem;
+        StackRef stack;
+        BlockRef block;
+        FunctionRef function;
+    };
+
+    Operand(Register reg);
+    Operand(Immediate imm);
+    Operand(MemoryRef mem);
+    Operand(StackRef stack);
+    Operand(BlockRef block);
+    Operand(FunctionRef function);
 
     void print(std::ostream& os) const;
 };
 
-struct InstDescriptor final {
-    /// Bytes read during a memory access.
-    u32 access;
-
-    InstDescriptor() = default;
+struct InstructionDesc final {
+    std::optional<u32> size = std::nullopt;
 };
 
 class Instruction final {
+    static u32 s_position;
+
 public:
     enum class Opcode : u8 {
-        Constant, String,
+        Constant, Float, String,
         Move, Lea, Copy,
         Load_Arg,
         Store_Arg,
-        Branch, BranchIf, Call, Return,
+        Jump, Branch, Call, Return,
         SExt, ZExt, FExt,
         Trunc, FTrunc,
         Add, Sub, Mul, Div,
@@ -100,10 +122,10 @@ public:
     };
 
 private:
-    u64 position;
+    u64 pos;
     Opcode op;
     std::vector<Operand> operands;
-    InstDescriptor desc;
+    InstructionDesc desc;
     Metadata meta;
 
     BasicBlock* pParent = nullptr;
@@ -113,26 +135,21 @@ private:
 
 public:
     Instruction(
-        u64 position,
         Opcode op, 
         const std::vector<Operand>& operands, 
-        const InstDescriptor& desc, 
         const Metadata& meta,
+        const InstructionDesc& desc = {},
         BasicBlock* pParent = nullptr);
 
     ~Instruction() = default;
 
-    u64 get_position() const { return position; }
+    u32 get_position() const { return pos; }
 
     Opcode get_opcode() const { return op; }
 
     const std::vector<Operand>& get_operands() const { return operands; }
 
     u32 num_operands() const { return operands.size(); }
-
-    InstDescriptor& get_desc() { return desc; }
-
-    const InstDescriptor& get_desc() const { return desc; }
 
     const Metadata& get_metadata() const { return meta; }
 
@@ -158,10 +175,6 @@ class BasicBlock final {
     BasicBlock* pPrev = nullptr;
     BasicBlock* pNext = nullptr;
 
-    std::vector<BasicBlock*> preds {};
-    std::vector<BasicBlock*> succs {};
-    std::vector<vreg_t> defs {};
-
 public:
     BasicBlock(Function* pParent = nullptr);
 
@@ -182,12 +195,6 @@ public:
     void set_prev(BasicBlock* pBlock) { pPrev = pBlock; }
 
     void set_next(BasicBlock* pBlock) { pNext = pBlock; }
-
-    const std::vector<BasicBlock*>& predecessors() const { return preds; }
-
-    const std::vector<BasicBlock*>& successors() const { return succs; }
-
-    const std::vector<vreg_t>& definitions() const { return defs; }
 
     /// Test if this basic block is empty (has no instructions).
     bool empty() const { return pFront == nullptr; }
@@ -214,19 +221,30 @@ public:
     void print(std::ostream& os) const;
 };
 
-struct Register final {
-    vreg_t num;
+class StackSlot final {
+    const Function* pParent;
+
+    std::string name;
+    u32 offset;
+
+public:
+    StackSlot(
+        const std::string& name, 
+        u32 offset, 
+        Function* pParent = nullptr);
+    
+    const std::string& get_name() const { return name; }
+
+    u32 get_offset() const { return offset; }
 };
 
 class Function final {
-    std::unordered_map<vreg_t, Register> regs;
-
-    std::string name;
-    std::vector<ValueType> args;
-    ValueType ret;
-
-    BasicBlock* pFront = nullptr;
-    BasicBlock* pBack = nullptr;
+    std::map<std::string, StackSlot*>       stack {};
+    std::string                             name;
+    std::vector<ValueType>                  args;
+    ValueType                               ret;
+    BasicBlock*                             pFront = nullptr;
+    BasicBlock*                             pBack = nullptr;
 
 public:
     Function(
@@ -235,6 +253,14 @@ public:
         ValueType ret);
 
     ~Function();
+
+    const std::map<std::string, StackSlot*>& get_stack() const { return stack; }
+
+    StackSlot* get_slot(const std::string& name) { return stack.at(name); }
+
+    void add_slot(StackSlot* pSlot) { stack.emplace(pSlot->get_name(), pSlot); }
+
+    u32 get_stack_size() const;
 
     const std::string& get_name() const { return name; }
 

@@ -94,7 +94,7 @@ void SymbolAnalysis::visit(UnaryExpr& node) {
         break;
 
     case UnaryExpr::Operator::Address_Of:
-        if (node.get_expr()->get_value_kind() != Expr::ValueKind::LValue)
+        if (!node.get_expr()->is_lvalue())
             Logger::fatal("cannot apply '&' operator to non-lvalue", node.span);
         
         node.pType = PointerType::get(root, node.get_expr()->get_type());

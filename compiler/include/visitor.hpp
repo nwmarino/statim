@@ -178,15 +178,20 @@ class Codegen final : public Visitor {
     enum class Phase : u8 {
         Declare, Define,
     };
+
+    enum class ValueContext : u8 {
+        LValue, RValue,
+    };
     
     Phase                   phase;
+    ValueContext            vctx;
     Options&                opts;
     Root&                   root;
     std::unique_ptr<Frame>  frame = nullptr;
     Function*               pFunction = nullptr;
     BasicBlock*             pInsert = nullptr;
     std::optional<Operand>  tmp = std::nullopt;
-    u64                     instr = 0;
+    u32                     vreg = 1;
 
     BasicBlock*             pCond = nullptr;
     BasicBlock*             pMerge = nullptr;

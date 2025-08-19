@@ -22,6 +22,15 @@ const std::string& InputFile::filename() {
     return (name = name.substr(pos + 1));
 }
 
+const std::string& InputFile::absolute() {
+    if (!absol.empty())
+        return absol;
+
+    boost::filesystem::path abs_path = boost::filesystem::absolute(pPath);
+    absol = abs_path.string();
+    return absol;
+}
+
 const std::string& InputFile::source() {
     if (!src.empty())
         return src;

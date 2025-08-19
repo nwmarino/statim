@@ -19,11 +19,15 @@ struct InputFile final {
 
 private:
     std::string name = "";
+    std::string absol = "";
     std::string src = "";
     
 public:
     /// Get the filename for this input file.
     const std::string& filename();
+
+    /// Get the absolute path for this input file.
+    const std::string& absolute();
 
     /// Get the source code of this input file as a string.
     const std::string& source();

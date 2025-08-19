@@ -479,29 +479,24 @@ class Expr : public Stmt {
     friend class SemanticAnalysis;
     friend class Codegen;
 
-public:
-    enum class ValueKind : u8 {
-        LValue, RValue
-    };
-
 protected:
     const Type* pType;
-    ValueKind   vkind;
 
 public:
-    Expr(const Span& span, const Type* pType, ValueKind vkind);
+    Expr(const Span& span, const Type* pType);
 
     virtual ~Expr() = default;
 
     virtual bool is_constant() const { return true; }
+
+    /// Test if this expression can be used as an lvalue.
+    virtual bool is_lvalue() const { return false; }
 
     virtual void accept(Visitor& visitor) = 0;
 
     virtual void print(std::ostream& os) const = 0;
 
     const Type* get_type() const { return pType; }
-
-    ValueKind get_value_kind() const { return vkind; }
 };
 
 class BoolLiteral final : public Expr {
@@ -513,7 +508,7 @@ class BoolLiteral final : public Expr {
 
 public:
     BoolLiteral(const Span& span, const Type* pType, bool value)
-        : Expr(span, pType, ValueKind::RValue), value(value) {};
+        : Expr(span, pType), value(value) {};
 
     bool get_value() const { return value; }
 
@@ -533,7 +528,7 @@ class IntegerLiteral final : public Expr {
 
 public:
     IntegerLiteral(const Span& span, const Type* pType, i64 value)
-        : Expr(span, pType, ValueKind::RValue), value(value) {};
+        : Expr(span, pType), value(value) {};
     
     i64 get_value() const { return value; }
 
@@ -553,7 +548,7 @@ class FloatLiteral final : public Expr {
 
 public:
     FloatLiteral(const Span& span, const Type* pType, f64 value)
-        : Expr(span, pType, ValueKind::RValue), value(value) {};
+        : Expr(span, pType), value(value) {};
 
     f64 get_value() const { return value; }
 
@@ -573,7 +568,7 @@ class CharLiteral final : public Expr {
 
 public:
     CharLiteral(const Span& span, const Type* pType, char value) 
-        : Expr(span, pType, ValueKind::RValue), value(value) {};
+        : Expr(span, pType), value(value) {};
 
     char get_value() const { return value; }
 
@@ -593,7 +588,7 @@ class StringLiteral final : public Expr {
 
 public:
     StringLiteral(const Span& span, const Type* pType, const std::string& value) 
-        : Expr(span, pType, ValueKind::RValue), value(value) {};
+        : Expr(span, pType), value(value) {};
 
     const std::string& get_value() const { return value; }
 
@@ -610,8 +605,7 @@ class NullLiteral final : public Expr {
     friend class Codegen;
 
 public:
-    NullLiteral(const Span& span, const Type* pType) 
-        : Expr(span, pType, ValueKind::RValue) {};
+    NullLiteral(const Span& span, const Type* pType) : Expr(span, pType) {};
 
     void accept(Visitor& visitor) override {
         visitor.visit(*this);
@@ -661,7 +655,6 @@ public:
     BinaryExpr(
         const Span& span, 
         const Type* pType, 
-        ValueKind vkind, 
         Operator op, 
         Expr* pLeft, 
         Expr* pRight);
@@ -718,7 +711,6 @@ public:
     UnaryExpr(
         const Span& span, 
         const Type* pType, 
-        ValueKind vkind, 
         Operator op, 
         Expr* pExpr, 
         bool postfix);
@@ -726,6 +718,8 @@ public:
     ~UnaryExpr() override;
 
     bool is_constant() const override;
+
+    bool is_lvalue() const override { return op == Operator::Dereference; }
 
     Operator get_operator() const { return op; }
 
@@ -753,7 +747,6 @@ public:
     CastExpr(
         const Span& span, 
         const Type* pType, 
-        ValueKind vkind, 
         Expr* pExpr);
 
     ~CastExpr() override;
@@ -828,13 +821,15 @@ public:
     SubscriptExpr(
         const Span& span, 
         const Type* pType,
-        ValueKind vkind, 
         Expr* pBase, 
         Expr* pIndex);
     
     ~SubscriptExpr() override;
 
-    bool is_constant() const override { return pBase->is_constant() && pIndex->is_constant(); }
+    bool is_constant() const override 
+    { return pBase->is_constant() && pIndex->is_constant(); }
+
+    bool is_lvalue() const override{ return true; }
 
     const Expr* get_base() const { return pBase; }
 
@@ -860,10 +855,11 @@ public:
     ReferenceExpr(
         const Span& span, 
         const Type* pType, 
-        ValueKind vkind, 
         const std::string& name);
     
     bool is_constant() const override { return false; }
+
+    bool is_lvalue() const override{ return true; }
 
     const std::string& get_name() const { return name; }
 
@@ -889,13 +885,14 @@ public:
     MemberExpr(
         const Span& span, 
         const Type* pType, 
-        ValueKind vkind, 
         const std::string& member, 
         Expr* pBase);
 
     ~MemberExpr() override;
 
     bool is_constant() const override { return false; }
+
+    bool is_lvalue() const override{ return true; }
 
     const Expr* get_base() const { return pBase; }
 
@@ -946,7 +943,6 @@ public:
     RuneExpr(
         const Span& span, 
         const Type* pType, 
-        ValueKind vkind, 
         Rune* pRune);
     
     ~RuneExpr() override;
