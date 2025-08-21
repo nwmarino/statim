@@ -9,16 +9,12 @@ SymbolAnalysis::SymbolAnalysis(Options& opts, Root& root)
     : opts(opts), root(root), pScope(root.get_scope()) {};
 
 void SymbolAnalysis::visit(Root& node) {
-    for (auto decl : node.decls)
-        decl->accept(*this);
+    for (auto decl : node.decls) decl->accept(*this);
 }
 
 void SymbolAnalysis::visit(FunctionDecl& node) {
     pScope = node.get_scope();
-
-    if (node.has_body()) 
-        node.pBody->accept(*this);
-
+    if (node.has_body()) node.pBody->accept(*this);
     pScope = pScope->get_parent();
 }
 
@@ -31,34 +27,18 @@ void SymbolAnalysis::visit(VariableDecl& node) {
 
     // If the variable has no type specifier, it needs an initializer in order
     // to infer it.
-    if (!node.has_init())
-        Logger::fatal("cannot infer variable type without initializer", node.span);
+    if (!node.has_init()) {
+        Logger::fatal(
+            "cannot infer variable type without initializer", 
+            node.get_span());
+    }
 
     node.pType = node.get_init()->get_type();
 }
 
-void SymbolAnalysis::visit(FieldDecl& node) {
-
-}
-
-void SymbolAnalysis::visit(StructDecl& node) {
-
-}
-
-void SymbolAnalysis::visit(EnumValueDecl& node) {
-
-}
-
-void SymbolAnalysis::visit(EnumDecl& node) {
-
-}
-
 void SymbolAnalysis::visit(BlockStmt& node) {
     pScope = node.get_scope();
-    
-    for (auto stmt : node.get_stmts()) 
-        stmt->accept(*this);
-    
+    for (auto stmt : node.get_stmts()) stmt->accept(*this);
     pScope = pScope->get_parent();
 }
 
@@ -70,8 +50,7 @@ void SymbolAnalysis::visit(IfStmt& node) {
     node.pCond->accept(*this);
     node.pThen->accept(*this);
 
-    if (node.has_else())
-        node.pElse->accept(*this);
+    if (node.has_else()) node.pElse->accept(*this);
 }
 
 void SymbolAnalysis::visit(WhileStmt& node) {
@@ -80,8 +59,7 @@ void SymbolAnalysis::visit(WhileStmt& node) {
 }
 
 void SymbolAnalysis::visit(RetStmt& node) {
-    if (node.has_expr())
-        node.pExpr->accept(*this);
+    if (node.has_expr()) node.pExpr->accept(*this);
 }
 
 void SymbolAnalysis::visit(Rune& node) {
@@ -139,11 +117,14 @@ void SymbolAnalysis::visit(SubscriptExpr& node) {
     node.pIndex->accept(*this);
 
     const Type* base_type = node.get_base()->get_type();
-    if (!dynamic_cast<const PointerType*>(base_type)) {
+    if (!base_type->is_pointer()) {
         Logger::fatal(
-            "subscript operator '[]' base type must be a pointer", 
+            "operator '[]' base type must be a pointer, got '" + 
+                base_type->to_string() + "'", 
             node.get_span());
     }
+
+    node.pType = base_type->as_pointer()->get_pointee();
 
     if (!node.get_index()->get_type()->is_int()) {
         Logger::fatal(
@@ -159,15 +140,51 @@ void SymbolAnalysis::visit(ReferenceExpr& node) {
 
     if (auto var = dynamic_cast<VariableDecl*>(decl)) {
         node.pType = var->get_type();
+    } else if (auto param = dynamic_cast<ParameterDecl*>(decl)) {
+        node.pType = param->get_type();
+    } else if (auto val = dynamic_cast<EnumValueDecl*>(decl)) {
+        node.pType = val->get_type();
     } else {
-        Logger::fatal("reference is not a variable: '" + node.name + "'", node.span);
+        Logger::fatal("unresolved reference: '" + node.name + "'", node.span);
     }
 
     node.set_decl(decl);
 }
 
 void SymbolAnalysis::visit(MemberExpr& node) {
-    /// TODO: Check that the base has a structure type.
+    node.pBase->accept(*this);
+
+    // Try to resolve the type of the access base as a structure.
+    const StructType* st = nullptr;
+    const Type* base_type = node.get_base()->get_type();
+    if (base_type->is_struct()) {
+        st = base_type->as_struct();
+    } else if (base_type->is_pointer()) {
+        auto pointee = base_type->as_pointer()->get_pointee();
+        st = dynamic_cast<const StructType*>(pointee);
+        if (!st) {
+            Logger::fatal(
+                "access operator '.' base is a pointer, but not to a struct",
+                node.get_span());
+        }
+    } else {
+        Logger::fatal(
+            "access operator '.' base is not a structure",
+            node.get_span());
+    }
+
+    // Try to resolve the targetted field within the structure.
+    const StructDecl* decl = st->get_decl();
+    const FieldDecl* field = decl->get_field(node.get_name());
+    if (!field) {
+        Logger::fatal(
+            "member '" + node.get_name() + "' does not exist in struct '" + 
+                decl->get_name() + "'",
+            node.get_span());
+    }
+
+    node.set_decl(field);
+    node.pType = field->get_type();
 }
 
 void SymbolAnalysis::visit(CallExpr& node) {

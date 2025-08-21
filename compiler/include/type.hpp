@@ -5,6 +5,7 @@
 #include "source_loc.hpp"
 #include "types.hpp"
 
+#include <cassert>
 #include <string>
 #include <vector>
 
@@ -13,6 +14,12 @@ namespace stm {
 class Root;
 class StructDecl;
 class EnumDecl;
+
+class DeferredType;
+class FunctionType;
+class PointerType;
+class StructType;
+class EnumType;
 
 /// Base class for all frontend types.
 class Type {
@@ -42,11 +49,55 @@ public:
     /// \returns `true` if this is the `void` type.
     virtual bool is_void() const { return false; }
 
+    /// \returns `true` if this is the `bool` type.
+    virtual bool is_bool() const { return false; }
+
     /// \returns `true` if this type can represent integers.
     virtual bool is_int() const { return false; }
 
+    /// \returns `true` only if this type is a signed integer.
+    virtual bool is_signed_int() const { return false; }
+
+    /// \returns `true` only if this type is an unsigned integer.
+    virtual bool is_unsigned_int() const { return false; }
+
     /// \returns `true` if this type can represent floating points.
     virtual bool is_float() const { return false; }
+
+    /// \returns `true` if this type is a deferred type.
+    virtual bool is_deferred() const { return false; }
+
+    /// \returns This type as a defered type, if it is one.
+    virtual const DeferredType* as_deferred() const
+    { assert(false && "cannot convert this type to a deferred type"); }
+
+    /// \returns `true` if this type is a function type.
+    virtual bool is_function() const { return false; }
+
+    /// \returns This type as a function type, if it is one.
+    virtual const FunctionType* as_function() const
+    { assert(false && "cannot convert this type to a function type"); }
+
+    /// \returns `true` if this type is a pointer type.
+    virtual bool is_pointer() const { return false; }
+
+    /// \returns This type as a pointer type, if it is one.
+    virtual const PointerType* as_pointer() const
+    { assert(false && "cannot convert this type to a pointer type"); }
+
+    /// \returns `true` if this type is a struct type.
+    virtual bool is_struct() const { return false; }
+
+    /// \returns This type as a struct type, if it is one.
+    virtual const StructType* as_struct() const
+    { assert(false && "cannot convert this type to a struct type"); }
+
+    /// \returns `true` if this type is an enum type.
+    virtual bool is_enum() const { return false; }
+
+    /// \returns This type as an enum type, if it is one.
+    virtual const EnumType* as_enum() const
+    { assert(false && "cannot convert this type to an enum type"); }
 
     /// \returns `true` if this type can be casted to the \p other type.
     virtual bool can_cast(const Type* other, bool impl = false) const
@@ -91,10 +142,35 @@ public:
     void set_resolved(const Type* pType) { pResolved = pType; }
 
     bool is_void() const override;
+
+    bool is_bool() const override;
     
     bool is_int() const override;
+
+    bool is_signed_int() const override;
+
+    bool is_unsigned_int() const override;
     
     bool is_float() const override;
+
+    bool is_deferred() const override { return true; }
+
+    const DeferredType* as_deferred() const override { return this; }
+
+    bool is_pointer() const override 
+    { return pResolved && pResolved->is_pointer(); }
+
+    const PointerType* as_pointer() const override;
+
+    bool is_struct() const override
+    { return pResolved && pResolved->is_struct(); }
+
+    const StructType* as_struct() const override;
+
+    bool is_enum() const override
+    { return pResolved && pResolved->is_enum(); }
+
+    const EnumType* as_enum() const override;
 
     bool can_cast(const Type* other, bool impl = false) const override;
 
@@ -132,7 +208,13 @@ public:
 
     bool is_void() const override { return kind == Kind::Void; }
 
+    bool is_bool() const override { return kind == Kind::Bool; }
+
     bool is_int() const override;
+
+    bool is_signed_int() const override;
+
+    bool is_unsigned_int() const override;
 
     bool is_float() const override;
 
@@ -168,6 +250,10 @@ public:
     /// \returns All the parameter types of this function signature.
     const std::vector<const Type*>& get_param_types() const { return params; }
 
+    bool is_function() const override { return true; }
+
+    const FunctionType* as_function() const override { return this; }
+
     std::string to_string() const override;
 };
 
@@ -189,6 +275,10 @@ public:
 
     /// \returns The level of indirection of this pointer type.
     u32 get_indirection() const;
+
+    bool is_pointer() const override { return true; }
+
+    const PointerType* as_pointer() const override { return this; }
 
     bool can_cast(const Type* other, bool impl = false) const override;
 
@@ -225,6 +315,10 @@ public:
     /// \returns The declaration that defines this struct type.
     const StructDecl* get_decl() const { return m_decl; }
 
+    bool is_struct() const override { return true; }
+
+    const StructType* as_struct() const override { return this; }
+
     std::string to_string() const override;
 };
 
@@ -256,6 +350,10 @@ public:
     const EnumDecl* get_decl() const { return m_decl; }
 
     bool is_int() const override { return true; }
+
+    bool is_enum() const override { return true; }
+
+    const EnumType* as_enum() const override { return this; }
 
     std::string to_string() const override;
 };

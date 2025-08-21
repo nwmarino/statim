@@ -11,34 +11,90 @@ Operand::Operand(Immediate imm)
     : kind(Kind::Immediate), imm(imm) {};
 
 Operand::Operand(MemoryRef mem)
-    : kind(Kind::MemoryRef), mem(mem) {};
+    : kind(Kind::Memory), mem(mem) {};
 
-Operand::Operand(StackRef stack)
-    : kind(Kind::StackRef), stack(stack) {};
+Operand::Operand(ArgumentRef arg)
+    : kind(Kind::Argument), arg(arg) {};
 
 Operand::Operand(BlockRef block)
-    : kind(Kind::BlockRef), block(block) {};
+    : kind(Kind::Block), block(block) {};
 
 Operand::Operand(FunctionRef function) 
-    : kind(Kind::FunctionRef), function(function) {};
-
-u32 Instruction::s_position = 0;
+    : kind(Kind::Function), function(function) {};
 
 Instruction::Instruction(
+        u32 position,
         Opcode op, 
         const std::vector<Operand>& operands, 
         const Metadata& meta,
-        const InstructionDesc& desc, 
-        BasicBlock* pParent) 
-    : pos(s_position++), op(op), operands(operands), meta(meta), desc(desc), 
-      pParent(pParent) {
-    if (pParent)
-        pParent->append(this);
-}; 
+        BasicBlock* insert,
+        Size size,
+        const std::string& comment)
+    : m_position(position), m_op(op), m_operands(operands), m_meta(meta), 
+      m_size(size), m_comment(comment), m_parent(insert) {
+
+    if (m_parent) 
+        m_parent->append(this);
+}
+
+void Instruction::create(
+        BasicBlock* block,
+        Opcode op, 
+        const std::vector<Operand>& operands, 
+        const Metadata& meta,
+        Size size,
+        const std::string& comment) {
+    static u32 instr_pos = 0;
+    new Instruction(
+        instr_pos++,
+        op,
+        operands,
+        meta,
+        block,
+        size,
+        comment);
+}
 
 bool Instruction::is_terminator() const {
-    return op == Opcode::Branch || op == Opcode::Jump || 
-        op == Opcode::Return;
+    switch (m_op) {
+    case Opcode::Jump:
+    case Opcode::BranchTrue:
+    case Opcode::BranchFalse:
+    case Opcode::Return:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool Instruction::is_comparison() const {
+    switch (m_op) {
+    case Opcode::Cmpeq:
+    case Opcode::Cmpne:
+    case Opcode::Cmpoeq:
+    case Opcode::Cmpone:
+    case Opcode::Cmpuneq:
+    case Opcode::Cmpunne:
+    case Opcode::Cmpslt:
+    case Opcode::Cmpsle:
+    case Opcode::Cmpsgt:
+    case Opcode::Cmpsge:
+    case Opcode::Cmpult:
+    case Opcode::Cmpule:
+    case Opcode::Cmpugt:
+    case Opcode::Cmpuge:
+    case Opcode::Cmpolt:
+    case Opcode::Cmpole:
+    case Opcode::Cmpogt:
+    case Opcode::Cmpoge:
+    case Opcode::Cmpunlt:
+    case Opcode::Cmpunle:
+    case Opcode::Cmpungt:
+    case Opcode::Cmpunge:
+        return true;
+    default:
+        return false;
+    }
 }
 
 BasicBlock::BasicBlock(Function* pParent) : pParent(pParent) {
@@ -115,25 +171,28 @@ StackSlot::StackSlot(
         u32 offset, 
         Function* pParent)
     : name(name), offset(offset), pParent(pParent) {
-    if (pParent)
-        pParent->add_slot(this);
+    if (pParent) pParent->add_slot(this);
 };
 
-Function::Function(
-        const std::string& name, 
-        const std::vector<ValueType>& args, 
-        ValueType ret)
-    : name(name), args(args), ret(ret) {};
+Function::Function(const std::string& name) : name(name) {}
 
 Function::~Function() {
-    
+    for (auto slot : stack) delete slot;
+    stack.clear();
+}
+
+StackSlot* Function::get_slot(const std::string& name) {
+    for (auto slot : stack)
+        if (slot->get_name() == name) return slot;
+
+    return nullptr;
 }
 
 u32 Function::get_stack_size() const {
     if (stack.empty())
         return 0;
 
-    return stack.end()->second->get_offset();
+    return stack.back()->get_offset();
 }
 
 u32 Function::num_blocks() const {

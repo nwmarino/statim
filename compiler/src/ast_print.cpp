@@ -32,16 +32,16 @@ static std::string span_string(const Span& span) {
 void Root::print(std::ostream& os) const {
     std::memset(gPipe, false, 16);
     
-    os << "AST <" << file.pPath << ">\n";
+    os << "AST <" << file.absolute() << ">\n";
 
-    gPipe[gIndent++] = true;
+    gPipe[++gIndent] = true;
 
     for (u32 idx = 0, e = decls.size(); idx != e; ++idx) {
         gLastChild = idx + 1 == e;
+        gPipe[gIndent] = !gLastChild;
         decls[idx]->print(os);
     }
 
-    gPipe[--gIndent] = false;
     os << '\n';
 }
 

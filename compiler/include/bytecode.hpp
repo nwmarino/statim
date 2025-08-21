@@ -6,7 +6,6 @@
 #include "types.hpp"
 
 #include <map>
-#include <optional>
 #include <ostream>
 #include <string>
 #include <vector>
@@ -21,16 +20,11 @@ struct Metadata final {
     InputFile& file;
     u32        line;  
 
+    Metadata(InputFile& file, u32 line) : file(file), line(line) {};
+
     Metadata(const Span& span) : file(span.begin.file), line(span.begin.line) {};
 
     Metadata(const SourceLocation& loc) : file(loc.file), line(loc.line) {};
-};
-
-enum class ValueType : u8 {
-    None,
-    Int8, Int16, Int32, Int64,
-    Float32, Float64,
-    Pointer,
 };
 
 struct Register final {
@@ -60,8 +54,8 @@ struct MemoryRef final {
     i32 offset;
 };
 
-struct StackRef final {
-    i32 offset;
+struct ArgumentRef final {
+    u32 index;
 };
 
 struct BlockRef final {
@@ -76,17 +70,17 @@ struct Operand final {
     enum class Kind : u8 {
         Register,
         Immediate,
-        MemoryRef,
-        StackRef,
-        BlockRef,
-        FunctionRef,
+        Memory,
+        Argument,
+        Block,
+        Function,
     } kind;
 
     union {
         Register reg;
         Immediate imm;
         MemoryRef mem;
-        StackRef stack;
+        ArgumentRef arg;
         BlockRef block;
         FunctionRef function;
     };
@@ -94,74 +88,124 @@ struct Operand final {
     Operand(Register reg);
     Operand(Immediate imm);
     Operand(MemoryRef mem);
-    Operand(StackRef stack);
+    Operand(ArgumentRef arg);
     Operand(BlockRef block);
     Operand(FunctionRef function);
 
     void print(std::ostream& os) const;
 };
 
-struct InstructionDesc final {
-    std::optional<u32> size = std::nullopt;
+/// Different types of instruction opcodes.
+enum class Opcode : u8 {
+    Constant,
+    Move,
+    Lea, 
+    Copy,
+    Jump, 
+    BranchTrue, BranchFalse,
+    Return,
+    Call, 
+    Add, Sub, Mul, Div,
+    Inc, Dec,
+    Neg,
+    And, Or, Xor, Not,
+    Shl, Sar, Shr,
+    SExt, ZExt, FExt,
+    Trunc, FTrunc,
+    SI2SS, SI2SD,
+    UI2SS, UI2SD,
+    SS2SI, SD2SI,
+    SS2UI, SD2UI,
+    Cmpeq, Cmpne, 
+    Cmpoeq, Cmpone, 
+    Cmpuneq, Cmpunne,
+    Cmpslt, Cmpsle, Cmpsgt, Cmpsge,
+    Cmpult, Cmpule, Cmpugt, Cmpuge,
+    Cmpolt, Cmpole, Cmpogt, Cmpoge,
+    Cmpunlt, Cmpunle, Cmpungt, Cmpunge,
 };
 
 class Instruction final {
-    static u32 s_position;
-
 public:
-    enum class Opcode : u8 {
-        Constant, Float, String,
-        Move, Lea, Copy,
-        Load_Arg,
-        Store_Arg,
-        Jump, Branch, Call, Return,
-        SExt, ZExt, FExt,
-        Trunc, FTrunc,
-        Add, Sub, Mul, Div,
-        Shl, Sar, Shr,
+    enum class Size : u8 {
+        None,
+        Byte, // b
+        Half, // h
+        Quad, // q
+        Word, // w
+        Single, // ss
+        Double, // sd
     };
 
 private:
-    u64 pos;
-    Opcode op;
-    std::vector<Operand> operands;
-    InstructionDesc desc;
-    Metadata meta;
+    u32 m_position;
+    Opcode m_op;
+    std::vector<Operand> m_operands;
+    Metadata m_meta;
+    Size m_size;
+    std::string m_comment;
+    BasicBlock* m_parent = nullptr;
+    Instruction* m_prev = nullptr;
+    Instruction* m_next = nullptr;
 
-    BasicBlock* pParent = nullptr;
-
-    Instruction* pPrev = nullptr;
-    Instruction* pNext = nullptr;
+    Instruction(
+        u32 position,
+        Opcode op,
+        const std::vector<Operand>& operands, 
+        const Metadata& meta,
+        BasicBlock* insert,
+        Size size,
+        const std::string& comment);
 
 public:
-    Instruction(
+    static void create(
+        BasicBlock* block,
         Opcode op, 
         const std::vector<Operand>& operands, 
         const Metadata& meta,
-        const InstructionDesc& desc = {},
-        BasicBlock* pParent = nullptr);
+        Size size = Size::None,
+        const std::string& comment = "");
 
     ~Instruction() = default;
 
-    u32 get_position() const { return pos; }
+    /// \returns The position of this instruction in its parent frame.
+    u32 position() const { return m_position; }
 
-    Opcode get_opcode() const { return op; }
+    /// \returns The opcode of this instruction.
+    Opcode opcode() const { return m_op; }
 
-    const std::vector<Operand>& get_operands() const { return operands; }
+    /// \returns The operands of thins instruction.
+    const std::vector<Operand>& operands() const { return m_operands; }
 
-    u32 num_operands() const { return operands.size(); }
+    /// \returns The number of operands in this instruction.
+    u32 num_operands() const { return m_operands.size(); }
 
-    const Metadata& get_metadata() const { return meta; }
+    /// \returns The metadata of this instruction.
+    const Metadata& metadata() const { return m_meta; }
 
-    Instruction* prev() const { return pPrev; }
+    /// \returns The instruction previous to this one, if it exists.
+    Instruction* prev() const { return m_prev; }
 
-    Instruction* next() const { return pNext; }
+    /// \returns The instruction after this one, if it exists.
+    Instruction* next() const { return m_next; }
 
-    void set_prev(Instruction* pInst) { pPrev = pInst; }
+    /// Set the instruction before this one to \p inst.
+    void set_prev(Instruction* inst) { m_prev = inst; }
 
-    void set_next(Instruction* pInst) { pNext = pInst; }
+    /// Set the instruction after this one to \p inst.
+    void set_next(Instruction* inst) { m_next = inst; }
 
+    /// \returns The parent block of this instruction.
+    BasicBlock* parent() const { return m_parent; }
+
+    /// \returns The size of this instruction.
+    Size size() const { return m_size; }
+
+    /// \returns `true` if this instruction is a terminator.
     bool is_terminator() const;
+
+    /// \returns `true` if this instruction is a comparison (affecting flags).
+    bool is_comparison() const;
 
     void print(std::ostream& os) const;
 };
@@ -239,36 +283,25 @@ public:
 };
 
 class Function final {
-    std::map<std::string, StackSlot*>       stack {};
-    std::string                             name;
-    std::vector<ValueType>                  args;
-    ValueType                               ret;
-    BasicBlock*                             pFront = nullptr;
-    BasicBlock*                             pBack = nullptr;
+    std::vector<StackSlot*> stack {};
+    std::string name;
+    BasicBlock* pFront = nullptr;
+    BasicBlock* pBack = nullptr;
 
 public:
-    Function(
-        const std::string& name, 
-        const std::vector<ValueType>& args, 
-        ValueType ret);
+    Function(const std::string& name);
 
     ~Function();
 
-    const std::map<std::string, StackSlot*>& get_stack() const { return stack; }
+    const std::vector<StackSlot*>& get_stack() const { return stack; }
 
-    StackSlot* get_slot(const std::string& name) { return stack.at(name); }
+    StackSlot* get_slot(const std::string& name);
 
-    void add_slot(StackSlot* pSlot) { stack.emplace(pSlot->get_name(), pSlot); }
+    void add_slot(StackSlot* pSlot) { stack.push_back(pSlot); }
 
     u32 get_stack_size() const;
 
     const std::string& get_name() const { return name; }
-
-    const std::vector<ValueType>& get_args() const { return args; }
-
-    ValueType get_arg(u32 idx) const { return args.at(idx); }
-
-    ValueType get_return() const { return ret; }
 
     BasicBlock* front() const { return pFront; }
 

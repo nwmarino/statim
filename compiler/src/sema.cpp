@@ -101,22 +101,6 @@ void SemanticAnalysis::visit(VariableDecl& node) {
     }
 }
 
-void SemanticAnalysis::visit(FieldDecl& node) {
-
-}
-
-void SemanticAnalysis::visit(StructDecl& node) {
-
-}
-
-void SemanticAnalysis::visit(EnumValueDecl& node) {
-
-}
-
-void SemanticAnalysis::visit(EnumDecl& node) {
-
-}
-
 void SemanticAnalysis::visit(BlockStmt& node) {
     for (auto stmt : node.stmts) stmt->accept(*this);
 }
@@ -144,6 +128,12 @@ void SemanticAnalysis::visit(DeclStmt& node) {
 void SemanticAnalysis::visit(IfStmt& node) {
     node.pCond->accept(*this);
 
+    if (!node.get_cond()->get_type()->is_bool()) {
+        Logger::fatal(
+            "'if' condition must be a boolean",
+            node.get_cond()->get_span());
+    }
+
     if (dynamic_cast<const DeclStmt*>(node.get_then())) {
         Logger::fatal(
             "declaration must be within a block statement", 
@@ -165,6 +155,12 @@ void SemanticAnalysis::visit(IfStmt& node) {
 
 void SemanticAnalysis::visit(WhileStmt& node) {
     node.pCond->accept(*this);
+
+    if (!node.get_cond()->get_type()->is_bool()) {
+        Logger::fatal(
+            "'while' condition must be a boolean",
+            node.get_cond()->get_span());
+    }
 
     if (dynamic_cast<const DeclStmt*>(node.get_body())) {
         Logger::fatal(

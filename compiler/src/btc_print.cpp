@@ -1,36 +1,9 @@
 #include "bytecode.hpp"
+
 #include <iomanip>
 #include <string>
 
 using namespace stm;
-
-static void print_valuetype(std::ostream& os, ValueType type) {
-    switch (type) {
-    case ValueType::None:
-        return;
-    case ValueType::Int8:
-        os << "i8";
-        return;
-    case ValueType::Int16:
-        os << "i16";
-        return;
-    case ValueType::Int32:
-        os << "i32";
-        return;
-    case ValueType::Int64:
-        os << "i64";
-        return;
-    case ValueType::Float32:
-        os << "f32";
-        return;
-    case ValueType::Float64:
-        os << "f64";
-        return;
-    case ValueType::Pointer:
-        os << "ptr";
-        return;
-    }
-}
 
 void Operand::print(std::ostream& os) const {
     switch (kind) {
@@ -52,7 +25,7 @@ void Operand::print(std::ostream& os) const {
         }
         break;
 
-    case Kind::MemoryRef:
+    case Kind::Memory:
         os << '[';
         if (mem.base.id == 0)
             os << "stack";
@@ -65,15 +38,15 @@ void Operand::print(std::ostream& os) const {
         os << ']';
         break;
 
-    case Kind::StackRef:
-        os << "stack+" + std::to_string(stack.offset);
+    case Kind::Argument:
+        os << "arg." << std::to_string(arg.index);
         break;
 
-    case Kind::BlockRef:
+    case Kind::Block:
         os << "bb" << std::to_string(block.pBlock->get_number());
         break;
 
-    case Kind::FunctionRef:
+    case Kind::Function:
         os << '@' << function.pFunction->get_name();
         break;
     }
@@ -81,25 +54,25 @@ void Operand::print(std::ostream& os) const {
 
 void Instruction::print(std::ostream& os) const {
     std::ostringstream oss;
-    oss << meta.file.filename() << ':' << meta.line;
+    oss << m_meta.file.filename() << ':' << m_meta.line;
 
-    constexpr i32 total_width = 25;
+    constexpr i32 TOTAL_WIDTH = 25;
     std::string left = oss.str();
-    std::string pos_str = std::to_string(pos);
-    i32 pad = total_width - static_cast<i32>(left.size() + pos_str.size());
-    if (pad < 0) pad = 0;
+    std::string pos_str = std::to_string(m_position);
+    i32 pad = TOTAL_WIDTH - static_cast<i32>(left.size() + pos_str.size());
+    if (pad < 0) 
+        pad = 0;
 
-    os << left << std::string(pad, ' ') << pos_str << "|" << std::setw(8);
+    os << left << std::string(pad, ' ') << pos_str << "|";
 
-    switch (op) {
+    if (m_size == Size::None)
+        os << ' ';
+
+    os << std::setw(9);
+
+    switch (m_op) {
     case Opcode::Constant:
         os << "const";
-        break;
-    case Opcode::Float:
-        os << "float";
-        break;
-    case Opcode::String:
-        os << "str";
         break;
     case Opcode::Move:
         os << "mov";
@@ -110,23 +83,62 @@ void Instruction::print(std::ostream& os) const {
     case Opcode::Copy:
         os << "cpy";
         break;
-    case Opcode::Load_Arg:
-        os << "load_arg";
-        break;
-    case Opcode::Store_Arg:
-        os << "store_arg";
-        break;
     case Opcode::Jump:
         os << "jmp";
         break;
-    case Opcode::Branch:
-        os << "br";
+    case Opcode::BranchTrue:
+        os << "brt";
+        break;
+    case Opcode::BranchFalse:
+        os << "brf";
         break;
     case Opcode::Call:
         os << "call";
         break;
     case Opcode::Return:
         os << "ret";
+        break;
+    case Opcode::Add:
+        os << "add";
+        break;
+    case Opcode::Sub:
+        os << "sub";
+        break;
+    case Opcode::Mul:
+        os << "mul";
+        break;
+    case Opcode::Div:
+        os << "div";
+        break;
+    case Opcode::Inc:
+        os << "inc";
+        break;
+    case Opcode::Dec:
+        os << "dec";
+        break;
+    case Opcode::Neg:
+        os << "neg";
+        break;
+    case Opcode::And:
+        os << "and";
+        break;
+    case Opcode::Or:
+        os << "or";
+        break;
+    case Opcode::Xor:
+        os << "xor";
+        break;
+    case Opcode::Not:
+        os << "not";
+        break;
+    case Opcode::Shl:
+        os << "shl";
+        break;
+    case Opcode::Sar:
+        os << "sar";
+        break;
+    case Opcode::Shr:
+        os << "shr";
         break;
     case Opcode::SExt:
         os << "sext";
@@ -143,43 +155,132 @@ void Instruction::print(std::ostream& os) const {
     case Opcode::FTrunc:
         os << "ftrunc";
         break;
-    case Opcode::Add:
-        os << "add";
+    case Opcode::SI2SS:
+        os << "si2ss";
         break;
-    case Opcode::Sub:
-        os << "sub";
+    case Opcode::SI2SD:
+        os << "si2sd";
         break;
-    case Opcode::Mul:
-        os << "mul";
+    case Opcode::UI2SS:
+        os << "ui2ss";
         break;
-    case Opcode::Div:
-        os << "div";
+    case Opcode::UI2SD:
+        os << "ui2sd";
         break;
-    case Opcode::Shl:
-        os << "shl";
+    case Opcode::SS2SI:
+        os << "ss2si";
         break;
-    case Opcode::Sar:
-        os << "sar";
+    case Opcode::SD2SI:
+        os << "sd2si";
         break;
-    case Opcode::Shr:
-        os << "shr";
+    case Opcode::SS2UI:
+        os << "ss2ui";
+        break;
+    case Opcode::SD2UI:
+        os << "sd2ui";
+        break;
+    case Opcode::Cmpeq:
+        os << "cmpeq";
+        break;
+    case Opcode::Cmpne:
+        os << "cmpne";
+        break;
+    case Opcode::Cmpoeq:
+        os << "cmpoeq";
+        break;
+    case Opcode::Cmpone:
+        os << "cmpone";
+        break;
+    case Opcode::Cmpuneq:
+        os << "cmpuneq";
+        break;
+    case Opcode::Cmpunne:
+        os << "cmpunne";
+        break;
+    case Opcode::Cmpslt:
+        os << "cmpslt";
+        break;
+    case Opcode::Cmpsle:
+        os << "cmpsle";
+        break;
+    case Opcode::Cmpsgt:
+        os << "cmpsgt";
+        break;
+    case Opcode::Cmpsge:
+        os << "cmpsge";
+        break;
+    case Opcode::Cmpult:
+        os << "cmpult";
+        break;
+    case Opcode::Cmpule:
+        os << "cmpule";
+        break;
+    case Opcode::Cmpugt:
+        os << "cmpugt";
+        break;
+    case Opcode::Cmpuge:
+        os << "cmpuge";
+        break;
+    case Opcode::Cmpolt:
+        os << "cmpolt";
+        break;
+    case Opcode::Cmpole:
+        os << "cmpole";
+        break;
+    case Opcode::Cmpogt:
+        os << "cmpogt";
+        break;
+    case Opcode::Cmpoge:
+        os << "cmpoge";
+        break;
+    case Opcode::Cmpunlt:
+        os << "cmpunlt";
+        break;
+    case Opcode::Cmpunle:
+        os << "cmpunle";
+        break;
+    case Opcode::Cmpungt:
+        os << "cmpungt";
+        break;
+    case Opcode::Cmpunge:
+        os << "cmpunge";
+        break;
+    }
+
+    switch (m_size) {
+    case Size::None:
+        os << " ";
+        break;
+    case Size::Byte:
+        os << "b ";
+        break;
+    case Size::Half:
+        os << "h ";
+        break;
+    case Size::Quad:
+        os << "q ";
+        break;
+    case Size::Word:
+        os << "w ";
+        break;
+    case Size::Single:
+        os << "ss";
+        break;
+    case Size::Double:
+        os << "sd";
         break;
     }
 
     os << "   ";
 
-    if (op == Opcode::Constant || op == Opcode::Float || op == Opcode::String) {
-        operands[1].print(os);
+    if (m_op == Opcode::Constant || m_op == Opcode::Copy) {
+        m_operands[1].print(os);
         os << " = ";
-        operands[0].print(os);
+        m_operands[0].print(os);
     } else for (u32 idx = 0, e = num_operands(); idx != e; ++idx) {
-        operands[idx].print(os);
-        if (idx + 1 != e)
-            os << ", ";
+        m_operands[idx].print(os);
+        if (idx + 1 != e) os << ", ";
     }
-
-    if (desc.size.has_value())
-        os << " ~" << *desc.size;
 }
 
 void BasicBlock::print(std::ostream& os) const {
@@ -195,21 +296,11 @@ void BasicBlock::print(std::ostream& os) const {
 }
 
 void Function::print(std::ostream& os) const {
-    os << "Bytecode for '" << name << " (";
+    os << "Bytecode for '" << name << "'\n\n";
 
-    for (u32 idx = 0, e = args.size(); idx != e; ++idx) { 
-        print_valuetype(os, args[idx]);
-        if (idx + 1 != e)
-            os << ", ";
-    }
-
-    os << ") -> ";
-    print_valuetype(os, ret);
-    os << "'\n\n";
-
-    for (auto [ name, slot ] : stack) {
+    for (auto slot : stack) {
         os << "    ... offset: " << std::to_string(slot->get_offset()) << 
-            ", name: " << name << '\n';
+            ", name: " << slot->get_name() << '\n';
     }
 
     os << "\n";

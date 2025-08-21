@@ -107,10 +107,10 @@ public:
     void visit(FunctionDecl& node) override;
     void visit(ParameterDecl& node) override {};
     void visit(VariableDecl& node) override;
-    void visit(FieldDecl& node) override;
-    void visit(StructDecl& node) override;
-    void visit(EnumValueDecl& node) override;
-    void visit(EnumDecl& node) override;
+    void visit(FieldDecl& node) override {};
+    void visit(StructDecl& node) override {};
+    void visit(EnumValueDecl& node) override {};
+    void visit(EnumDecl& node) override {};
 
     void visit(BlockStmt& node) override;
     void visit(BreakStmt& node) override {};
@@ -158,10 +158,10 @@ public:
     void visit(FunctionDecl& node) override;
     void visit(ParameterDecl& node) override {};
     void visit(VariableDecl& node) override;
-    void visit(FieldDecl& node) override;
-    void visit(StructDecl& node) override;
-    void visit(EnumValueDecl& node) override;
-    void visit(EnumDecl& node) override;
+    void visit(FieldDecl& node) override {};
+    void visit(StructDecl& node) override {};
+    void visit(EnumValueDecl& node) override {};
+    void visit(EnumDecl& node) override {};
 
     void visit(BlockStmt& node) override;
     void visit(BreakStmt& node) override;
@@ -211,6 +211,44 @@ class Codegen final : public Visitor {
 
     BasicBlock*             pCond = nullptr;
     BasicBlock*             pMerge = nullptr;
+
+    void cgn_binary_assign(BinaryExpr& node);
+    void cgn_binary_add(BinaryExpr& node);
+    void cgn_binary_add_assign(BinaryExpr& node);
+    void cgn_binary_sub(BinaryExpr& node);
+    void cgn_binary_sub_assign(BinaryExpr& node);
+    void cgn_binary_mul(BinaryExpr& node);
+    void cgn_binary_mul_assign(BinaryExpr& node);
+    void cgn_binary_div(BinaryExpr& node);
+    void cgn_binary_div_assign(BinaryExpr& node);
+    void cgn_binary_mod(BinaryExpr& node);
+    void cgn_binary_mod_assign(BinaryExpr& node);
+    void cgn_binary_eq(BinaryExpr& node);
+    void cgn_binary_neq(BinaryExpr& node);
+    void cgn_binary_lt(BinaryExpr& node);
+    void cgn_binary_le(BinaryExpr& node);
+    void cgn_binary_gt(BinaryExpr& node);
+    void cgn_binary_ge(BinaryExpr& node);
+    void cgn_binary_band(BinaryExpr& node);
+    void cgn_binary_band_assign(BinaryExpr& node);
+    void cgn_binary_bor(BinaryExpr& node);
+    void cgn_binary_bor_assign(BinaryExpr& node);
+    void cgn_binary_bxor(BinaryExpr& node);
+    void cgn_binary_bxor_assign(BinaryExpr& node);
+    void cgn_binary_land(BinaryExpr& node);
+    void cgn_binary_lor(BinaryExpr& node);
+    void cgn_binary_ls(BinaryExpr& node);
+    void cgn_binary_ls_assign(BinaryExpr& node);
+    void cgn_binary_rs(BinaryExpr& node);
+    void cgn_binary_rs_assign(BinaryExpr& node);
+
+    void cgn_unary_inc(UnaryExpr& node);
+    void cgn_unary_dec(UnaryExpr& node);
+    void cgn_unary_deref(UnaryExpr& node);
+    void cgn_unary_addrof(UnaryExpr& node);
+    void cgn_unary_neg(UnaryExpr& node);
+    void cgn_unary_lnot(UnaryExpr& node);
+    void cgn_unary_bnot(UnaryExpr& node);
 
 public:
     Codegen(Options& opts, Root& root) : opts(opts), root(root) {};

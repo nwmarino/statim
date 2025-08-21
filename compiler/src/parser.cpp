@@ -271,7 +271,7 @@ FunctionDecl* Parser::parse_function(const Token& name) {
                 since(name.loc));
         }
 
-        const Token& pname = lexer.last();
+        const Token pname = lexer.last();
         next(); // identifier
 
         if (!match(TOKEN_KIND_COLON)) {
@@ -319,7 +319,8 @@ FunctionDecl* Parser::parse_function(const Token& name) {
     next(); // '->'
     const Type* return_type = parse_type();
 
-    std::vector<const Type*> param_types { params.size() };
+    std::vector<const Type*> param_types;
+    param_types.reserve(params.size());
     for (auto& param : params)
         param_types.push_back(param->get_type());
 

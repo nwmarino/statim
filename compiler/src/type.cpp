@@ -16,14 +16,44 @@ bool DeferredType::is_void() const {
     return pResolved->is_void();
 }
 
+bool DeferredType::is_bool() const {
+    assert(pResolved && "deferred type unresolved");
+    return pResolved->is_bool();
+}
+
 bool DeferredType::is_int() const {
     assert(pResolved && "deferred type unresolved");
     return pResolved->is_int();
 }
 
+bool DeferredType::is_signed_int() const {
+    assert(pResolved && "deferred type unresolved");
+    return pResolved->is_signed_int();
+}
+
+bool DeferredType::is_unsigned_int() const {
+    assert(pResolved && "deferred type unresolved");
+    return pResolved->is_unsigned_int();
+}
+
 bool DeferredType::is_float() const {
     assert(pResolved && "deferred type unresolved");
     return pResolved->is_float();
+}
+
+const PointerType* DeferredType::as_pointer() const {
+    assert(pResolved && "deferred type unresolved");
+    return static_cast<const PointerType*>(pResolved);
+}
+
+const StructType* DeferredType::as_struct() const {
+    assert(pResolved && "deferred type unresolved");
+    return static_cast<const StructType*>(pResolved);
+}
+
+const EnumType* DeferredType::as_enum() const {
+    assert(pResolved && "deferred type unresolved");
+    return static_cast<const EnumType*>(pResolved);
 }
 
 bool DeferredType::can_cast(const Type* other, bool impl) const {
@@ -119,6 +149,32 @@ bool BuiltinType::is_int() const {
     }
 }
 
+bool BuiltinType::is_signed_int() const {
+    switch (kind) {
+    case Kind::Bool:
+    case Kind::Char:
+    case Kind::SInt8:
+    case Kind::SInt16:
+    case Kind::SInt32:
+    case Kind::SInt64:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool BuiltinType::is_unsigned_int() const {
+    switch (kind) {
+    case Kind::UInt8:
+    case Kind::UInt16:
+    case Kind::UInt32:
+    case Kind::UInt64:
+        return true;
+    default:
+        return false;
+    }
+}
+
 bool BuiltinType::is_float() const {
     switch (kind) {
     case Kind::Float32:
@@ -173,8 +229,8 @@ const FunctionType* FunctionType::get(
 std::string FunctionType::to_string() const {
     std::string str = "(";
 
-    for (u32 idx = 0, e = this->params.size(); idx != e; ++idx)
-        str += this->params[idx]->to_string() + (idx + 1 != e ? ", " : "");
+    for (u32 idx = 0, e = params.size(); idx != e; ++idx)
+        str += params[idx]->to_string() + (idx + 1 != e ? ", " : "");
 
     return str + ") -> " + this->pReturn->to_string();
 }
