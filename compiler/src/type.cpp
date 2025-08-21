@@ -250,21 +250,17 @@ u32 PointerType::get_indirection() const {
 bool PointerType::can_cast(const Type* other, bool impl) const {
     assert(other && "other type cannot be null");
 
+    if (other->is_deferred())
+        return can_cast(other->as_deferred()->get_resolved(), impl);
+
     if (impl) {
         if (pPointee->is_void())
             return true;
-        else if (auto ptr = dynamic_cast<const PointerType*>(other))
-            return ptr->get_pointee()->is_void();
-        else if (auto deferred = dynamic_cast<const DeferredType*>(other))
-            return can_cast(deferred->get_resolved(), true);
+        else if (other->is_pointer())
+            return other->as_pointer()->get_pointee()->is_void();
 
         return false;
-    } else {
-        if (dynamic_cast<const PointerType*>(other))
-            return true;
-
-        return other->is_int();
-    }
+    } else return other->is_pointer() || other->is_int();
 }
 
 std::string PointerType::to_string() const {

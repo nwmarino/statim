@@ -1,16 +1,17 @@
-__memcpy :: (__d: mut *void, __s: mut *void, __n: mut u64) -> void {
+__memcpy :: (__d: *void, __s: *void, __n: mut u64) -> void {
+    let dst: mut *char = __d;
+    let src: mut *char = __s;
+
     while __n != 0 {
-        __d[__n] = __s[__n]; 
-        //__n = __n - 1;
+        dst[__n] = src[__n]; 
+        __n = __n - 1;
     }
 }
 
-main :: () -> void {
-    let x: i64 = 4;
-            
-    if x == 3 {
-        ret;
-    }
+foo :: (x: i64) -> i64 {
+    ret x + 1;
+}
 
-    ret;
+main :: () -> void {
+    foo(5);
 }

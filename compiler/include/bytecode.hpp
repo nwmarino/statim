@@ -58,6 +58,10 @@ struct ArgumentRef final {
     u32 index;
 };
 
+struct ReturnRef final {
+    u32 index;
+};
+
 struct BlockRef final {
     BasicBlock* pBlock;
 };
@@ -72,6 +76,7 @@ struct Operand final {
         Immediate,
         Memory,
         Argument,
+        Return,
         Block,
         Function,
     } kind;
@@ -81,6 +86,7 @@ struct Operand final {
         Immediate imm;
         MemoryRef mem;
         ArgumentRef arg;
+        ReturnRef ret;
         BlockRef block;
         FunctionRef function;
     };
@@ -89,6 +95,7 @@ struct Operand final {
     Operand(Immediate imm);
     Operand(MemoryRef mem);
     Operand(ArgumentRef arg);
+    Operand(ReturnRef ret);
     Operand(BlockRef block);
     Operand(FunctionRef function);
 
@@ -103,6 +110,7 @@ enum class Opcode : u8 {
     Copy,
     Jump, 
     BranchTrue, BranchFalse,
+    SetTrue, SetFalse,
     Return,
     Call, 
     Add, Sub, Mul, Div,

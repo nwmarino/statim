@@ -85,6 +85,12 @@ void Codegen::cgn_binary_assign(BinaryExpr& node) {
     node.pRight->accept(*this);
     assert(tmp.has_value());
 
+    if (lhs.kind == Operand::Kind::Register) {
+        lhs.kind = Operand::Kind::Memory;
+        lhs.mem.base = lhs.reg;
+        lhs.mem.offset = 0;
+    }
+
     Instruction::create(
         pInsert, 
         Opcode::Move, 
@@ -94,7 +100,38 @@ void Codegen::cgn_binary_assign(BinaryExpr& node) {
 }
 
 void Codegen::cgn_binary_add(BinaryExpr& node) {
+    vctx = ValueContext::RValue;
+    node.pLeft->accept(*this);
+    assert(tmp.has_value());
 
+    Operand lhs = *tmp;
+    tmp = std::nullopt;
+
+    vctx = ValueContext::RValue;
+    node.pRight->accept(*this);
+    assert(tmp.has_value());
+
+    Operand rhs = *tmp;
+    tmp = std::nullopt;
+
+    const Type* lhs_type = node.get_lhs()->get_type();
+    const Type* rhs_type = node.get_rhs()->get_type();
+
+    if (lhs_type->is_pointer() && rhs_type->is_int()) {
+        auto pointee = lhs_type->as_pointer()->get_pointee();
+    } else if (lhs_type->is_int() || lhs_type->is_float()) {
+        Instruction::create(
+            pInsert, 
+            Opcode::Add, 
+            { rhs, lhs }, 
+            Metadata(node.get_span()),
+            get_inst_size(node.get_type()));
+    } else Logger::fatal(
+        "unsupported '+' operator on type '" + lhs_type->to_string() + "'",
+        node.get_span()
+    );
+
+    tmp = lhs;
 }
 
 void Codegen::cgn_binary_add_assign(BinaryExpr& node) {
@@ -102,7 +139,38 @@ void Codegen::cgn_binary_add_assign(BinaryExpr& node) {
 }
 
 void Codegen::cgn_binary_sub(BinaryExpr& node) {
+    vctx = ValueContext::RValue;
+    node.pLeft->accept(*this);
+    assert(tmp.has_value());
 
+    Operand lhs = *tmp;
+    tmp = std::nullopt;
+
+    vctx = ValueContext::RValue;
+    node.pRight->accept(*this);
+    assert(tmp.has_value());
+
+    Operand rhs = *tmp;
+    tmp = std::nullopt;
+
+    const Type* lhs_type = node.get_lhs()->get_type();
+    const Type* rhs_type = node.get_rhs()->get_type();
+
+    if (lhs_type->is_pointer() && rhs_type->is_int()) {
+        auto pointee = lhs_type->as_pointer()->get_pointee();
+    } else if (lhs_type->is_int() || lhs_type->is_float()) {
+        Instruction::create(
+            pInsert, 
+            Opcode::Sub, 
+            { rhs, lhs }, 
+            Metadata(node.get_span()),
+            get_inst_size(node.get_type()));
+    } else Logger::fatal(
+        "unsupported '-' operator on type '" + lhs_type->to_string() + "'",
+        node.get_span()
+    );
+
+    tmp = lhs;
 }
 
 void Codegen::cgn_binary_sub_assign(BinaryExpr& node) {
@@ -414,13 +482,16 @@ void Codegen::cgn_unary_inc(UnaryExpr& node) {
     vctx = ValueContext::LValue;
     node.pExpr->accept(*this);
     assert(tmp.has_value());
+    assert(tmp->kind == Operand::Kind::Register);
+
+    Operand deref { MemoryRef(Register(tmp->reg.id), 0) };
 
     // Load the value to a register to be used as an rvalue.
     Operand rval { Register(vreg++) };
     Instruction::create(
         pInsert, 
         Opcode::Move, 
-        { *tmp, rval }, 
+        { deref, rval }, 
         Metadata(node.get_span()),
         get_inst_size(expr_type));
 
@@ -456,7 +527,7 @@ void Codegen::cgn_unary_inc(UnaryExpr& node) {
         Instruction::create(
             pInsert, 
             Opcode::Constant, 
-            { get_type_size(pointee), size }, 
+            { Immediate(static_cast<i64>(get_type_size(pointee))), size }, 
             Metadata(node.get_span()),
             Instruction::Size::Word);
         
@@ -475,13 +546,86 @@ void Codegen::cgn_unary_inc(UnaryExpr& node) {
     Instruction::create(
         pInsert, 
         Opcode::Move, 
-        { rval, *tmp }, 
+        { rval, deref }, 
         Metadata(node.get_span()),
         get_inst_size(expr_type));
 }
 
 void Codegen::cgn_unary_dec(UnaryExpr& node) {
-    assert(false && "not implemented");
+    ValueContext node_vc = vctx;
+    const Type* expr_type = node.get_expr()->get_type();
+
+    // First, get the inner value as an lvalue for later storage.
+    vctx = ValueContext::LValue;
+    node.pExpr->accept(*this);
+    assert(tmp.has_value());
+    assert(tmp->kind == Operand::Kind::Register);
+
+    Operand deref { MemoryRef(Register(tmp->reg.id), 0) };
+
+    // Load the value to a register to be used as an rvalue.
+    Operand rval { Register(vreg++) };
+    Instruction::create(
+        pInsert, 
+        Opcode::Move, 
+        { deref, rval }, 
+        Metadata(node.get_span()),
+        get_inst_size(expr_type));
+
+    if (node.is_postfix()) {
+        // If the decrement is a postfix, then the original value is still
+        // needed, and since it'll be overwritten by the decrement, its copied
+        // here.
+        Operand copy { Register(vreg++) };
+        Instruction::create(
+            pInsert, 
+            Opcode::Copy, 
+            { rval, copy }, 
+            Metadata(node.get_span()));
+
+        tmp = copy;
+    } else {
+        tmp = rval;
+    }
+    
+    if (expr_type->is_int() || expr_type->is_float()) {
+        // Simple decrements can be done straight to the value.
+        Instruction::create(
+            pInsert, 
+            Opcode::Dec, 
+            { rval }, 
+            Metadata(node.get_span()),
+            get_inst_size(expr_type));
+    } else if (expr_type->is_pointer()) {
+        // For pointer decrements, we need to subtract the byte size of the 
+        // pointee to the original address.
+        const Type* pointee = expr_type->as_pointer()->get_pointee();
+        Operand size { Register(vreg++) };
+        Instruction::create(
+            pInsert, 
+            Opcode::Constant, 
+            { Immediate(static_cast<i64>(get_type_size(pointee))), size }, 
+            Metadata(node.get_span()),
+            Instruction::Size::Word);
+        
+        Instruction::create(
+            pInsert, 
+            Opcode::Sub, 
+            { size, rval }, 
+            Metadata(node.get_span()),
+            Instruction::Size::Word);
+    } else Logger::fatal(
+        "unsupported type for '--' operator: '" + expr_type->to_string() + "'", 
+        node.get_span()
+    );
+
+    // Store the result of the dcrement.
+    Instruction::create(
+        pInsert, 
+        Opcode::Move, 
+        { rval, deref }, 
+        Metadata(node.get_span()),
+        get_inst_size(expr_type));
 }
 
 void Codegen::cgn_unary_deref(UnaryExpr& node) {
@@ -496,7 +640,8 @@ void Codegen::cgn_unary_deref(UnaryExpr& node) {
             pInsert, 
             Opcode::Move, 
             { *tmp, dst },
-            Metadata(node.get_span()));
+            Metadata(node.get_span()),
+            get_inst_size(node.get_type()));
 
         tmp = dst;
     }
@@ -602,7 +747,7 @@ void Codegen::visit(FunctionDecl& node) {
                     Opcode::Return, 
                     {}, 
                     Metadata(node.get_body()->get_span().end));
-            } else Logger::fatal(
+            } else Logger::warn(
                 "function '" + node.get_name() + "' does not always return",
                 node.get_span()
             );
@@ -755,7 +900,7 @@ void Codegen::visit(WhileStmt& node) {
 
     Instruction::create(
         pInsert, 
-        Opcode::BranchTrue, 
+        Opcode::BranchFalse, 
         { BlockRef(merge_bb) }, 
         Metadata(node.get_cond()->get_span().begin));
 
@@ -790,20 +935,25 @@ void Codegen::visit(WhileStmt& node) {
 }
 
 void Codegen::visit(RetStmt& node) {
-    std::vector<Operand> operands;
-
     if (node.has_expr()) {
         vctx = ValueContext::RValue;
         node.pExpr->accept(*this);
         assert(tmp.has_value());
-        operands.push_back(*tmp);
+
+        Instruction::create(
+            pInsert, 
+            Opcode::Move, 
+            { *tmp, ReturnRef(0) }, 
+            Metadata(node.get_span()),
+            get_inst_size(node.get_expr()->get_type()));
+
         tmp = std::nullopt;
     }
 
     Instruction::create(
         pInsert, 
         Opcode::Return, 
-        operands, 
+        {}, 
         Metadata(node.get_span()));
 }
 
@@ -1166,7 +1316,44 @@ void Codegen::visit(MemberExpr& node) {
 }
 
 void Codegen::visit(CallExpr& node) {
+    auto target = static_cast<const FunctionDecl*>(node.get_decl());
+    Function* callee = frame->get_function(target->get_name());
+    assert(callee);
 
+    for (u32 idx = 0, e = node.num_args(); idx != e; ++idx) {
+        Expr* arg = node.args[idx];
+
+        vctx = ValueContext::RValue;
+        arg->accept(*this);
+        assert(tmp.has_value());
+
+        Instruction::create(
+            pInsert, 
+            Opcode::Move, 
+            { *tmp, ArgumentRef(idx) }, 
+            Metadata(arg->get_span()),
+            get_inst_size(arg->get_type()));
+    }
+
+    Instruction::create(
+        pInsert, 
+        Opcode::Call, 
+        { FunctionRef(callee) }, 
+        Metadata(node.get_span()));
+
+    if (!node.get_type()->is_void()) {
+        Operand dst { Register(vreg++) };
+        Instruction::create(
+            pInsert, 
+            Opcode::Move, 
+            { ReturnRef(0), dst }, 
+            Metadata(node.get_span()),
+            get_inst_size(node.get_type()));
+
+        tmp = dst;
+    } else {
+        tmp = std::nullopt;
+    }
 }
 
 void Codegen::visit(RuneExpr& node) {

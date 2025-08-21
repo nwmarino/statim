@@ -30,17 +30,21 @@ std::ostream* Logger::pOutput = nullptr;
 bool Logger::color = false;
 
 void Logger::log_src(const Span& span) {
-    *pOutput << "   ┌─[" << span.begin.file.absolute() << ':' << span.begin.line << "]\n";
+    u32 line_len = std::to_string(span.begin.line).length();
+
+    *pOutput << std::string(line_len + 2, ' ') << "┌─[" << span.begin.file.absolute() << ':' << span.begin.line << "]\n";
 
     u32 line_n = span.begin.line;
     for (auto line : source(span)) {
+        
         if (Logger::color)
-            *pOutput << "\e[38;5;240m" << line_n++ << "\033[0m  │ " << line << '\n';
+            *pOutput << "\e[38;5;240m" << line_n++ << "\033[0m" << 
+                std::string(line_len + 2 - std::to_string(line_n).length(), ' ') << "│ " << line << '\n';
         else
             *pOutput << line_n++ << ' ' << line << '\n';
     }
 
-    *pOutput << "   ╰──\n";
+    *pOutput << std::string(line_len + 2, ' ') << "╰──\n";
 }
 
 void Logger::init(std::ostream& output) {

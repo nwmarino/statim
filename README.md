@@ -1,18 +1,15 @@
 # statim ('stat·​im) *"immediately"*
 
-Statim is a general-purpose, strongly typed language built with kernel 
+Statim is a multi-purpose, strongly typed language built with kernel 
 development in mind. The main point of the project is to expirement with the 
-capabilities of a bytecode closely coupled into the compiler itself.
+potential of an interpretable bytecode closely coupled into the compiler.
 
 ## Overview
 
 Overarching priorities are reduced compilation times from that of modern C/C++, 
 metaprogramming capabilities, and compile-time executions of arbitrary code. 
 Although costly to the former, having a unique bytecode allows for some 
-interesting compiler feedback and compile-time opportunities. Since backing the 
-bytecode with LLVM allows for getting things running faster, keeping the 
-bytecode high-level enough so as to not "walk backwards" during code generation 
-is an important design consideration.
+interesting compiler feedback and compile-time opportunities.
 
 ### Long-term objectives
 
@@ -27,9 +24,6 @@ constants
 * Representing physical registers as typed pointers
 
 * Compile-time syntax tree modifications
-
-* Faster compilation times than modern C++, ideally in the realm of 100K lines 
-of code in half a second without caching
 
 ## Desugaring
 
@@ -79,9 +73,13 @@ $asm {
 
 ### Operator Overloading
 
-Operator overloading will be implemented by way of "magic" functions, similar 
-to that in Python. For example, to overload the `+` operator, one may implement 
-the `__add__` method for the respective type.
+Operator overloading will be implemented by way the `operator ...` syntax, i.e.
+
+```
+operator + :: (self: Box, other: Box) -> Box {
+    ...
+}
+```
 
 ### Templates
 
@@ -99,8 +97,8 @@ when the owning object goes out of scope:
 
 ```
 box :: {
-    a: ~i64*,
-    B: i64*,
+    a: *i64~,
+    B: *i64,
 }
 ```
 
@@ -111,8 +109,8 @@ unexpected behaviour with regards to objects unexpectedly being destroyed.
 
 The language will not make use of a preprocessor or header files. To use 
 multiple source files in a program, the `use` keyword can be utilized to import
-the public declarations (and thereby types) of a relative file, in one of three 
-ways:
+the public declarations (and thereby types possibly) of a relative file, in one 
+of three ways:
 
 ```
 use "Utils.stm"; // import all public symbols
@@ -133,16 +131,17 @@ how to namespace code in a clever way, relevant to the use case.
 
 ### Structures and Methods
 
-Structs will exist, but in a more "barebones" fashion, allowing for more 
-control over the layout and it's methods:
+Structs will exist, but in a more "barebones" fashion, similar to that found
+in C.
 
 ```
 Box :: {
+    $public
     length: u32,
     width: u32,
     height: u32,
 
-    $[priv]
+    $private
     contents: *void,
 };
 ```
@@ -209,7 +208,7 @@ A compile-time assert statement.
 Specify a string to be inserted as code, i.e.
 
 ```
-foo :: () i64 {
+foo :: () -> i64 {
     $code "ret 0;"
 }
 ```

@@ -276,13 +276,14 @@ void SemanticAnalysis::visit(UnaryExpr& node) {
 void SemanticAnalysis::visit(CastExpr& node) {
     node.pExpr->accept(*this);
 
+    const Type* expr_type = node.get_expr()->get_type();
+    const Type* cast_type = node.get_type();
+
     // if nested expr cannot cast to cast type, fatal
-    if (!node.get_expr()->get_type()->can_cast(node.get_type())) {
-        Logger::fatal(
-            "cannot cast type '" + node.get_expr()->get_type()->to_string() + 
-                "' to '" + node.get_type()->to_string() + "'",
-            node.get_span());
-    }
+    if (!expr_type->can_cast(cast_type)) Logger::fatal(
+        "cannot cast type '" + expr_type->to_string() + "' to '" + 
+            cast_type->to_string() + "'",
+        node.get_span());
 }
 
 void SemanticAnalysis::visit(ParenExpr& node) {

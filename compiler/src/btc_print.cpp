@@ -42,6 +42,10 @@ void Operand::print(std::ostream& os) const {
         os << "arg." << std::to_string(arg.index);
         break;
 
+    case Kind::Return:
+        os << "ret." << std::to_string(ret.index);
+        break;
+
     case Kind::Block:
         os << "bb" << std::to_string(block.pBlock->get_number());
         break;
@@ -63,7 +67,7 @@ void Instruction::print(std::ostream& os) const {
     if (pad < 0) 
         pad = 0;
 
-    os << left << std::string(pad, ' ') << pos_str << "|";
+    os << left << std::string(pad, ' ') << pos_str << "│";
 
     if (m_size == Size::None)
         os << ' ';
@@ -91,6 +95,12 @@ void Instruction::print(std::ostream& os) const {
         break;
     case Opcode::BranchFalse:
         os << "brf";
+        break;
+    case Opcode::SetTrue:
+        os << "sett";
+        break;
+    case Opcode::SetFalse:
+        os << "setf";
         break;
     case Opcode::Call:
         os << "call";
@@ -273,11 +283,7 @@ void Instruction::print(std::ostream& os) const {
 
     os << "   ";
 
-    if (m_op == Opcode::Constant || m_op == Opcode::Copy) {
-        m_operands[1].print(os);
-        os << " = ";
-        m_operands[0].print(os);
-    } else for (u32 idx = 0, e = num_operands(); idx != e; ++idx) {
+    for (u32 idx = 0, e = num_operands(); idx != e; ++idx) {
         m_operands[idx].print(os);
         if (idx + 1 != e) os << ", ";
     }
@@ -296,10 +302,14 @@ void BasicBlock::print(std::ostream& os) const {
 }
 
 void Function::print(std::ostream& os) const {
-    os << "Bytecode for '" << name << "'\n\n";
+    os << "Bytecode for '" << name << "'\n";
+
+    if (!stack.empty()) {
+        os << "\nstack (" << std::to_string(get_stack_size()) << " bytes)\n";
+    }
 
     for (auto slot : stack) {
-        os << "    ... offset: " << std::to_string(slot->get_offset()) << 
+        os << "    ~ offset: " << std::to_string(slot->get_offset()) << 
             ", name: " << slot->get_name() << '\n';
     }
 

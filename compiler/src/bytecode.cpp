@@ -4,20 +4,17 @@
 
 using namespace stm;
 
-Operand::Operand(Register reg)
-    : kind(Kind::Register), reg(reg) {};
+Operand::Operand(Register reg) : kind(Kind::Register), reg(reg) {};
 
-Operand::Operand(Immediate imm)
-    : kind(Kind::Immediate), imm(imm) {};
+Operand::Operand(Immediate imm) : kind(Kind::Immediate), imm(imm) {};
 
-Operand::Operand(MemoryRef mem)
-    : kind(Kind::Memory), mem(mem) {};
+Operand::Operand(MemoryRef mem) : kind(Kind::Memory), mem(mem) {};
 
-Operand::Operand(ArgumentRef arg)
-    : kind(Kind::Argument), arg(arg) {};
+Operand::Operand(ArgumentRef arg) : kind(Kind::Argument), arg(arg) {};
 
-Operand::Operand(BlockRef block)
-    : kind(Kind::Block), block(block) {};
+Operand::Operand(ReturnRef ret) : kind(Kind::Return), ret(ret) {};
+
+Operand::Operand(BlockRef block) : kind(Kind::Block), block(block) {};
 
 Operand::Operand(FunctionRef function) 
     : kind(Kind::Function), function(function) {};
