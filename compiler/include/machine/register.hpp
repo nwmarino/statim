@@ -1,0 +1,68 @@
+#ifndef STATIM_MACHINE_REGISTER_HPP_
+#define STATIM_MACHINE_REGISTER_HPP_
+
+#include "types.hpp"
+
+namespace stm {
+
+/// Potential physical register classes.
+///
+/// Used in tandem with virtual registers for register allocation.
+enum RegisterClass : u8 {
+    GeneralPurpose, FloatingPoint, Vector,
+};
+
+/// Represents a virtual or physical register.
+class Register final {
+public:
+    static constexpr u32 NoRegister = 0u;
+    static constexpr u32 PhysicalBarrier = 1u;
+    static constexpr u32 VirtualBarrier = 1u << 31;
+
+private:
+    /// The number of this register.
+    ///
+    /// All registers share a global namespace, and the value about barriers
+    /// determine if the register is physical or virtual.
+    ///
+    /// 0               Non-register
+    /// [1, 2^31)       Physical registers
+    /// [2^31, 2^32)    Virtual registers
+    u32 m_reg;
+
+public:
+    constexpr Register(u32 reg = NoRegister) : m_reg(reg) {}
+
+    /// \returns `true` if this register is valid.
+    constexpr bool is_valid() const { return m_reg != NoRegister; }
+
+    /// \returns `true` if this register is physical.
+    constexpr bool is_physical() const { 
+        return PhysicalBarrier <= m_reg && m_reg < VirtualBarrier; 
+    }
+
+    /// \returns `true` if this register is virtual.
+    constexpr bool is_virtual() const { return m_reg >= VirtualBarrier; }
+
+    constexpr u32 id() const { return m_reg; }
+
+    constexpr bool operator == (const Register& other) const {
+        return m_reg == other.m_reg;
+    }
+
+    constexpr bool operator != (const Register& other) const {
+        return m_reg != other.m_reg;
+    }
+
+    constexpr bool operator == (u32 other) const {
+        return m_reg == other;
+    }
+
+    constexpr bool operator != (u32 other) const {
+        return m_reg != other;
+    }
+};
+
+} // namespace stm
+
+#endif // STATIM_MACHINE_REGISTER_HPP_
