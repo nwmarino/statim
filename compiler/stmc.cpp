@@ -11,9 +11,6 @@ i32 main(i32 argc, char **argv) {
     Logger::init();
 
     Options options;
-    options.arch = Arch::X86_64;
-    options.backend = Backend::LLVM;
-    options.os = OpSys::Linux;
     options.pOutput = "main";
     options.debug = 1;
     options.devel = 1;

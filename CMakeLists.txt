@@ -39,6 +39,7 @@ set(COMPILER_SOURCES
     compiler/src/syma.cpp
     compiler/src/token.cpp
     compiler/src/type.cpp
+    compiler/src/target/amd64.cpp
 )
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

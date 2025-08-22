@@ -15,6 +15,7 @@ namespace stm {
 class BasicBlock;
 class StackSlot;
 class Function;
+class MachineFunction;
 
 struct Metadata final {
     InputFile& file;
@@ -326,31 +327,43 @@ public:
     void print(std::ostream& os) const;
 };
 
-class Frame final {
-    InputFile& file;
-    std::map<std::string, Function*> functions;
+class FrameMachineInfo final {
+    friend class FrameMachineAnalysis;
+    
+    std::map<std::string, MachineFunction*> m_functions;
 
 public:
-    Frame(InputFile& file) : file(file), functions() {};
+    ~FrameMachineInfo();
+
+    const MachineFunction* get_function(const std::string& name) const;
+    MachineFunction* get_function(const std::string& name);
+};
+
+class Frame final {
+    FrameMachineInfo m_minfo;
+    InputFile& m_file;
+    std::map<std::string, Function*> m_functions;
+
+public:
+    Frame(InputFile& file) : m_file(file) {}
 
     ~Frame();
 
     Function* get_function(const std::string& name) const {
-        return functions.at(name);
+        return m_functions.at(name);
     }
 
-    std::vector<Function*> get_functions() const {
-        std::vector<Function*> fns { functions.size() };
-        for (auto fn : functions)
-            fns.push_back(fn.second);
-
+    std::vector<Function*> functions() const {
+        std::vector<Function*> fns;
+        fns.reserve(m_functions.size());
+        for (auto fn : m_functions) fns.push_back(fn.second);
         return fns;
     }
 
-    u32 num_functions() const { return functions.size(); }
+    u32 num_functions() const { return m_functions.size(); }
 
     void add_function(Function* F, const std::string& name = "") { 
-        functions.emplace(name.empty() ? F->get_name() : name, F); 
+        m_functions.emplace(name.empty() ? F->get_name() : name, F); 
     }
 
     void print(std::ostream& os) const;

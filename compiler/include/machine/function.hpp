@@ -3,6 +3,7 @@
 
 #include "machine/basicblock.hpp"
 #include "machine/register.hpp"
+#include "machine/target.hpp"
 #include "types.hpp"
 
 #include <string>
@@ -61,17 +62,21 @@ class MachineFunction final {
 
     /// The bytecode function this derives from.
     const Function* m_fn;
+    const Target& m_target;
 
     /// Links to the first and last basic blocks in this function. 
     MachineBasicBlock* m_front;
     MachineBasicBlock* m_back;
 
 public:
-    MachineFunction(const Function* fn);
+    MachineFunction(const Function* fn, const Target& target);
     ~MachineFunction();
 
     /// \returns The bytecode function that this function derives from.
     const Function* get_function() const { return m_fn; }
+    
+    /// \returns The target this function was compiled for.
+    const Target& get_target() const { return m_target; }
 
     /// \returns The name of this function, as it was defined in the bytecode.
     const std::string& get_name() const;
