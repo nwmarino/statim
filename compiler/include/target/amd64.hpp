@@ -1,11 +1,18 @@
 #ifndef STATIM_MACHINE_AMD64_HPP_
 #define STATIM_MACHINE_AMD64_HPP_
 
-#include "machine/register.hpp"
+#include "bytecode.hpp"
 #include "types.hpp"
+#include "machine/register.hpp"
+
 #include <string>
 
 namespace stm {
+
+class MachineOperand;
+class MachineInst;
+class MachineBasicBlock;
+class MachineFunction;
 
 namespace amd64 {
 
@@ -67,6 +74,84 @@ enum Register : u32 {
     XMM4, XMM5, XMM6, XMM7,
     XMM8, XMM9, XMM10, XMM11,
     XMM12, XMM13, XMM14, XMM15,
+};
+
+/// Instruction selection pass for amd64.
+class InstSelection final {
+    MachineFunction* m_function;
+    MachineBasicBlock* m_insert = nullptr;
+
+    /// \returns The operand flipped jcc instruction of \p jcc.
+    amd64::Opcode flip_jcc(amd64::Opcode jcc);
+
+    /// \returns The negated jcc instruction of \p jcc.
+    amd64::Opcode neg_jcc(amd64::Opcode jcc);
+
+    /// \returns The operand flipped setcc instruction of \p setcc.
+    amd64::Opcode flip_setcc(amd64::Opcode setcc);
+
+    /// \returns The negated setcc instruction of \p setcc.
+    amd64::Opcode neg_setcc(amd64::Opcode setcc);
+
+    MachineOperand lower(const Operand& operand);
+
+    void select(Instruction* inst);
+    void select_const(Instruction* inst);
+    void select_move(Instruction* inst);
+    void select_lea(Instruction* inst);
+    void select_copy(Instruction* inst);
+    void select_jump(Instruction* inst);
+    void select_branch(Instruction* inst);
+    void select_set(Instruction* inst);
+    void select_return(Instruction* inst);
+    void select_call(Instruction* inst);
+    void select_arith(Instruction* inst);
+    void select_crement(Instruction* inst);
+    void select_neg(Instruction* inst);
+    void select_not(Instruction* inst);
+    void select_logic(Instruction* inst);
+    void select_shift(Instruction* inst);
+    void select_sext(Instruction* inst);
+    void select_zext(Instruction* inst);
+    void select_fext(Instruction* inst);
+    void select_trunc(Instruction* inst);
+    void select_ftrunc(Instruction *inst);
+    void select_cvt(Instruction* inst);
+    void select_cmp(Instruction* inst);
+
+public:
+    InstSelection(MachineFunction* function);
+
+    InstSelection(const InstSelection&) = delete;
+    InstSelection& operator = (const InstSelection&) = delete;
+
+    void run();
+};
+
+/// Machine code pass to dump amd64, exposing important details.
+class Printer final {
+    const FrameMachineInfo& m_frame;
+
+public:
+    Printer(FrameMachineInfo& frame) : m_frame(frame) {}
+
+    Printer(const Printer&) = delete;
+    Printer& operator = (const Printer&) = delete;
+
+    void run(std::ostream& os) const;
+};
+
+/// Machine code pass to write final assembly output for amd64.
+class AsmWriter final {
+    const FrameMachineInfo& m_frame;
+
+public:
+    AsmWriter(FrameMachineInfo& frame) : m_frame(frame) {}
+
+    AsmWriter(const AsmWriter&) = delete;
+    AsmWriter& operator = (const AsmWriter&) = delete;
+
+    void run(std::ostream& os) const;
 };
 
 /// \returns `true` if the opcode is considered a call instruction.

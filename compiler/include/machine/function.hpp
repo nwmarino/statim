@@ -46,7 +46,7 @@ struct VRegInfo final {
     u32 end;
 
     /// The resulting allocation of a virtual register.
-    u32 alloc = Register::NoRegister;
+    u32 alloc = MachineRegister::NoRegister;
 };
 
 /// Information about the registers used by a machine function.
@@ -56,6 +56,8 @@ struct FunctionRegisterInfo final {
 
 /// Represents a machine function, derived from a bytecode function.
 class MachineFunction final {
+    friend class FunctionRegisterAnalysis;
+
     /// Internal information about this function.
     FunctionStackInfo m_stack;
     FunctionRegisterInfo m_regi;
@@ -65,8 +67,8 @@ class MachineFunction final {
     const Target& m_target;
 
     /// Links to the first and last basic blocks in this function. 
-    MachineBasicBlock* m_front;
-    MachineBasicBlock* m_back;
+    MachineBasicBlock* m_front = nullptr;
+    MachineBasicBlock* m_back = nullptr;
 
 public:
     MachineFunction(const Function* fn, const Target& target);
@@ -87,7 +89,13 @@ public:
     const MachineBasicBlock* back() const { return m_back; }
     MachineBasicBlock* back() { return m_back; }
 
-    void print(std::ostream& os) const;
+    /// \returns The number of blocks in this function.
+    u32 size() const;
+
+    bool empty() const { return !m_front; }
+
+    void prepend(MachineBasicBlock* mbb);
+    void append(MachineBasicBlock* mbb);
 };
 
 } // namespace stm

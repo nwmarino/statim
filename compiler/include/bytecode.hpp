@@ -2,6 +2,7 @@
 #define STATIM_BYTECODE_HPP_
 
 #include "input_file.hpp"
+#include "machine/target.hpp"
 #include "source_loc.hpp"
 #include "types.hpp"
 
@@ -117,7 +118,8 @@ enum class Opcode : u8 {
     Add, Sub, Mul, Div,
     Inc, Dec,
     Neg,
-    And, Or, Xor, Not,
+    Not,
+    And, Or, Xor,
     Shl, Sar, Shr,
     SExt, ZExt, FExt,
     Trunc, FTrunc,
@@ -330,6 +332,7 @@ public:
 class FrameMachineInfo final {
     friend class FrameMachineAnalysis;
     
+    Target* m_target;
     std::map<std::string, MachineFunction*> m_functions;
 
 public:
@@ -337,10 +340,20 @@ public:
 
     const MachineFunction* get_function(const std::string& name) const;
     MachineFunction* get_function(const std::string& name);
+
+    const Target* get_target() const { return m_target; }
+    Target* get_target() { return m_target; }
+
+    std::vector<MachineFunction*> functions() const {
+        std::vector<MachineFunction*> fns;
+        fns.reserve(m_functions.size());
+        for (auto fn : m_functions) fns.push_back(fn.second);
+        return fns;
+    }
 };
 
 class Frame final {
-    FrameMachineInfo m_minfo;
+    FrameMachineInfo m_info;
     InputFile& m_file;
     std::map<std::string, Function*> m_functions;
 
@@ -348,6 +361,9 @@ public:
     Frame(InputFile& file) : m_file(file) {}
 
     ~Frame();
+
+    const FrameMachineInfo& get_machine_info() const { return m_info; }
+    FrameMachineInfo& get_machine_info() { return m_info; }
 
     Function* get_function(const std::string& name) const {
         return m_functions.at(name);

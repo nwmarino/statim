@@ -39,7 +39,15 @@ set(COMPILER_SOURCES
     compiler/src/syma.cpp
     compiler/src/token.cpp
     compiler/src/type.cpp
-    compiler/src/target/amd64.cpp
+    compiler/src/machine/analysis.cpp
+    compiler/src/machine/basicblock.cpp
+    compiler/src/machine/function.cpp
+    compiler/src/machine/inst.cpp
+    compiler/src/machine/operand.cpp
+    compiler/src/target/amd64/amd64.cpp
+    compiler/src/target/amd64/isel.cpp
+    compiler/src/target/amd64/printer.cpp
+    compiler/src/target/amd64/writer.cpp
 )
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
@@ -63,6 +71,7 @@ add_executable(stmc_test
     test/test_syma.cpp
     test/test_sema.cpp
     test/test_codegen.cpp
+    test/test_amd64.cpp
     ${COMPILER_SOURCES}
 )
 

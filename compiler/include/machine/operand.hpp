@@ -1,6 +1,7 @@
 #ifndef STATIM_MACHINE_OPERAND_HPP_
 #define STATIM_MACHINE_OPERAND_HPP_
 
+#include "machine/target.hpp"
 #include "types.hpp"
 
 #include <cassert>
@@ -33,10 +34,10 @@ private:
     /// use.
     u16 m_is_def : 1;
 
-    /// is_dead_or_kill - true if a. this operand is a use and is the last 
+    /// is_kill_or_dead - true if a. this operand is a use and is the last 
     /// use of a register or b. this operand is a def and is never used by a
     /// following instruction.
-    u16 m_is_dead_or_kill : 1;
+    u16 is_kill_or_dead : 1;
 
     /// is_implicit - true if this register operand is an implicit def or 
     /// use, false if it is explicit.
@@ -63,14 +64,14 @@ private:
     };
 
 public:
-    static MachineOperand create_reg(u32 regno, bool is_def, 
+    static MachineOperand create_reg(u32 regno, u16 subreg, bool is_def, 
         bool is_implicit = false, bool is_kill = false, bool is_dead = false);
 
     static MachineOperand create_mem(u32 regno, i32 disp);
 
     static MachineOperand create_imm(i64 imm);
 
-    static MachineOperand create_block(MachineBasicBlock* block);
+    static MachineOperand create_block(MachineBasicBlock* mbb);
 
     static MachineOperand create_symbol(const char* symbol);
 
@@ -106,12 +107,12 @@ public:
 
     bool is_kill() const {
         assert(is_reg());
-        return m_is_dead_or_kill & !m_is_def;
+        return is_kill_or_dead & !m_is_def;
     }
 
     bool is_dead() const {
         assert(is_reg());
-        return m_is_dead_or_kill && m_is_def;
+        return is_kill_or_dead && m_is_def;
     }
 
     bool is_implicit() const {
@@ -167,13 +168,13 @@ public:
     void set_is_kill(bool value = true) {
         assert(is_reg());
         assert(is_use());
-        m_is_dead_or_kill = value;
+        is_kill_or_dead = value;
     }
 
     void set_is_dead(bool value = true) {
         assert(is_reg());
         assert(is_def());
-        m_is_dead_or_kill = value;
+        is_kill_or_dead = value;
     }
 
     void set_is_implicit(bool value = true) {
@@ -205,8 +206,6 @@ public:
         assert(is_symbol());
         m_symbol = symbol;
     }
-
-    void print(std::ostream& os) const;
 };
 
 } // namespace stm

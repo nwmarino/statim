@@ -23,8 +23,8 @@ class MachineBasicBlock final {
     std::vector<MachineInst> m_insts;
 
     /// Links to the previous and next block in the parent function.
-    MachineBasicBlock* m_prev;
-    MachineBasicBlock* m_next;
+    MachineBasicBlock* m_prev = nullptr;
+    MachineBasicBlock* m_next = nullptr;
 
 public:
     MachineBasicBlock(
@@ -52,6 +52,8 @@ public:
     const MachineInst& back() const { return m_insts.back(); }
     MachineInst& back() { return m_insts.back(); }
 
+    const std::vector<MachineInst>& insts() const { return m_insts; }
+
     const MachineBasicBlock* prev() const { return m_prev; }
     MachineBasicBlock* prev() { return m_prev; }
 
@@ -61,7 +63,13 @@ public:
     void set_prev(MachineBasicBlock* prev) { m_prev = prev; }
     void set_next(MachineBasicBlock* next) { m_next = next; }
 
-    void print(std::ostream& os) const;
+    void push_front(const MachineInst& inst) {
+        m_insts.insert(m_insts.begin(), inst);
+    }
+
+    void push_back(const MachineInst& inst) {
+        m_insts.push_back(inst);
+    }
 };
 
 } // namespace stm

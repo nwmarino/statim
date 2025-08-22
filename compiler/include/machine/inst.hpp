@@ -39,10 +39,6 @@ public:
     const MachineFunction* get_mf() const;
     MachineFunction* get_mf();
 
-    /// \returns The position of this instruction relative to others in the
-    /// parent function.
-    u32 position() const;
-
     /// \returns The raw number of operands included in this instruction.
     u32 num_operands() const { return m_operands.size(); }
 
@@ -60,9 +56,7 @@ public:
 
     u32 num_implicit_operands() const;
 
-    u32 num_explicit_operands() const {
-        return num_operands() - num_implicit_operands();
-    }
+    u32 num_explicit_operands() const;
 
     u32 num_implicit_defs() const;
 
@@ -71,23 +65,21 @@ public:
     bool has_implicit_def() const;
 
     /// \returns A list of all explicit def operands.
-    std::vector<const MachineOperand&> defs() const;
+    std::vector<MachineOperand> defs() const;
 
     /// \returns A list of all explicit use operands.
-    std::vector<const MachineOperand&> uses() const;
+    std::vector<MachineOperand> uses() const;
 
     /// \returns A list of all explicit & implicit def operands.
-    std::vector<const MachineOperand&> all_defs() const;
+    std::vector<MachineOperand> all_defs() const;
 
     /// \returns A list of all explicit & implicit use operands.
-    std::vector<const MachineOperand&> all_uses() const;
+    std::vector<MachineOperand> all_uses() const;
 
     /// Add a new operand \p mo to this instruction.
     void add_operand(const MachineOperand& mo) {
         m_operands.push_back(mo);
     }
-
-    void print(std::ostream& os) const;
 };
 
 } // namespace stm

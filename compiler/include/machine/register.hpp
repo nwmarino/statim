@@ -13,7 +13,7 @@ enum RegisterClass : u8 {
 };
 
 /// Represents a virtual or physical register.
-class Register final {
+class MachineRegister final {
 public:
     static constexpr u32 NoRegister = 0u;
     static constexpr u32 PhysicalBarrier = 1u;
@@ -31,7 +31,7 @@ private:
     u32 m_reg;
 
 public:
-    constexpr Register(u32 reg = NoRegister) : m_reg(reg) {}
+    constexpr MachineRegister(u32 reg = NoRegister) : m_reg(reg) {}
 
     /// \returns `true` if this register is valid.
     constexpr bool is_valid() const { return m_reg != NoRegister; }
@@ -46,11 +46,11 @@ public:
 
     constexpr u32 id() const { return m_reg; }
 
-    constexpr bool operator == (const Register& other) const {
+    constexpr bool operator == (const MachineRegister& other) const {
         return m_reg == other.m_reg;
     }
 
-    constexpr bool operator != (const Register& other) const {
+    constexpr bool operator != (const MachineRegister& other) const {
         return m_reg != other.m_reg;
     }
 

@@ -1,5 +1,7 @@
 #include "include/logger.hpp"
 #include "input_file.hpp"
+#include "machine/analysis.hpp"
+#include "machine/target.hpp"
 #include "options.hpp"
 #include "parser.hpp"
 #include "translation_unit.hpp"
@@ -42,5 +44,13 @@ i32 main(i32 argc, char **argv) {
 
     unit.get_frame().print(std::cout);
 
+    Target target { Target::amd64, Target::Linux, Target::SystemV };
+
+    FrameMachineAnalysis FMA { unit.get_frame(), &target };
+    FMA.run();
+
+    FrameMachinePrinter FMP { unit.get_frame().get_machine_info() };
+    FMP.run(std::cout);
+    
     return 0;
 }

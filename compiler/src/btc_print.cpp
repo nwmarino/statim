@@ -327,6 +327,6 @@ void Function::print(std::ostream& os) const {
 void Frame::print(std::ostream& os) const {
     os << std::right;
 
-    for (auto [ name, function ] : functions)
+    for (auto [ name, function ] : m_functions)
         function->print(os);
 }

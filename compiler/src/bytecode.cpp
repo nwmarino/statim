@@ -1,4 +1,5 @@
 #include "bytecode.hpp"
+#include "machine/function.hpp"
 
 #include <cassert>
 
@@ -224,6 +225,29 @@ void Function::append(BasicBlock* pBlock) {
     }
 }
 
+FrameMachineInfo::~FrameMachineInfo() {
+    for (auto [ name, function ] : m_functions) delete function;
+    m_functions.clear();
+}
+
+const MachineFunction* 
+FrameMachineInfo::get_function(const std::string& name) const {
+    auto it = m_functions.find(name);
+    if (it != m_functions.end())
+        return it->second;
+
+    return nullptr;
+}
+
+MachineFunction* FrameMachineInfo::get_function(const std::string& name) {
+    auto it = m_functions.find(name);
+    if (it != m_functions.end())
+        return it->second;
+
+    return nullptr;
+}
+
 Frame::~Frame() {
-    
+    for (auto [ name, function ] : m_functions) delete function;
+    m_functions.clear();
 }
