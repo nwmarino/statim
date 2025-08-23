@@ -1,4 +1,4 @@
-#include "../compiler/include/types.hpp"
+#include "types/types.hpp"
 
 #include <gtest/gtest.h>
 

@@ -11,54 +11,46 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
 cmake_policy(SET CMP0167 OLD)
 
-find_package(LLVM REQUIRED CONFIG)
+#find_package(LLVM REQUIRED CONFIG)
 find_package(Boost REQUIRED COMPONENTS filesystem system)
 find_package(GTest REQUIRED)
 
-include_directories(${LLVM_INCLUDE_DIRS})
-add_definitions(${LLVM_DEFINITIONS})
+#include_directories(${LLVM_INCLUDE_DIRS})
+#add_definitions(${LLVM_DEFINITIONS})
 
 include_directories(
-    ${CMAKE_SOURCE_DIR}/compiler/include
+    ${CMAKE_SOURCE_DIR}/source
     ${Boost_INCLUDE_DIRS}
     ${GTEST_INCLUDE_DIRS}
 )
 
 set(COMPILER_SOURCES
-    compiler/src/ast.cpp
-    compiler/src/ast_print.cpp
-    compiler/src/btc_codegen.cpp
-    compiler/src/btc_print.cpp
-    compiler/src/bytecode.cpp
-    compiler/src/input_file.cpp
-    compiler/src/lexer.cpp
-    compiler/src/logger.cpp
-    compiler/src/parser.cpp
-    compiler/src/scope.cpp
-    compiler/src/sema.cpp
-    compiler/src/syma.cpp
-    compiler/src/token.cpp
-    compiler/src/type.cpp
-    compiler/src/machine/analysis.cpp
-    compiler/src/machine/basicblock.cpp
-    compiler/src/machine/function.cpp
-    compiler/src/machine/inst.cpp
-    compiler/src/machine/operand.cpp
-    compiler/src/target/amd64/amd64.cpp
-    compiler/src/target/amd64/isel.cpp
-    compiler/src/target/amd64/printer.cpp
-    compiler/src/target/amd64/writer.cpp
+    source/core/lexer.cpp
+    source/core/logger.cpp
+    source/core/type.cpp
+    source/tree/decl.cpp
+    source/tree/expr.cpp
+    source/tree/parser.cpp
+    source/tree/print.cpp
+    source/tree/root.cpp
+    source/tree/rune.cpp
+    source/tree/scope.cpp
+    source/tree/sema.cpp
+    source/tree/stmt.cpp
+    source/tree/syma.cpp
+    source/types/input_file.cpp
+    source/types/token.cpp
 )
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_executable(stmc
-    compiler/stmc.cpp
+    source/stmc.cpp
     ${COMPILER_SOURCES}
 )
 
 target_link_libraries(stmc PRIVATE
-    ${LLVM_LIBRARIES}
+#    ${LLVM_LIBRARIES}
     ${Boost_LIBRARIES}
 )
 
@@ -70,13 +62,11 @@ add_executable(stmc_test
     test/test_parser.cpp
     test/test_syma.cpp
     test/test_sema.cpp
-    test/test_codegen.cpp
-    test/test_amd64.cpp
     ${COMPILER_SOURCES}
 )
 
 target_link_libraries(stmc_test PRIVATE
-    ${LLVM_LIBRARIES}
+ #   ${LLVM_LIBRARIES}
     ${Boost_LIBRARIES}
     GTest::GTest
     GTest::Main

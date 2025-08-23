@@ -1,6 +1,10 @@
-#include "ast.hpp"
-#include "parser.hpp"
-#include "translation_unit.hpp"
+#include "tree/decl.hpp"
+#include "tree/expr.hpp"
+#include "tree/parser.hpp"
+#include "tree/root.hpp"
+#include "tree/rune.hpp"
+#include "tree/stmt.hpp"
+#include "types/translation_unit.hpp"
 
 #include <gtest/gtest.h>
 
@@ -12,7 +16,7 @@ class ParserTest : public ::testing::Test {};
 
 TEST_F(ParserTest, parse_function_basic) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void {}");
 
     TranslationUnit unit { file };
@@ -40,7 +44,7 @@ TEST_F(ParserTest, parse_function_basic) {
 
 TEST_F(ParserTest, parse_function_params) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: (a: i64, b: u32) -> void {}");
 
     TranslationUnit unit { file };
@@ -71,7 +75,7 @@ TEST_F(ParserTest, parse_function_params) {
 
 TEST_F(ParserTest, parse_variable_local) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void { let x: u32; }");
 
     TranslationUnit unit { file };
@@ -113,7 +117,7 @@ TEST_F(ParserTest, parse_variable_local) {
 
 TEST_F(ParserTest, parse_variable_local_with_init) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void { let x: u32 = 1; }");
 
     TranslationUnit unit { file };
@@ -162,7 +166,7 @@ TEST_F(ParserTest, parse_variable_local_with_init) {
 
 TEST_F(ParserTest, parse_struct) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("box :: { length: u32, width: i32, height: u64 }");
 
     TranslationUnit unit { file };
@@ -203,7 +207,7 @@ TEST_F(ParserTest, parse_struct) {
 
 TEST_F(ParserTest, parse_enum) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("colors :: i16 { RED, BLUE = 54, GREEN, Yellow = 1, ORANGE }");
 
     TranslationUnit unit { file };
@@ -247,7 +251,7 @@ TEST_F(ParserTest, parse_enum) {
 
 TEST_F(ParserTest, parse_break_stmt) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void { break; }");
 
     TranslationUnit unit { file };
@@ -280,7 +284,7 @@ TEST_F(ParserTest, parse_break_stmt) {
 
 TEST_F(ParserTest, parse_continue_stmt) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void { continue; }");
 
     TranslationUnit unit { file };
@@ -313,7 +317,7 @@ TEST_F(ParserTest, parse_continue_stmt) {
 
 TEST_F(ParserTest, parse_if_stmt) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void { if 365 {} }");
 
     TranslationUnit unit { file };
@@ -361,7 +365,7 @@ TEST_F(ParserTest, parse_if_stmt) {
 
 TEST_F(ParserTest, parse_if_stmt_with_else) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void { if 41 {} else {} }");
 
     TranslationUnit unit { file };
@@ -416,7 +420,7 @@ TEST_F(ParserTest, parse_if_stmt_with_else) {
 
 TEST_F(ParserTest, parse_if_stmt_with_else_if_else) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void { if 0 {} else if 42 {} else {} }");
 
     TranslationUnit unit { file };
@@ -485,7 +489,7 @@ TEST_F(ParserTest, parse_if_stmt_with_else_if_else) {
 
 TEST_F(ParserTest, parse_while_stmt) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void { while 77 {}; }");
 
     TranslationUnit unit { file };
@@ -534,7 +538,7 @@ TEST_F(ParserTest, parse_while_stmt) {
 
 TEST_F(ParserTest, parse_return_basic) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void { ret 42; }");
 
     TranslationUnit unit { file };
@@ -576,7 +580,7 @@ TEST_F(ParserTest, parse_return_basic) {
 
 TEST_F(ParserTest, parse_bool_literal) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void { true; }");
 
     TranslationUnit unit { file };
@@ -611,7 +615,7 @@ TEST_F(ParserTest, parse_bool_literal) {
 
 TEST_F(ParserTest, parse_float_literal) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void { 3.14; }");
 
     TranslationUnit unit { file };
@@ -646,7 +650,7 @@ TEST_F(ParserTest, parse_float_literal) {
 
 TEST_F(ParserTest, parse_char_literal) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void { 'z'; }");
 
     TranslationUnit unit { file };
@@ -681,7 +685,7 @@ TEST_F(ParserTest, parse_char_literal) {
 
 TEST_F(ParserTest, parse_string_literal) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void { \"abc\"; }");
 
     TranslationUnit unit { file };
@@ -716,7 +720,7 @@ TEST_F(ParserTest, parse_string_literal) {
 
 TEST_F(ParserTest, parse_null_literal) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void { null; }");
 
     TranslationUnit unit { file };
@@ -750,7 +754,7 @@ TEST_F(ParserTest, parse_null_literal) {
 
 TEST_F(ParserTest, parse_binary_expr_basic) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void { 1 + 3.14; }");
 
     TranslationUnit unit { file };
@@ -807,7 +811,7 @@ TEST_F(ParserTest, parse_binary_expr_complex) {
 
 TEST_F(ParserTest, parse_unary_expr_prefix_basic) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void { *5; }");
 
     TranslationUnit unit { file };
@@ -843,7 +847,7 @@ TEST_F(ParserTest, parse_unary_expr_prefix_basic) {
 
 TEST_F(ParserTest, parse_unary_expr_postfix_basic) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void { 5++; }");
 
     TranslationUnit unit { file };
@@ -879,7 +883,7 @@ TEST_F(ParserTest, parse_unary_expr_postfix_basic) {
 
 TEST_F(ParserTest, parse_unary_expr_complex) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void { *5++; }");
 
     TranslationUnit unit { file };
@@ -923,7 +927,7 @@ TEST_F(ParserTest, parse_unary_expr_complex) {
 
 TEST_F(ParserTest, parse_cast_expr) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void { cast<u32>(5); }");
 
     TranslationUnit unit { file };
@@ -965,7 +969,7 @@ TEST_F(ParserTest, parse_cast_expr) {
 
 TEST_F(ParserTest, parse_paren_expr) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void { (5); }");
 
     TranslationUnit unit { file };
@@ -1006,7 +1010,7 @@ TEST_F(ParserTest, parse_paren_expr) {
 
 TEST_F(ParserTest, parse_sizeof_expr) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void { sizeof(u32); }");
 
     TranslationUnit unit { file };
@@ -1041,7 +1045,7 @@ TEST_F(ParserTest, parse_sizeof_expr) {
 
 TEST_F(ParserTest, parse_subscript_expr) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void { x[42]; }");
 
     TranslationUnit unit { file };
@@ -1089,7 +1093,7 @@ TEST_F(ParserTest, parse_subscript_expr) {
 
 TEST_F(ParserTest, parse_member_expr) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void { x.a; }");
 
     TranslationUnit unit { file };
@@ -1131,7 +1135,7 @@ TEST_F(ParserTest, parse_member_expr) {
 
 TEST_F(ParserTest, parse_call_expr) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void { foo(); }");
 
     TranslationUnit unit { file };
@@ -1167,7 +1171,7 @@ TEST_F(ParserTest, parse_call_expr) {
 
 TEST_F(ParserTest, parse_call_expr_with_args) {
     InputFile file;
-    file.pPath = "test";
+    file.path = "test";
     file.overwrite("main :: () -> void { foo(1, y); }");
 
     TranslationUnit unit { file };

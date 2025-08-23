@@ -2,74 +2,104 @@
 
 Statim is a multi-purpose, strongly typed language built with kernel 
 development in mind. The main point of the project is to expirement with the 
-potential of an interpretable bytecode closely coupled into the compiler.
+potential of an interpretable intermediate represenation (IR) closely coupled 
+into the compiler.
 
 ## Overview
 
 Overarching priorities are reduced compilation times from that of modern C/C++, 
 metaprogramming capabilities, and compile-time executions of arbitrary code. 
-Although costly to the former, having a unique bytecode allows for some 
-interesting compiler feedback and compile-time opportunities.
+Although costly to the former, having a unique IR allows for some interesting 
+compiler feedback and CTFE opportunities.
+
+It's probably important to note that most of the concepts being implemented 
+here aren't necessarily new or unique to this project, but ultimately serve as 
+a tool for future projects.
 
 ### Long-term objectives
 
 * Primitive build system using language constructs so nothing is needed other 
 than the compiler itself
 
-* Partial compile-time evaluation, i.e. loop & condition folding for known 
-constants 
+* Compile-time function & expression evaluation
 
-* Explicit type layout for factors like alignment, padding, partial members
-
-* Representing physical registers as typed pointers
-
-* Compile-time syntax tree modifications
+* Syntax tree modifications
 
 ## Desugaring
 
-Although keeping with the general purpose idea, to write the software that we 
-often want, we need features like complex casting, pointer arithmetic, etc. and 
-thus the language won't shy away from those constructs; it's not meant to be 
-high-level.
+Although keeping with the general purpose idea, to write software that we want, 
+we need features like complex casting, pointer arithmetic, etc. and thus the 
+language won't shy away from those constructs; it's not meant to be high-level.
 
 ### What *is* part of the plan
 
-* compile-time execution of arbitrary code
-* inline assembly
+* compile-time evaluation
 * operator overloading
-* monomorphic templates
+* templates via monomorphization
 * parallelization
-* dropping marked struct members
 * runtime type reflection
 * auto dereferencing (no `->` operator)
-* functions with multiple return values
-* file-based, user-controlled namespacing
+* functions with multiple return values, natively
+* namespaces
+* `defer` statements
 * optional bounds, null pointer checks
 
 ### What *isn't* part of the plan
 
-* function overloading (up in the air)
-* constructors & destructors
-* C++ like namespacing
-* inheritance / virtual functions
+* constructors, destructors
+* `new` & `delete` operators
+* garbage collector
+* RAII
+* function overloading
+* inheritance
 * a preprocessor 
 * external build system(s)
-* built-in garbage collection
-* RAII (in the sense of cleaning up entire objects)
 * exceptions
+* references
 
-### Inline Assembly
+### Structures
 
-For now, inline assembly will follow the familiar GNU format using string 
-literals, clobbers, and potential side effect markers:
+Structs will exist, but in a fashion much similar to that found in C.
 
 ```
-$asm {
-    "mov $3, %rax",
-    "add %rax, %rbx"
-    : "~rax,~rbx,volatile"
+Box :: {
+// public by default
+    length: u32,
+    width: u32,
+    height: u32,
+
+$private
+    contents: mut *void,
 };
 ```
+
+Only fields exist in the initial declaration. Methods won't be defined in the
+traditional sense, but can be achieved by designating a receiver in a function,
+i.e. for the `Box` type,
+
+```
+foo :: (self: mut *Box) -> i32 {
+    ...
+}
+```
+
+will allow for both `foo(x)` and `x.foo()`, but only the former if `x` has
+type `*Box`.
+
+This means that with the all familiar method call syntax `.<name>()`, we can 
+also add methods to built-in types:
+
+```
+to_string :: (self: *i64) -> string {
+    ...
+}
+```
+
+One important note is that since the methods are defined outside of the
+structure, they have be in scope in order to be used. This means that apart
+from traditional visiblity via `$public` and `$private`, certain methods can
+be hidden if they are defined in a scope different from the parent scope of the
+receiving struct. 
 
 ### Operator Overloading
 
@@ -81,106 +111,38 @@ operator + :: (self: Box, other: Box) -> Box {
 }
 ```
 
+Not all operators can be overriden, but the planned exceptions are:
+
+`+`, `+=`, `-`, `-=`, `*`, `*=`, `/`, `/=`, `%`, `%=`, `==`, `!=`, `<`, `<=`, 
+`>`, `>=`, `[]`,
+
 ### Templates
 
 Templates (more similar to those found in C++, not generics) via 
 monomorphization will eventually exist, but come at a later date, probably 
 after bootsrapping.
 
-### RAII / Member Destruction
-
-RAII (Resource Acquisition is Initialization) won't be supported in the 
-traditional sense by tracking the lifetime of an entire object. Instead, 
-particular members of a struct may be marked with a tilde `~` to declare that 
-the relevant destructing function (one marked with `$destroy`) should be called 
-when the owning object goes out of scope:
-
-```
-box :: {
-    a: *i64~,
-    B: *i64,
-}
-```
-
-This allows for full control of what parts of an object get destroyed, and no 
-unexpected behaviour with regards to objects unexpectedly being destroyed.
-
-### Header files / Preprocessor
+### Namespacing & Multiple Files
 
 The language will not make use of a preprocessor or header files. To use 
-multiple source files in a program, the `use` keyword can be utilized to import
-the public declarations (and thereby types possibly) of a relative file, in one 
-of three ways:
+multiple source files in a program, the `$use` rune can be utilized to import
+the public declarations (and thereby types possibly) of a relative file:
 
 ```
-use "Utils.stm"; // import all public symbols
-
-use { Foo, Bar } = "Utils.stm"; // import only Foo, Bar
-
-use Utils = "Utils.stm"; // import everything under the namespace Utils
+$use "Utils.stm"; // imports all public symbols
 ```
 
-### Namespacing
+To define an actual namespace - that forces mangling on all declarations within
+it - one can nest `namespace ... { ... }` declarations as needed, and redeclare
+the namespace wherever convenient.
 
-Statim won't "declare" namespaces by way of `namespace ...`, instead files can 
-be namespaced on use, for example `use Utils = "utils.stm"`, can later by 
-scoped into like `Utils::foo()`.
-
-This model allows for only shallow namespacing while letting source code choose 
-how to namespace code in a clever way, relevant to the use case. 
-
-### Structures and Methods
-
-Structs will exist, but in a more "barebones" fashion, similar to that found
-in C.
-
-```
-Box :: {
-    $public
-    length: u32,
-    width: u32,
-    height: u32,
-
-    $private
-    contents: *void,
-};
-```
-
-Only fields exist in the initial declaration. Methods can be amended later 
-using an `impl`:
-
-```
-impl Box {
-    volume :: (self: *Box) -> u32 {
-        ...
-    }
-
-    ...
-}
-```
-
-This means that with the all familiar method call syntax `.()`, we can also
-add methods to built-in types:
-
-```
-impl i64 {
-    to_string :: (self: *i64) -> *char {
-        ...
-    }
-}
-```
-
-Another important note is that since the implementation of methods are clearly
-grouped, their name mangling can be clearly manipulated. For example, if 
-methods should be free floating, an impl can be decorated with 
-`$mangle("free")` to specify that. Methods only need a receiver `self` to be 
-considered valid.
+Namespaces can be "scoped" into using the path `::` operator.
 
 ## Runes
 
 Runes are a language construct that give way to much of the planned 
-metaprogramming and decorative abilities (things like safety knobs, 
-privacy modifiers, etc.) in the language.
+metaprogramming and decorative abilities (things like safety knobs, privacy 
+modifiers, etc.) in the language.
 
 ### `$abi(...)`
 
@@ -201,17 +163,7 @@ Marks the beginning of an inline assembly block.
 
 ### `$assert`
 
-A compile-time assert statement.
-
-### `$code`
-
-Specify a string to be inserted as code, i.e.
-
-```
-foo :: () -> i64 {
-    $code "ret 0;"
-}
-```
+A regular assert statement, configurably compiled.
 
 ### `$comptime`
 
@@ -230,11 +182,6 @@ if $comptime {
 
 Mark a function or type as deprecated, presenting a configurable warning or 
 error to the user.
-
-### `$dump`
-
-Pretty-print the bytecode of a function at compile-time for potentially 
-debugging purposes.
 
 ### `$if`
 
@@ -293,6 +240,10 @@ expanded to multiple print calls based on the types of the provided arguments.
 ### `$println`
 
 Same as `$print`, but with an automatic newline.
+
+### `$static_assert`
+
+A compile-time assert statement.
 
 ### `$unsafe`
 
