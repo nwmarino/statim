@@ -146,6 +146,14 @@ public:
     /// Clear the parent link of this block. Does not detach it.
     void clear_parent() { m_parent = nullptr; }
 
+    /// Append this block into a new parent function. Assumes this 
+    /// block is unlinked and free-floating.
+    void append_to(Function* parent);
+
+    /// \returns `true` if this block has a parent function and is the entry
+    /// block of that function.
+    bool is_entry() const;
+
     /// Detach this block from its parent. Does not destroy the block.
     void detach();
 
@@ -161,11 +169,22 @@ public:
     /// Append \p inst to this block.
     void push_back(Instruction* inst);
 
+    /// Insert \p inst into this block at position \p idx.
+    void insert(Instruction* inst, u32 idx);
+
+    /// Insert \p inst into this block immediately after \p insert_after. Fails
+    /// if \p insert_after is not inside this block.
+    void insert(Instruction* inst, Instruction* insert_after);
+
     /// \returns `true` if this block has no instructions.
     bool empty() const { return m_front == nullptr; }
 
     /// \returns The size of this block by its instruction count.
     u32 size() const { return std::distance(begin(), end()); }
+
+    /// \returns The numeric position of this basic block relative to others
+    /// it is linked to.
+    u32 get_number() const;
 
     iterator begin() { return iterator(m_front); }
     iterator end() { return iterator(nullptr); }
@@ -193,6 +212,12 @@ public:
 
     bool has_predecessors() const { return m_preds.empty(); }
     bool has_successors() const { return m_succs.empty(); }
+
+    /// \returns `true` if this basic block contains a terminator at any point.
+    bool terminates() const;
+
+    /// \returns The number of terminating instructions in this block.
+    u32 terminators() const;
 };
 
 } // namespace stm
