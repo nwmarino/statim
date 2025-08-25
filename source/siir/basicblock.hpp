@@ -23,14 +23,10 @@ class BasicBlock final {
     std::vector<BasicBlock*> m_preds = {};
     std::vector<BasicBlock*> m_succs = {};
 
-    BasicBlock(
-        Function* parent, 
-        const std::vector<BlockArgument*>& args = {}, 
-        const std::string& name = "");
+    BasicBlock(const std::vector<BlockArgument*>& args, const std::string& name,
+               Function* append_to);
 
 public:
-    ~BasicBlock();
-
     struct iterator {
         using iterator_category = std::bidirectional_iterator_tag;
         using value_type = Instruction;
@@ -124,10 +120,11 @@ public:
         }
     };
 
-    static BasicBlock* create(
-        const std::string& name,
-        const std::vector<BlockArgument*> args = {},
-        Function* parent = nullptr);
+    ~BasicBlock();
+
+    /// Create a new basic block with arguments \p args.
+    static BasicBlock* create(const std::vector<BlockArgument*>& args = {}, 
+        const std::string& name = "", Function* append_to = nullptr);
 
     const std::string& get_name() const { return m_name; }
 
@@ -139,8 +136,8 @@ public:
     }
 
     BlockArgument* get_arg(u32 i) {
-        return const_cast<BlockArgument*>(
-            static_cast<const BasicBlock*>(this)->get_arg(i));
+        assert(i <= num_args());
+        return m_args[i];
     }
 
     /// \returns The number of arguments to this basic block.
@@ -242,6 +239,15 @@ public:
 
     /// \returns The number of terminating instructions in this block.
     u32 terminators() const;
+    
+    /// \returns The last terminating instruction in this basic block, if one
+    /// exists, and `nullptr` otherwise.
+    const Instruction* terminator() const;
+
+    Instruction* terminator() {
+        return const_cast<Instruction*>(
+            static_cast<const BasicBlock*>(this)->terminator());
+    }
 };
 
 } // namespace stm

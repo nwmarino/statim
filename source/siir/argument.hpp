@@ -9,16 +9,48 @@ namespace stm {
 class BasicBlock;
 class Function;
 
+/// Base class for all argument values.
 class Argument : public Value {
-    u32 m_index;
+protected:
+    u32 m_argno;
+
+    Argument(u32 number, const Type* type, const std::string& name);
+
+public:
+    u32 get_arg_number() const { return m_argno; }
+    void set_arg_number(u32 num) { m_argno = num; }
 };
 
+/// Represents an argument to a BasicBlock.
 class BlockArgument final : public Argument {
     BasicBlock* m_parent;
+
+    BlockArgument(u32 num, const Type* type, const std::string& name, 
+                  BasicBlock* parent);
+
+public:
+    static BlockArgument* create(u32 num, const Type* type, 
+                                 const std::string& name = "", 
+                                 BasicBlock* parent = nullptr);
+
+    const BasicBlock* get_parent() const { return m_parent; }
+    BasicBlock* get_parent() { return m_parent; }
 };
 
+/// Represents an argument to a Function.
 class FunctionArgument final : public Argument {
     Function* m_parent;
+
+    FunctionArgument(u32 num, const Type* type, const std::string& name,
+                     Function* parent);
+
+public:
+    static FunctionArgument* create(u32 num, const Type* type,
+                                    const std::string& name = "",
+                                    Function* parent = nullptr);
+
+    const Function* get_parent() const { return m_parent; }
+    Function* get_parent() { return m_parent; }
 };
 
 } // namespace stm
