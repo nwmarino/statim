@@ -16,12 +16,21 @@ class BasicBlock final {
     std::string m_name;
     std::vector<BlockArgument*> m_args;
     Function* m_parent;
-    Instruction* m_front;
-    Instruction* m_back;
-    std::vector<BasicBlock*> m_preds;
-    std::vector<BasicBlock*> m_succs;
+    BasicBlock* m_prev = nullptr;
+    BasicBlock* m_next = nullptr;
+    Instruction* m_front = nullptr;
+    Instruction* m_back = nullptr;
+    std::vector<BasicBlock*> m_preds = {};
+    std::vector<BasicBlock*> m_succs = {};
+
+    BasicBlock(
+        Function* parent, 
+        const std::vector<BlockArgument*>& args = {}, 
+        const std::string& name = "");
 
 public:
+    ~BasicBlock();
+
     struct iterator {
         using iterator_category = std::bidirectional_iterator_tag;
         using value_type = Instruction;
@@ -130,8 +139,8 @@ public:
     }
 
     BlockArgument* get_arg(u32 i) {
-        assert(i <= num_args());
-        return m_args[i];
+        return const_cast<BlockArgument*>(
+            static_cast<const BasicBlock*>(this)->get_arg(i));
     }
 
     /// \returns The number of arguments to this basic block.
@@ -150,12 +159,27 @@ public:
     /// block is unlinked and free-floating.
     void append_to(Function* parent);
 
+    /// Insert this basic block into the position before \p block.
+    void insert_before(BasicBlock* inst);
+
+    /// Insert this basic block into the position after \p block.
+    void insert_after(BasicBlock* inst);
+
     /// \returns `true` if this block has a parent function and is the entry
     /// block of that function.
     bool is_entry() const;
 
     /// Detach this block from its parent. Does not destroy the block.
     void detach();
+
+    const BasicBlock* prev() const { return m_prev; }
+    BasicBlock* prev() { return m_prev; }
+
+    const BasicBlock* next() const { return m_next; }
+    BasicBlock* next() { return m_next; }
+
+    void set_prev(BasicBlock* block) { m_prev = block; }
+    void set_next(BasicBlock* block) { m_next = block; }
 
     const Instruction* front() const { return m_front; }
     Instruction* front() { return m_front; }
