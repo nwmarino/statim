@@ -1,6 +1,7 @@
 #ifndef STATIM_SIIR_INSTRUCTION_HPP_
 #define STATIM_SIIR_INSTRUCTION_HPP_
 
+#include "siir/constant.hpp"
 #include "siir/user.hpp"
 
 namespace stm {
@@ -68,6 +69,24 @@ public:
 
     void set_prev(Instruction* inst) { m_prev = inst; }
     void set_next(Instruction* inst) { m_next = inst; }
+};
+
+/// Represents a `const` instruction.
+class ConstInst final : public Constant, public Instruction {
+    Constant* m_const;
+
+    ConstInst(Constant* constant, const std::string& name, 
+              BasicBlock* append_to);
+
+public:
+    ~ConstInst() override;
+
+    /// Create a new constant instruction for value \p constant. 
+    static ConstInst* create(Constant* constant, const std::string& name = "",
+                             BasicBlock* append_to = nullptr);
+
+    const Constant* get_constant() const { return m_const; }
+    Constant* get_constant() { return m_const; }
 };
 
 /// Represents a `store` instruction.
