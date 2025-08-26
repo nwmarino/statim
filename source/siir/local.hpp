@@ -5,6 +5,8 @@
 
 namespace stm {
 
+namespace siir {
+
 class Function;
 
 class Local final : public Value {
@@ -33,6 +35,8 @@ public:
     u32 get_alignment() const { return m_align; }
     void set_alignment(u32 align) { m_align = align; }
 };
+
+} // namespace siir
 
 } // namespace stm
 

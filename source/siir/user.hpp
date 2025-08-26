@@ -7,10 +7,14 @@
 
 namespace stm {
 
+namespace siir {
+
 /// Represents values in the intermediate representation that use other values.
 class User : public Value {
+protected:
     std::vector<Use> m_operands;
 
+    User() = default;
     User(std::initializer_list<Value*> ops) {
         for (auto v : ops) m_operands.emplace_back(v, this);
     }
@@ -32,6 +36,8 @@ public:
 
     u32 num_operands() const { return m_operands.size(); }
 };
+
+} // namespace siir
 
 } // namespace stm
 

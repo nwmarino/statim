@@ -1,8 +1,8 @@
 #ifndef STATIM_SIIR_BASIC_BLOCK_HPP_
 #define STATIM_SIIR_BASIC_BLOCK_HPP_
 
-#include "argument.hpp"
-#include "instruction.hpp"
+#include "siir/argument.hpp"
+#include "siir/instruction.hpp"
 
 #include <cassert>
 #include <cstddef>
@@ -11,6 +11,8 @@
 #include <vector>
 
 namespace stm {
+
+namespace siir {
 
 class BasicBlock final {
     std::string m_name;
@@ -249,6 +251,8 @@ public:
             static_cast<const BasicBlock*>(this)->terminator());
     }
 };
+
+} // namespace siir
 
 } // namespace stm
 

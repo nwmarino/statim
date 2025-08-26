@@ -120,7 +120,7 @@ Not all operators can be overriden, but the planned exceptions are:
 
 Templates (more similar to those found in C++, not generics) via 
 monomorphization will eventually exist, but come at a later date, probably 
-after bootsrapping.
+after bootstrapping.
 
 ### Namespacing & Multiple Files
 

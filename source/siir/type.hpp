@@ -1,5 +1,5 @@
 #ifndef STATIM_SIIR_TYPE_HPP_
-#define STATIM_SIIR_TYPE_HPP_pe
+#define STATIM_SIIR_TYPE_HPP_
 
 #include "types/types.hpp"
 
@@ -11,7 +11,11 @@ namespace stm {
 
 namespace siir {
 
+class CFG;
+
 class Type {
+    friend class Context;
+
     static u32 s_id_iter;
 
 protected:
@@ -34,16 +38,27 @@ public:
         return to_string();
     }
 
+    static const Type* get_i1_type(CFG& cfg);
+    static const Type* get_i8_type(CFG& cfg);
+    static const Type* get_i16_type(CFG& cfg);
+    static const Type* get_i32_type(CFG& cfg);
+    static const Type* get_i64_type(CFG& cfg);
+    static const Type* get_f32_type(CFG& cfg);
+    static const Type* get_f64_type(CFG& cfg);
+
     virtual std::string to_string() const = 0;
 };
 
 class IntegerType final : public Type {
+    friend class Context;
+
 public:
     enum Kind : u8 {
-        TY_Int8,
-        TY_Int16,
-        TY_Int32,
-        TY_Int64,
+        TY_Int1 = 0x01,
+        TY_Int8 = 0x02,
+        TY_Int16 = 0x03,
+        TY_Int32 = 0x04,
+        TY_Int64 = 0x05,
     };
 
 private:
@@ -52,16 +67,18 @@ private:
     IntegerType(Kind kind) : m_kind(kind) {}
 
 public:
-    static IntegerType* get(u32 width);
+    static const IntegerType* get(CFG& cfg, u32 width);
 
     std::string to_string() const override;
 };
 
 class FloatType final : public Type {
+    friend class Context;
+
 public:
     enum Kind : u8 {
-        TY_F32,
-        TY_F64,
+        TY_Float32 = 0x06,
+        TY_Float64 = 0x07,
     };
 
 private:
@@ -70,12 +87,14 @@ private:
     FloatType(Kind kind) : m_kind(kind) {}
 
 public:
-    static FloatType* get(u32 width);
+    static const FloatType* get(CFG& cfg, u32 width);
 
     std::string to_string() const override;
 };
 
 class ArrayType final : public Type {
+    friend class Context;
+
     const Type* m_element;
     u32 m_size;
     
@@ -83,25 +102,14 @@ class ArrayType final : public Type {
         : m_element(element), m_size(size) {}
 
 public:
-    static ArrayType* get(const Type* element, u32 size);
-
-    std::string to_string() const override;
-};
-
-class PointerType final : public Type {
-    const Type* m_pointee;
-
-    PointerType(const Type* pointee) : m_pointee(pointee) {}
-
-public:
-    static PointerType* get(const Type* pointee);
-
-    const Type* get_pointee() const { return m_pointee; }
+    static const ArrayType* get(CFG& cfg, const Type* element, u32 size);
 
     std::string to_string() const override;
 };
 
 class FunctionType final : public Type {
+    friend class Context;
+    
     std::vector<const Type*> m_args;
     const Type* m_ret;
 
@@ -109,8 +117,8 @@ class FunctionType final : public Type {
         : m_args(args), m_ret(ret) {}
 
 public:
-    static FunctionType* get(const std::vector<const Type*>& args, 
-                             const Type* ret);
+    static const FunctionType* get(CFG& cfg, const std::vector<const Type*>& args, 
+                                   const Type* ret);
 
     const std::vector<const Type*>& args() const { return m_args; }
 
@@ -120,6 +128,62 @@ public:
     }
 
     u32 num_args() const { return m_args.size(); }
+
+    const Type* get_return_type() const { return m_ret; }
+
+    std::string to_string() const override;
+};
+
+class PointerType final : public Type {
+    friend class Context;
+
+    const Type* m_pointee;
+
+    PointerType(const Type* pointee) : m_pointee(pointee) {}
+
+public:
+    static const PointerType* get(CFG& cfg, const Type* pointee);
+
+    const Type* get_pointee() const { return m_pointee; }
+
+    std::string to_string() const override;
+};
+
+class StructType final : public Type {
+    friend class Context;
+
+    std::string m_name;
+    std::vector<const Type*> m_fields;
+
+    StructType(const std::string& name, const std::vector<const Type*>& fields)
+        : m_name(name), m_fields(fields) {}
+
+public:
+    static StructType* get(CFG& cfg, const std::string& name);
+    static StructType* create(CFG& cfg, const std::string& name,
+                              const std::vector<const Type*> &fields);
+
+    const std::string& get_name() const { return m_name; }
+    void set_name(const std::string& name) { m_name = name; }
+
+    const std::vector<const Type*>& get_fields() const { return m_fields; }
+    std::vector<const Type*>& get_fields() { return m_fields; }
+
+    const Type* get_field(u32 i) const {
+        assert(i <= num_fields());
+        return m_fields[i];
+    }
+
+    void append_field(const Type* type) { m_fields.push_back(type); }
+
+    void set_type(u32 i, const Type* type) {
+        assert(i <= num_fields());
+        m_fields[i] = type;
+    }
+
+    u32 num_fields() const { return m_fields.size(); }
+
+    bool empty() const { return m_fields.empty(); }
 
     std::string to_string() const override;
 };

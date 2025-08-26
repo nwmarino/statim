@@ -6,6 +6,8 @@
 
 namespace stm {
 
+namespace siir {
+
 class BasicBlock;
 class Function;
 
@@ -52,6 +54,8 @@ public:
     const Function* get_parent() const { return m_parent; }
     Function* get_parent() { return m_parent; }
 };
+
+} // namespace siir
 
 } // namespace stm
 

@@ -8,48 +8,86 @@ namespace stm {
 namespace siir {
 
 class BasicBlock;
+class CFG;
 
 class Constant : public User {
+protected:
+    Constant() = default;
 
+public:
+    virtual ~Constant() = default;
 };
 
 class ConstantInt final : public Constant {
+    friend class Context;
+
     i64 m_value;
 
     ConstantInt(i64 value, const Type* type);
+
+public:
+    static Constant* get_zero(CFG& cfg, const Type* type);
+    static Constant* get_one(CFG& cfg, const Type* type);
+    static Constant* get(CFG& cfg, const Type* type, i64 value);
+
+    i64 get_value() const { return m_value; }
 };
 
 class ConstantFP final : public Constant {
+    friend class Context;
+
     f64 m_value;
 
     ConstantFP(f64 value, const Type* type);
+
+public:
+    static Constant* get_zero(CFG& cfg, const Type* type);
+    static Constant* get_one(CFG& cfg, const Type* type);
+    static Constant* get(CFG& cfg, const Type* type, f64 value);
+
+    f64 get_value() const { return m_value; }
 };
 
 class ConstantNull final : public Constant {
+    friend class Context;
+    
     ConstantNull(const Type* type);
+
+public:
+    static Constant* get(CFG& cfg, const Type* type);
 };
 
 class BlockAddress final : public Constant {
+    friend class Context;
+
     BasicBlock* m_block;
 
-    BlockAddress(BasicBlock* block);
+    BlockAddress(BasicBlock* block) : Constant(), m_block(block) {}
+
+public:
+    static Constant* get(CFG& cfg, BasicBlock* type);
+
+    const BasicBlock* get_block() const { return m_block; }
+    BasicBlock* get_block() { return m_block; }
 };
 
+/*
 class ConstantAggregate : public Constant {
 
 };
 
 class ConstantArray final : public ConstantAggregate {
-
+    std::vector<Constant*> m_values;
 };
 
 class ConstantStruct final : public ConstantAggregate {
-
+    std::vector<Constant*> m_values;
 };
 
 class ConstantExpr : public Constant {
 
 };
+*/
 
 } // namespace siir
 

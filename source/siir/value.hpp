@@ -1,12 +1,14 @@
 #ifndef STATIM_SIIR_VALUE_HPP_
 #define STATIM_SIIR_VALUE_HPP_
 
-#include "core/type.hpp"
+#include "siir/type.hpp"
 
 #include <string>
 #include <vector>
 
 namespace stm {
+
+namespace siir {
 
 class Use;
 class User;
@@ -22,7 +24,7 @@ protected:
     Value(const Type* type, const std::string& name);
 
 public:
-    virtual ~Value() = default;
+    virtual ~Value();
 
     const Type* get_type() const { return m_type; }
     void set_type(const Type* type) { m_type = type; }
@@ -59,6 +61,8 @@ public:
     /// Replace all uses of this value with \p value.
     void replace_all_uses_with(Value* value);
 };
+
+} // namespace siir
 
 } // namespace stm
 

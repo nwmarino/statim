@@ -3,8 +3,11 @@
 
 #include "siir/constant.hpp"
 #include "siir/user.hpp"
+#include <initializer_list>
 
 namespace stm {
+
+namespace siir {
 
 class BasicBlock;
 class Function;
@@ -15,7 +18,8 @@ protected:
     Instruction* m_prev = nullptr;
     Instruction* m_next = nullptr;
 
-    Instruction(BasicBlock* parent);
+    Instruction(std::initializer_list<Value*> operands, BasicBlock* parent)
+        : User(operands), m_parent(parent) {}
 
 public:
     virtual ~Instruction() = default;
@@ -72,7 +76,7 @@ public:
 };
 
 /// Represents a `const` instruction.
-class ConstInst final : public Constant, public Instruction {
+class ConstInst final : public Instruction {
     Constant* m_const;
 
     ConstInst(Constant* constant, const std::string& name, 
@@ -159,6 +163,7 @@ public:
     /// Create a new select instruction with the condition \p cond and
     /// potential values \p tval, \p fval.
     static SelectInst* create(Value* cond, Value* tval, Value* fval, 
+                              const std::string& name = "",
                               BasicBlock* append_to = nullptr);
 
     const Value* get_condition() const { return m_cond; }
@@ -270,26 +275,54 @@ public:
     Value* get_return_value() { return m_value; }
 };
 
+/// Represents a terminating `abort` instruction.
+///
+/// * Does not produce a value.
+///
+class AbortInst final : public Instruction {
+    AbortInst(BasicBlock* append_to);
+
+public:
+    /// Create a new abort instruction.
+    static AbortInst* create(BasicBlock* append_to = nullptr);
+
+    bool is_terminator() const override { return true; }
+};
+
+/// Represents a terminating `unreachable` instruction.
+///
+/// * Does not produce a value.
+///
+class UnreachableInst final : public Instruction {
+    UnreachableInst(BasicBlock* append_to);
+
+public:
+    /// Create a new unreachable instruction.
+    static UnreachableInst* create(BasicBlock* append_to = nullptr);
+
+    bool is_terminator() const override { return true; }
+};
+
 class CallInst final : public Instruction {
-    Function* m_callee;
+    Value* m_callee;
     std::vector<Value*> m_args;
 
-    CallInst(Function* callee, const std::vector<Value*>& args, 
-             const std::string& name, BasicBlock* append_to);
+    CallInst(Value* callee, const std::vector<Value*>& args, 
+             const Type* type, const std::string& name, BasicBlock* append_to);
 
 public:
     ~CallInst() override;
 
-    /// Create a new call instruction to function \p callee with arguments
-    /// \p args.
-    static CallInst* create(Function* callee, const std::vector<Value*>& args,
-                            const std::string& name = "", 
+    /// Create a new call instruction to Value \p callee with arguments \p args.
+    static CallInst* create(Value* callee, const std::vector<Value*>& args,
+                            const Type* type, const std::string& name = "", 
                             BasicBlock* append_to = nullptr);
 
     bool is_call() const override { return true; }
 
-    const Function* get_callee() const { return m_callee; }
-    Function* get_callee() { return m_callee; }
+    const Value* get_callee() const { return m_callee; }
+    Value* get_callee() { return m_callee; }
+    void set_callee(Value* value) { m_callee = value; }
 
     const std::vector<Value*>& args() const { return m_args; }
 
@@ -327,8 +360,8 @@ private:
     Value* m_left;
     Value* m_right;
 
-    CmpInst(Predicate pred, Value* left, Value* right, const std::string& name, 
-            BasicBlock* append_to);
+    CmpInst(Predicate pred, Value* left, Value* right, const Type* type, 
+            const std::string& name, BasicBlock* append_to);
 
 public:
     ~CmpInst() override;
@@ -336,7 +369,7 @@ public:
     /// Create a new comparison instruction with predicate \p pred and operands 
     /// \p left, \p right.
     static CmpInst* create(Predicate pred, Value* left, Value* right,
-                           const std::string& name = "", 
+                           const Type* type, const std::string& name = "", 
                            BasicBlock* append_to = nullptr);
 
     Predicate get_predicate() const { return m_pred; }
@@ -369,8 +402,8 @@ private:
     Value* m_left;
     Value* m_right;
 
-    BinopInst(Ops op, Value* left, Value* right, const std::string& name,
-              BasicBlock* append_to);
+    BinopInst(Ops op, Value* left, Value* right, const Type* type, 
+              const std::string& name, BasicBlock* append_to);
 
 public:
     ~BinopInst() override;
@@ -378,7 +411,7 @@ public:
     /// Create a new binary operation with operator \p op and operands \p left,
     /// \p right.
     static BinopInst* create(Ops op, Value* left, Value* right,
-                             const std::string& name = "", 
+                             const Type* type, const std::string& name = "", 
                              BasicBlock* append_to = nullptr);
 
     Ops get_operator() const { return m_op; }
@@ -431,6 +464,8 @@ public:
 
     void set_value(Value* value) { m_value = value; }
 };
+
+} // namespace siir
 
 } // namespace stm
 
