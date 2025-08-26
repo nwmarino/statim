@@ -3,6 +3,7 @@
 
 #include "siir/type.hpp"
 
+#include <ostream>
 #include <string>
 #include <vector>
 
@@ -60,6 +61,8 @@ public:
 
     /// Replace all uses of this value with \p value.
     void replace_all_uses_with(Value* value);
+
+    virtual void print(std::ostream& os) const;
 };
 
 } // namespace siir

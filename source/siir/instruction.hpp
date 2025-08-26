@@ -91,6 +91,8 @@ public:
 
     const Constant* get_constant() const { return m_const; }
     Constant* get_constant() { return m_const; }
+
+    void print(std::ostream& os) const override;
 };
 
 /// Represents a `store` instruction.
@@ -120,6 +122,8 @@ public:
     void set_value(Value* value) { m_value = value; }
     void set_destination(Value* value) { m_dst = value; }
     void set_alignment(u32 align) { m_align = align; }
+
+    void print(std::ostream& os) const override;
 };
 
 /// Represents a `load` instruction.
@@ -146,6 +150,8 @@ public:
 
     void set_source(Value* value) { m_src = value; }
     void set_alignment(u32 align) { m_align = align; }
+
+    void print(std::ostream& os) const override;
 };
 
 /// Represents a `sel` instruction.
@@ -185,6 +191,8 @@ public:
         m_tval = m_fval;
         m_fval = tmp;
     }
+
+    void print(std::ostream& os) const override;
 };
 
 /// Represents a terminating `brif` instruction.
@@ -227,6 +235,8 @@ public:
         m_tdst = m_fdst;
         m_fdst = tmp;
     }
+
+    void print(std::ostream& os) const override;
 };
 
 /// Represents a terminating `jmp` instruction.
@@ -250,6 +260,8 @@ public:
     Value* get_destination() { return m_dst; }
 
     void set_destination(Value* value) { m_dst = value; }
+
+    void print(std::ostream& os) const override;
 };
 
 /// Represents a terminating `ret` instruction.
@@ -287,6 +299,8 @@ public:
     static AbortInst* create(BasicBlock* append_to = nullptr);
 
     bool is_terminator() const override { return true; }
+
+    void print(std::ostream& os) const override;
 };
 
 /// Represents a terminating `unreachable` instruction.
@@ -301,6 +315,8 @@ public:
     static UnreachableInst* create(BasicBlock* append_to = nullptr);
 
     bool is_terminator() const override { return true; }
+
+    void print(std::ostream& os) const override;
 };
 
 class CallInst final : public Instruction {
@@ -339,6 +355,8 @@ public:
     u32 num_args() const { return m_args.size(); }
 
     bool has_args() const { return !m_args.empty(); }
+
+    void print(std::ostream& os) const override;
 };
 
 /// Represents a comparison instruction.
@@ -382,6 +400,8 @@ public:
 
     void set_lhs_value(Value* value) { m_left = value; }
     void set_rhs_value(Value* value) { m_right = value; }
+
+    void print(std::ostream& os) const override;
 };
 
 /// Represents a binary operation instruction.
@@ -424,6 +444,8 @@ public:
 
     void set_lhs_value(Value* value) { m_left = value; }
     void set_rhs_value(Value* value) { m_right = value; }
+
+    void print(std::ostream& os) const override;
 };
 
 /// Represents a unary operation instruction.
@@ -463,6 +485,8 @@ public:
     Value* get_value() { return m_value; }
 
     void set_value(Value* value) { m_value = value; }
+
+    void print(std::ostream& os) const override;
 };
 
 } // namespace siir

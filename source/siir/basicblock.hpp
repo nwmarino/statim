@@ -250,6 +250,8 @@ public:
         return const_cast<Instruction*>(
             static_cast<const BasicBlock*>(this)->terminator());
     }
+
+    void print(std::ostream& os) const;
 };
 
 } // namespace siir

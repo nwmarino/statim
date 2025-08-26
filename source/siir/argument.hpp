@@ -37,6 +37,8 @@ public:
 
     const BasicBlock* get_parent() const { return m_parent; }
     BasicBlock* get_parent() { return m_parent; }
+
+    void print(std::ostream& os) const override;
 };
 
 /// Represents an argument to a Function.
@@ -53,6 +55,8 @@ public:
 
     const Function* get_parent() const { return m_parent; }
     Function* get_parent() { return m_parent; }
+
+    void print(std::ostream& os) const override;
 };
 
 } // namespace siir

@@ -34,6 +34,8 @@ public:
 
     u32 get_alignment() const { return m_align; }
     void set_alignment(u32 align) { m_align = align; }
+
+    void print(std::ostream& os) const override;
 };
 
 } // namespace siir

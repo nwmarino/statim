@@ -43,6 +43,8 @@ public:
     Constant* get_initializer() const { return m_init; }
     void set_initializer(Constant* constant) { m_init = constant; }
     bool has_initializer() const { return m_init != nullptr; }
+
+    void print(std::ostream& os) const override;
 };
 
 } // namespace siir

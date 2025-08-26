@@ -237,6 +237,8 @@ public:
 
     auto crbegin() const { return rbegin(); }
     auto crend() const { return rend(); }
+
+    void print(std::ostream& os) const override;
 };
 
 } // namespace siir

@@ -26,11 +26,15 @@ class ConstantInt final : public Constant {
     ConstantInt(i64 value, const Type* type);
 
 public:
+    static Constant* get_true(CFG& cfg);
+    static Constant* get_false(CFG& cfg);
     static Constant* get_zero(CFG& cfg, const Type* type);
     static Constant* get_one(CFG& cfg, const Type* type);
     static Constant* get(CFG& cfg, const Type* type, i64 value);
 
     i64 get_value() const { return m_value; }
+
+    void print(std::ostream& os) const override;
 };
 
 class ConstantFP final : public Constant {
@@ -46,6 +50,8 @@ public:
     static Constant* get(CFG& cfg, const Type* type, f64 value);
 
     f64 get_value() const { return m_value; }
+
+    void print(std::ostream& os) const override;
 };
 
 class ConstantNull final : public Constant {
@@ -55,6 +61,8 @@ class ConstantNull final : public Constant {
 
 public:
     static Constant* get(CFG& cfg, const Type* type);
+
+    void print(std::ostream& os) const override;
 };
 
 class BlockAddress final : public Constant {
@@ -69,6 +77,8 @@ public:
 
     const BasicBlock* get_block() const { return m_block; }
     BasicBlock* get_block() { return m_block; }
+
+    void print(std::ostream& os) const override;
 };
 
 /*

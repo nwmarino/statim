@@ -92,7 +92,7 @@ public:
     const Type* get_float64_type() const;
 
     /// Print this graph in a reproducible plaintext format.
-    void print(std::ostream& os);
+    void print(std::ostream& os) const;
 };
 
 } // namespace siir
