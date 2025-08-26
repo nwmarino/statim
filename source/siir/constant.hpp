@@ -2,6 +2,7 @@
 #define STATIM_SIIR_CONSTANT_HPP_
 
 #include "siir/user.hpp"
+#include <initializer_list>
 
 namespace stm {
 
@@ -13,6 +14,11 @@ class CFG;
 class Constant : public User {
 protected:
     Constant() = default;
+
+    Constant(std::initializer_list<Value*> ops, const Type* type, 
+             const std::string& name = "") 
+        : User(ops, type, name) {}
+    
 
 public:
     virtual ~Constant() = default;
@@ -57,7 +63,7 @@ public:
 class ConstantNull final : public Constant {
     friend class Context;
     
-    ConstantNull(const Type* type);
+    ConstantNull(const Type* type) : Constant({}, type) {}
 
 public:
     static Constant* get(CFG& cfg, const Type* type);
@@ -70,10 +76,10 @@ class BlockAddress final : public Constant {
 
     BasicBlock* m_block;
 
-    BlockAddress(BasicBlock* block) : Constant(), m_block(block) {}
+    BlockAddress(BasicBlock* blk) : Constant(), m_block(blk) {}
 
 public:
-    static Constant* get(CFG& cfg, BasicBlock* type);
+    static Constant* get(CFG& cfg, BasicBlock* blk);
 
     const BasicBlock* get_block() const { return m_block; }
     BasicBlock* get_block() { return m_block; }

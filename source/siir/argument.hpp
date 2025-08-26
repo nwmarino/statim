@@ -16,7 +16,7 @@ class Argument : public Value {
 protected:
     u32 m_argno;
 
-    Argument(u32 number, const Type* type, const std::string& name);
+    Argument(u32 num, const Type* type, const std::string& name);
 
 public:
     u32 get_arg_number() const { return m_argno; }

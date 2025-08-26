@@ -6,6 +6,7 @@
 #include "siir/constant.hpp"
 #include "siir/instruction.hpp"
 #include "siir/type.hpp"
+
 #include <cassert>
 
 namespace stm {
@@ -55,7 +56,8 @@ public:
         assert(fval);
         assert(*cond->get_type() == *Type::get_i1_type(m_cfg));
         assert(*tval->get_type() == *fval->get_type());
-        return SelectInst::create(cond, tval, fval, name, m_insert);
+        return SelectInst::create(cond, tval, fval, tval->get_type(), name, 
+            m_insert);
     }
 
     BrifInst* build_brif(Value* cond, Value* tdst, Value* fdst) {

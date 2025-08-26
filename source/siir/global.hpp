@@ -19,7 +19,7 @@ private:
     CFG* m_parent;
     Constant* m_init;
     LinkageTypes m_linkage;
-    bool m_readonly;
+    bool m_read_only;
     
     Global(const Type* type, LinkageTypes linkage, bool read_only, 
            Constant* init, CFG* parent, const std::string& name);
@@ -32,8 +32,8 @@ public:
     LinkageTypes get_linkage() const { return m_linkage; }
     void set_linkage(LinkageTypes linkage) { m_linkage = linkage; }
     
-    bool is_read_only() const { return m_readonly; }
-    void set_read_only(bool value = true) { m_readonly = value; }
+    bool is_read_only() const { return m_read_only; }
+    void set_read_only(bool value = true) { m_read_only = value; }
 
     const CFG* get_parent() const { return m_parent; }
     CFG* get_parent() { return m_parent; }

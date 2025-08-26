@@ -26,7 +26,7 @@ class BasicBlock final {
     std::vector<BasicBlock*> m_succs = {};
 
     BasicBlock(const std::vector<BlockArgument*>& args, const std::string& name,
-               Function* append_to);
+               Function* parent);
 
 public:
     struct iterator {
@@ -129,6 +129,7 @@ public:
         const std::string& name = "", Function* append_to = nullptr);
 
     const std::string& get_name() const { return m_name; }
+    bool has_name() const { return !m_name.empty(); }
 
     const std::vector<BlockArgument*>& get_args() const { return m_args; }
 
@@ -159,10 +160,13 @@ public:
     void append_to(Function* parent);
 
     /// Insert this basic block into the position before \p block.
-    void insert_before(BasicBlock* inst);
+    void insert_before(BasicBlock* blk);
 
     /// Insert this basic block into the position after \p block.
-    void insert_after(BasicBlock* inst);
+    void insert_after(BasicBlock* blk);
+
+    /// Remove the instruction \p inst, if it belongs to this block.
+    void remove(Instruction* inst);
 
     /// \returns `true` if this block has a parent function and is the entry
     /// block of that function.
@@ -242,7 +246,7 @@ public:
     /// \returns The number of terminating instructions in this block.
     u32 terminators() const;
     
-    /// \returns The last terminating instruction in this basic block, if one
+    /// \returns The first terminating instruction in this basic block, if one
     /// exists, and `nullptr` otherwise.
     const Instruction* terminator() const;
 

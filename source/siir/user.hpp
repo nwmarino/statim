@@ -15,8 +15,12 @@ protected:
     std::vector<Use> m_operands;
 
     User() = default;
-    User(std::initializer_list<Value*> ops) {
-        for (auto v : ops) m_operands.emplace_back(v, this);
+
+    User(std::initializer_list<Value*> ops, const Type* type = nullptr, 
+         const std::string& name = "")
+        : Value(type, name) {
+        for (auto v : ops)
+            if (v) m_operands.emplace_back(v, this);
     }
 
 public:

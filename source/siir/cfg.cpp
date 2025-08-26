@@ -1,0 +1,119 @@
+#include "siir/cfg.hpp"
+
+using namespace stm;
+using namespace stm::siir;
+
+CFG::CFG(InputFile& file) : m_file(file) {}
+
+CFG::~CFG() {
+    for (auto [ name, global ] : m_globals) delete global;
+    m_globals.clear();
+
+    for (auto [ name, function ] : m_functions) delete function;
+    m_functions.clear();
+
+    for (auto [ kind, type ] : m_types_ints) delete type;
+    m_types_ints.clear();
+
+    for (auto [ kind, type ] : m_types_floats) delete type;
+    m_types_floats.clear();
+
+    for (auto [ element, size_pair ] : m_types_arrays) {
+        for (auto [ size, type ] : size_pair)
+            delete type;
+
+        size_pair.clear();
+    }
+
+    m_types_arrays.clear();
+
+    for (auto [ pointee, type ] : m_types_ptrs) delete type;
+    m_types_ptrs.clear();
+
+    for (auto [ name, type ] : m_types_structs) delete type;
+    m_types_structs.clear();
+
+    for (auto type : m_types_fns) delete type;
+    m_types_fns.clear();
+
+    delete m_int1_zero;
+    delete m_int1_one;
+    m_int1_zero = nullptr;
+    m_int1_one = nullptr;
+
+    for (auto [ value, constant ] : m_pool_int8) delete constant;
+    m_pool_int8.clear();
+
+    for (auto [ value, constant ] : m_pool_int16) delete constant;
+    m_pool_int16.clear();
+
+    for (auto [ value, constant ] : m_pool_int32) delete constant;
+    m_pool_int32.clear();
+
+    for (auto [ value, constant ] : m_pool_int64) delete constant;
+    m_pool_int64.clear();
+
+    for (auto [ value, constant ] : m_pool_fp32) delete constant;
+    m_pool_fp32.clear();
+
+    for (auto [ value, constant ] : m_pool_fp64) delete constant;
+    m_pool_fp64.clear();
+
+    for (auto [ type, null ] : m_pool_null) delete null;
+    m_pool_null.clear();
+
+    for (auto [ block, addr ] : m_pool_baddr) delete addr;
+    m_pool_baddr.clear();
+}
+
+const Global* CFG::get_global(const std::string& name) const {
+    auto it = m_globals.find(name);
+    if (it != m_globals.end())
+        return it->second;
+
+    return nullptr;
+}
+
+void CFG::add_global(Global* glb) {
+    assert(glb);
+    assert(!get_global(glb->get_name()) && !get_function(glb->get_name())
+        && "global has name conflicts with existing graph symbol");
+
+    m_globals.emplace(glb->get_name(), glb);
+}
+
+void CFG::remove_global(Global* glb) {
+    auto it = m_globals.find(glb->get_name());
+    if (it != m_globals.end()) {
+        assert(it->second == glb);
+        assert(glb->get_parent() == this);
+
+        m_globals.erase(it);
+    }
+}
+
+const Function* CFG::get_function(const std::string& name) const {
+    auto it = m_functions.find(name);
+    if (it != m_functions.end())
+        return it->second;
+
+    return nullptr;
+}
+
+void CFG::add_function(Function* fn) {
+    assert(fn);
+    assert(!get_global(fn->get_name()) && !get_function(fn->get_name())
+        && "function has name conflicts with existing graph symbol");
+
+    m_functions.emplace(fn->get_name(), fn);
+}
+
+void CFG::remove_function(Function* fn) {
+    auto it = m_functions.find(fn->get_name());
+    if (it != m_functions.end()) {
+        assert(it->second == fn);
+        assert(fn->get_parent() == this);
+
+        m_functions.erase(it);
+    }
+}

@@ -20,7 +20,7 @@ class Local final : public Value {
 public:
     /// Create a new local with allocation type \p alloc_type and alignment
     /// \p align.
-    static Local* create(const Type* alloc_type, u32 align, 
+    static Local* create(const Type* alloc_type, u32 align, const Type* type,
                          const std::string& name = "", 
                          Function* parent = nullptr);
 

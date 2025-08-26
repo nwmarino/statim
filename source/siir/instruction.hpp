@@ -18,14 +18,11 @@ protected:
     Instruction* m_prev = nullptr;
     Instruction* m_next = nullptr;
 
-    Instruction(std::initializer_list<Value*> operands, BasicBlock* parent)
-        : User(operands), m_parent(parent) {}
+    Instruction(std::initializer_list<Value*> operands, BasicBlock* parent,
+                const Type* type = nullptr, const std::string& name = "");
 
 public:
     virtual ~Instruction() = default;
-
-    /// \returns The stringified version of this instructions opcode.
-    virtual std::string opcode_to_string() const;
 
     /// \returns `true` if this is a call instruction.
     virtual bool is_call() const { return false; }
@@ -41,6 +38,7 @@ public:
 
     const BasicBlock* get_parent() const { return m_parent; }
     BasicBlock* get_parent() { return m_parent; }
+    void set_parent(BasicBlock* blk) { m_parent = blk; }
 
     /// Clear the link to the parent block of this instruction.
     void clear_parent() { m_parent = nullptr; }
@@ -53,7 +51,7 @@ public:
 
     /// Append this instruction to a new parent block \p parent. Assumes that
     /// this instruction is unlinked and free-floating.
-    void append_to(BasicBlock* parent);
+    void append_to(BasicBlock* blk);
 
     /// Insert this instruction into the position before \p inst.
     void insert_before(Instruction* inst);
@@ -83,8 +81,6 @@ class ConstInst final : public Instruction {
               BasicBlock* append_to);
 
 public:
-    ~ConstInst() override;
-
     /// Create a new constant instruction for value \p constant. 
     static ConstInst* create(Constant* constant, const std::string& name = "",
                              BasicBlock* append_to = nullptr);
@@ -96,6 +92,9 @@ public:
 };
 
 /// Represents a `store` instruction.
+///
+/// * Does not produce a value.
+///
 class StoreInst final : public Instruction {
     Value* m_value;
     Value* m_dst;
@@ -104,8 +103,6 @@ class StoreInst final : public Instruction {
     StoreInst(Value* value, Value* dst, u32 align, BasicBlock* append_to);
 
 public:
-    ~StoreInst() override;
-
     /// Create a new store instruction with value \p value, destination \p dst,
     /// and alignment \p align.
     static StoreInst* create(Value* value, Value* dst, u32 align, 
@@ -135,8 +132,6 @@ class LoadInst final : public Instruction {
              BasicBlock* append_to);
 
 public:
-    ~LoadInst() override;
-
     /// Create a new load instruction with source \p src, and alignment 
     /// \p align.
     static LoadInst* create(Value* src, u32 align, const Type* type,
@@ -160,16 +155,14 @@ class SelectInst final : public Instruction {
     Value* m_tval;
     Value* m_fval;
 
-    SelectInst(Value* cond, Value* tval, Value* fval, const std::string& name, 
-               BasicBlock* append_to);
+    SelectInst(Value* cond, Value* tval, Value* fval, const Type* type,
+               const std::string& name, BasicBlock* append_to);
 
 public:
-    ~SelectInst() override;
-
     /// Create a new select instruction with the condition \p cond and
     /// potential values \p tval, \p fval.
     static SelectInst* create(Value* cond, Value* tval, Value* fval, 
-                              const std::string& name = "",
+                              const Type* type, const std::string& name = "",
                               BasicBlock* append_to = nullptr);
 
     const Value* get_condition() const { return m_cond; }
@@ -207,8 +200,6 @@ class BrifInst final : public Instruction {
     BrifInst(Value* cond, Value* tdst, Value* fdst, BasicBlock* append_to);
 
 public:
-    ~BrifInst() override;
-
     /// Create a new branch-if instruction with the condition \p cond and
     /// destination blocks \p tdst, \p fdst.
     static BrifInst* create(Value* cond, Value* tdst, Value* fdst, 
@@ -249,8 +240,6 @@ class JmpInst final : public Instruction {
     JmpInst(Value* dst, BasicBlock* append_to);
 
 public:
-    ~JmpInst() override;
-
     /// Create a new jump instruction with the destination block \p dst.
     static JmpInst* create(Value* dst, BasicBlock* append_to = nullptr);
 
@@ -274,8 +263,6 @@ class RetInst final : public Instruction {
     RetInst(Value* value, BasicBlock* append_to);
 
 public:
-    ~RetInst() override;
-
     /// Create a new return instruction with the return value \p value.
     static RetInst* create(Value* value, BasicBlock* append_to = nullptr);
 
@@ -285,6 +272,8 @@ public:
 
     const Value* get_return_value() const { return m_value; }
     Value* get_return_value() { return m_value; }
+
+    void print(std::ostream& os) const override;
 };
 
 /// Represents a terminating `abort` instruction.
@@ -327,8 +316,6 @@ class CallInst final : public Instruction {
              const Type* type, const std::string& name, BasicBlock* append_to);
 
 public:
-    ~CallInst() override;
-
     /// Create a new call instruction to Value \p callee with arguments \p args.
     static CallInst* create(Value* callee, const std::vector<Value*>& args,
                             const Type* type, const std::string& name = "", 
@@ -382,8 +369,6 @@ private:
             const std::string& name, BasicBlock* append_to);
 
 public:
-    ~CmpInst() override;
-
     /// Create a new comparison instruction with predicate \p pred and operands 
     /// \p left, \p right.
     static CmpInst* create(Predicate pred, Value* left, Value* right,
@@ -426,7 +411,6 @@ private:
               const std::string& name, BasicBlock* append_to);
 
 public:
-    ~BinopInst() override;
 
     /// Create a new binary operation with operator \p op and operands \p left,
     /// \p right.
@@ -470,8 +454,6 @@ private:
              BasicBlock* append_to);
 
 public:
-    ~UnopInst() override;
-
     /// Create a new unary operation with operator \p op on value \p value.
     static UnopInst* create(Ops op, Value* value, const Type* type,
                             const std::string& name = "", 

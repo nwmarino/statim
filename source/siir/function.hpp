@@ -4,6 +4,7 @@
 #include "siir/argument.hpp"
 #include "siir/basicblock.hpp"
 #include "siir/local.hpp"
+#include "siir/type.hpp"
 #include "siir/value.hpp"
 
 #include <cassert>
@@ -137,6 +138,14 @@ public:
     LinkageTypes get_linkage() const { return m_linkage; }
     void set_linkage(LinkageTypes linkage) { m_linkage = linkage; }
 
+    const FunctionType* get_type() const { 
+        return static_cast<const FunctionType*>(m_type); 
+    }
+
+    const Type* get_return_type() const {
+        return get_type()->get_return_type();
+    }
+
     const CFG* get_parent() const { return m_parent; }
     CFG* get_parent() { return m_parent; }
     void set_parent(CFG* parent) { m_parent = parent; }
@@ -202,17 +211,20 @@ public:
     BasicBlock* back() { return m_back; }
 
     /// Prepend \p block to this function.
-    void push_front(BasicBlock* block);
+    void push_front(BasicBlock* blk);
 
     /// Append \p block to this function.
-    void push_back(BasicBlock* block);
+    void push_back(BasicBlock* blk);
 
     /// Insert \p block into this function at position \p idx.
-    void insert(BasicBlock* block, u32 idx);
+    void insert(BasicBlock* blk, u32 idx);
 
     /// Insert \p block into this function immediately after \p insert_after. 
     /// Fails if \p insert_after is not inside this function.
-    void insert(BasicBlock* block, BasicBlock* insert_after);
+    void insert(BasicBlock* blk, BasicBlock* insert_after);
+
+    /// Remove the basic block \p blk, if it belongs to this function.
+    void remove(BasicBlock* blk);
 
     /// \returns `true` if this function has no basic blocks.
     bool empty() const { return m_front == nullptr; }

@@ -62,7 +62,7 @@ public:
     /// Replace all uses of this value with \p value.
     void replace_all_uses_with(Value* value);
 
-    virtual void print(std::ostream& os) const;
+    virtual void print(std::ostream& os) const = 0;
 };
 
 } // namespace siir

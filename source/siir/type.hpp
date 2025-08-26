@@ -46,6 +46,18 @@ public:
     static const Type* get_f32_type(CFG& cfg);
     static const Type* get_f64_type(CFG& cfg);
 
+    virtual bool is_integer_type() const { return false; }
+
+    virtual bool is_floating_point_type() const { return false; }
+
+    virtual bool is_array_type() const { return false; }
+
+    virtual bool is_function_type() const { return false; }
+
+    virtual bool is_pointer_type() const { return false; }
+
+    virtual bool is_struct_type() const { return false; }
+
     virtual std::string to_string() const = 0;
 };
 
@@ -69,6 +81,10 @@ private:
 public:
     static const IntegerType* get(CFG& cfg, u32 width);
 
+    Kind get_kind() const { return m_kind; }
+
+    bool is_integer_type() const override { return false; }
+
     std::string to_string() const override;
 };
 
@@ -89,6 +105,10 @@ private:
 public:
     static const FloatType* get(CFG& cfg, u32 width);
 
+    Kind get_kind() const { return m_kind; }
+
+    bool is_floating_point_type() const override { return false; }
+
     std::string to_string() const override;
 };
 
@@ -104,6 +124,8 @@ class ArrayType final : public Type {
 public:
     static const ArrayType* get(CFG& cfg, const Type* element, u32 size);
 
+    bool is_array_type() const override { return false; }
+
     std::string to_string() const override;
 };
 
@@ -117,7 +139,8 @@ class FunctionType final : public Type {
         : m_args(args), m_ret(ret) {}
 
 public:
-    static const FunctionType* get(CFG& cfg, const std::vector<const Type*>& args, 
+    static const FunctionType* get(CFG& cfg, 
+                                   const std::vector<const Type*>& args, 
                                    const Type* ret);
 
     const std::vector<const Type*>& args() const { return m_args; }
@@ -130,6 +153,10 @@ public:
     u32 num_args() const { return m_args.size(); }
 
     const Type* get_return_type() const { return m_ret; }
+
+    bool has_return_type() const { return m_ret != nullptr; }
+
+    bool is_function_type() const override { return false; }
 
     std::string to_string() const override;
 };
@@ -145,6 +172,8 @@ public:
     static const PointerType* get(CFG& cfg, const Type* pointee);
 
     const Type* get_pointee() const { return m_pointee; }
+
+    bool is_pointer_type() const override { return false; }
 
     std::string to_string() const override;
 };
@@ -185,7 +214,11 @@ public:
 
     bool empty() const { return m_fields.empty(); }
 
+    bool is_struct_type() const override { return false; }
+
     std::string to_string() const override;
+
+    void print(std::ostream& os) const;
 };
 
 } // namespace siir
