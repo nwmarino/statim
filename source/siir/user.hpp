@@ -12,7 +12,7 @@ namespace siir {
 /// Represents values in the intermediate representation that use other values.
 class User : public Value {
 protected:
-    std::vector<Use> m_operands;
+    std::vector<Use> m_operands = {};
 
     User() = default;
 
@@ -24,8 +24,6 @@ protected:
     }
 
 public:
-    virtual ~User() = default;
-
     const std::vector<Use>& operands() const { return m_operands; }
 
     const Use& get_operand(u32 i) const {

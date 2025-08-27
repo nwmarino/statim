@@ -138,7 +138,14 @@ const PointerType* PointerType::get(CFG& cfg, const Type* pointee) {
 }
 
 std::string PointerType::to_string() const {
-    return '*' + m_pointee->to_string();
+    std::string str = "*";
+
+    if (m_pointee)
+        str += m_pointee->to_string();
+    else
+        str += "void";
+
+    return str;
 }
 
 StructType* StructType::get(CFG& cfg, const std::string& name) {

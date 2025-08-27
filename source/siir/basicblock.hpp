@@ -25,8 +25,8 @@ class BasicBlock final {
     std::vector<BasicBlock*> m_preds = {};
     std::vector<BasicBlock*> m_succs = {};
 
-    BasicBlock(const std::vector<BlockArgument*>& args, const std::string& name,
-               Function* parent);
+    BasicBlock(const std::vector<BlockArgument*>& args, Function* parent,
+               const std::string& name);
 
 public:
     struct iterator {
@@ -126,7 +126,7 @@ public:
 
     /// Create a new basic block with arguments \p args.
     static BasicBlock* create(const std::vector<BlockArgument*>& args = {}, 
-        const std::string& name = "", Function* append_to = nullptr);
+        Function* append_to = nullptr, const std::string& name = "");
 
     const std::string& get_name() const { return m_name; }
     bool has_name() const { return !m_name.empty(); }

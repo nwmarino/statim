@@ -8,11 +8,13 @@ using namespace stm::siir;
 Function::Function(LinkageTypes linkage, 
                    const std::vector<FunctionArgument*>& args, CFG* parent, 
                    const Type* type, const std::string& name)
-    : Value(type, name), m_linkage(linkage), m_args(args), m_parent(parent) {}
+    : Value(type, name), m_linkage(linkage), m_args(args), m_parent(parent) {
+
+    for (auto& arg : args)
+        arg->set_parent(this);
+}
 
 Function::~Function() {
-    detach();
-
     for (auto arg : m_args) delete arg;
     m_args.clear();
 

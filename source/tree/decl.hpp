@@ -70,6 +70,8 @@ public:
 
     const FunctionType* get_type() const { return pType; }
 
+    const Type* get_return_type() const { return pType->get_return_type(); }
+
     const std::vector<ParameterDecl*>& get_params() const { return params; }
 
     const ParameterDecl* get_param(u32 idx) const { return params.at(idx); }

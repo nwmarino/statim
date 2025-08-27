@@ -25,7 +25,7 @@ public:
 };
 
 class ConstantInt final : public Constant {
-    friend class Context;
+    friend class CFG;
 
     i64 m_value;
 
@@ -44,7 +44,7 @@ public:
 };
 
 class ConstantFP final : public Constant {
-    friend class Context;
+    friend class CFG;
 
     f64 m_value;
 
@@ -61,7 +61,7 @@ public:
 };
 
 class ConstantNull final : public Constant {
-    friend class Context;
+    friend class CFG;
     
     ConstantNull(const Type* type) : Constant({}, type) {}
 
@@ -72,7 +72,7 @@ public:
 };
 
 class BlockAddress final : public Constant {
-    friend class Context;
+    friend class CFG;
 
     BasicBlock* m_block;
 

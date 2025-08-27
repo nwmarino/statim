@@ -37,6 +37,8 @@ public:
 
     const BasicBlock* get_parent() const { return m_parent; }
     BasicBlock* get_parent() { return m_parent; }
+    void set_parent(BasicBlock* parent) { m_parent = parent; }
+    void clear_parent() { m_parent = nullptr; }
 
     void print(std::ostream& os) const override;
 };
@@ -55,6 +57,8 @@ public:
 
     const Function* get_parent() const { return m_parent; }
     Function* get_parent() { return m_parent; }
+    void set_parent(Function* parent) { m_parent = parent; }
+    void clear_parent() { m_parent = nullptr; }
 
     void print(std::ostream& os) const override;
 };

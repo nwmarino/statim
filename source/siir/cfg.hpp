@@ -18,6 +18,8 @@ namespace stm {
 
 namespace siir {
 
+class Target;
+
 /// The top-level SIIR control flow graph representation.
 class CFG final {
     friend class Type;
@@ -32,37 +34,42 @@ class CFG final {
 
     /// Top-level graph items.
     InputFile& m_file;
-    std::map<std::string, Global*> m_globals;
-    std::map<std::string, Function*> m_functions;
+    Target& m_target;
+    std::map<std::string, Global*> m_globals = {};
+    std::map<std::string, Function*> m_functions = {};
 
     /// Type pooling.
-    std::unordered_map<IntegerType::Kind, IntegerType*> m_types_ints;
-    std::unordered_map<FloatType::Kind, FloatType*> m_types_floats;
+    std::unordered_map<IntegerType::Kind, IntegerType*> m_types_ints = {};
+    std::unordered_map<FloatType::Kind, FloatType*> m_types_floats = {};
     std::unordered_map<const Type*, 
-        std::unordered_map<u32, ArrayType*>> m_types_arrays;
-    std::unordered_map<const Type*, PointerType*> m_types_ptrs;
-    std::map<std::string, StructType*> m_types_structs;
-    std::vector<FunctionType*> m_types_fns; 
+        std::unordered_map<u32, ArrayType*>> m_types_arrays = {};
+    std::unordered_map<const Type*, PointerType*> m_types_ptrs = {};
+    std::map<std::string, StructType*> m_types_structs = {};
+    std::vector<FunctionType*> m_types_fns = {}; 
 
     /// Constant pooling.
     ConstantInt *m_int1_zero, *m_int1_one;
-    std::unordered_map<i8, ConstantInt*> m_pool_int8;
-    std::unordered_map<i16, ConstantInt*> m_pool_int16;
-    std::unordered_map<i32, ConstantInt*> m_pool_int32;
-    std::unordered_map<i64, ConstantInt*> m_pool_int64;
-    std::unordered_map<f32, ConstantFP*> m_pool_fp32;
-    std::unordered_map<f64, ConstantFP*> m_pool_fp64;
-    std::unordered_map<const Type*, ConstantNull*> m_pool_null;
-    std::unordered_map<const BasicBlock*, BlockAddress*> m_pool_baddr;
+    std::unordered_map<i8, ConstantInt*> m_pool_int8 = {};
+    std::unordered_map<i16, ConstantInt*> m_pool_int16 = {};
+    std::unordered_map<i32, ConstantInt*> m_pool_int32 = {};
+    std::unordered_map<i64, ConstantInt*> m_pool_int64 = {};
+    std::unordered_map<f32, ConstantFP*> m_pool_fp32 = {};
+    std::unordered_map<f64, ConstantFP*> m_pool_fp64 = {};
+    std::unordered_map<const Type*, ConstantNull*> m_pool_null = {};
+    std::unordered_map<const BasicBlock*, BlockAddress*> m_pool_baddr = {};
 
 public:
-    CFG(InputFile& file);
+    CFG(InputFile& file, Target& target);
     ~CFG();
 
     /// Get the input file that this control flow graph represents.
     const InputFile& get_file() const { return m_file; }
     InputFile& get_file() { return m_file; }
     void set_file(InputFile& file) { m_file = file; }
+
+    /// Get the target of this control flow graph.
+    const Target& get_target() const { return m_target; }
+    Target& get_target() { return m_target; }
 
     /// Get the global in this graph with name \p name if it exists, and
     /// `nullptr` otherwise. 

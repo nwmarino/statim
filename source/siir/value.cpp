@@ -9,7 +9,7 @@ Value::Value(const Type* type, const std::string& name)
     : m_type(type), m_name(name), m_uses() {}
 
 Value::~Value() {
-    for (auto use : m_uses) delete use;
+    //for (auto use : m_uses) delete use;
     m_uses.clear();
 }
 

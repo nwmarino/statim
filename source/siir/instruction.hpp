@@ -3,6 +3,7 @@
 
 #include "siir/constant.hpp"
 #include "siir/user.hpp"
+
 #include <initializer_list>
 
 namespace stm {
@@ -13,13 +14,33 @@ class BasicBlock;
 class Function;
 
 class Instruction : public User {
+public:
+    enum Op : u8 {
+        Const,
+        Store,
+        Load,
+        AP,
+        Select,
+        Brif,
+        Jmp,
+        Ret,
+        Abort,
+        Unreachable,
+        Call,
+        Cmp,
+        Binop,
+        Unop,
+    };
+
 protected:
+    Op m_op;
     BasicBlock* m_parent;
     Instruction* m_prev = nullptr;
     Instruction* m_next = nullptr;
 
-    Instruction(std::initializer_list<Value*> operands, BasicBlock* parent,
-                const Type* type = nullptr, const std::string& name = "");
+    Instruction(Op op, std::initializer_list<Value*> operands, 
+                BasicBlock* parent, const Type* type = nullptr, 
+                const std::string& name = "");
 
 public:
     virtual ~Instruction() = default;
@@ -35,6 +56,8 @@ public:
 
     /// \returns `true` if this is a casting instruction.
     virtual bool is_cast() const { return false; }
+
+    Op get_op() const { return m_op; }
 
     const BasicBlock* get_parent() const { return m_parent; }
     BasicBlock* get_parent() { return m_parent; }
@@ -145,6 +168,36 @@ public:
 
     void set_source(Value* value) { m_src = value; }
     void set_alignment(u32 align) { m_align = align; }
+
+    void print(std::ostream& os) const override;
+};
+
+/// Represents an `ap` instruction.
+class APInst final : public Instruction {
+    Value* m_src;
+    Value* m_idx;
+    bool m_deref;
+
+    APInst(Value* src, Value* idx, bool deref, const Type* type,
+           const std::string& name, BasicBlock* append_to);
+
+public:
+    /// Create a new pointer access with source \p src and index \p idx.
+    /// Indicate deference access via \p deref.
+    static APInst* create(Value* src, Value* idx, bool deref, const Type* type,
+                          const std::string& name = "", 
+                          BasicBlock* append_to = nullptr);
+
+    const Value* get_source() const { return m_src; }
+    Value* get_source() { return m_src; }
+    void set_source(Value* value) { m_src = value; }
+
+    const Value* get_index() const { return m_idx; }
+    Value* get_index() { return m_idx; }
+    void set_index(Value* value) { m_idx = value; }
+
+    bool is_deref() const { return m_deref; }
+    void set_is_deref(bool value = true) { m_deref = value; }
 
     void print(std::ostream& os) const override;
 };
@@ -399,7 +452,7 @@ public:
         BINOP_SDiv, BINOP_UDiv, BINOP_FDiv,
         BINOP_SRem, BINOP_URem, BINOP_FRem,
         BINOP_And, BINOP_Or, BINOP_Xor,
-        BINOP_Shl, BINOP_Shr, BINOP_AShr,
+        BINOP_Shl, BINOP_Shr, BINOP_Sar,
     };
 
 private:

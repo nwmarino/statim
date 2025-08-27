@@ -204,6 +204,11 @@ public:
             static_cast<const Function*>(this)->get_local(name));
     }
 
+    void add_local(Local* local) {
+        assert(!get_local(local->get_name()));
+        m_locals.emplace(local->get_name(), local);
+    }
+
     const BasicBlock* front() const { return m_front; }
     BasicBlock* front() { return m_front; }
 

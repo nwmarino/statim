@@ -51,8 +51,8 @@ class Root final {
     TypeContext                 context;
     Scope*                      pScope;
     std::vector<Decl*>          decls;
-    std::vector<const Decl*>    imports;
-    std::vector<const Decl*>    exports;
+    std::vector<Decl*>    imports;
+    std::vector<Decl*>    exports;
 
 public:
     Root(InputFile& file, Scope* pScope);
@@ -73,9 +73,9 @@ public:
 
     void add_decl(Decl* pDecl) { decls.push_back(pDecl); }
 
-    const std::vector<const Decl*>& get_imports() const { return imports; }
+    const std::vector<Decl*>& get_imports() const { return imports; }
 
-    const std::vector<const Decl*>& get_exports() const { return exports; }
+    const std::vector<Decl*>& get_exports() const { return exports; }
 
     const BuiltinType* get_void_type() const 
     { return context.get(BuiltinType::Kind::Void); }

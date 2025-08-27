@@ -23,6 +23,7 @@ public:
     const BasicBlock* get_insert() const { return m_insert; }
     BasicBlock* get_insert() { return m_insert; }
     void set_insert(BasicBlock* blk) { m_insert = blk; }
+    void clear_insert() { m_insert = nullptr; }
 
     Value* build_const(Constant* constant, const std::string& name = "") {
         assert(constant);
@@ -49,6 +50,22 @@ public:
         return LoadInst::create(src, align, type, name, m_insert);
     }
 
+    Value* build_ap(const Type* type, Value* src, Value* idx,
+                    const std::string& name = "") {
+        assert(type);
+        assert(src);
+        assert(idx);
+        return APInst::create(src, idx, false, type, name, m_insert);
+    }
+
+    Value* build_apd(const Type* type, Value* src, Value* idx,
+                     const std::string& name = "") {
+        assert(type);
+        assert(src);
+        assert(idx);
+        return APInst::create(src, idx, true, type, name, m_insert);
+    }
+
     Value* build_select(Value* cond, Value* tval, Value* fval, 
                         const std::string& name = "") {
         assert(cond);
@@ -72,7 +89,7 @@ public:
 
     JmpInst* build_jmp(Value* dst) {
         assert(dst);
-        assert(dynamic_cast<BlockArgument*>(dst));
+        assert(dynamic_cast<BlockAddress*>(dst));
         return JmpInst::create(dst, m_insert);
     }
 

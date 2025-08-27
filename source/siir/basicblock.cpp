@@ -6,12 +6,10 @@ using namespace stm;
 using namespace stm::siir;
 
 BasicBlock::BasicBlock(const std::vector<BlockArgument*>& args, 
-                       const std::string& name, Function* parent)
+                       Function* parent, const std::string& name)
     : m_name(name), m_args(args), m_parent(parent) {}
 
 BasicBlock::~BasicBlock() {
-    detach();
-
     for (auto arg : m_args) delete arg;
     m_args.clear();
 
@@ -34,8 +32,8 @@ BasicBlock::~BasicBlock() {
 
 BasicBlock* 
 BasicBlock::create(const std::vector<BlockArgument*>& args, 
-                   const std::string& name, Function* append_to) {
-    BasicBlock* blk = new BasicBlock(args, name, append_to);
+                   Function* append_to, const std::string& name) {
+    BasicBlock* blk = new BasicBlock(args, append_to, name);
     if (append_to)
         append_to->push_back(blk);
 

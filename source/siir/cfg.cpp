@@ -1,9 +1,22 @@
 #include "siir/cfg.hpp"
+#include "siir/constant.hpp"
+#include "siir/type.hpp"
 
 using namespace stm;
 using namespace stm::siir;
 
-CFG::CFG(InputFile& file) : m_file(file) {}
+CFG::CFG(InputFile& file, Target& target) : m_file(file), m_target(target) {
+    m_types_ints[IntegerType::TY_Int1] = new IntegerType(IntegerType::TY_Int1);
+    m_types_ints[IntegerType::TY_Int8] = new IntegerType(IntegerType::TY_Int8);
+    m_types_ints[IntegerType::TY_Int16] = new IntegerType(IntegerType::TY_Int16);
+    m_types_ints[IntegerType::TY_Int32] = new IntegerType(IntegerType::TY_Int32);
+    m_types_ints[IntegerType::TY_Int64] = new IntegerType(IntegerType::TY_Int64);
+    m_types_floats[FloatType::TY_Float32] = new FloatType(FloatType::TY_Float32);
+    m_types_floats[FloatType::TY_Float64] = new FloatType(FloatType::TY_Float64);
+
+    m_int1_zero = new ConstantInt(0, m_types_ints[IntegerType::TY_Int1]);
+    m_int1_one = new ConstantInt(1, m_types_ints[IntegerType::TY_Int1]);
+}
 
 CFG::~CFG() {
     for (auto [ name, global ] : m_globals) delete global;
@@ -36,10 +49,15 @@ CFG::~CFG() {
     for (auto type : m_types_fns) delete type;
     m_types_fns.clear();
 
-    delete m_int1_zero;
-    delete m_int1_one;
-    m_int1_zero = nullptr;
-    m_int1_one = nullptr;
+    if (m_int1_zero) {
+        delete m_int1_zero;
+        m_int1_zero = nullptr;
+    }
+
+    if (m_int1_one) {
+        delete m_int1_one;
+        m_int1_one = nullptr;
+    }
 
     for (auto [ value, constant ] : m_pool_int8) delete constant;
     m_pool_int8.clear();

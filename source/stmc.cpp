@@ -1,4 +1,6 @@
 #include "core/logger.hpp"
+#include "siir/cfg.hpp"
+#include "siir/target.hpp"
 #include "tree/parser.hpp"
 #include "tree/visitor.hpp"
 #include "types/input_file.hpp"
@@ -17,7 +19,7 @@ stm::i32 main(stm::i32 argc, char** argv) {
     options.time = 1;
 
     stm::InputFile file;
-    file.path = "samples/return_zero.stm";
+    file.path = "samples/b.stm";
 
     stm::TranslationUnit unit { file };
 
@@ -34,6 +36,18 @@ stm::i32 main(stm::i32 argc, char** argv) {
     root.accept(sema);
 
     root.print(std::cout);
-    
+
+    stm::siir::Target target { 
+        stm::siir::Target::amd64, 
+        stm::siir::Target::SystemV, 
+        stm::siir::Target::Linux 
+    };
+
+    stm::siir::CFG cfg { file, target };
+
+    stm::Codegen cgn { options, root, cfg };
+    root.accept(cgn);
+
+    cfg.print(std::cout);
     return 0;
 }

@@ -37,8 +37,10 @@ set(COMPILER_SOURCES
     source/siir/instruction.cpp
     source/siir/local.cpp
     source/siir/print.cpp
+    source/siir/target.cpp
     source/siir/type.cpp
     source/siir/value.cpp
+    source/tree/codegen.cpp
     source/tree/decl.cpp
     source/tree/expr.cpp
     source/tree/parser.cpp
