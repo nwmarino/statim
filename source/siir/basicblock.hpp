@@ -1,22 +1,24 @@
 #ifndef STATIM_SIIR_BASIC_BLOCK_HPP_
 #define STATIM_SIIR_BASIC_BLOCK_HPP_
 
-#include "siir/argument.hpp"
 #include "siir/instruction.hpp"
 
 #include <cassert>
 #include <cstddef>
 #include <iterator>
-#include <string>
 #include <vector>
 
 namespace stm {
-
 namespace siir {
 
+class Function;
+
+/// The BasicBlock type is implemented as a node in a linked list, managed by
+/// the Function class. Each block manages a similar doubly linked list of
+/// instructions, expecting one and only one terminating instruction at a time.
+
+/// A basic block consisting of instructions.
 class BasicBlock final {
-    std::string m_name;
-    std::vector<BlockArgument*> m_args;
     Function* m_parent;
     BasicBlock* m_prev = nullptr;
     BasicBlock* m_next = nullptr;
@@ -25,10 +27,129 @@ class BasicBlock final {
     std::vector<BasicBlock*> m_preds = {};
     std::vector<BasicBlock*> m_succs = {};
 
-    BasicBlock(const std::vector<BlockArgument*>& args, Function* parent,
-               const std::string& name);
-
 public:
+    /// Create a new basic block. If the |parent| argument is provided, the new
+    /// block will be automatically append to it.
+    BasicBlock(Function* parent = nullptr);
+    
+    BasicBlock(const BasicBlock&) = delete;
+    BasicBlock& operator = (const BasicBlock&) = delete;
+    
+    ~BasicBlock();
+
+    /// Returns the parent function of this basic block.
+    const Function* get_parent() const { return m_parent; }
+    Function* get_parent() { return m_parent; }
+
+    /// Clear the parent link of this basic block. Does not detach this block
+    /// from its old parent.
+    void clear_parent() { m_parent = nullptr; }
+
+    /// Mutate the parent link of this basic block to |parent|.
+    void set_parent(Function* parent) { m_parent = parent; }
+
+    /// Append this basic block to function |parent|. Assumes this block is 
+    /// unlinked and free-floating.
+    void append_to_function(Function* parent);
+
+    /// Insert this basic block into the position before |blk|.
+    void insert_before(BasicBlock* blk);
+
+    /// Insert this basic block into the position after |blk|.
+    void insert_after(BasicBlock* blk);
+
+    /// Remove the instruction |inst| if it belongs to this basic block.
+    void remove_inst(Instruction* inst);
+
+    /// Returns true if this basic block has a parent function and is the first
+    /// block in that function.
+    bool is_entry_block() const { 
+        return m_parent != nullptr && m_prev == nullptr; 
+    }
+
+    /// Detach this basic block from its parent. Does not destroy the block.
+    void detach_from_parent();
+
+    /// Returns the basic block previous to this one in the parent function.
+    const BasicBlock* prev() const { return m_prev; }
+    BasicBlock* prev() { return m_prev; }
+
+    /// Returns the basic block after this one in the parent function.
+    const BasicBlock* next() const { return m_next; }
+    BasicBlock* next() { return m_next; }
+
+    void set_prev(BasicBlock* blk) { m_prev = blk; }
+    void set_next(BasicBlock* blk) { m_next = blk; }
+
+    /// Returns the first instruction in this block, if one exists.
+    const Instruction* front() const { return m_front; }
+    Instruction* front() { return m_front; }
+
+    /// Returns the last instruction in this block, if it exists.
+    const Instruction* back() const { return m_back; }
+    Instruction* back() { return m_back; }
+
+    /// Prepend |inst| to this basic block.
+    void push_front(Instruction* inst);
+
+    /// Append |inst| to this basic block.
+    void push_back(Instruction* inst);
+
+    /// Insert |inst| into this basic block at position |i|.
+    void insert(Instruction* inst, u32 i);
+
+    /// Insert |inst| into this basic block immediately after |insert_after|. 
+    /// Fails if |insert_after| is not already inside this block.
+    void insert(Instruction* inst, Instruction* insert_after);
+
+    /// Retuns true if this basic block has no instructions.
+    bool empty() const { return m_front == nullptr; }
+
+    /// Returns the size of this basic block by its instruction count.
+    u32 size() const { return std::distance(begin(), end()); }
+
+    /// Returns the numeric position of this basic block relative to other
+    /// blocks in the parent function.
+    u32 get_number() const;
+
+    /// Returns the predecessors of this basic block.
+    const std::vector<BasicBlock*>& preds() const { return m_preds; }
+    std::vector<BasicBlock*>& preds() { return m_preds; }
+
+    /// Returns the number of predecessors to this basic block.
+    u32 num_preds() const { return m_preds.size(); }
+
+    /// Returns true if this basic block has atleast one predecessor.
+    bool has_preds() const { return m_preds.empty(); }
+
+    /// Returns the successors of this basic block.
+    const std::vector<BasicBlock*>& succs() const { return m_succs; }
+    std::vector<BasicBlock*>& succs() { return m_succs; }
+
+    /// Returns the number of successors to this basic block.
+    u32 num_successors() const { return m_succs.size(); }
+    
+    /// Returns true if this basic block has atleast one successor.
+    bool has_succs() const { return m_succs.empty(); }
+
+    /// Returns true if this basic block contains a terminating instruction at 
+    /// any point.
+    bool terminates() const;
+
+    /// Returns the number of terminating instructions in this basic block.
+    u32 terminators() const;
+    
+    /// The earliest terminating instruction in this basic block if one exists.
+    const Instruction* terminator() const;
+    Instruction* terminator() {
+        return const_cast<Instruction*>(
+            static_cast<const BasicBlock*>(this)->terminator());
+    }
+
+    /// Print this basic block in a reproducible plaintext format to the output
+    /// stream |os|.
+    void print(std::ostream& os) const;
+
     struct iterator {
         using iterator_category = std::bidirectional_iterator_tag;
         using value_type = Instruction;
@@ -122,97 +243,6 @@ public:
         }
     };
 
-    ~BasicBlock();
-
-    /// Create a new basic block with arguments \p args.
-    static BasicBlock* create(const std::vector<BlockArgument*>& args = {}, 
-        Function* append_to = nullptr, const std::string& name = "");
-
-    const std::string& get_name() const { return m_name; }
-    bool has_name() const { return !m_name.empty(); }
-
-    const std::vector<BlockArgument*>& get_args() const { return m_args; }
-
-    const BlockArgument* get_arg(u32 i) const {
-        assert(i <= num_args());
-        return m_args[i];
-    }
-
-    BlockArgument* get_arg(u32 i) {
-        assert(i <= num_args());
-        return m_args[i];
-    }
-
-    /// \returns The number of arguments to this basic block.
-    u32 num_args() const { return m_args.size(); }
-
-    /// \returns `true` if this basic block has any arguments.
-    bool has_args() const { return !m_args.empty(); }
-
-    const Function* get_parent() const { return m_parent; }
-    Function* get_parent() { return m_parent; }
-
-    /// Clear the parent link of this block. Does not detach it.
-    void clear_parent() { m_parent = nullptr; }
-
-    /// Append this block into a new parent function. Assumes this 
-    /// block is unlinked and free-floating.
-    void append_to(Function* parent);
-
-    /// Insert this basic block into the position before \p block.
-    void insert_before(BasicBlock* blk);
-
-    /// Insert this basic block into the position after \p block.
-    void insert_after(BasicBlock* blk);
-
-    /// Remove the instruction \p inst, if it belongs to this block.
-    void remove(Instruction* inst);
-
-    /// \returns `true` if this block has a parent function and is the entry
-    /// block of that function.
-    bool is_entry() const;
-
-    /// Detach this block from its parent. Does not destroy the block.
-    void detach();
-
-    const BasicBlock* prev() const { return m_prev; }
-    BasicBlock* prev() { return m_prev; }
-
-    const BasicBlock* next() const { return m_next; }
-    BasicBlock* next() { return m_next; }
-
-    void set_prev(BasicBlock* block) { m_prev = block; }
-    void set_next(BasicBlock* block) { m_next = block; }
-
-    const Instruction* front() const { return m_front; }
-    Instruction* front() { return m_front; }
-
-    const Instruction* back() const { return m_back; }
-    Instruction* back() { return m_back; }
-
-    /// Prepend \p inst to this block.
-    void push_front(Instruction* inst);
-
-    /// Append \p inst to this block.
-    void push_back(Instruction* inst);
-
-    /// Insert \p inst into this block at position \p idx.
-    void insert(Instruction* inst, u32 idx);
-
-    /// Insert \p inst into this block immediately after \p insert_after. Fails
-    /// if \p insert_after is not inside this block.
-    void insert(Instruction* inst, Instruction* insert_after);
-
-    /// \returns `true` if this block has no instructions.
-    bool empty() const { return m_front == nullptr; }
-
-    /// \returns The size of this block by its instruction count.
-    u32 size() const { return std::distance(begin(), end()); }
-
-    /// \returns The numeric position of this basic block relative to others
-    /// it is linked to.
-    u32 get_number() const;
-
     iterator begin() { return iterator(m_front); }
     iterator end() { return iterator(nullptr); }
 
@@ -230,36 +260,9 @@ public:
 
     auto crbegin() const { return rbegin(); }
     auto crend() const { return rend(); }
-
-    const std::vector<BasicBlock*>& predecessors() const { return m_preds; }
-    const std::vector<BasicBlock*>& succcessors() const { return m_succs; }
-
-    u32 num_predecessors() const { return m_preds.size(); }
-    u32 num_successors() const { return m_succs.size(); }
-
-    bool has_predecessors() const { return m_preds.empty(); }
-    bool has_successors() const { return m_succs.empty(); }
-
-    /// \returns `true` if this basic block contains a terminator at any point.
-    bool terminates() const;
-
-    /// \returns The number of terminating instructions in this block.
-    u32 terminators() const;
-    
-    /// \returns The first terminating instruction in this basic block, if one
-    /// exists, and `nullptr` otherwise.
-    const Instruction* terminator() const;
-
-    Instruction* terminator() {
-        return const_cast<Instruction*>(
-            static_cast<const BasicBlock*>(this)->terminator());
-    }
-
-    void print(std::ostream& os) const;
 };
 
 } // namespace siir
-
 } // namespace stm
 
 #endif // STATIM_SIIR_BASIC_BLOCK_HPP_

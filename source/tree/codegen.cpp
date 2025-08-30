@@ -1,6 +1,5 @@
 #include "core/logger.hpp"
 #include "core/type.hpp"
-#include "siir/argument.hpp"
 #include "siir/constant.hpp"
 #include "siir/function.hpp"
 #include "siir/instruction.hpp"
@@ -69,13 +68,13 @@ siir::Value* Codegen::inject_bool_cmp(siir::Value* value) {
     if (value->get_type()->is_integer_type(1)) {
         return value;
     } else if (value->get_type()->is_integer_type()) {
-        return m_builder.build_cmp(siir::CmpInst::CMP_Ne, value, 
+        return m_builder.build_cmp_ine(value, 
             siir::ConstantInt::get(m_cfg, value->get_type(), 0));   
     } else if (value->get_type()->is_floating_point_type()) {
-        return m_builder.build_cmp(siir::CmpInst::CMP_One, value, 
+        return m_builder.build_cmp_one(value, 
             siir::ConstantFP::get(m_cfg, value->get_type(), 0.f));
     } else if (value->get_type()->is_pointer_type()) {
-        return m_builder.build_cmp(siir::CmpInst::CMP_Ne, value, 
+        return m_builder.build_cmp_ine(value, 
             siir::ConstantNull::get(m_cfg, value->get_type())); 
     } else {
         assert(false && "incompatible boolean value");
@@ -83,24 +82,25 @@ siir::Value* Codegen::inject_bool_cmp(siir::Value* value) {
 }
 
 void Codegen::lower_function(const FunctionDecl& decl) {
-    auto linkage = siir::Function::External;
+    auto linkage = siir::Function::LINKAGE_EXTERNAL;
 
     std::vector<const siir::Type*> arg_types;
-    std::vector<siir::FunctionArgument*> args;
+    std::vector<siir::Argument*> args;
     args.reserve(decl.num_params());
     arg_types.reserve(decl.num_params());
     for (auto& param : decl.get_params()) {
         const siir::Type* atype = lower_type(param->get_type());
         arg_types.push_back(atype);
-        siir::FunctionArgument* arg = siir::FunctionArgument::create(
-            args.size(), atype, param->get_name(), nullptr);
+        siir::Argument* arg = new siir::Argument(
+            atype, param->get_name(), args.size(), nullptr);
+        args.push_back(arg);
     }
 
     auto type = siir::FunctionType::get(
         m_cfg, arg_types, lower_type(decl.get_return_type()));
     
-    auto function = siir::Function::create(
-       type, linkage, args, &m_cfg, mangle(&decl));
+    siir::Function* function = new siir::Function(
+        m_cfg, linkage, type, mangle(&decl), args);
 }
 
 void Codegen::impl_function(const FunctionDecl& decl) {
@@ -112,15 +112,15 @@ void Codegen::impl_function(const FunctionDecl& decl) {
 
     for (u32 idx = 0, e = decl.num_params(); idx != e; ++idx) {
         const siir::Type* arg_type = fn->get_type()->get_arg(idx);
-        siir::Local* local = siir::Local::create(
+        siir::Local* local = new siir::Local(
+            m_cfg, 
             arg_type, 
             m_cfg.get_target().get_type_align(arg_type), 
-            siir::PointerType::get(m_cfg, arg_type),
             decl.get_param(idx)->get_name(),
             fn);
     }
 
-    siir::BasicBlock* entry = siir::BasicBlock::create({}, fn);
+    siir::BasicBlock* entry = new siir::BasicBlock(fn);
     m_builder.set_insert(entry);
 
     decl.pBody->accept(*this);
@@ -172,10 +172,10 @@ void Codegen::visit(FunctionDecl& node) {
 
 void Codegen::visit(VariableDecl& node) {
     const siir::Type* type = lower_type(node.get_type());
-    siir::Local* local = siir::Local::create(
+    siir::Local* local = new siir::Local(
+        m_cfg,
         type, 
-        m_cfg.get_target().get_type_align(type), 
-        siir::PointerType::get(m_cfg, type), 
+        m_cfg.get_target().get_type_align(type),
         node.get_name(), 
         m_func);
         
@@ -207,7 +207,7 @@ void Codegen::visit(BreakStmt& node) {
         return;
 
     assert(m_merge);
-    m_builder.build_jmp(siir::BlockAddress::get(m_cfg, m_merge));
+    m_builder.build_jmp(m_merge);
 }
 
 void Codegen::visit(ContinueStmt& node) {
@@ -215,7 +215,7 @@ void Codegen::visit(ContinueStmt& node) {
         return;
 
     assert(m_merge);
-    m_builder.build_jmp(siir::BlockAddress::get(m_cfg, m_cond));
+    m_builder.build_jmp(m_cond);
 }
 
 void Codegen::visit(DeclStmt& node) {
@@ -227,28 +227,22 @@ void Codegen::visit(IfStmt& node) {
     node.pCond->accept(*this);
     assert(m_tmp);
 
-    siir::BasicBlock* then_bb = siir::BasicBlock::create({}, m_func);
+    siir::BasicBlock* then_bb = new siir::BasicBlock(m_func);
     siir::BasicBlock* else_bb = nullptr;
-    siir::BasicBlock* merge_bb = siir::BasicBlock::create({});
+    siir::BasicBlock* merge_bb = new siir::BasicBlock();
 
     if (node.has_else()) {
-        else_bb = siir::BasicBlock::create({});
-        m_builder.build_brif(
-            inject_bool_cmp(m_tmp), 
-            siir::BlockAddress::get(m_cfg, then_bb), 
-            siir::BlockAddress::get(m_cfg, else_bb));
+        else_bb = new siir::BasicBlock();
+        m_builder.build_brif(inject_bool_cmp(m_tmp), then_bb, else_bb);
     } else {
-        m_builder.build_brif(
-            inject_bool_cmp(m_tmp), 
-            siir::BlockAddress::get(m_cfg, then_bb), 
-            siir::BlockAddress::get(m_cfg, merge_bb));
+        m_builder.build_brif( inject_bool_cmp(m_tmp), then_bb, merge_bb);
     }
     
     m_builder.set_insert(then_bb);
     node.pThen->accept(*this);
 
     if (!m_builder.get_insert()->terminates())
-        m_builder.build_jmp(siir::BlockAddress::get(m_cfg, merge_bb));
+        m_builder.build_jmp(merge_bb);
     
     if (node.has_else()) {
         m_func->push_back(else_bb);
@@ -256,32 +250,29 @@ void Codegen::visit(IfStmt& node) {
         node.pElse->accept(*this);
 
         if (!m_builder.get_insert()->terminates())
-            m_builder.build_jmp(siir::BlockAddress::get(m_cfg, merge_bb));
+            m_builder.build_jmp(merge_bb);
         
     }
 
-    if (merge_bb->has_predecessors()) {
+    if (merge_bb->has_preds()) {
         m_func->push_back(merge_bb);
         m_builder.set_insert(merge_bb);
     }
 }
 
 void Codegen::visit(WhileStmt& node) {
-    siir::BasicBlock* cond_bb = siir::BasicBlock::create({}, m_func);
-    siir::BasicBlock* body_bb = siir::BasicBlock::create({});
-    siir::BasicBlock* merge_bb = siir::BasicBlock::create({});
+    siir::BasicBlock* cond_bb = new siir::BasicBlock(m_func);
+    siir::BasicBlock* body_bb = new siir::BasicBlock();
+    siir::BasicBlock* merge_bb = new siir::BasicBlock();
 
-    m_builder.build_jmp(siir::BlockAddress::get(m_cfg, cond_bb));
+    m_builder.build_jmp(cond_bb);
 
     m_builder.set_insert(cond_bb);
     m_vctx = RValue;
     node.pCond->accept(*this);
     assert(m_tmp);
 
-    m_builder.build_brif(
-        inject_bool_cmp(m_tmp), 
-        siir::BlockAddress::get(m_cfg, body_bb), 
-        siir::BlockAddress::get(m_cfg, merge_bb));
+    m_builder.build_brif(inject_bool_cmp(m_tmp), body_bb, merge_bb);
 
     m_func->push_back(body_bb);
     m_builder.set_insert(body_bb);
@@ -294,7 +285,7 @@ void Codegen::visit(WhileStmt& node) {
     node.pBody->accept(*this);
 
     if (!m_builder.get_insert()->terminates())
-        m_builder.build_jmp(siir::BlockAddress::get(m_cfg, cond_bb));
+        m_builder.build_jmp(cond_bb);
 
     m_func->push_back(merge_bb);
     m_builder.set_insert(merge_bb);
@@ -446,11 +437,9 @@ void Codegen::codegen_binary_add(const BinaryExpr& node) {
             lhs, 
             rhs);
     } else if (lhs->get_type()->is_integer_type()) {
-        m_tmp = m_builder.build_binop(
-            lower_type(node.get_type()), siir::BinopInst::BINOP_Add, lhs, rhs);
+        m_tmp = m_builder.build_iadd(lhs, rhs);
     } else if (lhs->get_type()->is_floating_point_type()) {
-        m_tmp = m_builder.build_binop(
-            lower_type(node.get_type()), siir::BinopInst::BINOP_FAdd, lhs, rhs);
+        m_tmp = m_builder.build_fadd(lhs, rhs);
     } else Logger::fatal(
         "unsupported '+' operator between on type '" + 
             node.get_type()->to_string() + "'",
@@ -478,13 +467,11 @@ void Codegen::codegen_binary_sub(const BinaryExpr& node) {
         m_tmp = m_builder.build_ap(
             lower_type(node.get_type()), 
             lhs, 
-            m_builder.build_unop(rhs->get_type(), siir::UnopInst::UNOP_Neg, rhs));
+            m_builder.build_ineg(rhs));
     } else if (lhs->get_type()->is_integer_type()) {
-        m_tmp = m_builder.build_binop(
-            lower_type(node.get_type()), siir::BinopInst::BINOP_Add, lhs, rhs);
+        m_tmp = m_builder.build_isub(lhs, rhs);
     } else if (lhs->get_type()->is_floating_point_type()) {
-        m_tmp = m_builder.build_binop(
-            lower_type(node.get_type()), siir::BinopInst::BINOP_FAdd, lhs, rhs);
+        m_tmp = m_builder.build_fsub(lhs, rhs);
     } else Logger::fatal(
         "unsupported '+' operator between on type '" + 
             node.get_type()->to_string() + "'",
@@ -507,12 +494,12 @@ void Codegen::codegen_binary_mul(const BinaryExpr& node) {
     assert(m_tmp);
     siir::Value* rhs = m_tmp;
 
-    if (lhs->get_type()->is_integer_type()) {
-        m_tmp = m_builder.build_binop(
-            lower_type(node.get_type()), siir::BinopInst::BINOP_Mul, lhs, rhs);
+    if (node.get_lhs()->get_type()->is_signed_int()) {
+        m_tmp = m_builder.build_smul(lhs, rhs);
+    } else if (node.get_lhs()->get_type()->is_unsigned_int()) {
+        m_tmp = m_builder.build_umul(lhs, rhs);
     } else if (lhs->get_type()->is_floating_point_type()) {
-        m_tmp = m_builder.build_binop(
-            lower_type(node.get_type()), siir::BinopInst::BINOP_FMul, lhs, rhs);
+        m_tmp = m_builder.build_fmul(lhs, rhs);
     } else Logger::fatal(
         "unsupported '*' operator between on type '" + 
             node.get_type()->to_string() + "'",
@@ -536,14 +523,11 @@ void Codegen::codegen_binary_div(const BinaryExpr& node) {
     siir::Value* rhs = m_tmp;
 
     if (node.get_lhs()->get_type()->is_signed_int()) {
-        m_tmp = m_builder.build_binop(
-            lower_type(node.get_type()), siir::BinopInst::BINOP_SDiv, lhs, rhs);
+        m_tmp = m_builder.build_sdiv(lhs, rhs);
     } else if (node.get_lhs()->get_type()->is_unsigned_int()) {
-        m_tmp = m_builder.build_binop(
-            lower_type(node.get_type()), siir::BinopInst::BINOP_UDiv, lhs, rhs);
-    } else if (node.get_lhs()->get_type()->is_float()) {
-        m_tmp = m_builder.build_binop(
-            lower_type(node.get_type()), siir::BinopInst::BINOP_FDiv, lhs, rhs);
+        m_tmp = m_builder.build_udiv(lhs, rhs);
+    } else if (lhs->get_type()->is_floating_point_type()) {
+        m_tmp = m_builder.build_fdiv(lhs, rhs);
     } else Logger::fatal(
         "unsupported '/' operator between on type '" + 
             node.get_type()->to_string() + "'",
@@ -567,14 +551,11 @@ void Codegen::codegen_binary_mod(const BinaryExpr& node) {
     siir::Value* rhs = m_tmp;
 
     if (node.get_lhs()->get_type()->is_signed_int()) {
-        m_tmp = m_builder.build_binop(
-            lower_type(node.get_type()), siir::BinopInst::BINOP_SRem, lhs, rhs);
+        m_tmp = m_builder.build_srem(lhs, rhs);
     } else if (node.get_lhs()->get_type()->is_unsigned_int()) {
-        m_tmp = m_builder.build_binop(
-            lower_type(node.get_type()), siir::BinopInst::BINOP_URem, lhs, rhs);
-    } else if (node.get_lhs()->get_type()->is_float()) {
-        m_tmp = m_builder.build_binop(
-            lower_type(node.get_type()), siir::BinopInst::BINOP_FRem, lhs, rhs);
+        m_tmp = m_builder.build_urem(lhs, rhs);
+    } else if (lhs->get_type()->is_floating_point_type()) {
+        m_tmp = m_builder.build_frem(lhs, rhs);
     } else Logger::fatal(
         "unsupported '/' operator between on type '" + 
             node.get_type()->to_string() + "'",
@@ -599,11 +580,9 @@ void Codegen::codegen_binary_eq(const BinaryExpr& node) {
 
     if (lhs->get_type()->is_integer_type() 
       || lhs->get_type()->is_pointer_type()) {
-        m_tmp = m_builder.build_cmp(
-            siir::CmpInst::CMP_Eq, lhs, rhs);
+        m_tmp = m_builder.build_cmp_ieq(lhs, rhs);
     } else if (lhs->get_type()->is_floating_point_type()) {
-        m_tmp = m_builder.build_cmp(
-            siir::CmpInst::CMP_Oeq, lhs, rhs);
+        m_tmp = m_builder.build_cmp_oeq(lhs, rhs);
     } else Logger::fatal(
         "unsupported '==' operator between on type '" + 
             node.get_type()->to_string() + "'",
@@ -624,11 +603,9 @@ void Codegen::codegen_binary_ne(const BinaryExpr& node) {
 
     if (lhs->get_type()->is_integer_type() 
       || lhs->get_type()->is_pointer_type()) {
-        m_tmp = m_builder.build_cmp(
-            siir::CmpInst::CMP_Ne, lhs, rhs);
+        m_tmp = m_builder.build_cmp_ine(lhs, rhs);
     } else if (lhs->get_type()->is_floating_point_type()) {
-        m_tmp = m_builder.build_cmp(
-            siir::CmpInst::CMP_One, lhs, rhs);
+        m_tmp = m_builder.build_cmp_one(lhs, rhs);
     } else Logger::fatal(
         "unsupported '!=' operator between on type '" + 
             node.get_type()->to_string() + "'",
@@ -649,14 +626,11 @@ void Codegen::codegen_binary_lt(const BinaryExpr& node) {
 
     if (node.get_lhs()->get_type()->is_signed_int()
       || node.get_lhs()->get_type()->is_pointer()) {
-        m_tmp = m_builder.build_cmp(
-            siir::CmpInst::CMP_Slt, lhs, rhs);
+        m_tmp = m_builder.build_cmp_slt(lhs, rhs);
     } else if (node.get_lhs()->get_type()->is_unsigned_int()) {
-        m_tmp = m_builder.build_cmp(
-            siir::CmpInst::CMP_Ult, lhs, rhs);
+        m_tmp = m_builder.build_cmp_ult(lhs, rhs);
     } else if (lhs->get_type()->is_floating_point_type()) {
-        m_tmp = m_builder.build_cmp(
-            siir::CmpInst::CMP_Olt, lhs, rhs);
+        m_tmp = m_builder.build_cmp_olt(lhs, rhs);
     } else Logger::fatal(
         "unsupported '<' operator between on type '" + 
             node.get_type()->to_string() + "'",
@@ -677,14 +651,11 @@ void Codegen::codegen_binary_lte(const BinaryExpr& node) {
 
     if (node.get_lhs()->get_type()->is_signed_int()
       || node.get_lhs()->get_type()->is_pointer()) {
-        m_tmp = m_builder.build_cmp(
-            siir::CmpInst::CMP_Sle, lhs, rhs);
+        m_tmp = m_builder.build_cmp_sle(lhs, rhs);
     } else if (node.get_lhs()->get_type()->is_unsigned_int()) {
-        m_tmp = m_builder.build_cmp(
-            siir::CmpInst::CMP_Ule, lhs, rhs);
+        m_tmp = m_builder.build_cmp_ule(lhs, rhs);
     } else if (lhs->get_type()->is_floating_point_type()) {
-        m_tmp = m_builder.build_cmp(
-            siir::CmpInst::CMP_Ole, lhs, rhs);
+        m_tmp = m_builder.build_cmp_ole(lhs, rhs);
     } else Logger::fatal(
         "unsupported '<=' operator between on type '" + 
             node.get_type()->to_string() + "'",
@@ -705,14 +676,11 @@ void Codegen::codegen_binary_gt(const BinaryExpr& node) {
 
     if (node.get_lhs()->get_type()->is_signed_int()
       || node.get_lhs()->get_type()->is_pointer()) {
-        m_tmp = m_builder.build_cmp(
-            siir::CmpInst::CMP_Sgt, lhs, rhs);
+        m_tmp = m_builder.build_cmp_sgt(lhs, rhs);
     } else if (node.get_lhs()->get_type()->is_unsigned_int()) {
-        m_tmp = m_builder.build_cmp(
-            siir::CmpInst::CMP_Ugt, lhs, rhs);
+        m_tmp = m_builder.build_cmp_ugt(lhs, rhs);
     } else if (lhs->get_type()->is_floating_point_type()) {
-        m_tmp = m_builder.build_cmp(
-            siir::CmpInst::CMP_Ogt, lhs, rhs);
+        m_tmp = m_builder.build_cmp_ogt(lhs, rhs);
     } else Logger::fatal(
         "unsupported '>' operator between on type '" + 
             node.get_type()->to_string() + "'",
@@ -733,14 +701,11 @@ void Codegen::codegen_binary_gte(const BinaryExpr& node) {
 
     if (node.get_lhs()->get_type()->is_signed_int()
       || node.get_lhs()->get_type()->is_pointer()) {
-        m_tmp = m_builder.build_cmp(
-            siir::CmpInst::CMP_Sge, lhs, rhs);
+        m_tmp = m_builder.build_cmp_sge(lhs, rhs);
     } else if (node.get_lhs()->get_type()->is_unsigned_int()) {
-        m_tmp = m_builder.build_cmp(
-            siir::CmpInst::CMP_Uge, lhs, rhs);
+        m_tmp = m_builder.build_cmp_uge(lhs, rhs);
     } else if (lhs->get_type()->is_floating_point_type()) {
-        m_tmp = m_builder.build_cmp(
-            siir::CmpInst::CMP_Oge, lhs, rhs);
+        m_tmp = m_builder.build_cmp_oge(lhs, rhs);
     } else Logger::fatal(
         "unsupported '>=' operator between on type '" + 
             node.get_type()->to_string() + "'",
@@ -760,8 +725,7 @@ void Codegen::codegen_binary_bitwise_and(const BinaryExpr& node) {
     siir::Value* rhs = m_tmp;
 
     if (lhs->get_type()->is_integer_type()) {
-        m_tmp = m_builder.build_binop(
-            lower_type(node.get_type()), siir::BinopInst::BINOP_And, lhs, rhs);
+        m_tmp = m_builder.build_and(lhs, rhs);
     } else Logger::fatal(
         "unsupported '&' operator between on type '" + 
             node.get_type()->to_string() + "'",
@@ -785,8 +749,7 @@ void Codegen::codegen_binary_bitwise_or(const BinaryExpr& node) {
     siir::Value* rhs = m_tmp;
 
     if (lhs->get_type()->is_integer_type()) {
-        m_tmp = m_builder.build_binop(
-            lower_type(node.get_type()), siir::BinopInst::BINOP_Or, lhs, rhs);
+        m_tmp = m_builder.build_or(lhs, rhs);
     } else Logger::fatal(
         "unsupported '|' operator between on type '" + 
             node.get_type()->to_string() + "'",
@@ -810,8 +773,7 @@ void Codegen::codegen_binary_bitwise_xor(const BinaryExpr& node) {
     siir::Value* rhs = m_tmp;
 
     if (lhs->get_type()->is_integer_type()) {
-        m_tmp = m_builder.build_binop(
-            lower_type(node.get_type()), siir::BinopInst::BINOP_Xor, lhs, rhs);
+        m_tmp = m_builder.build_xor(lhs, rhs);
     } else Logger::fatal(
         "unsupported '^' operator between on type '" + 
             node.get_type()->to_string() + "'",
@@ -843,8 +805,7 @@ void Codegen::codegen_binary_left_shift(const BinaryExpr& node) {
     siir::Value* rhs = m_tmp;
 
     if (lhs->get_type()->is_integer_type()) {
-        m_tmp = m_builder.build_binop(
-            lower_type(node.get_type()), siir::BinopInst::BINOP_Shl, lhs, rhs);
+        m_tmp = m_builder.build_shl(lhs, rhs);
     } else Logger::fatal(
         "unsupported '<<' operator between on type '" + 
             node.get_type()->to_string() + "'",
@@ -868,11 +829,9 @@ void Codegen::codegen_binary_right_shift(const BinaryExpr& node) {
     siir::Value* rhs = m_tmp;
 
     if (node.get_lhs()->get_type()->is_signed_int()) {
-        m_tmp = m_builder.build_binop(
-            lower_type(node.get_type()), siir::BinopInst::BINOP_Sar, lhs, rhs);
+        m_tmp = m_builder.build_sar(lhs, rhs);
     } else if (node.get_lhs()->get_type()->is_unsigned_int()) {
-        m_tmp = m_builder.build_binop(
-            lower_type(node.get_type()), siir::BinopInst::BINOP_Shr, lhs, rhs);
+        m_tmp = m_builder.build_shr(lhs, rhs);
     } else Logger::fatal(
         "unsupported '>>' operator between on type '" + 
             node.get_type()->to_string() + "'",
@@ -916,17 +875,11 @@ void Codegen::codegen_unary_increment(const UnaryExpr& node) {
         lower_type(node.get_type()), lvalue);
 
     if (preop->get_type()->is_integer_type()) {
-        m_tmp = m_builder.build_binop(
-            lower_type(node.get_type()), 
-            siir::BinopInst::BINOP_Add, 
-            preop, 
-            siir::ConstantInt::get(m_cfg, preop->get_type(), 1));
+        m_tmp = m_builder.build_iadd(
+            preop, siir::ConstantInt::get(m_cfg, preop->get_type(), 1));
     } else if (preop->get_type()->is_floating_point_type()) {
-        m_tmp = m_builder.build_binop(
-            lower_type(node.get_type()), 
-            siir::BinopInst::BINOP_FAdd, 
-            preop, 
-            siir::ConstantFP::get(m_cfg, preop->get_type(), 1.f));
+        m_tmp = m_builder.build_fadd(
+            preop, siir::ConstantFP::get(m_cfg, preop->get_type(), 1.f));
     } else if (preop->get_type()->is_pointer_type()) {
         m_tmp = m_builder.build_ap(
             lower_type(node.get_type()), 
@@ -955,17 +908,11 @@ void Codegen::codegen_unary_decrement(const UnaryExpr& node) {
         lower_type(node.get_type()), lvalue);
 
     if (preop->get_type()->is_integer_type()) {
-        m_tmp = m_builder.build_binop(
-            lower_type(node.get_type()), 
-            siir::BinopInst::BINOP_Sub, 
-            preop, 
-            siir::ConstantInt::get(m_cfg, preop->get_type(), 1));
+        m_tmp = m_builder.build_isub(
+            preop, siir::ConstantInt::get(m_cfg, preop->get_type(), 1));
     } else if (preop->get_type()->is_floating_point_type()) {
-        m_tmp = m_builder.build_binop(
-            lower_type(node.get_type()), 
-            siir::BinopInst::BINOP_FSub, 
-            preop, 
-            siir::ConstantFP::get(m_cfg, preop->get_type(), 1.f));
+        m_tmp = m_builder.build_fsub(
+            preop, siir::ConstantFP::get(m_cfg, preop->get_type(), 1.f));
     } else if (preop->get_type()->is_pointer_type()) {
         m_tmp = m_builder.build_ap(
             lower_type(node.get_type()), 
@@ -1006,15 +953,11 @@ void Codegen::codegen_unary_negate(const UnaryExpr& node) {
 
     siir::Value* value = m_tmp;
 
-    if (value->get_type()->is_integer_type()) {
-        m_tmp = m_builder.build_unop(
-            lower_type(node.get_type()), siir::UnopInst::UNOP_Neg, value);
-    } else if (value->get_type()->is_pointer_type()) {
-        m_tmp = m_builder.build_unop(
-            lower_type(node.get_type()), siir::UnopInst::UNOP_Neg, value);
+    if (value->get_type()->is_integer_type()
+      || value->get_type()->is_pointer_type()) {
+        m_tmp = m_builder.build_ineg(value);
     } else if (value->get_type()->is_floating_point_type()) {
-        m_tmp = m_builder.build_unop(
-            lower_type(node.get_type()), siir::UnopInst::UNOP_FNeg, value);
+        m_tmp = m_builder.build_fneg(value);
     } else Logger::fatal(
         "unsupported '-' operator between on type '" + 
             node.get_type()->to_string() + "'",
@@ -1030,20 +973,14 @@ void Codegen::codegen_unary_logical_not(const UnaryExpr& node) {
     siir::Value* value = m_tmp;
 
     if (value->get_type()->is_integer_type()) {
-        m_tmp = m_builder.build_cmp(
-            siir::CmpInst::CMP_Eq, 
-            value, 
-            siir::ConstantInt::get(m_cfg, value->get_type(), 0));
+        m_tmp = m_builder.build_cmp_ieq(
+            value, siir::ConstantInt::get(m_cfg, value->get_type(), 0));
     } else if (value->get_type()->is_floating_point_type()) {
-        m_tmp = m_builder.build_cmp(
-            siir::CmpInst::CMP_Oeq, 
-            value, 
-            siir::ConstantFP::get(m_cfg, value->get_type(), 1.f));
+        m_tmp = m_builder.build_cmp_oeq(
+            value, siir::ConstantFP::get(m_cfg, value->get_type(), 1.f));
     } else if (value->get_type()->is_pointer_type()) {
-        m_tmp = m_builder.build_cmp(
-            siir::CmpInst::CMP_Eq, 
-            value, 
-            siir::ConstantNull::get(m_cfg, value->get_type()));
+        m_tmp = m_builder.build_cmp_ieq(
+            value, siir::ConstantNull::get(m_cfg, value->get_type()));
     } else Logger::fatal(
         "unsupported '!' operator between on type '" + 
             node.get_type()->to_string() + "'",
@@ -1057,8 +994,7 @@ void Codegen::codegen_unary_bitwise_not(const UnaryExpr& node) {
     assert(m_tmp);
 
     if (m_tmp->get_type()->is_integer_type()) {
-        m_tmp = m_builder.build_unop(
-            lower_type(node.get_type()), siir::UnopInst::UNOP_Not, m_tmp);
+        m_tmp = m_builder.build_not(m_tmp);
     } else Logger::fatal(
         "unsupported '~' operator between on type '" + 
             node.get_type()->to_string() + "'",
@@ -1097,15 +1033,12 @@ void Codegen::visit(CastExpr& node) {
             return;
         }
 
-        siir::UnopInst::Ops op;
-        if (src_sz > dst_sz) // Downcasting.
-            op = siir::UnopInst::UNOP_Trunc;
+        if (src_sz > dst_sz)
+            m_tmp = m_builder.build_itrunc(dst_type, m_tmp);
         else if (node.get_expr()->get_type()->is_signed_int())
-            op = siir::UnopInst::UNOP_SExt;
+            m_tmp = m_builder.build_sext(dst_type, m_tmp);
         else
-            op = siir::UnopInst::UNOP_ZExt;
-
-        m_tmp = m_builder.build_unop(dst_type, op, m_tmp);
+            m_tmp = m_builder.build_zext(dst_type, m_tmp);
     } else if (src_type->is_floating_point_type() 
       && dst_type->is_floating_point_type()) {
         // Floating point -> Floating point casts.
@@ -1119,53 +1052,40 @@ void Codegen::visit(CastExpr& node) {
             return;
         }
 
-        siir::UnopInst::Ops op;
         if (src_sz > dst_sz) // Downcasting.
-            op = siir::UnopInst::UNOP_FTrunc;
+            m_tmp = m_builder.build_ftrunc(dst_type, m_tmp);
         else // Upcasting.
-            op = siir::UnopInst::UNOP_FExt;
-
-        m_tmp = m_builder.build_unop(dst_type, op, m_tmp);
+            m_tmp = m_builder.build_fext(dst_type, m_tmp);
     } else if (src_type->is_integer_type()
       && dst_type->is_floating_point_type()) {
         // Integer -> Floating point conversions.
-        siir::UnopInst::Ops op;
         if (node.get_expr()->get_type()->is_signed_int())
-            op = siir::UnopInst::UNOP_SI2FP;
+            m_tmp = m_builder.build_si2fp(dst_type, m_tmp);
         else if (node.get_expr()->get_type()->is_unsigned_int())
-            op = siir::UnopInst::UNOP_UI2FP;
-
-        m_tmp = m_builder.build_unop(dst_type, op, m_tmp);
+            m_tmp = m_builder.build_ui2fp(dst_type, m_tmp);
     } else if (src_type->is_floating_point_type()
       && dst_type->is_integer_type()) {
         // Floating point -> Integer conversions.
-        siir::UnopInst::Ops op;
         if (node.get_type()->is_signed_int())
-            op = siir::UnopInst::UNOP_FP2SI;
+            m_tmp = m_builder.build_fp2si(dst_type, m_tmp);
         else if (node.get_type()->is_unsigned_int())
-            op = siir::UnopInst::UNOP_FP2UI;
-
-        m_tmp = m_builder.build_unop(dst_type, op, m_tmp);
+            m_tmp = m_builder.build_fp2ui(dst_type, m_tmp);
     } else if (src_type->is_pointer_type() 
       && dst_type->is_pointer_type()) {
         // Pointer -> Pointer reinterpretations.
-        m_tmp = m_builder.build_unop(
-            dst_type, siir::UnopInst::UNOP_Reint, m_tmp);
+        m_tmp = m_builder.build_reint(dst_type, m_tmp);
     } else if (src_type->is_array_type()
       && dst_type->is_pointer_type()) {
         // Array -> Pointer decay.
-        m_tmp = m_builder.build_unop(
-            dst_type, siir::UnopInst::UNOP_Reint, m_tmp);
+       m_tmp = m_builder.build_reint(dst_type, m_tmp);
     } else if (src_type->is_integer_type()
       && dst_type->is_pointer_type()) {
         // Integer -> Pointer casts.
-        m_tmp = m_builder.build_unop(
-            dst_type, siir::UnopInst::UNOP_I2P, m_tmp);
+        m_tmp = m_builder.build_i2p(dst_type, m_tmp);
     } else if (src_type->is_pointer_type()
       && dst_type->is_integer_type()) {
         // Pointer -> Integer casts.
-        m_tmp = m_builder.build_unop(
-            dst_type, siir::UnopInst::UNOP_P2I, m_tmp);
+        m_tmp = m_builder.build_p2i(dst_type, m_tmp);
     } else Logger::fatal(   
         "unsupported cast '" + node.get_expr()->get_type()->to_string() + 
             "' to '" + node.get_type()->to_string() + "'",

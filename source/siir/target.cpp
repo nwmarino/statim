@@ -37,7 +37,7 @@ u32 Target::get_type_size(const Type* type) const {
     case Type::TK_Struct: {
         const StructType* sty = static_cast<const StructType*>(type);
         u32 offset = 0;
-        for (auto field : sty->get_fields()) {
+        for (auto field : sty->fields()) {
             offset = align_to(offset, get_type_align(field));
             offset += get_type_size(field);
         }
@@ -60,7 +60,7 @@ u32 Target::get_type_align(const Type* type) const {
         case Type::TK_Struct: {
             const StructType* sty = static_cast<const StructType*>(type);
             u32 max_align = 1;
-            for (auto field : sty->get_fields())
+            for (auto field : sty->fields())
                 max_align = std::max(max_align, get_type_align(field));
 
             return max_align;

@@ -5,9 +5,6 @@
 using namespace stm;
 using namespace stm::siir;
 
-ConstantInt::ConstantInt(i64 value, const Type* type)
-    : Constant({}, type), m_value(value) {}
-
 Constant* ConstantInt::get_true(CFG& cfg) {
     return cfg.m_int1_one;
 }
@@ -73,9 +70,6 @@ Constant* ConstantInt::get(CFG& cfg, const Type* type, i64 value) {
         }
     }
 }
-
-ConstantFP::ConstantFP(f64 value, const Type* type) 
-    : Constant({}, type), m_value(value) {}
 
 Constant* ConstantFP::get_zero(CFG& cfg, const Type* type) {
     return get(cfg, type, 0);

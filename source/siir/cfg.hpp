@@ -15,12 +15,11 @@
 #include <unordered_map>
 
 namespace stm {
-
 namespace siir {
 
 class Target;
 
-/// The top-level SIIR control flow graph representation.
+/// The top-level SIIR control flow graph.
 class CFG final {
     friend class Type;
     friend class ArrayType;
@@ -59,54 +58,62 @@ class CFG final {
     std::unordered_map<const BasicBlock*, BlockAddress*> m_pool_baddr = {};
 
 public:
+    /// Create a new control flow graph, representing |file| with the given
+    /// target. Note that the target cannot be mutated later.
     CFG(InputFile& file, Target& target);
+    
+    CFG(const CFG&) = delete;
+    CFG& operator = (const CFG&) = delete;
+    
     ~CFG();
 
-    /// Get the input file that this control flow graph represents.
+    /// Returns the input file that this control flow graph represents.
     const InputFile& get_file() const { return m_file; }
     InputFile& get_file() { return m_file; }
+
+    /// Set the file that this graph represents to |file|.
     void set_file(InputFile& file) { m_file = file; }
 
-    /// Get the target of this control flow graph.
+    /// Returns the target of this control flow graph.
     const Target& get_target() const { return m_target; }
     Target& get_target() { return m_target; }
 
-    /// Get the global in this graph with name \p name if it exists, and
-    /// `nullptr` otherwise. 
+    /// Returns the global in this graph with the provided name, if it exists, 
+    /// and null otherwise. 
     const Global* get_global(const std::string& name) const;
     Global* get_global(const std::string& name) {
         return const_cast<Global*>(
             static_cast<const CFG*>(this)->get_global(name));
     }
 
-    /// Add a new global \p glb to this graph. Will fail if there is an 
-    /// existing top-level value with the same name.
+    /// Add |glb| to this graph. Fails if there is any existing top-level value 
+    /// with the same name.
     void add_global(Global* glb);
 
-    /// Remove the existing global \p glb if it exists in this graph.
+    /// Remove |glb| if it exists in this graph.
     void remove_global(Global* glb);
 
-    /// Get the function in this graph with name \p name if it exists, and
-    /// `nullptr` otherwise.
+    /// Returns the function in this graph with the provided name if it exists, 
+    /// and null otherwise.
     const Function* get_function(const std::string& name) const;
     Function* get_function(const std::string& name) {
         return const_cast<Function*>(
             static_cast<const CFG*>(this)->get_function(name));
     }
 
-    /// Add a new function \p fn to this graph. Will fail if there is an
-    /// existing top-level value with the same name.
+    /// Add |fn| to this graph. Fails if there is any existing top-level value 
+    /// with the same name.
     void add_function(Function* fn);
 
-    /// Remove the existing function \p fn if it exists in this graph.
+    /// Remove |fn| if it exists in this graph.
     void remove_function(Function* fn);
 
-    /// Print this graph in a reproducible plaintext format.
+    /// Print this graph in a reproducible plaintext format to the output
+    /// stream |os|.
     void print(std::ostream& os) const;
 };
 
 } // namespace siir
-
 } // namespace stm
 
 #endif // STATIM_SIIR_CFG_HPP_

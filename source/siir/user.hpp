@@ -3,44 +3,45 @@
 
 #include "siir/use.hpp"
 #include "siir/value.hpp"
-#include <initializer_list>
 
 namespace stm {
-
 namespace siir {
 
-/// Represents values in the intermediate representation that use other values.
+/// A value that uses other values.
 class User : public Value {
 protected:
+    /// The operands of this user, or "use" edges - value, user pairs that
+    /// model the use-def chain.
     std::vector<Use> m_operands = {};
 
     User() = default;
-
-    User(std::initializer_list<Value*> ops, const Type* type = nullptr, 
-         const std::string& name = "")
-        : Value(type, name) {
+    User(const std::vector<Value*>& ops, const Type* type) : Value(type) {
         for (auto v : ops)
-            if (v) m_operands.emplace_back(v, this);
+            if (v) 
+                m_operands.emplace_back(v, this);
     }
 
 public:
-    const std::vector<Use>& operands() const { return m_operands; }
+    /// Get the operand list of this user.
+    const std::vector<Use>& get_operand_list() const { return m_operands; }
+    std::vector<Use>& get_operand_list() { return m_operands; }
 
+    /// Get the operand at position |i| of this user.
     const Use& get_operand(u32 i) const {
-        assert(i <= m_operands.size());
+        assert(i <= num_operands());
         return m_operands[i];
     }
     
     Use& get_operand(u32 i) {
-        assert(i <= m_operands.size());
+        assert(i <= num_operands());
         return m_operands[i];
     }
 
+    /// Returns the number of operands this user has.
     u32 num_operands() const { return m_operands.size(); }
 };
 
 } // namespace siir
-
 } // namespace stm
 
 #endif // STATIM_SIIR_USER_HPP_

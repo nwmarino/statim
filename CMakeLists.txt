@@ -28,12 +28,12 @@ set(COMPILER_SOURCES
     source/core/lexer.cpp
     source/core/logger.cpp
     source/core/type.cpp
-    source/siir/argument.cpp
     source/siir/basicblock.cpp
     source/siir/cfg.cpp
     source/siir/constant.cpp
     source/siir/function.cpp
     source/siir/global.cpp
+    source/siir/instbuilder.cpp
     source/siir/instruction.cpp
     source/siir/local.cpp
     source/siir/print.cpp

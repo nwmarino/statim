@@ -4,528 +4,232 @@
 #include "siir/constant.hpp"
 #include "siir/user.hpp"
 
-#include <initializer_list>
-
 namespace stm {
-
 namespace siir {
 
 class BasicBlock;
-class Function;
 
-class Instruction : public User {
-public:
-    enum Op : u8 {
-        Const,
-        Store,
-        Load,
-        AP,
-        Select,
-        Brif,
-        Jmp,
-        Ret,
-        Abort,
-        Unreachable,
-        Call,
-        Cmp,
-        Binop,
-        Unop,
-    };
+/// Potential opcodes for an IR instruction.
+enum Opcode : u16 {
+    INST_OP_NOP,
+    INST_OP_CONSTANT,
+    INST_OP_LOAD,
+    INST_OP_STORE,
+    INST_OP_ACCESS_PTR,
+    INST_OP_SELECT,
+    INST_OP_BRANCH_IF,
+    INST_OP_JUMP,
+    INST_OP_RETURN,
+    INST_OP_ABORT,
+    INST_OP_UNREACHABLE,
+    INST_OP_CALL,
+    INST_OP_IADD,
+    INST_OP_FADD,
+    INST_OP_ISUB,
+    INST_OP_FSUB,
+    INST_OP_SMUL,
+    INST_OP_UMUL,
+    INST_OP_FMUL,
+    INST_OP_SDIV,
+    INST_OP_UDIV,
+    INST_OP_FDIV,
+    INST_OP_SREM,
+    INST_OP_UREM,
+    INST_OP_FREM,
+    INST_OP_AND,
+    INST_OP_OR,
+    INST_OP_XOR,
+    INST_OP_SHL,
+    INST_OP_SHR,
+    INST_OP_SAR,
+    INST_OP_NOT,
+    INST_OP_INEG,
+    INST_OP_FNEG,
+    INST_OP_SEXT,
+    INST_OP_ZEXT,
+    INST_OP_FEXT,
+    INST_OP_ITRUNC,
+    INST_OP_FTRUNC,
+    INST_OP_SI2FP,
+    INST_OP_UI2FP,
+    INST_OP_FP2SI,
+    INST_OP_FP2UI,
+    INST_OP_P2I,
+    INST_OP_I2P,
+    INST_OP_REINTERPET,
+    INST_OP_CMP_IEQ,
+    INST_OP_CMP_INE,
+    INST_OP_CMP_OEQ,
+    INST_OP_CMP_ONE,
+    INST_OP_CMP_UNEQ,
+    INST_OP_CMP_UNNE,
+    INST_OP_CMP_SLT,
+    INST_OP_CMP_SLE,
+    INST_OP_CMP_SGT,
+    INST_OP_CMP_SGE,
+    INST_OP_CMP_ULT,
+    INST_OP_CMP_ULE,
+    INST_OP_CMP_UGT,
+    INST_OP_CMP_UGE,
+    INST_OP_CMP_OLT,
+    INST_OP_CMP_OLE,
+    INST_OP_CMP_OGT,
+    INST_OP_CMP_OGE,
+    INST_OP_CMP_UNLT,
+    INST_OP_CMP_UNLE,
+    INST_OP_CMP_UNGT,
+    INST_OP_CMP_UNGE,
+};
 
-protected:
-    Op m_op;
-    BasicBlock* m_parent;
+/// Returns the string equivelant of |op|.
+std::string opcode_to_string(Opcode op);
+
+/// An instruction that potentially defines a value.
+class Instruction final : public User {
+    friend class InstBuilder;
+    
+    using OperandList = std::vector<Value*>;
+    using iterator = OperandList::iterator;
+    using const_iterator = OperandList::const_iterator;
+
+    /// The resulting id of this instruction. This is the value on the left
+    /// hand side of a dump, i.e. `v2` in `v2 = IADD ...`. A sentinel value of 
+    /// 0 here reserves that the instruction does not define a value, i.e. a
+    /// store or return instruction.
+    u32 m_result;
+
+    /// The opcode of this instruction. Changing this after instruction
+    /// creation may invalidate the instruction due to how operands are
+    /// interpreted.
+    Opcode m_opcode;
+
+    /// Optional data field used for some instructions. For example, load/store
+    /// instructions use this field for value alignment details.
+    u16 m_data = 0;
+
+    /// Links to the previous and next instructions in the parent basic block.
+    /// These pointers functionally make up the doubly-linked list managed
+    /// by the parent BasicBlock.
     Instruction* m_prev = nullptr;
     Instruction* m_next = nullptr;
 
-    Instruction(Op op, std::initializer_list<Value*> operands, 
-                BasicBlock* parent, const Type* type = nullptr, 
-                const std::string& name = "");
+    /// Create a new non-defining instruction.
+    ///
+    /// Private constructor to be used by the InstBuilder class.
+    Instruction(Opcode opcode, const std::vector<Value*>& operands = {});
+    
+    /// Create a new defining instruction.
+    ///
+    /// Private construtor to be used by the InstBuilder class.
+    Instruction(u32 result, const Type* type, Opcode opcode, 
+                const std::vector<Value*>& operands = {});
 
 public:
-    virtual ~Instruction() = default;
+    Instruction(const Instruction&) = delete;
+    Instruction& operator = (const Instruction&) = delete;
 
-    /// \returns `true` if this is a call instruction.
-    virtual bool is_call() const { return false; }
+    ~Instruction() = default;
 
-    /// \returns `true` if this is a return instruction.
-    virtual bool is_return() const { return false; }
+    /// Returns the opcode of this instruction.
+    Opcode opcode() const { return m_opcode; }
 
-    /// \returns `true` if this is a terminating instruction.
-    virtual bool is_terminator() const { return false; }
+    /// Returns the id defined by this instruction, and 0 if it does not define
+    /// a value.
+    u32 result_id() const { return m_result; }
 
-    /// \returns `true` if this is a casting instruction.
-    virtual bool is_cast() const { return false; }
+    /// Returns true if this instruction defines a value.
+    bool is_def() const { return m_result != 0; }
 
-    Op get_op() const { return m_op; }
-
-    const BasicBlock* get_parent() const { return m_parent; }
-    BasicBlock* get_parent() { return m_parent; }
-    void set_parent(BasicBlock* blk) { m_parent = blk; }
-
-    /// Clear the link to the parent block of this instruction.
-    void clear_parent() { m_parent = nullptr; }
-
-    const Function* get_function() const;
-    Function* get_function() {
-        return const_cast<Function*>(
-            static_cast<const Instruction*>(this)->get_function());
+    /// Returns the value operand at position |i|. Fails if the provided index
+    /// is out of bounds of the operand list.
+    const Value* get_operand(u32 i) const;
+    Value* get_operand(u32 i) {
+        return const_cast<Value*>(
+            static_cast<const Instruction*>(this)->get_operand(i));
     }
 
-    /// Append this instruction to a new parent block \p parent. Assumes that
-    /// this instruction is unlinked and free-floating.
+    /// Returns any data associated with this instruction.
+    u16 get_data() const { return m_data; }
+
+    /// Returns a reference to the data field of this instruction.
+    u16& data() { return m_data; }
+
+    /// Prepends this instruction to |blk|. Assumes that this instruction is 
+    /// unlinked and free-floating.
+    void prepend_to(BasicBlock* blk);
+
+    /// Append this instruction to |blk|. Assumes that this instruction is 
+    /// unlinked and free-floating.
     void append_to(BasicBlock* blk);
 
-    /// Insert this instruction into the position before \p inst.
+    /// Insert this instruction into the position immediately before |inst|.
     void insert_before(Instruction* inst);
 
-    /// Insert this instruction into the position after \p inst.
+    /// Insert this instruction into the position immediately after |inst|.
     void insert_after(Instruction* inst);
 
-    /// Detach this instruction from its parent block. Does not destroy the
-    /// instruction.
-    void detach();
-
+    /// Returns the instruction previous to this one in the parent basic block.
     const Instruction* prev() const { return m_prev; }
     Instruction* prev() { return m_prev; }
 
+    /// Returns instruction after this one in the parent basic block.
     const Instruction* next() const { return m_next; }
     Instruction* next() { return m_next; }
 
     void set_prev(Instruction* inst) { m_prev = inst; }
     void set_next(Instruction* inst) { m_next = inst; }
-};
 
-/// Represents a `const` instruction.
-class ConstInst final : public Instruction {
-    Constant* m_const;
+    /// Returns true if this instruction does nothing.
+    bool is_nop() const { return opcode() == INST_OP_NOP; }
 
-    ConstInst(Constant* constant, const std::string& name, 
-              BasicBlock* append_to);
+    /// Returns true if this instruction defines a constant value.
+    bool is_const() const { return opcode() == INST_OP_CONSTANT; }
 
-public:
-    /// Create a new constant instruction for value \p constant. 
-    static ConstInst* create(Constant* constant, const std::string& name = "",
-                             BasicBlock* append_to = nullptr);
+    /// Returns true if this instruction loads a value from memory.
+    bool is_load() const { return opcode() == INST_OP_LOAD; }
 
-    const Constant* get_constant() const { return m_const; }
-    Constant* get_constant() { return m_const; }
+    /// Returns true if this instruction stores a value to memory.
+    bool is_store() const { return opcode() == INST_OP_STORE; }
 
-    void print(std::ostream& os) const override;
-};
+    /// Returns true if this instruction jumps to another basic block.
+    bool is_jump() const { return opcode() == INST_OP_JUMP; }
 
-/// Represents a `store` instruction.
-///
-/// * Does not produce a value.
-///
-class StoreInst final : public Instruction {
-    Value* m_value;
-    Value* m_dst;
-    u32 m_align;
+    /// Returns true if this instruction branches conditionally.
+    bool is_branch_if() const { return opcode() == INST_OP_BRANCH_IF; }
 
-    StoreInst(Value* value, Value* dst, u32 align, BasicBlock* append_to);
+    /// Returns true if this instruction aborts execution.
+    bool is_abort() const { return opcode() == INST_OP_ABORT; }
 
-public:
-    /// Create a new store instruction with value \p value, destination \p dst,
-    /// and alignment \p align.
-    static StoreInst* create(Value* value, Value* dst, u32 align, 
-                             BasicBlock* append_to = nullptr);
+    /// Returns true if this instruction returns from a function call.
+    bool is_return() const { return opcode() == INST_OP_RETURN; }
 
-    const Value* get_value() const { return m_value; }
-    Value* get_value() { return m_value; }
+    /// Returns true if this instruction aborts execution or returns from a
+    /// function call.
+    bool is_abort_or_return() const { return is_abort() | is_return(); }
 
-    const Value* get_destination() const { return m_dst; }
-    Value* get_destination() { return m_dst; }
+    /// Returns true if this instruction marks a function call.
+    bool is_call() const { return opcode() == INST_OP_CALL; }
 
-    u32 get_alignment() const { return m_align; }
+    /// Returns true if this instruction terminates a basic block.
+    bool is_terminator() const;
 
-    void set_value(Value* value) { m_value = value; }
-    void set_destination(Value* value) { m_dst = value; }
-    void set_alignment(u32 align) { m_align = align; }
+    /// Returns true if this instruction performs a comparison between two
+    /// operands.
+    bool is_comparison() const;
 
-    void print(std::ostream& os) const override;
-};
+    /// Returns true if this instructions performs some form of type cast.
+    /// This includes pointer casts like pointer to integer, and reinterprets.
+    bool is_cast() const;
 
-/// Represents a `load` instruction.
-class LoadInst final : public Instruction {
-    Value* m_src;
-    u32 m_align;
-
-    LoadInst(Value* src, u32 align, const Type* type, const std::string& name,
-             BasicBlock* append_to);
-
-public:
-    /// Create a new load instruction with source \p src, and alignment 
-    /// \p align.
-    static LoadInst* create(Value* src, u32 align, const Type* type,
-                            const std::string& name = "", 
-                            BasicBlock* append_to = nullptr);
-
-    const Value* get_source() const { return m_src; }
-    Value* get_source() { return m_src; }
-    
-    u32 get_alignment() const { return m_align; }
-
-    void set_source(Value* value) { m_src = value; }
-    void set_alignment(u32 align) { m_align = align; }
-
-    void print(std::ostream& os) const override;
-};
-
-/// Represents an `ap` instruction.
-class APInst final : public Instruction {
-    Value* m_src;
-    Value* m_idx;
-    bool m_deref;
-
-    APInst(Value* src, Value* idx, bool deref, const Type* type,
-           const std::string& name, BasicBlock* append_to);
-
-public:
-    /// Create a new pointer access with source \p src and index \p idx.
-    /// Indicate deference access via \p deref.
-    static APInst* create(Value* src, Value* idx, bool deref, const Type* type,
-                          const std::string& name = "", 
-                          BasicBlock* append_to = nullptr);
-
-    const Value* get_source() const { return m_src; }
-    Value* get_source() { return m_src; }
-    void set_source(Value* value) { m_src = value; }
-
-    const Value* get_index() const { return m_idx; }
-    Value* get_index() { return m_idx; }
-    void set_index(Value* value) { m_idx = value; }
-
-    bool is_deref() const { return m_deref; }
-    void set_is_deref(bool value = true) { m_deref = value; }
-
-    void print(std::ostream& os) const override;
-};
-
-/// Represents a `sel` instruction.
-class SelectInst final : public Instruction {
-    Value* m_cond;
-    Value* m_tval;
-    Value* m_fval;
-
-    SelectInst(Value* cond, Value* tval, Value* fval, const Type* type,
-               const std::string& name, BasicBlock* append_to);
-
-public:
-    /// Create a new select instruction with the condition \p cond and
-    /// potential values \p tval, \p fval.
-    static SelectInst* create(Value* cond, Value* tval, Value* fval, 
-                              const Type* type, const std::string& name = "",
-                              BasicBlock* append_to = nullptr);
-
-    const Value* get_condition() const { return m_cond; }
-    Value* get_condition() { return m_cond; }
-
-    const Value* get_true_value() const { return m_tval; }
-    Value* get_true_value() { return m_tval; }
-
-    const Value* get_false_value() const { return m_fval; }
-    Value* get_false_value() { return m_fval; }
-
-    void set_condition(Value* value) { m_cond = value; }
-    void set_true_value(Value* value) { m_tval = value; }
-    void set_false_value(Value* value) { m_fval = value; }
-
-    /// Swap the true and false values.
-    void swap_values() {
-        Value* tmp = m_tval;
-        m_tval = m_fval;
-        m_fval = tmp;
-    }
-
-    void print(std::ostream& os) const override;
-};
-
-/// Represents a terminating `brif` instruction.
-///
-/// * Does not produce a value.
-///
-class BrifInst final : public Instruction {
-    Value* m_cond;
-    Value* m_tdst;
-    Value* m_fdst;
-
-    BrifInst(Value* cond, Value* tdst, Value* fdst, BasicBlock* append_to);
-
-public:
-    /// Create a new branch-if instruction with the condition \p cond and
-    /// destination blocks \p tdst, \p fdst.
-    static BrifInst* create(Value* cond, Value* tdst, Value* fdst, 
-                            BasicBlock* append_to = nullptr);
-
-    bool is_terminator() const override { return true; }
-
-    const Value* get_condition() const { return m_cond; }
-    Value* get_condition() { return m_cond; }
-
-    const Value* get_true_dest() const { return m_tdst; }
-    Value* get_true_dest() { return m_tdst; }
-
-    const Value* get_false_dest() const { return m_fdst; }
-    Value* get_false_dest() { return m_fdst; }
-
-    void set_condition(Value* value) { m_cond = value; }
-    void set_true_dest(Value* value) { m_tdst = value; }
-    void set_false_dest(Value* value) { m_fdst = value; }
-
-    /// Swap the true and false destinations.
-    void swap_destinations() {
-        Value* tmp = m_tdst;
-        m_tdst = m_fdst;
-        m_fdst = tmp;
-    }
-
-    void print(std::ostream& os) const override;
-};
-
-/// Represents a terminating `jmp` instruction.
-///
-/// * Does not produce a value.
-///
-class JmpInst final : public Instruction {
-    Value* m_dst;
-
-    JmpInst(Value* dst, BasicBlock* append_to);
-
-public:
-    /// Create a new jump instruction with the destination block \p dst.
-    static JmpInst* create(Value* dst, BasicBlock* append_to = nullptr);
-
-    bool is_terminator() const override { return true; }
-
-    const Value* get_destination() const { return m_dst; }
-    Value* get_destination() { return m_dst; }
-
-    void set_destination(Value* value) { m_dst = value; }
-
-    void print(std::ostream& os) const override;
-};
-
-/// Represents a terminating `ret` instruction.
-///
-/// * Does not produce a value.
-///
-class RetInst final : public Instruction {
-    Value* m_value;
-
-    RetInst(Value* value, BasicBlock* append_to);
-
-public:
-    /// Create a new return instruction with the return value \p value.
-    static RetInst* create(Value* value, BasicBlock* append_to = nullptr);
-
-    bool is_return() const override { return true; }
-
-    bool is_terminator() const override { return true; }
-
-    const Value* get_return_value() const { return m_value; }
-    Value* get_return_value() { return m_value; }
-
-    void print(std::ostream& os) const override;
-};
-
-/// Represents a terminating `abort` instruction.
-///
-/// * Does not produce a value.
-///
-class AbortInst final : public Instruction {
-    AbortInst(BasicBlock* append_to);
-
-public:
-    /// Create a new abort instruction.
-    static AbortInst* create(BasicBlock* append_to = nullptr);
-
-    bool is_terminator() const override { return true; }
-
-    void print(std::ostream& os) const override;
-};
-
-/// Represents a terminating `unreachable` instruction.
-///
-/// * Does not produce a value.
-///
-class UnreachableInst final : public Instruction {
-    UnreachableInst(BasicBlock* append_to);
-
-public:
-    /// Create a new unreachable instruction.
-    static UnreachableInst* create(BasicBlock* append_to = nullptr);
-
-    bool is_terminator() const override { return true; }
-
-    void print(std::ostream& os) const override;
-};
-
-class CallInst final : public Instruction {
-    Value* m_callee;
-    std::vector<Value*> m_args;
-
-    CallInst(Value* callee, const std::vector<Value*>& args, 
-             const Type* type, const std::string& name, BasicBlock* append_to);
-
-public:
-    /// Create a new call instruction to Value \p callee with arguments \p args.
-    static CallInst* create(Value* callee, const std::vector<Value*>& args,
-                            const Type* type, const std::string& name = "", 
-                            BasicBlock* append_to = nullptr);
-
-    bool is_call() const override { return true; }
-
-    const Value* get_callee() const { return m_callee; }
-    Value* get_callee() { return m_callee; }
-    void set_callee(Value* value) { m_callee = value; }
-
-    const std::vector<Value*>& args() const { return m_args; }
-
-    const Value* get_arg(u32 i) const {
-        assert(i <= num_args());
-        return m_args[i];
-    }
-
-    Value* get_arg(u32 i) {
-        assert(i <= num_args());
-        return m_args[i];
-    }
-
-    u32 num_args() const { return m_args.size(); }
-
-    bool has_args() const { return !m_args.empty(); }
-
-    void print(std::ostream& os) const override;
-};
-
-/// Represents a comparison instruction.
-class CmpInst final : public Instruction {
-public:
-    /// Possible comparison predicates.
-    enum Predicate : u8 {
-        CMP_Eq, CMP_Ne,
-        CMP_Oeq, CMP_One,
-        CMP_Uneq, CMP_Unne,
-        CMP_Slt, CMP_Sle, CMP_Sgt, CMP_Sge,
-        CMP_Ult, CMP_Ule, CMP_Ugt, CMP_Uge,
-        CMP_Olt, CMP_Ole, CMP_Ogt, CMP_Oge,
-        CMP_Unlt, CMP_Unle, CMP_Ungt, CMP_Unge,
-    };
-
-private:
-    Predicate m_pred;
-    Value* m_left;
-    Value* m_right;
-
-    CmpInst(Predicate pred, Value* left, Value* right, const Type* type, 
-            const std::string& name, BasicBlock* append_to);
-
-public:
-    /// Create a new comparison instruction with predicate \p pred and operands 
-    /// \p left, \p right.
-    static CmpInst* create(Predicate pred, Value* left, Value* right,
-                           const Type* type, const std::string& name = "", 
-                           BasicBlock* append_to = nullptr);
-
-    Predicate get_predicate() const { return m_pred; }
-
-    const Value* get_lhs_value() const { return m_left; }
-    Value* get_lhs_value() { return m_left; }
-
-    const Value* get_rhs_value() const { return m_right; }
-    Value* get_rhs_value() { return m_right; }
-
-    void set_lhs_value(Value* value) { m_left = value; }
-    void set_rhs_value(Value* value) { m_right = value; }
-
-    void print(std::ostream& os) const override;
-};
-
-/// Represents a binary operation instruction.
-class BinopInst final : public Instruction {
-public:
-    enum Ops : u8 {
-        BINOP_Add, BINOP_FAdd,
-        BINOP_Sub, BINOP_FSub,
-        BINOP_Mul, BINOP_FMul,
-        BINOP_SDiv, BINOP_UDiv, BINOP_FDiv,
-        BINOP_SRem, BINOP_URem, BINOP_FRem,
-        BINOP_And, BINOP_Or, BINOP_Xor,
-        BINOP_Shl, BINOP_Shr, BINOP_Sar,
-    };
-
-private:
-    Ops m_op;
-    Value* m_left;
-    Value* m_right;
-
-    BinopInst(Ops op, Value* left, Value* right, const Type* type, 
-              const std::string& name, BasicBlock* append_to);
-
-public:
-
-    /// Create a new binary operation with operator \p op and operands \p left,
-    /// \p right.
-    static BinopInst* create(Ops op, Value* left, Value* right,
-                             const Type* type, const std::string& name = "", 
-                             BasicBlock* append_to = nullptr);
-
-    Ops get_operator() const { return m_op; }
-
-    const Value* get_lhs_value() const { return m_left; }
-    Value* get_lhs_value() { return m_left; }
-
-    const Value* get_rhs_value() const { return m_right; }
-    Value* get_rhs_value() { return m_right; }
-
-    void set_lhs_value(Value* value) { m_left = value; }
-    void set_rhs_value(Value* value) { m_right = value; }
-
-    void print(std::ostream& os) const override;
-};
-
-/// Represents a unary operation instruction.
-class UnopInst final : public Instruction {
-public:
-    enum Ops : u8 {
-        UNOP_Not,
-        UNOP_Neg, UNOP_FNeg,
-        UNOP_SExt, UNOP_ZExt, UNOP_FExt,
-        UNOP_Trunc, UNOP_FTrunc,
-        UNOP_SI2FP, UNOP_UI2FP,
-        UNOP_FP2SI, UNOP_FP2UI,
-        UNOP_P2I, UNOP_I2P,
-        UNOP_Reint,
-    };
-
-private:
-    Ops m_op;
-    Value* m_value;
-
-    UnopInst(Ops op, Value* value, const Type* type, const std::string& name, 
-             BasicBlock* append_to);
-
-public:
-    /// Create a new unary operation with operator \p op on value \p value.
-    static UnopInst* create(Ops op, Value* value, const Type* type,
-                            const std::string& name = "", 
-                            BasicBlock* append_to = nullptr);
-
-    bool is_cast() const override { return m_op >= UNOP_SExt; }
-
-    Ops get_operator() const { return m_op; }
-
-    const Value* get_value() const { return m_value; }
-    Value* get_value() { return m_value; }
-
-    void set_value(Value* value) { m_value = value; }
+    /// Returns true if this instruction deals with floating point values only.
+    /// This generally only works for things like comparisons and arithmetic 
+    /// but not generic load/store/constant/etc. instructions.
+    bool operates_on_floats() const;
 
     void print(std::ostream& os) const override;
 };
 
 } // namespace siir
-
 } // namespace stm
 
 #endif // STATIM_SIIR_INSTRUCTION_HPP_

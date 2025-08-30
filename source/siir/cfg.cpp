@@ -98,6 +98,7 @@ void CFG::add_global(Global* glb) {
         && "global has name conflicts with existing graph symbol");
 
     m_globals.emplace(glb->get_name(), glb);
+    glb->set_parent(this);
 }
 
 void CFG::remove_global(Global* glb) {
@@ -124,6 +125,7 @@ void CFG::add_function(Function* fn) {
         && "function has name conflicts with existing graph symbol");
 
     m_functions.emplace(fn->get_name(), fn);
+    fn->set_parent(this);
 }
 
 void CFG::remove_function(Function* fn) {

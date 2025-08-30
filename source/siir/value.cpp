@@ -1,17 +1,10 @@
 #include "siir/use.hpp"
-#include <algorithm>
 #include "siir/value.hpp"
+
+#include <algorithm>
 
 using namespace stm;
 using namespace stm::siir;
-
-Value::Value(const Type* type, const std::string& name) 
-    : m_type(type), m_name(name), m_uses() {}
-
-Value::~Value() {
-    //for (auto use : m_uses) delete use;
-    m_uses.clear();
-}
 
 void Value::add_use(Use* use) {
     m_uses.push_back(use);

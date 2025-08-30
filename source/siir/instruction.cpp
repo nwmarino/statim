@@ -1,196 +1,286 @@
 #include "siir/basicblock.hpp"
+#include "siir/user.hpp"
 #include "siir/instruction.hpp"
 
 using namespace stm;
 using namespace stm::siir;
 
-Instruction::Instruction(Op op, std::initializer_list<Value*> operands, 
-                         BasicBlock* parent, const Type* type, 
-                         const std::string& name)
-    : User(operands, type, name), m_op(op), m_parent(parent) {
+std::string stm::siir::opcode_to_string(Opcode op) {
+    switch (op) {
+    case INST_OP_NOP:
+        return "Nop";
+    case INST_OP_CONSTANT:
+        return "Constant";
+    case INST_OP_LOAD:
+        return "Load";
+    case INST_OP_STORE:
+        return "Store";
+    case INST_OP_ACCESS_PTR:
+        return "AP";
+    case INST_OP_SELECT:
+        return "Select";
+    case INST_OP_BRANCH_IF:
+        return "BranchIf";
+    case INST_OP_JUMP:
+        return "Jump";
+    case INST_OP_RETURN:
+        return "Return";
+    case INST_OP_ABORT:
+        return "Abort";
+    case INST_OP_UNREACHABLE:
+        return "Unreachable";
+    case INST_OP_CALL:
+        return "Call";
+    case INST_OP_IADD:
+        return "IAdd";
+    case INST_OP_FADD:
+        return "FAdd";
+    case INST_OP_ISUB:
+        return "ISub";
+    case INST_OP_FSUB:
+        return "FSub";
+    case INST_OP_SMUL:
+        return "SMul";
+    case INST_OP_UMUL:
+        return "UMul";
+    case INST_OP_FMUL:
+        return "FMul";
+    case INST_OP_SDIV:
+        return "SDiv";
+    case INST_OP_UDIV:
+        return "UDiv";
+    case INST_OP_FDIV:
+        return "FDiv";
+    case INST_OP_SREM:
+        return "SRem";
+    case INST_OP_UREM:
+        return "URem";
+    case INST_OP_FREM:
+        return "FRem";
+    case INST_OP_AND:
+        return "And";
+    case INST_OP_OR:
+        return "Or";
+    case INST_OP_XOR:
+        return "Xor";
+    case INST_OP_SHL:
+        return "Shl";
+    case INST_OP_SHR:
+        return "Shr";
+    case INST_OP_SAR:
+        return "Sar";
+    case INST_OP_NOT:
+        return "Not";
+    case INST_OP_INEG:
+        return "INeg";
+    case INST_OP_FNEG:
+        return "FNeg";
+    case INST_OP_SEXT:
+        return "SExt";
+    case INST_OP_ZEXT:
+        return "ZExt";
+    case INST_OP_FEXT:
+        return "FExt";
+    case INST_OP_ITRUNC:
+        return "ITrunc";
+    case INST_OP_FTRUNC:
+        return "FTrunc";
+    case INST_OP_SI2FP:
+        return "SI2FP";
+    case INST_OP_UI2FP:
+        return "UI2FP";
+    case INST_OP_FP2SI:
+        return "FP2SI";
+    case INST_OP_FP2UI:
+        return "FP2UI";
+    case INST_OP_P2I:
+        return "P2I";
+    case INST_OP_I2P:
+        return "I2P";
+    case INST_OP_REINTERPET:
+        return "Reinterpret";
+    case INST_OP_CMP_IEQ:
+        return "CmpIEQ";
+    case INST_OP_CMP_INE:
+        return "CmpINE";
+    case INST_OP_CMP_OEQ:
+        return "CmpOEQ";
+    case INST_OP_CMP_ONE:
+        return "CmpONE";
+    case INST_OP_CMP_UNEQ:
+        return "CmpUNEQ";
+    case INST_OP_CMP_UNNE:
+        return "CmpUNNE";
+    case INST_OP_CMP_SLT:
+        return "CmpSLT";
+    case INST_OP_CMP_SLE:
+        return "CmpSLE";
+    case INST_OP_CMP_SGT:
+        return "CmpSGT";
+    case INST_OP_CMP_SGE:
+        return "CmpSGE";
+    case INST_OP_CMP_ULT:
+        return "CmpULT";
+    case INST_OP_CMP_ULE:
+        return "CmpULE";
+    case INST_OP_CMP_UGT:
+        return "CmpUGT";
+    case INST_OP_CMP_UGE:
+        return "CmpUGE";
+    case INST_OP_CMP_OLT:
+        return "CmpOLT";
+    case INST_OP_CMP_OLE:
+        return "CmpOLE";
+    case INST_OP_CMP_OGT:
+        return "CmpOGT";
+    case INST_OP_CMP_OGE:
+        return "CmpOGE";
+    case INST_OP_CMP_UNLT:
+        return "CmpUNLT";
+    case INST_OP_CMP_UNLE:
+        return "CmpUNLE";
+    case INST_OP_CMP_UNGT:
+        return "CmpUNGT";
+    case INST_OP_CMP_UNGE:
+        return "CmpUNGE";
+    default:
+        return "Unknown";
+    }
+}
 
-    if (parent)
-        parent->push_back(this);
+Instruction::Instruction(Opcode opcode, const std::vector<Value*>& operands)
+    : User(operands, nullptr), m_result(0), m_opcode(opcode) {}
+
+Instruction::Instruction(u32 result, const Type* type, Opcode opcode, 
+            const std::vector<Value*>& operands)
+    : User(operands, type), m_result(result), m_opcode(opcode) {}
+
+const Value* Instruction::get_operand(u32 i) const {
+    assert(i <= num_operands());
+    return m_operands[i].get_value();
+}
+
+void Instruction::prepend_to(BasicBlock* blk) {
+    assert(blk && "blk cannot be null");
+    blk->push_front(this);
 }
 
 void Instruction::append_to(BasicBlock* blk) {
-    assert(blk);
-    assert(!m_parent && "instruction already belongs to a block");
-
+    assert(blk && "blk cannot be null");
     blk->push_back(this);
-    m_parent = blk;
 }
 
 void Instruction::insert_before(Instruction* inst) {
-    assert(inst);
-    assert(!m_parent && "instruction already belongs to a block");
+    assert(inst && "inst cannot be null");
 
-    m_prev = inst->m_prev;
+    if (inst->prev())
+        inst->prev()->set_next(this);
+
+    m_prev = inst->prev();
     m_next = inst;
-
-    if (inst->m_prev)
-        inst->m_prev->m_next = this;
-
-    inst->m_prev = this;
-    m_parent = inst->m_parent;
+    inst->set_prev(this);
 }
 
 void Instruction::insert_after(Instruction* inst) {
-    assert(inst);
-    assert(!m_parent && "instruction already belongs to a block");
+    assert(inst && "inst cannot be null");
+
+    if (inst->next())
+        inst->next()->set_prev(this);
 
     m_prev = inst;
-    m_next = inst->m_next;
-
-    if (inst->m_next)
-        inst->m_next->m_prev = this;
-
-    inst->m_next = this;
-    m_parent = inst->m_parent;
+    m_next = inst->next();
+    inst->set_next(this);
 }
 
-void Instruction::detach() {
-    if (m_parent)
-        m_parent->remove(this);
-
-    m_prev = nullptr;
-    m_next = nullptr;
-    m_parent = nullptr;
+bool Instruction::is_terminator() const {
+    switch (opcode()) {
+    case INST_OP_BRANCH_IF:
+    case INST_OP_JUMP:
+    case INST_OP_RETURN:
+    case INST_OP_ABORT:
+    case INST_OP_UNREACHABLE:
+        return true;
+    default:
+        return false;
+    }
 }
 
-ConstInst::ConstInst(Constant* constant, const std::string& name, 
-                     BasicBlock* append_to)
-    : Instruction(Instruction::Const, { constant }, append_to, 
-      constant->get_type(), name) {}
-
-ConstInst* 
-ConstInst::create(Constant* constant, const std::string& name,
-                  BasicBlock* append_to) {
-    return new ConstInst(constant, name, append_to);
+bool Instruction::is_comparison() const {
+    switch (opcode()) {
+    case INST_OP_CMP_IEQ:
+    case INST_OP_CMP_INE:
+    case INST_OP_CMP_OEQ:
+    case INST_OP_CMP_ONE:
+    case INST_OP_CMP_UNEQ:
+    case INST_OP_CMP_UNNE:
+    case INST_OP_CMP_SLT:
+    case INST_OP_CMP_SLE:
+    case INST_OP_CMP_SGT:
+    case INST_OP_CMP_SGE:
+    case INST_OP_CMP_ULT:
+    case INST_OP_CMP_ULE:
+    case INST_OP_CMP_UGT:
+    case INST_OP_CMP_UGE:
+    case INST_OP_CMP_OLT:
+    case INST_OP_CMP_OLE:
+    case INST_OP_CMP_OGT:
+    case INST_OP_CMP_OGE:
+    case INST_OP_CMP_UNLT:
+    case INST_OP_CMP_UNLE:
+    case INST_OP_CMP_UNGT:
+    case INST_OP_CMP_UNGE:
+        return true;
+    default:
+        return false;
+    }
 }
 
-StoreInst::StoreInst(Value* value, Value* dst, u32 align, 
-                     BasicBlock* append_to)
-    : Instruction(Instruction::Store, { value, dst }, append_to), 
-      m_value(value), m_dst(dst), m_align(align) {}
-
-StoreInst* 
-StoreInst::create(Value* value, Value* dst, u32 align, BasicBlock* append_to) {
-    return new StoreInst(value, dst, align, append_to);
+bool Instruction::is_cast() const {
+    switch (opcode()) {
+    case INST_OP_SEXT:
+    case INST_OP_ZEXT:
+    case INST_OP_FEXT:
+    case INST_OP_ITRUNC:
+    case INST_OP_FTRUNC:
+    case INST_OP_SI2FP:
+    case INST_OP_UI2FP:
+    case INST_OP_FP2SI:
+    case INST_OP_FP2UI:
+    case INST_OP_P2I:
+    case INST_OP_I2P:
+    case INST_OP_REINTERPET:
+        return true;
+    default:
+        return false;
+    }
 }
 
-LoadInst::LoadInst(Value* src, u32 align, const Type* type, 
-                   const std::string& name, BasicBlock* append_to)
-    : Instruction(Instruction::Load, { src }, append_to, type, name), 
-      m_src(src), m_align(align) {}
-
-LoadInst* 
-LoadInst::create(Value* src, u32 align, const Type* type,
-                 const std::string& name, BasicBlock* append_to) {
-    return new LoadInst(src, align, type, name, append_to);
-}
-
-APInst::APInst(Value* src, Value* idx, bool deref, const Type* type,
-           const std::string& name, BasicBlock* append_to)
-    : Instruction(Instruction::AP, { src, idx }, append_to, type, name), 
-      m_src(src), m_idx(idx), m_deref(deref) {}
-
-APInst* 
-APInst::create(Value* src, Value* idx, bool deref, const Type* type,
-               const std::string& name, BasicBlock* append_to) {
-    return new APInst(src, idx, deref, type, name, append_to);
-}
-
-SelectInst::SelectInst(Value* cond, Value* tval, Value* fval, const Type* type,
-                       const std::string& name, BasicBlock* append_to)
-    : Instruction(Instruction::Select, { cond, tval, fval }, append_to, type, 
-        name), m_cond(cond), m_tval(tval), m_fval(fval) {}
-
-SelectInst* 
-SelectInst::create(Value* cond, Value* tval, Value* fval, const Type* type,
-                   const std::string& name, BasicBlock* append_to) {
-    return new SelectInst(cond, tval, fval, type, name, append_to);
-}
-
-BrifInst::BrifInst(Value* cond, Value* tdst, Value* fdst, BasicBlock* append_to)
-    : Instruction(Instruction::Brif, { cond, tdst, fdst }, append_to), 
-      m_cond(cond), m_tdst(tdst), m_fdst(fdst) {}
-
-BrifInst* 
-BrifInst::create(Value* cond, Value* tdst, Value* fdst, BasicBlock* append_to) {
-    return new BrifInst(cond, tdst, fdst, append_to);
-}
-
-JmpInst::JmpInst(Value* dst, BasicBlock* append_to)
-    : Instruction(Instruction::Jmp, { dst }, append_to), m_dst(dst) {}
-
-JmpInst* JmpInst::create(Value* dst, BasicBlock* append_to) {
-    return new JmpInst(dst, append_to);
-}
-
-RetInst::RetInst(Value* value, BasicBlock* append_to)
-    : Instruction(Instruction::Ret, { value }, append_to), m_value(value) {}
-
-RetInst* RetInst::create(Value* value, BasicBlock* append_to) {
-    return new RetInst(value, append_to);
-}
-
-AbortInst::AbortInst(BasicBlock* append_to) 
-    : Instruction(Instruction::Abort, {}, append_to) {}
-
-AbortInst* AbortInst::create(BasicBlock* append_to) {
-    return new AbortInst(append_to);
-}
-
-UnreachableInst::UnreachableInst(BasicBlock* append_to) 
-    : Instruction(Instruction::Unreachable, {}, append_to) {}
-
-UnreachableInst* UnreachableInst::create(BasicBlock* append_to) {
-    return new UnreachableInst(append_to);
-}
-
-CallInst::CallInst(Value* callee, const std::vector<Value*>& args, 
-                   const Type* type, const std::string& name, 
-                   BasicBlock* append_to)
-    : Instruction(Instruction::Call, { callee }, append_to, type, name), 
-      m_callee(callee), m_args(args) {} 
-
-CallInst* 
-CallInst::create(Value* callee, const std::vector<Value*>& args,
-                 const Type* type, const std::string& name, 
-                 BasicBlock* append_to) {
-    return new CallInst(callee, args, type, name, append_to);
-}
-
-CmpInst::CmpInst(Predicate pred, Value* left, Value* right, const Type* type, 
-                 const std::string& name, BasicBlock* append_to)
-    : Instruction(Instruction::Cmp, { left, right }, append_to, type, name), 
-      m_pred(pred), m_left(left), m_right(right) {}
-
-CmpInst* 
-CmpInst::create(Predicate pred, Value* left, Value* right, const Type* type, 
-                const std::string& name, BasicBlock* append_to) {
-    return new CmpInst(pred, left, right, type, name, append_to);
-}
-
-BinopInst::BinopInst(Ops op, Value* left, Value* right, const Type* type, 
-                     const std::string& name, BasicBlock* append_to)
-    : Instruction(Instruction::Binop, { left, right }, append_to, type, name), 
-      m_op(op), m_left(left), m_right(right) {}
-
-BinopInst* 
-BinopInst::create(Ops op, Value* left, Value* right, const Type* type, 
-                  const std::string& name, BasicBlock* append_to) {
-    return new BinopInst(op, left, right, type, name, append_to);
-}
-
-UnopInst::UnopInst(Ops op, Value* value, const Type* type, 
-                   const std::string& name, BasicBlock* append_to)
-    : Instruction(Instruction::Unop, { value }, append_to, type, name), 
-      m_op(op), m_value(value) {}
-
-UnopInst* 
-UnopInst::create(Ops op, Value* value, const Type* type, 
-                 const std::string& name, BasicBlock* append_to) {
-    return new UnopInst(op, value, type, name, append_to);
+bool Instruction::operates_on_floats() const {
+    switch (opcode()) {
+    case INST_OP_CMP_OEQ:
+    case INST_OP_CMP_ONE:
+    case INST_OP_CMP_UNEQ:
+    case INST_OP_CMP_UNNE:
+    case INST_OP_CMP_OLT:
+    case INST_OP_CMP_OLE:
+    case INST_OP_CMP_OGT:
+    case INST_OP_CMP_OGE:
+    case INST_OP_CMP_UNLT:
+    case INST_OP_CMP_UNLE:
+    case INST_OP_CMP_UNGT:
+    case INST_OP_CMP_UNGE:
+    case INST_OP_FADD:
+    case INST_OP_FSUB:
+    case INST_OP_FMUL:
+    case INST_OP_FDIV:
+    case INST_OP_FREM:
+    case INST_OP_FNEG:
+    case INST_OP_FEXT:
+    case INST_OP_FTRUNC:
+    case INST_OP_FP2SI:
+    case INST_OP_FP2UI:
+        return true;
+    default:
+        return false;
+    }
 }
