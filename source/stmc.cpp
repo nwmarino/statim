@@ -1,13 +1,17 @@
 #include "core/logger.hpp"
 #include "siir/cfg.hpp"
+#include "siir/ssa_rewrite_pass.hpp"
 #include "siir/target.hpp"
 #include "tree/parser.hpp"
 #include "tree/visitor.hpp"
 #include "types/input_file.hpp"
 #include "types/options.hpp"
 #include "types/translation_unit.hpp"
+#include <fstream>
 
 stm::i32 main(stm::i32 argc, char** argv) {
+    std::ofstream pre_ssa_dump("pre_ssa");
+    std::ofstream post_ssa_dump("post_ssa");
     stm::Logger::init();
 
     stm::Options options;
@@ -35,7 +39,7 @@ stm::i32 main(stm::i32 argc, char** argv) {
     stm::SemanticAnalysis sema { options, root };
     root.accept(sema);
 
-    root.print(std::cout);
+    //root.print(std::cout);
 
     stm::siir::Target target { 
         stm::siir::Target::amd64, 
@@ -48,6 +52,13 @@ stm::i32 main(stm::i32 argc, char** argv) {
     stm::Codegen cgn { options, root, cfg };
     root.accept(cgn);
 
-    cfg.print(std::cout);
+    cfg.print(pre_ssa_dump);
+    pre_ssa_dump.close();
+
+    stm::siir::SSARewrite ssar { cfg };
+    ssar.run();
+
+    cfg.print(post_ssa_dump);
+    post_ssa_dump.close();
     return 0;
 }

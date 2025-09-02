@@ -82,6 +82,9 @@ CFG::~CFG() {
 
     for (auto [ block, addr ] : m_pool_baddr) delete addr;
     m_pool_baddr.clear();
+
+    for (auto incoming : m_pool_incomings) delete incoming;
+    m_pool_incomings.clear();
 }
 
 const Global* CFG::get_global(const std::string& name) const {
@@ -109,6 +112,15 @@ void CFG::remove_global(Global* glb) {
 
         m_globals.erase(it);
     }
+}
+
+std::vector<Function*> CFG::functions() const {
+    std::vector<Function*> functions;
+    functions.reserve(m_functions.size());
+    for (auto& [name, function] : m_functions)
+        functions.push_back(function);
+
+    return functions;
 }
 
 const Function* CFG::get_function(const std::string& name) const {

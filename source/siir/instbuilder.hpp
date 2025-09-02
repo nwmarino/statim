@@ -13,15 +13,19 @@ namespace siir {
 
 /// A system of convenience to build instructions.
 class InstBuilder final {
+public:
+    enum InsertMode : u8 {
+        Prepend, Append,
+    };
+
+private:
     /// The parent graph, used for type and constant pooling.
     CFG& m_cfg;
 
-    /// The instruction result id. Only incremented with the creation of new
-    /// defining instructions.
-    u32 m_id = 1;
-
     /// The current basic block insertion point.
     BasicBlock* m_insert = nullptr;
+
+    InsertMode m_mode = Append;
 
 public:
     /// Create a new instruction builder for graph |cfg|.
@@ -39,6 +43,12 @@ public:
 
     /// Clear the current insertion point of the builder.
     void clear_insert() { m_insert = nullptr; }
+
+    /// Returns the mode of insertion this builder is in.
+    InsertMode get_mode() const { return m_mode; }
+
+    /// Set the insertion mode of this builder to |mode|.
+    void set_insert_mode(InsertMode mode) { m_mode = mode; }
 
     /// Insert |inst| to the current insertion point, if it is set.
     void insert(Instruction* inst);
@@ -85,6 +95,9 @@ public:
 
     /// Create a new jump instruction that branches to |dst|.
     Instruction* build_jmp(BasicBlock* dst);
+
+    /// Create a new phi node of the given type.
+    Instruction* build_phi(const Type* type);
 
     /// Create a new return instruction that returns |value|.
     Instruction* build_ret(Value* value);

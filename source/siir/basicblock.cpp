@@ -73,6 +73,7 @@ void BasicBlock::remove_inst(Instruction* inst) {
 
         inst->set_prev(nullptr);
         inst->set_next(nullptr);
+        inst->clear_parent();
     }
 }
 
@@ -94,6 +95,8 @@ void BasicBlock::push_front(Instruction* inst) {
     } else {
         m_front = m_back = inst;
     }
+
+    inst->set_parent(this);
 }
 
 void BasicBlock::push_back(Instruction* inst) {
@@ -106,6 +109,8 @@ void BasicBlock::push_back(Instruction* inst) {
     } else {
         m_front = m_back = inst;
     }
+
+    inst->set_parent(this);
 }
 
 void BasicBlock::insert(Instruction* inst, u32 i) {

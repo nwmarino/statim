@@ -45,7 +45,7 @@ static void print_inst(std::ostream& os, Instruction* inst) {
     os << opcode_to_string(inst->opcode()) << ' ';
 
     if (inst->is_def() && !inst->is_cast())
-        os << inst->get_type()->to_string() << ", ";
+        os << inst->get_type()->to_string() << (inst->is_call() ? " " : ", ");
 
     for (u32 idx = 0, e = inst->num_operands(); idx != e; ++idx) {
         Value* operand = inst->get_operand(idx);
@@ -53,19 +53,33 @@ static void print_inst(std::ostream& os, Instruction* inst) {
         if (operand->has_type()) {
             if (!inst->has_type()) {
                 os << operand->get_type()->to_string() << ' ';
-            } else if (inst->has_type() 
+            } else if (inst->has_type() && !inst->is_call()
               && (*inst->get_type() != *operand->get_type())) {
                 os << operand->get_type()->to_string() << ' ';
             }
         }
 
         operand->print(os);
-        if (idx + 1 != e)
+
+        if (inst->is_call() && idx == 0) {
+            os << '(';
+        } else if (idx + 1 != e) {
             os << ", ";
+        } else if (inst->is_call()) {
+            os << ')';
+        }
     }
 
     if (inst->is_cast()) {
         os << " -> " << inst->get_type()->to_string();
+    }
+
+    if (inst->is_load() || inst->is_store()) {
+        os << ", align " << inst->get_data();
+    }
+
+    if (inst->is_def()) {
+        os << "\n        ... " << inst->num_uses() << " uses";
     }
 
     os << '\n';
@@ -78,7 +92,21 @@ static void print_local(std::ostream& os, Local* local) {
 }
 
 static void print_block(std::ostream& os, BasicBlock* blk) {
-    os << "    bb" << blk->get_number() << ": {\n";
+    os << "    bb" << blk->get_number();
+    
+    if (blk->has_preds()) {
+        os << '(';
+
+        for (u32 idx = 0, e = blk->num_preds(); idx != e; ++idx) {
+            os << "bb" << blk->preds()[idx]->get_number();
+            if (idx + 1 != e)
+                os << ", ";
+        }
+
+        os << ')';
+    }
+    
+    os << ": {\n";
 
     for (auto curr = blk->front(); curr; curr = curr->next()) {
         os << "        ";
@@ -197,6 +225,12 @@ void ConstantNull::print(std::ostream& os) const {
 
 void BlockAddress::print(std::ostream& os) const {
     os << "bb" << m_block->get_number();
+}
+
+void PhiOperand::print(std::ostream& os) const {
+    m_pred->print(os);
+    os << ' ';
+    m_value->print(os);
 }
 
 void Instruction::print(std::ostream& os) const {

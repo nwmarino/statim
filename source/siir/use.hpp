@@ -2,6 +2,7 @@
 #define STATIM_SIIR_USE_HPP_
 
 #include "value.hpp"
+#include <iostream>
 
 namespace stm {
 namespace siir {
@@ -34,6 +35,19 @@ public:
     /// Get the value of this use.
     const Value* get_value() const { return m_value; }
     Value* get_value() { return m_value; }
+
+    /// Set the value of this use to |value|.
+    void set_value(Value* value) {
+        assert(m_value);
+        assert(value);
+
+        if (m_value == value) 
+            return;
+
+        m_value->del_use(this);
+        m_value = value;
+        m_value->add_use(this);
+    }
 
     /// Get the user of this use.
     const User* get_user() const { return m_user; }

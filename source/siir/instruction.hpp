@@ -3,11 +3,41 @@
 
 #include "siir/constant.hpp"
 #include "siir/user.hpp"
+#include "siir/value.hpp"
 
 namespace stm {
 namespace siir {
 
 class BasicBlock;
+
+/// An operand to a PHI node, wrapping over a value and the basic block it
+/// comes from.
+class PhiOperand final : public Value {
+    /// The value in this edge.
+    Value* m_value;
+
+    /// The parent predecessor block that this operand's value comes from.
+    BasicBlock* m_pred;
+
+public:
+    PhiOperand(Value* value, BasicBlock* pred);
+
+    PhiOperand(const PhiOperand&) = delete;
+    PhiOperand& operator = (const PhiOperand&) = delete;
+
+    operator Value*() const { return m_value; }
+    operator BasicBlock*() const { return m_pred; }
+
+    /// Returns the value of this incoming phi edge.
+    const Value* get_value() const { return m_value; }
+    Value* get_value() { return m_value; }
+
+    /// Returns the predecessor basic block of this incoming phi edge.
+    const BasicBlock* get_pred() const { return m_pred; }
+    BasicBlock* get_pred() { return m_pred; }
+
+    void print(std::ostream& os) const override;
+};
 
 /// Potential opcodes for an IR instruction.
 enum Opcode : u16 {
@@ -19,6 +49,7 @@ enum Opcode : u16 {
     INST_OP_SELECT,
     INST_OP_BRANCH_IF,
     INST_OP_JUMP,
+    INST_OP_PHI,
     INST_OP_RETURN,
     INST_OP_ABORT,
     INST_OP_UNREACHABLE,
@@ -107,6 +138,9 @@ class Instruction final : public User {
     /// instructions use this field for value alignment details.
     u16 m_data = 0;
 
+    /// The basic block that this instruction is contained in.
+    BasicBlock* m_parent;
+
     /// Links to the previous and next instructions in the parent basic block.
     /// These pointers functionally make up the doubly-linked list managed
     /// by the parent BasicBlock.
@@ -116,12 +150,13 @@ class Instruction final : public User {
     /// Create a new non-defining instruction.
     ///
     /// Private constructor to be used by the InstBuilder class.
-    Instruction(Opcode opcode, const std::vector<Value*>& operands = {});
+    Instruction(Opcode opcode, BasicBlock* parent, 
+                const std::vector<Value*>& operands = {});
     
     /// Create a new defining instruction.
     ///
     /// Private construtor to be used by the InstBuilder class.
-    Instruction(u32 result, const Type* type, Opcode opcode, 
+    Instruction(u32 result, const Type* type, Opcode opcode, BasicBlock* parent,
                 const std::vector<Value*>& operands = {});
 
 public:
@@ -154,6 +189,17 @@ public:
     /// Returns a reference to the data field of this instruction.
     u16& data() { return m_data; }
 
+    /// Returns the parent block of this instruction.
+    const BasicBlock* get_parent() const { return m_parent; }
+    BasicBlock* get_parent() { return m_parent; }
+
+    /// Mutate the parent basic block of this instruction to |blk|.
+    void set_parent(BasicBlock* blk) { m_parent = blk; }
+ 
+    /// Clears the parent basic block of this instruction. Does not actually 
+    /// remove this instruction from the old block.
+    void clear_parent() { m_parent = nullptr; }
+
     /// Prepends this instruction to |blk|. Assumes that this instruction is 
     /// unlinked and free-floating.
     void prepend_to(BasicBlock* blk);
@@ -179,6 +225,10 @@ public:
     void set_prev(Instruction* inst) { m_prev = inst; }
     void set_next(Instruction* inst) { m_next = inst; }
 
+    /// Detach this instruction from its parent block. Does not destroy the
+    /// instruction.
+    void detach_from_parent();
+
     /// Returns true if this instruction does nothing.
     bool is_nop() const { return opcode() == INST_OP_NOP; }
 
@@ -196,6 +246,9 @@ public:
 
     /// Returns true if this instruction branches conditionally.
     bool is_branch_if() const { return opcode() == INST_OP_BRANCH_IF; }
+
+    /// Returns true if this instruction is a phi node.
+    bool is_phi() const { return opcode() == INST_OP_PHI; }
 
     /// Returns true if this instruction aborts execution.
     bool is_abort() const { return opcode() == INST_OP_ABORT; }
@@ -225,6 +278,10 @@ public:
     /// This generally only works for things like comparisons and arithmetic 
     /// but not generic load/store/constant/etc. instructions.
     bool operates_on_floats() const;
+
+    /// Add a new incoming value edge to a PHI node. This only works for
+    /// instructions with the PHI opcode.
+    void add_incoming(CFG& cfg, Value* value, BasicBlock* pred);
 
     void print(std::ostream& os) const override;
 };

@@ -30,10 +30,12 @@ class CFG final {
     friend class ConstantFP;
     friend class ConstantNull;
     friend class BlockAddress;
+    friend class Instruction;
 
     /// Top-level graph items.
     InputFile& m_file;
     Target& m_target;
+    u32 m_def_id = 1;
     std::map<std::string, Global*> m_globals = {};
     std::map<std::string, Function*> m_functions = {};
 
@@ -56,6 +58,10 @@ class CFG final {
     std::unordered_map<f64, ConstantFP*> m_pool_fp64 = {};
     std::unordered_map<const Type*, ConstantNull*> m_pool_null = {};
     std::unordered_map<const BasicBlock*, BlockAddress*> m_pool_baddr = {};
+
+    /// PHI operand pooling. This is only here because the memory cannot be 
+    /// appropriately managed by the individual instructions 
+    std::vector<PhiOperand*> m_pool_incomings = {};
 
 public:
     /// Create a new control flow graph, representing |file| with the given
@@ -93,6 +99,9 @@ public:
     /// Remove |glb| if it exists in this graph.
     void remove_global(Global* glb);
 
+    /// Returns a list of all functions in this graph, in order of creation.
+    std::vector<Function*> functions() const;
+
     /// Returns the function in this graph with the provided name if it exists, 
     /// and null otherwise.
     const Function* get_function(const std::string& name) const;
@@ -107,6 +116,9 @@ public:
 
     /// Remove |fn| if it exists in this graph.
     void remove_function(Function* fn);
+
+    /// Return a new unique definition id to create an instruction with.
+    u32 get_def_id() { return m_def_id++; }
 
     /// Print this graph in a reproducible plaintext format to the output
     /// stream |os|.

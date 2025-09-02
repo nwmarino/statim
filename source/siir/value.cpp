@@ -17,7 +17,7 @@ void Value::del_use(Use* use) {
 }
 
 void Value::replace_all_uses_with(Value* value) {
-    for (auto use : m_uses) {
-        /// TODO: ...
-    }   
+    std::vector<Use*> uses_copy = m_uses;
+    for (Use* use : uses_copy)
+        use->set_value(value);
 }

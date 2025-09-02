@@ -89,6 +89,20 @@ public:
     const Instruction* back() const { return m_back; }
     Instruction* back() { return m_back; }
 
+    /// Set the first instruction in this block to |inst|.
+    void set_front(Instruction* inst) {
+        assert((!inst || inst->get_parent() == this) &&
+            "cannot make a stranger instruction the front of this block");
+        m_front = inst;
+    }
+
+    /// Set the last instruction in this block to |inst|.
+    void set_back(Instruction* inst) {
+        assert((!inst || inst->get_parent() == this) &&
+            "cannot make a stranger instruction the back of this block");
+        m_back = inst;
+    }
+
     /// Prepend |inst| to this basic block.
     void push_front(Instruction* inst);
 
@@ -120,7 +134,7 @@ public:
     u32 num_preds() const { return m_preds.size(); }
 
     /// Returns true if this basic block has atleast one predecessor.
-    bool has_preds() const { return m_preds.empty(); }
+    bool has_preds() const { return !m_preds.empty(); }
 
     /// Returns the successors of this basic block.
     const std::vector<BasicBlock*>& succs() const { return m_succs; }

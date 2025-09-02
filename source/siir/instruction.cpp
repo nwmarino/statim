@@ -1,9 +1,15 @@
+#include "core/logger.hpp"
 #include "siir/basicblock.hpp"
+#include "siir/cfg.hpp"
 #include "siir/user.hpp"
+#include <string>
 #include "siir/instruction.hpp"
 
 using namespace stm;
 using namespace stm::siir;
+
+PhiOperand::PhiOperand(Value* value, BasicBlock* pred) 
+    : Value(value->get_type()), m_value(value), m_pred(pred) {}
 
 std::string stm::siir::opcode_to_string(Opcode op) {
     switch (op) {
@@ -23,6 +29,8 @@ std::string stm::siir::opcode_to_string(Opcode op) {
         return "BranchIf";
     case INST_OP_JUMP:
         return "Jump";
+    case INST_OP_PHI:
+        return "Phi";
     case INST_OP_RETURN:
         return "Return";
     case INST_OP_ABORT:
@@ -148,16 +156,20 @@ std::string stm::siir::opcode_to_string(Opcode op) {
     }
 }
 
-Instruction::Instruction(Opcode opcode, const std::vector<Value*>& operands)
-    : User(operands, nullptr), m_result(0), m_opcode(opcode) {}
+Instruction::Instruction(Opcode opcode, BasicBlock* parent,
+                         const std::vector<Value*>& operands)
+    : User(operands, nullptr), m_result(0), m_opcode(opcode), 
+      m_parent(parent) {}
 
 Instruction::Instruction(u32 result, const Type* type, Opcode opcode, 
-            const std::vector<Value*>& operands)
-    : User(operands, type), m_result(result), m_opcode(opcode) {}
+                         BasicBlock* parent, 
+                         const std::vector<Value*>& operands)
+    : User(operands, type), m_result(result), m_opcode(opcode), 
+      m_parent(parent) {}
 
 const Value* Instruction::get_operand(u32 i) const {
     assert(i <= num_operands());
-    return m_operands[i].get_value();
+    return m_operands[i]->get_value();
 }
 
 void Instruction::prepend_to(BasicBlock* blk) {
@@ -179,6 +191,7 @@ void Instruction::insert_before(Instruction* inst) {
     m_prev = inst->prev();
     m_next = inst;
     inst->set_prev(this);
+    set_parent(inst->get_parent());
 }
 
 void Instruction::insert_after(Instruction* inst) {
@@ -190,6 +203,42 @@ void Instruction::insert_after(Instruction* inst) {
     m_prev = inst;
     m_next = inst->next();
     inst->set_next(this);
+    set_parent(inst->get_parent());
+}
+
+void Instruction::detach_from_parent() {
+    assert(m_parent && "cannot detach a free-floating instruction");
+
+    if (m_prev) {
+        m_prev->m_next = m_next;
+    } else {
+        // No instruction before this one, so it must be the first instruction
+        // in the parent block; have to update the parent block links.
+        if (m_next) {
+            m_parent->set_front(m_next);
+        } else {
+            // This was the only instruction in the block.
+            m_parent->set_front(nullptr);
+            m_parent->set_back(nullptr);
+        }
+    }
+
+    if (m_next) {
+        m_next->m_prev = m_prev;
+    } else {
+        // No instruction after this one, so it must be the last instruction in
+        // the parent block.
+        if (m_prev) {
+            m_parent->set_back(m_prev);     
+        } else {
+            // This was the only instruction in the block.
+            m_parent->set_front(nullptr);
+            m_parent->set_back(nullptr);
+        }
+    }
+
+    m_parent = nullptr;
+    m_prev = m_next = nullptr;
 }
 
 bool Instruction::is_terminator() const {
@@ -283,4 +332,10 @@ bool Instruction::operates_on_floats() const {
     default:
         return false;
     }
+}
+
+void Instruction::add_incoming(CFG& cfg, Value* value, BasicBlock* pred) {
+    PhiOperand* incoming = new PhiOperand(value, pred);
+    cfg.m_pool_incomings.push_back(incoming);
+    User::add_operand(incoming);
 }

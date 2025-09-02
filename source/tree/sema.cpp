@@ -293,6 +293,7 @@ void SemanticAnalysis::visit(CastExpr& node) {
 
 void SemanticAnalysis::visit(ParenExpr& node) {
     node.pExpr->accept(*this);
+    node.pType = node.get_expr()->get_type();
 }
 
 void SemanticAnalysis::visit(SubscriptExpr& node) {

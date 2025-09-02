@@ -37,6 +37,7 @@ set(COMPILER_SOURCES
     source/siir/instruction.cpp
     source/siir/local.cpp
     source/siir/print.cpp
+    source/siir/ssa_rewrite_pass.cpp
     source/siir/target.cpp
     source/siir/type.cpp
     source/siir/value.cpp

@@ -1,0 +1,107 @@
+__memcpy :: (__d: *void, __s: *void, __n: i64) -> void {
+    ___d: *void, align 8
+    ___n: i64, align 8
+    ___s: *void, align 8
+    _dst: *i8, align 8
+    _src: *i8, align 8
+
+    bb0: {
+        Store *void __d, **void ___d, align 8
+        Store *void __s, **void ___s, align 8
+        Store i64 __n, *i64 ___n, align 8
+        v1 = Load *void, **void ___d, align 8
+        ... 1 uses
+        v2 = Reinterpret *void v1 -> *i8
+        ... 1 uses
+        Store *i8 v2, **i8 _dst, align 8
+        v3 = Load *void, **void ___s, align 8
+        ... 1 uses
+        v4 = Reinterpret *void v3 -> *i8
+        ... 1 uses
+        Store *i8 v4, **i8 _src, align 8
+        Jump bb1
+    }
+
+    bb1(bb0, bb2): {
+        v5 = Load i64, *i64 ___n, align 8
+        ... 1 uses
+        v6 = CmpINE i1, i64 v5, i64 0
+        ... 1 uses
+        BranchIf i1 v6, bb2, bb3
+    }
+
+    bb2(bb1): {
+        v7 = Load *i8, **i8 _src, align 8
+        ... 1 uses
+        v8 = Load i64, *i64 ___n, align 8
+        ... 1 uses
+        v9 = AP *i8, v7, i64 v8
+        ... 1 uses
+        v10 = Load i8, *i8 v9, align 1
+        ... 1 uses
+        v11 = Load *i8, **i8 _dst, align 8
+        ... 1 uses
+        v12 = Load i64, *i64 ___n, align 8
+        ... 1 uses
+        v13 = AP *i8, v11, i64 v12
+        ... 1 uses
+        Store i8 v10, *i8 v13, align 1
+        v14 = Load i64, *i64 ___n, align 8
+        ... 1 uses
+        v15 = ISub i64, v14, 1
+        ... 1 uses
+        Store i64 v15, *i64 ___n, align 8
+        Jump bb1
+    }
+
+    bb3(bb1): {
+        Return 
+    }
+}
+
+bar :: (x: i64) -> i64 {
+    _x: i64, align 8
+
+    bb0: {
+        Store i64 x, *i64 _x, align 8
+        v16 = Load i64, *i64 _x, align 8
+        ... 1 uses
+        v17 = CmpSGT i1, i64 v16, i64 5
+        ... 1 uses
+        BranchIf i1 v17, bb1, bb2
+    }
+
+    bb1(bb0): {
+        Store i64 5, *i64 _x, align 8
+        Jump bb2
+    }
+
+    bb2(bb0, bb1): {
+        v18 = Load i64, *i64 _x, align 8
+        ... 1 uses
+        Return i64 v18
+    }
+}
+
+foo :: (x: i64) -> i64 {
+    _x: i64, align 8
+
+    bb0: {
+        Store i64 x, *i64 _x, align 8
+        v19 = Load i64, *i64 _x, align 8
+        ... 1 uses
+        v20 = IAdd i64, v19, 1
+        ... 1 uses
+        Return i64 v20
+    }
+}
+
+main :: () -> void {
+    bb0: {
+        v21 = Call i64 foo(5)
+        ... 0 uses
+        Return 
+    }
+}
+
+

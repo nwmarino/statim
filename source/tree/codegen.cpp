@@ -123,6 +123,16 @@ void Codegen::impl_function(const FunctionDecl& decl) {
     siir::BasicBlock* entry = new siir::BasicBlock(fn);
     m_builder.set_insert(entry);
 
+    for (u32 idx = 0, e = decl.num_params(); idx != e; ++idx) {
+        siir::Argument* arg = fn->get_arg(idx);
+        const ParameterDecl* param = decl.get_param(idx);
+
+        siir::Local* arg_local = fn->get_local(arg->get_name());
+        assert(arg_local);
+
+        m_builder.build_store(arg, arg_local);
+    }
+
     decl.pBody->accept(*this);
 
     if (!m_builder.get_insert()->terminates()) {
