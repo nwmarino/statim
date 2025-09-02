@@ -1,0 +1,25 @@
+__memcpy :: (__d: *void, __s: *void, __n: mut u64) -> void {
+    let dst: mut *char = __d;
+    let src: mut *char = __s;
+
+    while __n != 0 {
+        dst[__n] = src[__n]; 
+        __n = __n - 1;
+    }
+}
+
+bar :: (x: i64) -> i64 {
+    if x > 5 {
+        x = 5;
+    }
+
+    ret x;
+}
+
+foo :: (x: i64) -> i64 {
+    ret x + 1;
+}
+
+main :: () -> void {
+    foo(5);
+}

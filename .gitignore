@@ -54,5 +54,13 @@ dkms.conf
 # debug information files
 *.dwo
 
+.cache/
 .vscode/
+build/
+docs/rega.md
 stmc
+stmc_test
+scratch/
+dump
+pre_ssa
+post_ssa
