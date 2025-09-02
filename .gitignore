@@ -61,3 +61,6 @@ docs/rega.md
 stmc
 stmc_test
 scratch/
+dump
+pre_ssa
+post_ssa
