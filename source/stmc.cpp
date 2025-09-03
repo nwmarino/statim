@@ -2,6 +2,7 @@
 #include "siir/cfg.hpp"
 #include "siir/ssa_rewrite_pass.hpp"
 #include "siir/target.hpp"
+#include "siir/trivial_dce_pass.hpp"
 #include "tree/parser.hpp"
 #include "tree/visitor.hpp"
 #include "types/input_file.hpp"
@@ -39,8 +40,6 @@ stm::i32 main(stm::i32 argc, char** argv) {
     stm::SemanticAnalysis sema { options, root };
     root.accept(sema);
 
-    //root.print(std::cout);
-
     stm::siir::Target target { 
         stm::siir::Target::amd64, 
         stm::siir::Target::SystemV, 
@@ -57,6 +56,9 @@ stm::i32 main(stm::i32 argc, char** argv) {
 
     stm::siir::SSARewrite ssar { cfg };
     ssar.run();
+
+    stm::siir::TrivialDCEPass dce { cfg };
+    //dce.run();
 
     cfg.print(post_ssa_dump);
     post_ssa_dump.close();

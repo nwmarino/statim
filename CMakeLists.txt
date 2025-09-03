@@ -39,6 +39,7 @@ set(COMPILER_SOURCES
     source/siir/print.cpp
     source/siir/ssa_rewrite_pass.cpp
     source/siir/target.cpp
+    source/siir/trivial_dce_pass.cpp
     source/siir/type.cpp
     source/siir/value.cpp
     source/tree/codegen.cpp

@@ -26,6 +26,12 @@ public:
         value->add_use(this);
     }
 
+    ~Use() {
+        m_value->del_use(this);
+        m_value = nullptr;
+        m_user = nullptr;
+    }
+
     operator Value*() { return m_value; }
     operator const Value*() { return m_value; }
 

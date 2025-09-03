@@ -339,3 +339,79 @@ void Instruction::add_incoming(CFG& cfg, Value* value, BasicBlock* pred) {
     cfg.m_pool_incomings.push_back(incoming);
     User::add_operand(incoming);
 }
+
+bool Instruction::is_trivially_dead() const {
+    if (result_id() == 0)
+        return false;
+
+    if (Value::used())
+        return false;
+
+    switch (opcode()) {
+    case INST_OP_NOP:
+    case INST_OP_CONSTANT:
+    case INST_OP_LOAD:
+    case INST_OP_ACCESS_PTR:
+    case INST_OP_SELECT:
+    case INST_OP_PHI:
+    case INST_OP_IADD:
+    case INST_OP_FADD:
+    case INST_OP_ISUB:
+    case INST_OP_FSUB:
+    case INST_OP_SMUL:
+    case INST_OP_UMUL:
+    case INST_OP_FMUL:
+    case INST_OP_SDIV:
+    case INST_OP_UDIV:
+    case INST_OP_FDIV:
+    case INST_OP_SREM:
+    case INST_OP_UREM:
+    case INST_OP_FREM:
+    case INST_OP_AND:
+    case INST_OP_OR:
+    case INST_OP_XOR:
+    case INST_OP_SHL:
+    case INST_OP_SHR:
+    case INST_OP_SAR:
+    case INST_OP_NOT:
+    case INST_OP_INEG:
+    case INST_OP_FNEG:
+    case INST_OP_SEXT:
+    case INST_OP_ZEXT:
+    case INST_OP_FEXT:
+    case INST_OP_ITRUNC:
+    case INST_OP_FTRUNC:
+    case INST_OP_SI2FP:
+    case INST_OP_UI2FP:
+    case INST_OP_FP2SI:
+    case INST_OP_FP2UI:
+    case INST_OP_P2I:
+    case INST_OP_I2P:
+    case INST_OP_REINTERPET:
+    case INST_OP_CMP_IEQ:
+    case INST_OP_CMP_INE:
+    case INST_OP_CMP_OEQ:
+    case INST_OP_CMP_ONE:
+    case INST_OP_CMP_UNEQ:
+    case INST_OP_CMP_UNNE:
+    case INST_OP_CMP_SLT:
+    case INST_OP_CMP_SLE:
+    case INST_OP_CMP_SGT:
+    case INST_OP_CMP_SGE:
+    case INST_OP_CMP_ULT:
+    case INST_OP_CMP_ULE:
+    case INST_OP_CMP_UGT:
+    case INST_OP_CMP_UGE:
+    case INST_OP_CMP_OLT:
+    case INST_OP_CMP_OLE:
+    case INST_OP_CMP_OGT:
+    case INST_OP_CMP_OGE:
+    case INST_OP_CMP_UNLT:
+    case INST_OP_CMP_UNLE:
+    case INST_OP_CMP_UNGT:
+    case INST_OP_CMP_UNGE:
+        return true;
+    default:
+        return false;
+    }
+}

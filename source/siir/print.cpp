@@ -78,9 +78,9 @@ static void print_inst(std::ostream& os, Instruction* inst) {
         os << ", align " << inst->get_data();
     }
 
-    if (inst->is_def()) {
-        os << "\n        ... " << inst->num_uses() << " uses";
-    }
+    //if (inst->is_def()) {
+    //    os << "\n        ... " << inst->num_uses() << " uses";
+    //}
 
     os << '\n';
 }
