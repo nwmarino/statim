@@ -5,9 +5,10 @@
 #include "siir/instbuilder.hpp"
 #include "siir/instruction.hpp"
 #include "siir/value.hpp"
-#include "tree/decl.hpp"
+
 #include <algorithm>
 #include <functional>
+#include <iostream>
 #include <set>
 #include <unordered_map>
 #include <vector>
@@ -51,6 +52,12 @@ void SSARewrite::process(Function* fn) {
 }
 
 void SSARewrite::promote_local(Function* fn, Local* local) {
+#ifdef SSAR_DEBUGGING
+    std::cerr << "Promoting local: ";
+    local->print(std::cerr);
+    std::cerr << '\n';
+#endif // SSAR_DEBUGGING
+
     m_local = local;
 
     std::vector<BasicBlock*> rpo;
@@ -80,20 +87,20 @@ void SSARewrite::promote_local(Function* fn, Local* local) {
                 m_to_remove.push_back(inst);
             }
         }
-    }
 
-    for (auto* blk : rpo) {
-        if (blk->num_preds() > 1) {
-            // Check if any definition from a predecessor is missing
-            auto blk_pos = std::find(rpo.begin(), rpo.end(), blk);
-            for (auto* pred : blk->preds()) {
-                auto pred_pos = std::find(rpo.begin(), rpo.end(), pred);
-                if (pred_pos > blk_pos) {
-                    // This is a back-edge (pred comes after blk in RPO)
-                    read_variable(blk);
-                    break;
-                }
-            }
+        m_visited.push_back(blk);
+
+        for (auto& blk : rpo) {
+            if (is_sealed(blk))
+                continue;
+
+            bool all_preds_visited = true;
+            for (auto& pred : blk->preds())
+                if (!visited(pred))
+                    all_preds_visited = false;
+
+            if (all_preds_visited && !is_sealed(blk))
+                seal_block(blk);
         }
     }
 
@@ -103,6 +110,10 @@ void SSARewrite::promote_local(Function* fn, Local* local) {
         delete inst;
     }
 
+    m_local = nullptr;
+    m_sealed.clear();
+    m_visited.clear();
+    m_incomplete_phis.clear();
     m_to_remove.clear();
     m_current_def.clear();
 }
@@ -142,7 +153,19 @@ Value* SSARewrite::add_phi_operands(Instruction* phi) {
 Value* SSARewrite::read_variable_recursive(BasicBlock* blk) {
     assert(!blk->is_entry_block() && blk->num_preds() > 0);
 
-    if (blk->num_preds() == 1) {
+    if (!is_sealed(blk)) {
+        m_builder.set_insert(blk);
+        Instruction* phi = m_builder.build_phi(m_local->get_allocated_type());
+        if (m_incomplete_phis.count(blk) == 0)
+            m_incomplete_phis.emplace(blk, std::unordered_map<Local*, std::vector<Instruction*>>());
+
+        if (m_incomplete_phis[blk].count(m_local))
+            m_incomplete_phis[blk].emplace(m_local, std::vector<Instruction*>());
+
+        m_incomplete_phis[blk][m_local].push_back(phi);
+        write_variable(blk, phi);
+        return phi;
+    } else if (blk->num_preds() == 1) {
         // Only one predecessor to the block, so we can recursively look in the 
         // predecessor for a def.
         Value* v = read_variable(blk->preds()[0]);
@@ -207,4 +230,29 @@ Value* SSARewrite::try_remove_trivial_phi(Instruction* phi) {
                 try_remove_trivial_phi(instr);
 
     return same;
+}
+
+bool SSARewrite::visited(BasicBlock* blk) {
+    return std::find(m_visited.begin(), m_visited.end(), blk) != m_visited.end();
+}
+
+bool SSARewrite::is_sealed(BasicBlock* blk) {
+    return std::find(m_sealed.begin(), m_sealed.end(), blk) != m_sealed.end();
+}
+
+void SSARewrite::seal_block(BasicBlock* blk) {
+    assert(!is_sealed(blk));
+
+    for (auto& [ local, phis ] : m_incomplete_phis[blk]) {
+        for (auto& phi : phis)
+            add_phi_operands(phi);
+
+        phis.clear();
+    }
+
+    m_sealed.push_back(blk);
+    
+#ifdef SSAR_DEBUGGING
+    std::cerr << "Sealed block: bb" << blk->get_number() << "\n";
+#endif // SSAR_DEBUGGING
 }
