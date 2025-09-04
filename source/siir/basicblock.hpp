@@ -141,10 +141,10 @@ public:
     std::vector<BasicBlock*>& succs() { return m_succs; }
 
     /// Returns the number of successors to this basic block.
-    u32 num_successors() const { return m_succs.size(); }
+    u32 num_succs() const { return m_succs.size(); }
     
     /// Returns true if this basic block has atleast one successor.
-    bool has_succs() const { return m_succs.empty(); }
+    bool has_succs() const { return !m_succs.empty(); }
 
     /// Returns true if this basic block contains a terminating instruction at 
     /// any point.

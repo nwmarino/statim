@@ -90,8 +90,10 @@ static void print_local(std::ostream& os, Local* local) {
 static void print_block(std::ostream& os, BasicBlock* blk) {
     os << "    bb" << blk->get_number();
     
+    os << ": {\n";
+
     if (blk->has_preds()) {
-        os << '(';
+        os << "        ... preds: ";
 
         for (u32 idx = 0, e = blk->num_preds(); idx != e; ++idx) {
             os << "bb" << blk->preds()[idx]->get_number();
@@ -99,10 +101,27 @@ static void print_block(std::ostream& os, BasicBlock* blk) {
                 os << ", ";
         }
 
-        os << ')';
+        if (!blk->has_succs())
+            os << '\n';
     }
-    
-    os << ": {\n";
+
+    if (blk->has_succs()) {
+        if (blk->has_preds())
+            os << ", succs: ";
+        else
+            os << "        ... succs: ";
+
+        for (u32 idx = 0, e = blk->num_succs(); idx != e; ++idx) {
+            os << "bb" << blk->succs()[idx]->get_number();
+            if (idx + 1 != e)
+                os << ", ";
+        }
+
+        os << '\n';
+    }
+
+    if (blk->has_preds() || blk->has_succs())
+        os << '\n';
 
     for (auto curr = blk->front(); curr; curr = curr->next()) {
         os << "        ";

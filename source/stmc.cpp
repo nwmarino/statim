@@ -8,6 +8,7 @@
 #include "types/input_file.hpp"
 #include "types/options.hpp"
 #include "types/translation_unit.hpp"
+
 #include <fstream>
 
 stm::i32 main(stm::i32 argc, char** argv) {
