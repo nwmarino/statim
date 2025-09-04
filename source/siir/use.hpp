@@ -2,7 +2,6 @@
 #define STATIM_SIIR_USE_HPP_
 
 #include "value.hpp"
-#include <iostream>
 
 namespace stm {
 namespace siir {
@@ -19,18 +18,9 @@ class Use final {
 
 public:
     /// Create a new use edge between a value and a user.
-    Use(Value* value, User* user) : m_value(value), m_user(user) {
-        assert(value);
-        assert(user);
+    Use(Value* value, User* user);
 
-        value->add_use(this);
-    }
-
-    ~Use() {
-        m_value->del_use(this);
-        m_value = nullptr;
-        m_user = nullptr;
-    }
+    ~Use();
 
     operator Value*() { return m_value; }
     operator const Value*() { return m_value; }

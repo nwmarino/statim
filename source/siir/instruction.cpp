@@ -341,10 +341,7 @@ void Instruction::add_incoming(CFG& cfg, Value* value, BasicBlock* pred) {
 }
 
 bool Instruction::is_trivially_dead() const {
-    if (result_id() == 0)
-        return false;
-
-    if (Value::used())
+    if (result_id() == 0 || Value::used())
         return false;
 
     switch (opcode()) {

@@ -13,3 +13,8 @@ Local::Local(CFG& cfg, const Type* type, u32 align, const std::string& name,
 	if (parent)
 		parent->add_local(this);
 }
+
+void Local::detach_from_parent() {
+	assert(m_parent && "local does not belong to a function");
+	m_parent->remove_local(this);
+}

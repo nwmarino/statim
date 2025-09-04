@@ -58,7 +58,7 @@ stm::i32 main(stm::i32 argc, char** argv) {
     ssar.run();
 
     stm::siir::TrivialDCEPass dce { cfg };
-    //dce.run();
+    dce.run();
 
     cfg.print(post_ssa_dump);
     post_ssa_dump.close();

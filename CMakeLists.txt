@@ -41,6 +41,7 @@ set(COMPILER_SOURCES
     source/siir/target.cpp
     source/siir/trivial_dce_pass.cpp
     source/siir/type.cpp
+    source/siir/use.cpp
     source/siir/value.cpp
     source/tree/codegen.cpp
     source/tree/decl.cpp

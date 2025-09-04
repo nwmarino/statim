@@ -42,6 +42,10 @@ public:
     /// Mutate the parent function of this local to |parent|.
     void set_parent(Function* parent) { m_parent = parent; }
 
+    /// Detaches this local from its parent function. Does not destroy the
+    /// local.
+    void detach_from_parent();
+
     /// Returns the name of this local.
     const std::string& get_name() const { return m_name; }
 

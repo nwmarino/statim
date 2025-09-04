@@ -78,9 +78,9 @@ static void print_inst(std::ostream& os, Instruction* inst) {
         os << ", align " << inst->get_data();
     }
 
-    //if (inst->is_def()) {
-    //    os << "\n        ... " << inst->num_uses() << " uses";
-    //}
+    if (inst->is_def()) {
+        os << " ... " << inst->num_uses() << " uses";
+    }
 
     os << '\n';
 }
@@ -88,7 +88,7 @@ static void print_inst(std::ostream& os, Instruction* inst) {
 static void print_local(std::ostream& os, Local* local) {
     os << '_' << local->get_name()  << ": " << 
         local->get_allocated_type()->to_string() << ", align " << 
-        local->get_alignment() << "\n";
+        local->get_alignment() << " ... " << local->num_uses() << " uses\n";
 }
 
 static void print_block(std::ostream& os, BasicBlock* blk) {
@@ -174,20 +174,15 @@ void CFG::print(std::ostream& os) const {
     }
 
     if (!m_globals.empty()) {
-        for (auto& [ name, global ] : m_globals) {
+        for (auto& [ name, global ] : m_globals)
             print_global(os, global);
-        }
 
         os << '\n';
     }
 
     if (!m_functions.empty()) {
-        for (auto& [ name, function ] : m_functions) {
+        for (auto& [ name, function ] : m_functions)
             print_function(os, function);
-            os << '\n';
-        }
-
-        os << '\n';
     }
 }
 

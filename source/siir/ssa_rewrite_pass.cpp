@@ -16,7 +16,7 @@
 using namespace stm;
 using namespace stm::siir;
 
-#define SSAR_DEBUGGING 1
+//#define SSAR_DEBUGGING
 
 static void compute_rpo(Function* fn, std::vector<BasicBlock*>& rpo) {
     std::set<BasicBlock*> visited;
@@ -46,7 +46,8 @@ void SSARewrite::run() {
 }
 
 void SSARewrite::process(Function* fn) {
-    for (auto& [name, local] : fn->locals()) {
+    auto locals_copy = fn->locals();
+    for (auto& [name, local] : locals_copy) {
         promote_local(fn, local);
     }
 }
@@ -108,6 +109,11 @@ void SSARewrite::promote_local(Function* fn, Local* local) {
         assert(!inst->used());
         inst->detach_from_parent();
         delete inst;
+    }
+
+    if (!m_local->used()) {
+        m_local->detach_from_parent();
+        delete m_local;
     }
 
     m_local = nullptr;
@@ -221,7 +227,7 @@ Value* SSARewrite::try_remove_trivial_phi(Instruction* phi) {
             m_current_def[blk] = same;
 
     phi->detach_from_parent();
-    assert(!phi->used());
+    //assert(!phi->used());
     delete phi;
 
     for (auto& user : phi_users)

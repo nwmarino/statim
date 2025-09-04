@@ -176,6 +176,9 @@ public:
     /// already an existing local with the same name.
     void add_local(Local* local);
 
+    /// Remove |local| from this function if it already belongs.
+    void remove_local(Local* local);
+
     /// Returns the first basic block of this function, if one exists.
     const BasicBlock* front() const { return m_front; }
     BasicBlock* front() { return m_front; }
