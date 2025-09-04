@@ -1,7 +1,7 @@
 #ifndef STATIM_TREE_DECL_HPP_
 #define STATIM_TREE_DECL_HPP_
 
-#include "core/type.hpp"
+#include "tree/type.hpp"
 #include "tree/visitor.hpp"
 #include "types/source_location.hpp"
 

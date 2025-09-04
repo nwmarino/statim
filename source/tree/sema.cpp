@@ -1,5 +1,5 @@
 #include "core/logger.hpp"
-#include "core/type.hpp"
+#include "tree/type.hpp"
 #include "tree/decl.hpp"
 #include "tree/expr.hpp"
 #include "tree/root.hpp"

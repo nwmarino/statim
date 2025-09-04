@@ -27,7 +27,6 @@ include_directories(
 set(COMPILER_SOURCES
     source/core/lexer.cpp
     source/core/logger.cpp
-    source/core/type.cpp
     source/siir/basicblock.cpp
     source/siir/cfg.cpp
     source/siir/constant.cpp
@@ -54,6 +53,7 @@ set(COMPILER_SOURCES
     source/tree/sema.cpp
     source/tree/stmt.cpp
     source/tree/syma.cpp
+    source/tree/type.cpp
     source/types/input_file.cpp
     source/types/token.cpp
 )

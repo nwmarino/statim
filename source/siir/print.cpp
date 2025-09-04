@@ -44,7 +44,7 @@ static void print_inst(std::ostream& os, Instruction* inst) {
 
     os << opcode_to_string(inst->opcode()) << ' ';
 
-    if (inst->is_def() && !inst->is_cast())
+    if (inst->is_def())
         os << inst->get_type()->to_string() << (inst->is_call() ? " " : ", ");
 
     for (u32 idx = 0, e = inst->num_operands(); idx != e; ++idx) {
@@ -68,10 +68,6 @@ static void print_inst(std::ostream& os, Instruction* inst) {
         } else if (inst->is_call()) {
             os << ')';
         }
-    }
-
-    if (inst->is_cast()) {
-        os << " -> " << inst->get_type()->to_string();
     }
 
     if (inst->is_load() || inst->is_store()) {

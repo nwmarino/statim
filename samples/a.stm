@@ -1,8 +1,8 @@
-main :: () -> i64 {
+main :: () -> s64 {
     ret 0;
 }
 
-bar :: (x: i64) -> i64 {
+bar :: (x: s64) -> s64 {
     if x > 5 {
         x = 5;
     }
@@ -10,7 +10,7 @@ bar :: (x: i64) -> i64 {
     ret x;
 }
 
-foo :: (x: i64) -> i64 {
+foo :: (x: s64) -> s64 {
     ret x + 1;
 }
 

@@ -1,5 +1,5 @@
 #include "core/logger.hpp"
-#include "core/type.hpp"
+#include "tree/type.hpp"
 #include "siir/constant.hpp"
 #include "siir/function.hpp"
 #include "siir/instruction.hpp"
