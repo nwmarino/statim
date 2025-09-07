@@ -325,17 +325,19 @@ FunctionDecl* Parser::parse_function(const Token& name) {
     const FunctionType* type = FunctionType::get(
         *root, return_type, param_types);
     
-    if (!match(TOKEN_KIND_SET_BRACE)) {
-        Logger::fatal("expected '{' after function signature", 
+    if (match(TOKEN_KIND_SET_BRACE)) {
+        body = parse_stmt();
+        assert(body && "could not parse function body");
+    } else if (!match(TOKEN_KIND_SEMICOLON)) {
+        Logger::fatal("expected '{' or ';' after function signature", 
             since(name.loc));
+    } else {
+        next(); // ';'
     }
-
-    body = parse_stmt();
-    assert(body && "could not parse function body");
 
     exit_scope();
     FunctionDecl* function = new FunctionDecl(
-        Span(name.loc, body->get_span().end),
+        Span(name.loc, body != nullptr ? body->get_span().end : name.loc),
         name.value,
         runes,
         type,

@@ -1,3 +1,5 @@
+exit :: (code: s64) -> void;
+
 __memcpy :: (__d: *void, __s: *void, __n: mut u64) -> void {
     let dst: mut *char = __d;
     let src: mut *char = __s;
@@ -6,4 +8,8 @@ __memcpy :: (__d: *void, __s: *void, __n: mut u64) -> void {
         dst[__n] = src[__n]; 
         __n = __n - 1;
     }
+}
+
+main :: (argc: s32, argv: **char) -> s32 {
+    ret argc + 15;
 }

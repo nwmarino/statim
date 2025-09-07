@@ -232,6 +232,14 @@ stm::i32 main(stm::i32 argc, char** argv) {
             module->setDataLayout(target_mc->createDataLayout());
             module->setTargetTriple(triple.getTriple());
 
+            module->print(llvm::outs(), nullptr);
+
+            emit_module(
+                options, 
+                llvm::CodeGenFileType::AssemblyFile, 
+                *module,
+                target_mc);
+
             emit_module(
                 options, 
                 llvm::CodeGenFileType::ObjectFile, 
@@ -242,7 +250,7 @@ stm::i32 main(stm::i32 argc, char** argv) {
             modules.push_back(std::move(module));
         }
 
-        std::string ld = "ld -o " + std::string(options.output) + ' ';
+        std::string ld = "ld -nostdlib -o " + std::string(options.output) + " std/rt.o ";
         for (const auto& module : modules) {
             ld += module->getSourceFileName() + ".o ";
         }

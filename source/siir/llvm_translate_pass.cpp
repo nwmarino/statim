@@ -204,6 +204,17 @@ void LLVMTranslatePass::convert(Global* global) {
 void LLVMTranslatePass::convert(Function* fn) {
     llvm::Function* F = translate(fn);
 
+    F->addFnAttr(llvm::Attribute::StackProtectStrong);
+    F->addFnAttr("stack-protector-buffer-size", "8");
+    
+    F->addFnAttr(llvm::Attribute::UWTable);
+    F->addFnAttr(llvm::Attribute::NoUnwind);
+    F->setUWTableKind(llvm::UWTableKind::Default);
+
+    F->addFnAttr("frame-pointer", "all");
+    
+    F->addFnAttr("target-cpu", "x86-64");
+
     for (auto& arg : fn->args()) {
         llvm::Argument* A = new llvm::Argument(
             translate(arg->get_type()), arg->get_name(), F);
@@ -337,8 +348,8 @@ void LLVMTranslatePass::convert(Instruction* inst) {
         if (inst->num_operands() > 1)
             args.reserve(inst->num_operands() - 1);
 
-        for (auto& arg : inst->get_operand_list())
-            args.push_back(translate(arg->get_value()));
+        for (u32 idx = 1, e = inst->num_operands(); idx != e; ++idx)
+            args.push_back(translate(inst->get_operand(idx)));
 
         llvm::CallInst* call = m_builder->CreateCall(callee, args);
         m_insts.emplace(inst, call);
