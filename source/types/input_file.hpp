@@ -12,6 +12,8 @@ class Span;
 struct InputFile final {
     const char* path;
 
+    InputFile(const char* path) : path(path) {}
+
     bool operator == (const InputFile& other) const {
         return std::strcmp(path, other.path) == 0;
     }

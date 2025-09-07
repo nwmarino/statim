@@ -1,6 +1,7 @@
 #ifndef STATIM_TRANSLATION_UNIT_HPP_
 #define STATIM_TRANSLATION_UNIT_HPP_
 
+#include "siir/cfg.hpp"
 #include "tree/root.hpp"
 #include "types/input_file.hpp"
 
@@ -10,27 +11,28 @@
 namespace stm {
 
 class TranslationUnit final {
-    InputFile& file;
-    
-    std::unique_ptr<Root> pRoot = nullptr;
+    InputFile& m_file;
+    std::unique_ptr<Root> m_root = nullptr;
+    std::unique_ptr<siir::CFG> m_graph = nullptr; 
 
 public:
-    TranslationUnit(InputFile& file) : file(file) {};
+    TranslationUnit(InputFile& file) : m_file(file) {};
 
-    InputFile& get_file() { return file; }
+    const InputFile& get_file() const { return m_file; }
+    InputFile& get_file() { return m_file; }
 
-    Root& get_root() { 
-        assert(pRoot && "root not created yet");
-        return *pRoot; 
-    }
-
-    const Root& get_root() const { 
-        assert(pRoot && "root not created yet");
-        return *pRoot; 
-    }
+    const Root& get_root() const { return *m_root; }
+    Root& get_root() { return *m_root; }
 
     void set_root(std::unique_ptr<Root> root) {
-        pRoot = std::move(root);
+        m_root = std::move(root);
+    }
+
+    const siir::CFG& get_graph() const { return *m_graph; }
+    siir::CFG& get_graph() { return *m_graph; }
+
+    void set_graph(std::unique_ptr<siir::CFG> graph) {
+        m_graph = std::move(graph);
     }
 };
 

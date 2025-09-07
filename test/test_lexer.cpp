@@ -10,8 +10,7 @@ namespace test {
 class LexerTest : public ::testing::Test {};
 
 TEST_F(LexerTest, lex_identifier) {
-    InputFile file;
-    file.path = "test";
+    InputFile file { "test" };
     Lexer lexer { file, "test" };
     
     lexer.lex();
@@ -23,8 +22,7 @@ TEST_F(LexerTest, lex_identifier) {
 }
 
 TEST_F(LexerTest, lex_identifier_many) {
-    InputFile file;
-    file.path = "test";
+    InputFile file { "test" };
     Lexer lexer { file, "one_ _two" };
 
     lexer.lex();
@@ -40,8 +38,7 @@ TEST_F(LexerTest, lex_identifier_many) {
 }
 
 TEST_F(LexerTest, lex_literal_character) {
-    InputFile file;
-    file.path = "test";
+    InputFile file { "test" };
     Lexer lexer { file, "'a'" };
 
     lexer.lex();
@@ -50,8 +47,7 @@ TEST_F(LexerTest, lex_literal_character) {
 }
 
 TEST_F(LexerTest, lex_literal_character_escape_sequence) {
-    InputFile file;
-    file.path = "test";
+    InputFile file { "test" };
     Lexer lexer { file, "'\t'" };
 
     lexer.lex();
@@ -60,8 +56,7 @@ TEST_F(LexerTest, lex_literal_character_escape_sequence) {
 }
 
 TEST_F(LexerTest, lex_literal_string) {
-    InputFile file;
-    file.path = "test";
+    InputFile file { "test" };
     Lexer lexer { file, "\"hey!\"" };
 
     lexer.lex();
@@ -70,8 +65,7 @@ TEST_F(LexerTest, lex_literal_string) {
 }
 
 TEST_F(LexerTest, lex_literal_string_escape_sequence) {
-    InputFile file;
-    file.path = "test";
+    InputFile file { "test" };
     Lexer lexer { file, "\"hey\nbye\t\"" };
 
     lexer.lex();
@@ -80,8 +74,7 @@ TEST_F(LexerTest, lex_literal_string_escape_sequence) {
 }
 
 TEST_F(LexerTest, lex_literal_integer) {
-    InputFile file;
-    file.path = "test";
+    InputFile file { "test" };
     Lexer lexer { file, "1" };
 
     lexer.lex();
@@ -90,8 +83,7 @@ TEST_F(LexerTest, lex_literal_integer) {
 }
 
 TEST_F(LexerTest, lex_literal_float) {
-    InputFile file;
-    file.path = "test";
+    InputFile file { "test" };
     Lexer lexer { file, "3.14" };
 
     lexer.lex();
@@ -100,8 +92,7 @@ TEST_F(LexerTest, lex_literal_float) {
 }
 
 TEST_F(LexerTest, lex_basic_token) {
-    InputFile file;
-    file.path = "test";
+    InputFile file { "test" };
     Lexer lexer { file, "." };
 
     lexer.lex();
@@ -109,8 +100,7 @@ TEST_F(LexerTest, lex_basic_token) {
 }
 
 TEST_F(LexerTest, lex_compound_token) {
-    InputFile file;
-    file.path = "test";
+    InputFile file { "test" };
     Lexer lexer { file, "->" };
 
     lexer.lex();

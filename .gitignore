@@ -67,3 +67,5 @@ post_ssa
 braun13cc.pdf
 a.cpp
 a.ll
+main
+vgcore.*

@@ -24,8 +24,8 @@ namespace stm::siir {
 ///
 /// The LLVM target will be derived from the existing target of the SIIR graph.
 class LLVMTranslatePass final : public Pass {
-    std::unique_ptr<llvm::Module> m_module = nullptr;
-    std::unique_ptr<llvm::LLVMContext> m_context = nullptr;
+    llvm::Module& m_module;
+    llvm::LLVMContext* m_context;
     std::unique_ptr<llvm::IRBuilder<>> m_builder = nullptr;
     std::unordered_map<Global*, llvm::GlobalVariable*> m_globals = {};
     std::unordered_map<Function*, llvm::Function*> m_functions = {};
@@ -50,15 +50,12 @@ class LLVMTranslatePass final : public Pass {
     void convert(Instruction* inst);
 
 public:
-    LLVMTranslatePass(CFG& cfg) : Pass(cfg) {}
+    LLVMTranslatePass(CFG& cfg, llvm::Module& module) 
+            : Pass(cfg), m_module(module) {
+        m_context = &m_module.getContext();
+    }
 
     void run() override;
-
-    /// Returns the module that results from a run of this translation pass.
-    std::unique_ptr<llvm::Module> module() { 
-        assert(m_module && "translation pass has not occured!");    
-        return std::move(m_module); 
-    }
 };
 
 } // namespace stm::siir

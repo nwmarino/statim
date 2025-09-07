@@ -23,9 +23,6 @@ using namespace stm;
 using namespace stm::siir;
 
 void LLVMTranslatePass::run() {
-    m_context = std::make_unique<llvm::LLVMContext>();
-    m_module = std::make_unique<llvm::Module>(
-        m_cfg.get_file().absolute(), *m_context);
     m_builder = std::make_unique<llvm::IRBuilder<>>(*m_context);
 
     for (auto& global : m_cfg.globals()) {
@@ -46,7 +43,7 @@ void LLVMTranslatePass::run() {
             nullptr,
             global->get_name());
 
-        m_module->insertGlobalVariable(GV);
+        m_module.insertGlobalVariable(GV);
         m_globals.emplace(global, GV);
     }
 
@@ -65,7 +62,7 @@ void LLVMTranslatePass::run() {
         }
 
         llvm::Function* F = llvm::Function::Create(
-            type, llvm::Function::ExternalLinkage, fn->get_name(), *m_module);
+            type, llvm::Function::ExternalLinkage, fn->get_name(), m_module);
         m_functions.emplace(fn, F);
     }
 
@@ -77,7 +74,7 @@ void LLVMTranslatePass::run() {
         convert(fn);
     }
 
-    assert(!llvm::verifyModule(*m_module, &llvm::outs()));
+    assert(!llvm::verifyModule(m_module, &llvm::outs()));
 }
 
 llvm::Type* LLVMTranslatePass::translate(const Type* ty) {
