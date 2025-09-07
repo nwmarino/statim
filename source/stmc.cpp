@@ -1,5 +1,6 @@
 #include "core/logger.hpp"
 #include "siir/cfg.hpp"
+#include "siir/llvm_translate_pass.hpp"
 #include "siir/ssa_rewrite_pass.hpp"
 #include "siir/target.hpp"
 #include "siir/trivial_dce_pass.hpp"
@@ -8,8 +9,10 @@
 #include "types/input_file.hpp"
 #include "types/options.hpp"
 #include "types/translation_unit.hpp"
+#include "llvm/Support/raw_ostream.h"
 
 #include <fstream>
+#include <iostream>
 
 stm::i32 main(stm::i32 argc, char** argv) {
     std::ofstream pre_ssa_dump("pre_ssa");
@@ -56,12 +59,19 @@ stm::i32 main(stm::i32 argc, char** argv) {
     pre_ssa_dump.close();
 
     stm::siir::SSARewrite ssar { cfg };
-    ssar.run();
+    //ssar.run();
 
     stm::siir::TrivialDCEPass dce { cfg };
     dce.run();
 
     cfg.print(post_ssa_dump);
     post_ssa_dump.close();
+
+    stm::siir::LLVMTranslatePass ltp { cfg };
+    ltp.run();
+    auto mod = ltp.module();
+
+    mod->print(llvm::outs(), nullptr);
+
     return 0;
 }

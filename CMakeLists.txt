@@ -11,12 +11,20 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
 cmake_policy(SET CMP0167 OLD)
 
-#find_package(LLVM REQUIRED CONFIG)
+find_package(LLVM REQUIRED CONFIG)
 find_package(Boost REQUIRED COMPONENTS filesystem system)
 find_package(GTest REQUIRED)
 
-#include_directories(${LLVM_INCLUDE_DIRS})
-#add_definitions(${LLVM_DEFINITIONS})
+message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+
+message(STATUS "LLVM includes: ${LLVM_INCLUDE_DIRS}")
+message(STATUS "LLVM definitions: ${LLVM_DEFINITIONS}")
+message(STATUS "LLVM tools: ${LLVM_TOOLS_BINARY_DIR}")
+
+include_directories(${LLVM_INCLUDE_DIRS})
+separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+add_definitions(${LLVM_DEFINITIONS_LIST})
 
 include_directories(
     ${CMAKE_SOURCE_DIR}/source
@@ -34,6 +42,7 @@ set(COMPILER_SOURCES
     source/siir/global.cpp
     source/siir/instbuilder.cpp
     source/siir/instruction.cpp
+    source/siir/llvm_translate_pass.cpp
     source/siir/local.cpp
     source/siir/print.cpp
     source/siir/ssa_rewrite_pass.cpp
@@ -65,10 +74,12 @@ add_executable(stmc
     ${COMPILER_SOURCES}
 )
 
-target_link_libraries(stmc PRIVATE
-#    ${LLVM_LIBRARIES}
-    ${Boost_LIBRARIES}
+target_link_libraries(stmc 
+    PRIVATE
+        ${Boost_LIBRARIES}
 )
+
+llvm_config(stmc USE_SHARED core irreader support clang)
 
 enable_testing()
 
@@ -81,12 +92,14 @@ add_executable(stmc_test
     ${COMPILER_SOURCES}
 )
 
-target_link_libraries(stmc_test PRIVATE
- #   ${LLVM_LIBRARIES}
-    ${Boost_LIBRARIES}
-    GTest::GTest
-    GTest::Main
+target_link_libraries(stmc_test 
+    PRIVATE
+        ${Boost_LIBRARIES}
+        GTest::GTest
+        GTest::Main
 )
+
+llvm_config(stmc_test USE_SHARED core irreader support clang)
 
 add_test(
     NAME stmc_test
