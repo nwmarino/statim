@@ -10,6 +10,6 @@ __memcpy :: (__d: *void, __s: *void, __n: mut u64) -> void {
     }
 }
 
-main :: (argc: s32, argv: **char) -> s32 {
+main :: (argc: s64, argv: **char) -> s64 {
     ret argc + 15;
 }

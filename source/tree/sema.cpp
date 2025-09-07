@@ -7,6 +7,7 @@
 #include "tree/stmt.hpp"
 
 #include "tree/visitor.hpp"
+#include <string>
 
 using namespace stm;
 
@@ -76,7 +77,80 @@ void SemanticAnalysis::visit(Root& node) {
 
 void SemanticAnalysis::visit(FunctionDecl& node) {
     pFunction = &node;
-    if (node.has_body()) node.pBody->accept(*this);
+
+    /// Function signature checking for 'main' function.
+    /// TODO: Improve this to unify errors with the expected signature.
+    if (node.get_name() == "main") {
+        const FunctionType* type = node.get_type();
+
+        const Type* return_type = type->get_return_type();
+        if (return_type->is_deferred())
+            return_type = return_type->as_deferred()->get_resolved();
+        
+        if (*return_type != *root.get_si64_type()) {
+            Logger::fatal(
+                "'main' function should return 's64' type, got '" + 
+                    type->get_return_type()->to_string() + "' instead",
+                node.get_span());
+        }
+
+        if (node.num_params() != 2) {
+            Logger::fatal(
+                "'main' function should have two parameters, got " + 
+                    std::to_string(node.num_params()) + " instead",
+                node.get_span());
+        }
+
+        const Type* param1_type = node.get_param(0)->get_type();
+        if (param1_type->is_deferred())
+            param1_type = param1_type->as_deferred()->get_resolved();
+
+        if (*param1_type != *root.get_si64_type()) {
+            Logger::fatal(
+                "'main' function first parameter should have 's64' type, got '"
+                    + param1_type->to_string() + "' instead",
+                node.get_param(0)->get_span());
+        }
+
+        const Type* param2_type = node.get_param(1)->get_type();
+        if (param2_type->is_deferred())
+            param2_type = param2_type->as_deferred()->get_resolved();
+
+        bool param2_adequate = true;
+
+        // Check that the parameter type is *...
+        if (param2_type->is_pointer()) {
+            const Type* pointee = param2_type->as_pointer()->get_pointee();
+            if (pointee->is_deferred())
+                pointee = pointee->as_deferred()->get_resolved();
+
+            // Check that the parameter type is **...
+            if (pointee->is_pointer()) {
+                const Type* base = pointee->as_pointer()->get_pointee();
+                if (base->is_deferred())
+                    base = base->as_deferred()->get_resolved();
+
+                // Check that the parameter type is **char
+                if (*base != *root.get_char_type())
+                    param2_adequate = false;
+            } else {
+                param2_adequate = false;
+            }
+        } else {
+            param2_adequate = false;
+        }
+
+        if (!param2_adequate) {
+            Logger::fatal(
+                "'main' function second parameter should have '**char' type, got '"
+                    + param2_type->to_string() + "' instead",
+                node.get_param(1)->get_span());
+        }
+    }
+
+    if (node.has_body()) 
+        node.pBody->accept(*this);
+    
     pFunction = nullptr;
 }
 

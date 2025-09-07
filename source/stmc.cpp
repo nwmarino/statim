@@ -28,6 +28,7 @@
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
+
 #include <cstdlib>
 
 void emit_module(const stm::Options& opts, llvm::CodeGenFileType file_type,
