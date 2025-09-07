@@ -11,11 +11,13 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Target/TargetMachine.h"
 
 #include <cassert>
+#include <string>
 
 using namespace stm;
 using namespace stm::siir;
@@ -26,9 +28,56 @@ void LLVMTranslatePass::run() {
         m_cfg.get_file().absolute(), *m_context);
     m_builder = std::make_unique<llvm::IRBuilder<>>(*m_context);
 
+    for (auto& global : m_cfg.globals()) {
+        llvm::GlobalVariable::LinkageTypes linkage;
+        switch (global->get_linkage()) {
+        case Global::LINKAGE_INTERNAL:
+            linkage = llvm::GlobalVariable::InternalLinkage;
+            break;
+        case Global::LINKAGE_EXTERNAL:
+            linkage = llvm::GlobalVariable::ExternalLinkage;
+            break;
+        }
+
+        llvm::GlobalVariable* GV = new llvm::GlobalVariable(
+            translate(global->get_type()), // TODO: Change to pointee type possibly.
+            global->is_read_only(), 
+            linkage,
+            nullptr,
+            global->get_name());
+
+        m_module->insertGlobalVariable(GV);
+        m_globals.emplace(global, GV);
+    }
+
+    for (auto& fn : m_cfg.functions()) {
+        llvm::FunctionType* type = 
+        llvm::dyn_cast<llvm::FunctionType>(translate(fn->get_type()));
+
+        llvm::Function::LinkageTypes linkage;
+        switch (fn->get_linkage()) {
+        case Function::LINKAGE_INTERNAL:
+            linkage = llvm::Function::InternalLinkage;
+            break;
+        case Function::LINKAGE_EXTERNAL:
+            linkage = llvm::Function::ExternalLinkage;
+            break;
+        }
+
+        llvm::Function* F = llvm::Function::Create(
+            type, llvm::Function::ExternalLinkage, fn->get_name(), *m_module);
+        m_functions.emplace(fn, F);
+    }
+
+    for (auto& global : m_cfg.globals()) {
+        convert(global);
+    }
+
     for (auto& fn : m_cfg.functions()) {
         convert(fn);
     }
+
+    assert(!llvm::verifyModule(*m_module, &llvm::outs()));
 }
 
 llvm::Type* LLVMTranslatePass::translate(const Type* ty) {
@@ -149,44 +198,14 @@ llvm::Value* LLVMTranslatePass::translate(Value* value) {
 }
 
 void LLVMTranslatePass::convert(Global* global) {
-    llvm::GlobalVariable::LinkageTypes linkage;
-    switch (global->get_linkage()) {
-    case Global::LINKAGE_INTERNAL:
-        linkage = llvm::GlobalVariable::InternalLinkage;
-        break;
-    case Global::LINKAGE_EXTERNAL:
-        linkage = llvm::GlobalVariable::ExternalLinkage;
-        break;
-    }
+    llvm::GlobalVariable* GV = translate(global);
 
-    llvm::GlobalVariable* GV = new llvm::GlobalVariable(
-        translate(global->get_type()), // TODO: Change to pointee type possibly.
-        global->is_read_only(), 
-        linkage,
-        global->has_initializer() ? translate(global->get_initializer()) : nullptr,
-        global->get_name());
-
-    m_module->insertGlobalVariable(GV);
-    m_globals.emplace(global, GV);
+    if (global->has_initializer())
+        GV->setInitializer(translate(global->get_initializer()));
 }
 
 void LLVMTranslatePass::convert(Function* fn) {
-    llvm::FunctionType* type = 
-        llvm::dyn_cast<llvm::FunctionType>(translate(fn->get_type()));
-
-    llvm::Function::LinkageTypes linkage;
-    switch (fn->get_linkage()) {
-    case Function::LINKAGE_INTERNAL:
-        linkage = llvm::Function::InternalLinkage;
-        break;
-    case Function::LINKAGE_EXTERNAL:
-        linkage = llvm::Function::ExternalLinkage;
-        break;
-    }
-
-    llvm::Function* F = llvm::Function::Create(
-        type, llvm::Function::ExternalLinkage, fn->get_name(), *m_module);
-    m_functions.emplace(fn, F);
+    llvm::Function* F = translate(fn);
 
     for (auto& arg : fn->args()) {
         llvm::Argument* A = new llvm::Argument(
@@ -197,14 +216,15 @@ void LLVMTranslatePass::convert(Function* fn) {
         return;
 
     for (auto* curr = fn->front(); curr; curr = curr->next()) {
-        llvm::BasicBlock* BB = llvm::BasicBlock::Create(*m_context, "", F);
+        llvm::BasicBlock* BB = llvm::BasicBlock::Create(
+            *m_context, "bb" + std::to_string(curr->get_number()), F);
         m_blocks.emplace(curr, BB);
     }
 
     for (auto& [name, local] : fn->locals()) {
         m_builder->SetInsertPoint(&F->front());
         llvm::AllocaInst* alloca = m_builder->CreateAlloca(
-            translate(local->get_allocated_type()), nullptr, name);
+            translate(local->get_allocated_type()), nullptr, '_' + name);
         m_locals.emplace(local, alloca);
     }
 
@@ -224,6 +244,8 @@ void LLVMTranslatePass::convert(Function* fn) {
 
     m_delayed_phis.clear();
     m_locals.clear();
+
+    assert(!llvm::verifyFunction(*F, &llvm::outs()));
 }
 
 void LLVMTranslatePass::convert(BasicBlock* bb) {
