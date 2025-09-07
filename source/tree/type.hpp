@@ -1,5 +1,5 @@
-#ifndef STATIM_TYPE_HPP_
-#define STATIM_TYPE_HPP_
+#ifndef STATIM_TREE_TYPE_HPP_
+#define STATIM_TREE_TYPE_HPP_
 
 #include "tree/scope.hpp"
 #include "types/source_location.hpp"
@@ -360,4 +360,4 @@ public:
 
 } // namespace stm
 
-#endif // STATIM_TYPE_HPP_
+#endif // STATIM_TREE_TYPE_HPP_

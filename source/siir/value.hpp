@@ -49,7 +49,7 @@ public:
     u32 num_uses() const { return m_uses.size(); }
 
     /// Returns true if this value has atleast one use.
-    bool used() const { return m_uses.empty(); }
+    bool used() const { return !m_uses.empty(); }
 
     /// Returns true if this value has exactly one use.
     bool has_one_use() const { return m_uses.size() == 1; }

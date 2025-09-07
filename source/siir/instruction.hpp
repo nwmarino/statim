@@ -283,6 +283,12 @@ public:
     /// instructions with the PHI opcode.
     void add_incoming(CFG& cfg, Value* value, BasicBlock* pred);
 
+    /// Returns true if this instruction can be considered "dead" in a trivial
+    /// manner. This includes defining instructions that are considered
+    /// non-volatile, non-branching instructions, and unused calls to functions
+    /// without side effects.
+    bool is_trivially_dead() const;
+
     void print(std::ostream& os) const override;
 };
 

@@ -77,6 +77,16 @@ void Function::add_local(Local* local) {
     local->set_parent(this);
 }
 
+void Function::remove_local(Local* local) {
+    assert(local && "local cannot be null");
+
+    auto it = m_locals.find(local->get_name());
+    if (it == m_locals.end())
+        return;
+
+    m_locals.erase(it);
+}
+
 void Function::push_front(BasicBlock* blk) {
     assert(blk);
 

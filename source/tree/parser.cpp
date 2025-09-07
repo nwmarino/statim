@@ -1,5 +1,5 @@
 #include "core/logger.hpp"
-#include "core/type.hpp"
+#include "tree/type.hpp"
 #include "tree/parser.hpp"
 #include "types/source_location.hpp"
 #include "types/token.hpp"

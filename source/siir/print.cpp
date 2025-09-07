@@ -44,7 +44,7 @@ static void print_inst(std::ostream& os, Instruction* inst) {
 
     os << opcode_to_string(inst->opcode()) << ' ';
 
-    if (inst->is_def() && !inst->is_cast())
+    if (inst->is_def())
         os << inst->get_type()->to_string() << (inst->is_call() ? " " : ", ");
 
     for (u32 idx = 0, e = inst->num_operands(); idx != e; ++idx) {
@@ -70,16 +70,12 @@ static void print_inst(std::ostream& os, Instruction* inst) {
         }
     }
 
-    if (inst->is_cast()) {
-        os << " -> " << inst->get_type()->to_string();
-    }
-
     if (inst->is_load() || inst->is_store()) {
         os << ", align " << inst->get_data();
     }
 
     if (inst->is_def()) {
-        os << "\n        ... " << inst->num_uses() << " uses";
+        os << " ... " << inst->num_uses() << " uses";
     }
 
     os << '\n';
@@ -88,14 +84,16 @@ static void print_inst(std::ostream& os, Instruction* inst) {
 static void print_local(std::ostream& os, Local* local) {
     os << '_' << local->get_name()  << ": " << 
         local->get_allocated_type()->to_string() << ", align " << 
-        local->get_alignment() << "\n";
+        local->get_alignment() << " ... " << local->num_uses() << " uses\n";
 }
 
 static void print_block(std::ostream& os, BasicBlock* blk) {
     os << "    bb" << blk->get_number();
     
+    os << ": {\n";
+
     if (blk->has_preds()) {
-        os << '(';
+        os << "        ... preds: ";
 
         for (u32 idx = 0, e = blk->num_preds(); idx != e; ++idx) {
             os << "bb" << blk->preds()[idx]->get_number();
@@ -103,10 +101,27 @@ static void print_block(std::ostream& os, BasicBlock* blk) {
                 os << ", ";
         }
 
-        os << ')';
+        if (!blk->has_succs())
+            os << '\n';
     }
-    
-    os << ": {\n";
+
+    if (blk->has_succs()) {
+        if (blk->has_preds())
+            os << ", succs: ";
+        else
+            os << "        ... succs: ";
+
+        for (u32 idx = 0, e = blk->num_succs(); idx != e; ++idx) {
+            os << "bb" << blk->succs()[idx]->get_number();
+            if (idx + 1 != e)
+                os << ", ";
+        }
+
+        os << '\n';
+    }
+
+    if (blk->has_preds() || blk->has_succs())
+        os << '\n';
 
     for (auto curr = blk->front(); curr; curr = curr->next()) {
         os << "        ";
@@ -174,20 +189,15 @@ void CFG::print(std::ostream& os) const {
     }
 
     if (!m_globals.empty()) {
-        for (auto& [ name, global ] : m_globals) {
+        for (auto& [ name, global ] : m_globals)
             print_global(os, global);
-        }
 
         os << '\n';
     }
 
     if (!m_functions.empty()) {
-        for (auto& [ name, function ] : m_functions) {
+        for (auto& [ name, function ] : m_functions)
             print_function(os, function);
-            os << '\n';
-        }
-
-        os << '\n';
     }
 }
 

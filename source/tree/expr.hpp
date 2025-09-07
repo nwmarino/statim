@@ -1,7 +1,7 @@
 #ifndef STATIM_TREE_EXPR_HPP_
 #define STATIM_TREE_EXPR_HPP_
 
-#include "core/type.hpp"
+#include "tree/type.hpp"
 #include "tree/stmt.hpp"
 
 namespace stm {

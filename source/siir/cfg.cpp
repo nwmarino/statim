@@ -87,6 +87,15 @@ CFG::~CFG() {
     m_pool_incomings.clear();
 }
 
+std::vector<Global*> CFG::globals() const {
+    std::vector<Global*> globals;
+    globals.reserve(m_globals.size());
+    for (auto& [name, global] : m_globals)
+        globals.push_back(global);
+
+    return globals;
+}
+
 const Global* CFG::get_global(const std::string& name) const {
     auto it = m_globals.find(name);
     if (it != m_globals.end())

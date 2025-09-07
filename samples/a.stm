@@ -1,3 +1,19 @@
-main :: () -> i64 {
+main :: () -> s64 {
     ret 0;
+}
+
+bar :: (x: s64) -> s64 {
+    if x > 5 {
+        x = 5;
+    }
+
+    ret x;
+}
+
+foo :: (x: s64) -> s64 {
+    ret x + 1;
+}
+
+main :: () -> void {
+    foo(5);
 }

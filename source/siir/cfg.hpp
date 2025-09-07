@@ -84,6 +84,9 @@ public:
     const Target& get_target() const { return m_target; }
     Target& get_target() { return m_target; }
 
+    /// Returns a list of all functions in this graph, in order of addition.
+    std::vector<Global*> globals() const;
+
     /// Returns the global in this graph with the provided name, if it exists, 
     /// and null otherwise. 
     const Global* get_global(const std::string& name) const;
@@ -99,7 +102,7 @@ public:
     /// Remove |glb| if it exists in this graph.
     void remove_global(Global* glb);
 
-    /// Returns a list of all functions in this graph, in order of creation.
+    /// Returns a list of all functions in this graph, in order of addition.
     std::vector<Function*> functions() const;
 
     /// Returns the function in this graph with the provided name if it exists, 

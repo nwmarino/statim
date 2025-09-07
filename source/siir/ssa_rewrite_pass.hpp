@@ -27,37 +27,44 @@ class SSARewrite final : public Pass {
 
     InstBuilder m_builder;
 
-    /// A mapping for each basic block between a local variable and a store
-    /// instruction.
-    BlockDefs m_block_defs = {};
+    Local* m_local = nullptr;
+
+    std::unordered_map<BasicBlock*, Value*> m_current_def = {};
+
+    std::unordered_map<BasicBlock*, std::unordered_map<Local*, 
+        std::vector<Instruction*>>> m_incomplete_phis;
 
     /// A list of instructions to remove after the current process.
     std::vector<Instruction*> m_to_remove = {};
 
+    std::vector<BasicBlock*> m_visited = {};
+
+    std::vector<BasicBlock*> m_sealed = {};
+
     /// Process a function in the target graph.
     void process(Function* fn);
 
-    /// Process a load instruction.
-    void process_load(BasicBlock* blk, Instruction* inst);
-
-    /// Process a store instruction.
-    void process_store(BasicBlock* blk, Instruction* inst);
+    void promote_local(Function* fn, Local* local);
 
     /// Register a variable write (def).
-    void write_variable(Local* var, BasicBlock* blk, Value* value);
+    void write_variable(BasicBlock* blk, Value* value);
 
     // Read the latest definition of |var| based on current block |blk|.
-    Value* read_variable(Local* var, BasicBlock* blk);
-    Value* read_variable_recursive(Local* var, BasicBlock* blk);
+    Value* read_variable(BasicBlock* blk);
+    Value* read_variable_recursive(BasicBlock* blk);
 
-    /// Add the appropriate incoming values to |phi| based on the predecessors
-    /// of block |blk|.
-    Value* add_phi_operands(Local* var, BasicBlock* blk, Instruction* phi);
+    Value* add_phi_operands(Instruction* phi);
 
     /// Attempt to remove a phi instruction which could be considered trivial,
     /// i.e. merges less than two unique values. Returns the result of the 
     /// operation; the phi instruction or the distinguishable operand.
-    Value* try_remove_trivial_phi(Local* var, Instruction* phi);
+    Value* try_remove_trivial_phi(Instruction* phi);
+
+    bool visited(BasicBlock* blk);
+
+    bool is_sealed(BasicBlock* blk);
+
+    void seal_block(BasicBlock* blk);
 
 public:
     SSARewrite(CFG& cfg);

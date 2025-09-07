@@ -1,6 +1,6 @@
 #include "tree/decl.hpp"
 #include "tree/root.hpp"
-#include "core/type.hpp"
+#include "tree/type.hpp"
 
 #include <cassert>
 
@@ -79,13 +79,13 @@ std::string BuiltinType::get_name(Kind kind) {
     case Kind::Char: 
         return "char";
     case Kind::SInt8: 
-        return "i8";
+        return "s8";
     case Kind::SInt16: 
-        return "i16";
+        return "s16";
     case Kind::SInt32: 
-        return "i32";
+        return "s32";
     case Kind::SInt64: 
-        return "i64";
+        return "s64";
     case Kind::UInt8: 
         return "u8";
     case Kind::UInt16: 
