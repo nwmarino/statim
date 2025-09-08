@@ -319,10 +319,6 @@ void Codegen::visit(RetStmt& node) {
     m_tmp = nullptr;
 }
 
-void Codegen::visit(Rune& node) {
-
-}
-
 void Codegen::visit(BoolLiteral& node) {
     m_tmp = siir::ConstantInt::get(m_cfg, siir::Type::get_i1_type(m_cfg), 
         node.get_value());

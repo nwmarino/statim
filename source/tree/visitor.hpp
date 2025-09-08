@@ -37,8 +37,7 @@ class DeclStmt;
 class IfStmt;
 class WhileStmt;
 class RetStmt;
-
-class Rune;
+class RuneStmt;
 
 class Expr;
 class BoolLiteral;
@@ -80,7 +79,7 @@ public:
     virtual void visit(IfStmt& node) = 0;
     virtual void visit(WhileStmt& node) = 0;
     virtual void visit(RetStmt& node) = 0;
-    virtual void visit(Rune& node) = 0;
+    virtual void visit(RuneStmt& node) = 0;
 
     virtual void visit(BoolLiteral& node) = 0;
     virtual void visit(IntegerLiteral& node) = 0;
@@ -128,7 +127,7 @@ public:
     void visit(IfStmt& node) override;
     void visit(WhileStmt& node) override;
     void visit(RetStmt& node) override;
-    void visit(Rune& node) override;
+    void visit(RuneStmt& node) override;
 
     void visit(BoolLiteral& node) override {};
     void visit(IntegerLiteral& node) override {};
@@ -176,7 +175,7 @@ public:
     void visit(IfStmt& node) override;
     void visit(WhileStmt& node) override;
     void visit(RetStmt& node) override;
-    void visit(Rune& node) override;
+    void visit(RuneStmt& node) override;
 
     void visit(BoolLiteral& node) override {};
     void visit(IntegerLiteral& node) override {};
@@ -294,7 +293,7 @@ public:
     void visit(IfStmt& node) override;
     void visit(WhileStmt& node) override;
     void visit(RetStmt& node) override;
-    void visit(Rune& node) override;
+    void visit(RuneStmt& node) override;
 
     void visit(BoolLiteral& node) override;
     void visit(IntegerLiteral& node) override;

@@ -54,7 +54,14 @@ void Root::print(std::ostream& os) const {
 void FunctionDecl::print(std::ostream& os) const {
     print_piping(os);
     os << "Function " << span_string(span) << ' ' << name << " '" << 
-        pType->to_string() << "'\n";
+        pType->to_string() << "' ";
+
+    if (!decorators.empty()) {
+        for (auto& dec : decorators)
+            os << Rune::to_string(dec->kind()) << ' ';
+    }
+
+    os << "\n";
 
     gPipe[++gIndent] = true;
     for (auto& param : params)
@@ -90,12 +97,26 @@ void VariableDecl::print(std::ostream& os) const {
 void FieldDecl::print(std::ostream& os) const {
     print_piping(os);
     os << "Field " << span_string(span) << ' ' << name << " '" <<
-        m_type->to_string() << "'\n";
+        m_type->to_string() << "' ";
+
+    if (!decorators.empty()) {
+        for (auto& dec : decorators)
+            os << Rune::to_string(dec->kind()) << ' ';
+    }
+
+    os << "\n";
 }
 
 void StructDecl::print(std::ostream& os) const {
     print_piping(os);
-    os << "Structure " << span_string(span) << ' ' << name << " \n";
+    os << "Structure " << span_string(span) << ' ' << name << ' ';
+
+    if (!decorators.empty()) {
+        for (auto& dec : decorators)
+            os << Rune::to_string(dec->kind()) << ' ';
+    }
+
+    os << "\n";
 
     gPipe[++gIndent] = true;
 
@@ -204,10 +225,6 @@ void RetStmt::print(std::ostream& os) const {
         pExpr->print(os);
         gIndent--;
     }
-}
-
-void Rune::print(std::ostream& os) const {
-    
 }
 
 void BoolLiteral::print(std::ostream& os) const {
@@ -437,6 +454,36 @@ void CallExpr::print(std::ostream& os) const {
     gIndent--;
 }
 
+void Rune::print(std::ostream& os) const {
+    os << "Rune " << to_string(kind()) << '\n';
+
+    if (has_args()) {
+        gIndent++;
+        
+        for (u32 idx = 0, e = num_args(); idx != e; ++idx) {
+            gLastChild = true;
+            args().at(idx)->print(os);
+        }
+
+        gIndent--;
+    }
+}
+
 void RuneExpr::print(std::ostream& os) const {
-    
+    os << "RuneExpr " << span_string(span) << " '" << get_type()->to_string() 
+        << "'\n";
+
+    gIndent++;
+    gLastChild = true;
+    rune()->print(os);
+    gIndent--;
+}
+
+void RuneStmt::print(std::ostream& os) const {
+    os << "RuneStmt " << span_string(span) << '\n';
+
+    gIndent++;
+    gLastChild = true;
+    rune()->print(os);
+    gIndent--;
 }

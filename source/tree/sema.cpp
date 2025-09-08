@@ -291,10 +291,6 @@ void SemanticAnalysis::visit(RetStmt& node) {
     }
 }
 
-void SemanticAnalysis::visit(Rune& node) {
-
-}
-
 void SemanticAnalysis::visit(BinaryExpr& node) {
     node.pLeft->accept(*this);
     node.pRight->accept(*this);
@@ -411,5 +407,9 @@ void SemanticAnalysis::visit(CallExpr& node) {
 }
 
 void SemanticAnalysis::visit(RuneExpr& node) {
+
+}
+
+void SemanticAnalysis::visit(RuneStmt& node) {
 
 }

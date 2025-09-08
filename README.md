@@ -125,11 +125,11 @@ after bootstrapping.
 ### Namespacing & Multiple Files
 
 The language will not make use of a preprocessor or header files. To use 
-multiple source files in a program, the `$use` rune can be utilized to import
+multiple source files in a program, the `use` keyword can be utilized to import
 the public declarations (and thereby types possibly) of a relative file:
 
 ```
-$use "Utils.stm"; // imports all public symbols
+use "Utils.stm"; // imports all public symbols
 ```
 
 To define an actual namespace - that forces mangling on all declarations within

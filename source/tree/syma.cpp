@@ -67,10 +67,6 @@ void SymbolAnalysis::visit(RetStmt& node) {
     if (node.has_expr()) node.pExpr->accept(*this);
 }
 
-void SymbolAnalysis::visit(Rune& node) {
-
-}
-
 void SymbolAnalysis::visit(BinaryExpr& node) {
     node.pLeft->accept(*this);
     node.pRight->accept(*this);
@@ -226,5 +222,9 @@ void SymbolAnalysis::visit(CallExpr& node) {
 }
 
 void SymbolAnalysis::visit(RuneExpr& node) {
-    node.pRune->accept(*this);
+
+}
+
+void SymbolAnalysis::visit(RuneStmt& node) {
+
 }

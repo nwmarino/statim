@@ -47,6 +47,7 @@ private:
 
     UnaryExpr::Operator unop(TokenKind kind) const;
 
+    Rune* parse_rune();
     void parse_rune_decorators();
 
     const Type* parse_type();

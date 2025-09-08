@@ -190,8 +190,92 @@ UnaryExpr::Operator Parser::unop(TokenKind kind) const {
     }
 }
 
-void Parser::parse_rune_decorators() {
+Rune* Parser::parse_rune() {
+    if (!match(TOKEN_KIND_IDENTIFIER)) {
+        Logger::fatal(
+                "expected rune identifier after '$'", since(lexer.last().loc));
+    }
 
+    Rune::Kind kind = Rune::from_string(lexer.last().value);
+    next(); // identifier
+
+    std::vector<Expr*> args = {};
+    if (match(TOKEN_KIND_SET_PAREN)) {
+        next(); // '('
+
+        while (!match(TOKEN_KIND_END_PAREN)) {
+            auto* expr = parse_expr();
+            assert(expr && "could not parse rune argument!");
+            args.push_back(expr);
+
+            if (match(TOKEN_KIND_END_PAREN))
+                break;
+
+            if (!match(TOKEN_KIND_COMMA)) {
+                Logger::fatal(
+                    "expected ',' or ')' after rune argument list",
+                    lexer.last().loc);
+            }
+
+            next(); // ','
+        }
+
+        next(); // ')'
+    };
+
+    if (!Rune::accepts_args(kind) && !args.empty()) {
+        Logger::fatal(
+            "rune '" + Rune::to_string(kind) + "' does not accept arguments", 
+            since(lexer.last().loc)); 
+    }
+
+    return new Rune(kind, args);
+}
+
+void Parser::parse_rune_decorators() {
+    runes.clear();
+
+    if (!match(TOKEN_KIND_SIGN))
+        return;
+
+    next(); // '$'
+
+    if (match(TOKEN_KIND_SET_BRACKET)) {
+        next(); // '['
+
+        while (!match(TOKEN_KIND_END_BRACKET)) {
+            auto* rune = parse_rune();
+            if (!Rune::is_decorator(rune->kind())) {
+                Logger::fatal(
+                    "non-decorator rune in decorator list", 
+                    since(lexer.last().loc));
+            }
+
+            runes.push_back(parse_rune());
+
+            if (match(TOKEN_KIND_END_BRACKET))
+                break;
+
+            if (!match(TOKEN_KIND_COMMA)) {
+                Logger::fatal(
+                    "expected ',' or ']' after rune decorator list", 
+                    since(lexer.last().loc));
+            }
+
+            next(); // ','
+        }
+
+        next(); // ']'
+    } else {
+        auto* rune = parse_rune();
+        if (!Rune::is_decorator(rune->kind())) {
+            Logger::fatal(
+                "non-decorator rune in decorator list", 
+                since(lexer.last().loc));
+        }
+
+        runes.push_back(parse_rune());
+    }
 }
 
 const Type* Parser::parse_type() {
@@ -219,8 +303,8 @@ const Type* Parser::parse_type() {
     return DeferredType::get(*root, context);
 }
 
-Decl* Parser::parse_decl() {
-    if (match(TOKEN_KIND_SIGN)) parse_rune_decorators();
+Decl* Parser::parse_decl() { 
+    parse_rune_decorators();
 
     if (!match(TOKEN_KIND_IDENTIFIER)) {
         Logger::fatal(
@@ -339,7 +423,7 @@ FunctionDecl* Parser::parse_function(const Token& name) {
     FunctionDecl* function = new FunctionDecl(
         Span(name.loc, body != nullptr ? body->get_span().end : name.loc),
         name.value,
-        runes,
+        function_runes,
         type,
         params,
         scope,

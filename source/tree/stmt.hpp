@@ -8,6 +8,8 @@
 
 namespace stm {
 
+class Rune;
+
 class Stmt {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
