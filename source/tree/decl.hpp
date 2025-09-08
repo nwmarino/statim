@@ -1,6 +1,7 @@
 #ifndef STATIM_TREE_DECL_HPP_
 #define STATIM_TREE_DECL_HPP_
 
+#include "tree/rune.hpp"
 #include "tree/type.hpp"
 #include "tree/visitor.hpp"
 #include "types/source_location.hpp"
@@ -9,8 +10,6 @@
 #include <vector>
 
 namespace stm {
-
-class Rune;
 
 class Decl {
     friend class SymbolAnalysis;
@@ -44,6 +43,51 @@ public:
     const std::string& get_name() const { return name; }
 
     const std::vector<Rune*>& get_decorators() const { return decorators; }
+
+    /// Returns true if this declaration carries a rune of the given kind.
+    bool has_decorator(Rune::Kind kind) const;
+};
+
+/// Represents a use declaration in the syntax tree.
+///
+/// The `use` keyword specifies a path that the local source file should import
+/// public symbols from.
+class UseDecl final : public Decl {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+    friend class Codegen;
+
+    /// The referenced unit, once resolved after parsing of all units finish.
+    TranslationUnit* m_resolved = nullptr;
+
+public:
+    UseDecl(
+        const Span& span,
+        const std::string& path,
+        const std::vector<Rune*>& decorators);
+
+    UseDecl(const UseDecl&) = delete;
+    UseDecl& operator = (const UseDecl&) = delete;
+
+    /// Returns the path specified in this use declaration.
+    const std::string& path() const { return name; }
+
+    /// Returns the unit this use declaration references, if it has been
+    /// resolved.
+    const TranslationUnit* unit() const { return m_resolved; }
+    TranslationUnit* unit() { return m_resolved; }
+
+    /// Resolve the translation unit of this use as |unit|.
+    void resolve(TranslationUnit* unit) { m_resolved = unit; }
+
+    /// Returns true if the unit this use declaration references was resolved.
+    bool resolved() const { return m_resolved != nullptr; }
+
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
+    void print(std::ostream& os) const override;
 };
 
 class FunctionDecl final : public Decl {

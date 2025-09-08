@@ -14,7 +14,8 @@ SymbolAnalysis::SymbolAnalysis(Options& opts, Root& root)
     : opts(opts), root(root), pScope(root.get_scope()) {};
 
 void SymbolAnalysis::visit(Root& node) {
-    for (auto decl : node.decls) decl->accept(*this);
+    for (auto& decl : node.decls()) 
+        decl->accept(*this);
 }
 
 void SymbolAnalysis::visit(FunctionDecl& node) {

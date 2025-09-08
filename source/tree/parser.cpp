@@ -21,6 +21,10 @@ void Parser::parse(TranslationUnit& unit) {
         Decl* decl = parse_decl();
         assert(decl && "could not parse declaration");
         root->add_decl(decl);
+
+        if (decl->has_decorator(Rune::Public)) {
+            root->exports().push_back(decl);
+        }
     }
 
     unit.set_root(std::move(root));
@@ -192,13 +196,19 @@ UnaryExpr::Operator Parser::unop(TokenKind kind) const {
 
 Rune* Parser::parse_rune() {
     if (!match(TOKEN_KIND_IDENTIFIER)) {
+        Logger::info(token_kind_to_string(lexer.last().kind));
         Logger::fatal(
                 "expected rune identifier after '$'", since(lexer.last().loc));
     }
 
     Rune::Kind kind = Rune::from_string(lexer.last().value);
-    next(); // identifier
+    if (kind == Rune::Unknown) {
+        Logger::fatal(
+            "unrecognized rune: '$" + lexer.last().value + "'",
+            since(lexer.last().loc));
+    }
 
+    next(); // identifier
     std::vector<Expr*> args = {};
     if (match(TOKEN_KIND_SET_PAREN)) {
         next(); // '('
@@ -251,7 +261,7 @@ void Parser::parse_rune_decorators() {
                     since(lexer.last().loc));
             }
 
-            runes.push_back(parse_rune());
+            runes.push_back(rune);
 
             if (match(TOKEN_KIND_END_BRACKET))
                 break;
@@ -312,6 +322,9 @@ Decl* Parser::parse_decl() {
             Span(lexer.last().loc));
     }
 
+    if (lexer.last().value == "use")
+        return parse_use();
+
     const Token name = lexer.last();
     next(); // identifier
 
@@ -335,6 +348,31 @@ Decl* Parser::parse_decl() {
             "expected declaration after binding operator '::'",
             since(name.loc));
     }
+}
+
+UseDecl* Parser::parse_use() {
+    SourceLocation loc = lexer.last().loc;
+    next(); // 'use'
+
+    std::vector<Rune*> use_runes = this->runes;
+    this->runes.clear();
+
+    if (!match(TOKEN_KIND_STRING)) {
+        Logger::fatal(
+            "expected string literal enclosed by '\"' after 'use' keyword",
+            since(lexer.last().loc));
+    }
+
+    std::string path = lexer.last().value;
+    next(); // "path"
+
+    if (!match(TOKEN_KIND_SEMICOLON)) {
+        Logger::fatal("expected ';' after 'use' declaration", since(loc));
+    }
+
+    next(); // ';'
+
+    return new UseDecl(since(loc), path, use_runes);
 }
 
 FunctionDecl* Parser::parse_function(const Token& name) {

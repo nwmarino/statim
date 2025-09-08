@@ -53,6 +53,7 @@ private:
     const Type* parse_type();
 
     Decl*           parse_decl();
+    UseDecl*        parse_use();
     FunctionDecl*   parse_function(const Token& name);
     VariableDecl*   parse_variable();
     StructDecl*     parse_struct(const Token& name);

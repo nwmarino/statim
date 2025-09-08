@@ -21,6 +21,7 @@ class Frame;
 class Root;
 
 class Decl;
+class UseDecl;
 class FunctionDecl;
 class ParameterDecl;
 class VariableDecl;
@@ -64,6 +65,7 @@ public:
 
     virtual void visit(Root& node) = 0;
     
+    virtual void visit(UseDecl& node) = 0;
     virtual void visit(FunctionDecl& node) = 0;
     virtual void visit(ParameterDecl& node) = 0;
     virtual void visit(VariableDecl& node) = 0;
@@ -112,34 +114,35 @@ public:
 
     void visit(Root& node) override;
 
+    void visit(UseDecl& node) override {}
     void visit(FunctionDecl& node) override;
-    void visit(ParameterDecl& node) override {};
+    void visit(ParameterDecl& node) override {}
     void visit(VariableDecl& node) override;
-    void visit(FieldDecl& node) override {};
-    void visit(StructDecl& node) override {};
-    void visit(EnumValueDecl& node) override {};
-    void visit(EnumDecl& node) override {};
+    void visit(FieldDecl& node) override {}
+    void visit(StructDecl& node) override {}
+    void visit(EnumValueDecl& node) override {}
+    void visit(EnumDecl& node) override {}
 
     void visit(BlockStmt& node) override;
-    void visit(BreakStmt& node) override {};
-    void visit(ContinueStmt& node) override {};
+    void visit(BreakStmt& node) override {}
+    void visit(ContinueStmt& node) override {}
     void visit(DeclStmt& node) override;
     void visit(IfStmt& node) override;
     void visit(WhileStmt& node) override;
     void visit(RetStmt& node) override;
     void visit(RuneStmt& node) override;
 
-    void visit(BoolLiteral& node) override {};
-    void visit(IntegerLiteral& node) override {};
-    void visit(FloatLiteral& node) override {};
-    void visit(CharLiteral& node) override {};
-    void visit(StringLiteral& node) override {};
-    void visit(NullLiteral& node) override {};
+    void visit(BoolLiteral& node) override {}
+    void visit(IntegerLiteral& node) override {}
+    void visit(FloatLiteral& node) override {}
+    void visit(CharLiteral& node) override {}
+    void visit(StringLiteral& node) override {}
+    void visit(NullLiteral& node) override {}
     void visit(BinaryExpr& node) override;
     void visit(UnaryExpr& node) override;
     void visit(CastExpr& node) override;
     void visit(ParenExpr& node) override;
-    void visit(SizeofExpr& node) override {};
+    void visit(SizeofExpr& node) override {}
     void visit(SubscriptExpr& node) override;
     void visit(ReferenceExpr& node) override;
     void visit(MemberExpr& node) override;
@@ -160,13 +163,14 @@ public:
 
     void visit(Root& node) override;
 
+    void visit(UseDecl& node) override {}
     void visit(FunctionDecl& node) override;
-    void visit(ParameterDecl& node) override {};
+    void visit(ParameterDecl& node) override {}
     void visit(VariableDecl& node) override;
-    void visit(FieldDecl& node) override {};
-    void visit(StructDecl& node) override {};
-    void visit(EnumValueDecl& node) override {};
-    void visit(EnumDecl& node) override {};
+    void visit(FieldDecl& node) override {}
+    void visit(StructDecl& node) override {}
+    void visit(EnumValueDecl& node) override {}
+    void visit(EnumDecl& node) override {}
 
     void visit(BlockStmt& node) override;
     void visit(BreakStmt& node) override;
@@ -177,19 +181,19 @@ public:
     void visit(RetStmt& node) override;
     void visit(RuneStmt& node) override;
 
-    void visit(BoolLiteral& node) override {};
-    void visit(IntegerLiteral& node) override {};
-    void visit(FloatLiteral& node) override {};
-    void visit(CharLiteral& node) override {};
-    void visit(StringLiteral& node) override {};
-    void visit(NullLiteral& node) override {};
+    void visit(BoolLiteral& node) override {}
+    void visit(IntegerLiteral& node) override {}
+    void visit(FloatLiteral& node) override {}
+    void visit(CharLiteral& node) override {}
+    void visit(StringLiteral& node) override {}
+    void visit(NullLiteral& node) override {}
     void visit(BinaryExpr& node) override;
     void visit(UnaryExpr& node) override;
     void visit(CastExpr& node) override;
     void visit(ParenExpr& node) override;
-    void visit(SizeofExpr& node) override {};
+    void visit(SizeofExpr& node) override {}
     void visit(SubscriptExpr& node) override;
-    void visit(ReferenceExpr& node) override {};
+    void visit(ReferenceExpr& node) override {}
     void visit(MemberExpr& node) override;
     void visit(CallExpr& node) override;
     void visit(RuneExpr& node) override;
@@ -278,13 +282,14 @@ public:
 
     void visit(Root& node) override;
 
+    void visit(UseDecl& node) override {}
     void visit(FunctionDecl& node) override;
-    void visit(ParameterDecl& node) override {};
+    void visit(ParameterDecl& node) override {}
     void visit(VariableDecl& node) override;
-    void visit(FieldDecl& node) override {};
+    void visit(FieldDecl& node) override {}
     void visit(StructDecl& node) override;
-    void visit(EnumValueDecl& node) override {};
-    void visit(EnumDecl& node) override {};
+    void visit(EnumValueDecl& node) override {}
+    void visit(EnumDecl& node) override {}
 
     void visit(BlockStmt& node) override;
     void visit(BreakStmt& node) override;

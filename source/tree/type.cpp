@@ -9,7 +9,7 @@ using namespace stm;
 Type::id_t Type::it = 0;
 
 const DeferredType* DeferredType::get(Root& root, const Context& context) {
-    return root.get_context().get(context);
+    return root.context().get(context);
 }
 
 bool DeferredType::is_void() const {
@@ -224,7 +224,7 @@ const FunctionType* FunctionType::get(
         Root& root, 
         const Type *pReturn, 
         const std::vector<const Type*>& params) {
-    return root.get_context().get(pReturn, params);
+    return root.context().get(pReturn, params);
 }
 
 std::string FunctionType::to_string() const {
@@ -237,7 +237,7 @@ std::string FunctionType::to_string() const {
 }
 
 const PointerType* PointerType::get(Root& root, const Type* pPointee) {
-    return root.get_context().get(pPointee);
+    return root.context().get(pPointee);
 }
 
 u32 PointerType::get_indirection() const {
@@ -269,7 +269,7 @@ std::string PointerType::to_string() const {
 }
 
 const StructType* StructType::get(Root& root, const std::string& name) {
-    const Type* type = root.get_context().get(name);
+    const Type* type = root.context().get(name);
     if (!type)
         return nullptr;
 
@@ -284,7 +284,7 @@ const StructType* StructType::create(
         Root& root, 
         const std::vector<const Type*>& fields, 
         const StructDecl* decl) {
-    return root.get_context().create(fields, decl);
+    return root.context().create(fields, decl);
 }
 
 std::string StructType::to_string() const {
@@ -292,7 +292,7 @@ std::string StructType::to_string() const {
 }
 
 const EnumType* EnumType::get(Root& root, const std::string& name) {
-    const Type* type = root.get_context().get(name);
+    const Type* type = root.context().get(name);
     if (!type)
         return nullptr;
 
@@ -307,7 +307,7 @@ const EnumType* EnumType::create(
         Root& root,
         const Type* underlying,
         const EnumDecl* decl) {
-    return root.get_context().create(underlying, decl);
+    return root.context().create(underlying, decl);
 }
 
 std::string EnumType::to_string() const {

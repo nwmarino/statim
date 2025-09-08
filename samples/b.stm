@@ -1,8 +1,5 @@
-$[public]
-foo :: () -> s64 {
-    ret 42;
-}
+use "a.stm";
 
 main :: (argc: s64, argv: **char) -> s64 {
-    ret argc + 15;
+    ret foo();
 }

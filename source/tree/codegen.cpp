@@ -153,20 +153,24 @@ void Codegen::lower_structure(const StructDecl& decl) {
 }
 
 void Codegen::visit(Root& node) {
-    for (auto import : node.imports)
+    for (auto& import : node.imports())
         if (auto structure = dynamic_cast<StructDecl*>(import))
             lower_structure(*structure);
 
-    for (auto decl : node.decls)
+    for (auto& decl : node.decls())
         if (auto structure = dynamic_cast<StructDecl*>(decl))
             lower_structure(*structure);
 
     m_phase = PH_Declare;
-    for (auto import : node.imports) import->accept(*this);
-    for (auto decl : node.decls) decl->accept(*this);
+    for (auto& import : node.imports()) 
+        import->accept(*this);
+
+    for (auto& decl : node.decls()) 
+        decl->accept(*this);
 
     m_phase = PH_Define;
-    for (auto decl : node.decls) decl->accept(*this);
+    for (auto& decl : node.decls()) 
+        decl->accept(*this);
 }
 
 void Codegen::visit(FunctionDecl& node) {
@@ -317,6 +321,10 @@ void Codegen::visit(RetStmt& node) {
     assert(m_tmp);
     m_builder.build_ret(m_tmp);
     m_tmp = nullptr;
+}
+
+void Codegen::visit(RuneStmt& node) {
+    
 }
 
 void Codegen::visit(BoolLiteral& node) {
@@ -1171,7 +1179,7 @@ void Codegen::visit(CallExpr& node) {
         args.push_back(m_tmp);
     }
 
-    m_builder.build_call(callee->get_type(), callee, args);
+    m_tmp = m_builder.build_call(callee->get_type(), callee, args);
 }
 
 void Codegen::visit(RuneExpr& node) {

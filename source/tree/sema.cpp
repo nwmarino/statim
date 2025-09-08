@@ -72,7 +72,8 @@ static TypeCheckResult type_check(
 }
 
 void SemanticAnalysis::visit(Root& node) {
-    for (auto decl : node.decls) decl->accept(*this);
+    for (auto& decl : node.decls()) 
+        decl->accept(*this);
 }
 
 void SemanticAnalysis::visit(FunctionDecl& node) {

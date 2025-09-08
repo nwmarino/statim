@@ -71,4 +71,4 @@ main
 vgcore.*
 *.stm.o
 *.stm.s
-
+std/*.s

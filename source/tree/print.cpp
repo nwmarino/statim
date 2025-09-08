@@ -38,17 +38,21 @@ static std::string span_string(const Span& span) {
 void Root::print(std::ostream& os) const {
     std::memset(gPipe, false, 16);
     
-    os << "Root <" << file.absolute() << ">\n";
+    os << "Root <" << m_file.absolute() << ">\n";
 
     gPipe[++gIndent] = true;
 
-    for (u32 idx = 0, e = decls.size(); idx != e; ++idx) {
+    for (u32 idx = 0, e = num_decls(); idx != e; ++idx) {
         gLastChild = idx + 1 == e;
         gPipe[gIndent] = !gLastChild;
-        decls[idx]->print(os);
+        decls()[idx]->print(os);
     }
 
     os << '\n';
+}
+
+void UseDecl::print(std::ostream& os) const {
+    os << "Use " << span_string(span) << " \"" << path() << "\"\n";
 }
 
 void FunctionDecl::print(std::ostream& os) const {
