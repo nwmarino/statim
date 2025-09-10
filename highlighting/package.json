@@ -1,0 +1,30 @@
+{
+  "name": "statim",
+  "displayName": "Statim Syntax Highlighting",
+  "description": "Syntax Highlighting for Statim (.stm)",
+  "version": "1.0.0",
+  "publisher": "nwmarino",
+  "engines": {
+    "vscode": "^1.97.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "statim",
+        "aliases": ["statim"],
+        "extensions": [".stm"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "statim",
+        "scopeName": "source.stm",
+        "path": "./syntaxes/statim.tmLanguage.json"
+      }
+    ]
+  }
+}
