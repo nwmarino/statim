@@ -2,5 +2,7 @@ use "a.stm";
 
 main :: (argc: s64, argv: **char) -> s64 {
     $println("hello world!");
+    $println("this is 4 = {}", 4);
+    $println("this is pi = {}", 3.14562);
     ret foo();
 }

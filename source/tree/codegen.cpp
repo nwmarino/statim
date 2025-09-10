@@ -361,6 +361,10 @@ void Codegen::codegen_rune_print(const RuneStmt& node) {
     siir::Constant* fd = siir::ConstantInt::get(
         m_cfg, siir::Type::get_i64_type(m_cfg), 1);
 
+    /// Get constant 10 for base 10 integer prints.
+    siir::Constant* ten = siir::ConstantInt::get(
+        m_cfg, siir::Type::get_i64_type(m_cfg), 10);
+
     std::string str = strlit->get_value();
     std::vector<std::string> parts;
     parts.reserve(rune->num_args() + 1);
@@ -400,7 +404,7 @@ void Codegen::codegen_rune_print(const RuneStmt& node) {
     if (parts.size() != rune->num_args()) {
         Logger::fatal(
             "argument count mismatch with bracket count, got '" + 
-                std::to_string(rune->num_args() - 1) + "', but expected '" + 
+                std::to_string(rune->num_args()) + "', but expected '" + 
                 std::to_string(parts.size()) + "'", 
             node.get_span());
     }
@@ -428,10 +432,10 @@ void Codegen::codegen_rune_print(const RuneStmt& node) {
         if (idx >= rune->num_args() - 1)
             continue;
     
-        Expr* arg = rune->args().at(idx);
+        Expr* arg = rune->args().at(idx + 1);
         m_vctx = RValue;
         arg->accept(*this);
-        assert(m_tmp && "print argument does not produce a value!");
+        assert(m_tmp && "print argument does not produceConstantString *string a value!");
 
         if (arg->get_type()->is_bool()) {
             siir::Function* rt_print_bool = fetch_runtime_fn(
@@ -467,7 +471,7 @@ void Codegen::codegen_rune_print(const RuneStmt& node) {
             );
 
             m_builder.build_call(
-                rt_print_si->get_type(), rt_print_si, { fd, m_tmp });
+                rt_print_si->get_type(), rt_print_si, { fd, m_tmp, ten });
         } else if (arg->get_type()->is_unsigned_int()) {
             siir::Function* rt_print_ui = fetch_runtime_fn(
                 "__print_ui", 
@@ -479,7 +483,7 @@ void Codegen::codegen_rune_print(const RuneStmt& node) {
             );
 
             m_builder.build_call(
-                rt_print_ui->get_type(), rt_print_ui, { fd, m_tmp });
+                rt_print_ui->get_type(), rt_print_ui, { fd, m_tmp, ten });
         } else if (*arg->get_type() == *m_root.get_fp32_type()) {
             siir::Function* rt_print_float = fetch_runtime_fn(
                 "__print_float", 

@@ -267,8 +267,18 @@ void LLVMTranslatePass::convert(BasicBlock* bb) {
 void LLVMTranslatePass::convert(Instruction* inst) {
     switch (inst->opcode()) { 
     case INST_OP_STRING: {
-        llvm::GlobalVariable* GV = m_builder->CreateGlobalString(
-            static_cast<ConstantString*>(inst->get_operand(0))->get_value());
+        std::string string = static_cast<ConstantString*>(
+            inst->get_operand(0))->get_value();
+        
+        llvm::GlobalVariable* GV = nullptr;
+        auto it = m_strings.find(string);
+        if (it != m_strings.end()) {
+            GV = it->second;
+        } else {
+            GV = m_builder->CreateGlobalString(string);
+            m_strings.emplace(string, GV);
+        }
+
         m_insts.emplace(inst, GV);
         break;
     }
