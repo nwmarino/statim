@@ -154,6 +154,11 @@ void EnumDecl::print(std::ostream& os) const {
     gIndent--;
 }
 
+void AsmStmt::print(std::ostream& os) const {
+    print_piping(os);
+    os << "InlineAsm " << span_string(span) << '\n';
+}
+
 void BlockStmt::print(std::ostream& os) const {
     print_piping(os);
     os << "Block " << span_string(span) << '\n';

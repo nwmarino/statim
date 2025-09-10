@@ -181,6 +181,11 @@ void SemanticAnalysis::visit(VariableDecl& node) {
     }
 }
 
+void SemanticAnalysis::visit(AsmStmt& node) {
+    for (auto& expr : node.m_exprs)
+        expr->accept(*this);
+}
+
 void SemanticAnalysis::visit(BlockStmt& node) {
     for (auto stmt : node.stmts) stmt->accept(*this);
 }

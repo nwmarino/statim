@@ -30,6 +30,19 @@ private:
 $public
 file_new :: (path: *char, flags: FileFlags) -> File {
     let file: File;
+
+    __asm__ (
+        "movq $2, %%rax\n"
+        "movq %0, %%rdi\n"
+        "movl %1, %%rsi\n"
+        "movq $420, %%rdx\n"
+        "syscall\n"
+        "movq %%rax, %2\n"
+        : "=m" (file._M_fd)
+        : "r" (path), "r" (flags)
+        : "rax", "rdi", "rsi", "rdx"
+    );
+
     ret file;
 }
 

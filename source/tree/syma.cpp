@@ -42,6 +42,11 @@ void SymbolAnalysis::visit(VariableDecl& node) {
     node.pType = node.get_init()->get_type();
 }
 
+void SymbolAnalysis::visit(AsmStmt& node) {
+    for (auto& expr : node.m_exprs)
+        expr->accept(*this);
+}
+
 void SymbolAnalysis::visit(BlockStmt& node) {
     pScope = node.get_scope();
     for (auto stmt : node.get_stmts()) stmt->accept(*this);

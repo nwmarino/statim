@@ -720,6 +720,8 @@ Stmt* Parser::parse_stmt() {
         return parse_block();
     else if (match(TOKEN_KIND_SIGN))
         return parse_rune_stmt();
+    else if (match("__asm__"))
+        return parse_asm();
     else if (match("break"))
         return parse_break();
     else if (match("continue"))
@@ -734,6 +736,165 @@ Stmt* Parser::parse_stmt() {
         return parse_ret();
     else
         return parse_expr();
+}
+
+AsmStmt* Parser::parse_asm() {
+    const SourceLocation begin = lexer.last().loc;
+    next(); // 'asm'
+
+    bool is_volatile = false;
+    if (match("volatile")) {
+        is_volatile = true;
+        next(); // 'volatile'
+    }
+
+    if (!match(TOKEN_KIND_SET_PAREN))
+        Logger::fatal("expected '(' after 'asm' keyword", lexer.last().loc);
+    
+    next(); // '('
+
+    std::string iasm = "";    
+    std::vector<std::string> outputs = {};
+    std::vector<std::string> inputs = {};
+    std::vector<Expr*> exprs = {};
+    std::vector<std::string> clobbers = {};
+
+    while (!match(TOKEN_KIND_COLON)) {
+        if (!match(TOKEN_KIND_STRING)) {
+            Logger::fatal(
+                "expected inline assembly string literal", lexer.last().loc);
+        }
+
+        iasm += lexer.last().value;
+        next(); // "string"
+    }
+
+    if (!match(TOKEN_KIND_COLON)) {
+        Logger::fatal(
+            "expected ':' after inline assembly to define input operands", 
+            lexer.last().loc);
+    }
+
+    next(); // ':'
+
+    while (!match(TOKEN_KIND_COLON)) {
+        // Parse the output operands.
+        if (!match(TOKEN_KIND_STRING)) {
+            Logger::fatal(
+                "expected string literal to define inline output constraint", 
+                lexer.last().loc);
+        }
+
+        outputs.push_back(lexer.last().value);
+        next(); // "constraint"
+
+        if (!match(TOKEN_KIND_SET_PAREN)) {
+            Logger::fatal(
+                "expected '(' to define output operand expression", 
+                lexer.last().loc);
+        }
+
+        next(); // '('
+
+        Expr* expr = parse_expr();
+        assert(expr && "could not parse inline assembly output expression!");
+        exprs.push_back(expr);
+
+        if (!match(TOKEN_KIND_END_PAREN)) {
+            Logger::fatal(
+                "expected ')' to define output operand expression", 
+                lexer.last().loc);
+        }
+
+        next(); // ')'
+
+        if (match(TOKEN_KIND_COLON))
+            break;
+
+        if (!match(TOKEN_KIND_COMMA)) {
+            Logger::fatal(
+                "expected ',' to separate inline assembly output operands", 
+                lexer.last().loc);
+        }
+
+        next(); // ','
+    }
+
+    next(); // ':'
+
+    while (!match(TOKEN_KIND_COLON)) {
+        // Parse the input operands.
+        if (!match(TOKEN_KIND_STRING)) {
+            Logger::fatal(
+                "expected string literal to define inline assembly input constraint", 
+                lexer.last().loc);
+        }
+
+        inputs.push_back(lexer.last().value);
+        next(); // "constraint"
+
+        if (!match(TOKEN_KIND_SET_PAREN)) {
+            Logger::fatal(
+                "expected '(' to define input operand expression", 
+                lexer.last().loc);
+        }
+
+        next(); // '('
+
+        Expr* expr = parse_expr();
+        assert(expr && "could not parse inline assembly input expression!");
+        exprs.push_back(expr);
+
+        if (!match(TOKEN_KIND_END_PAREN)) {
+            Logger::fatal(
+                "expected ')' to define input operand expression", 
+                lexer.last().loc);
+        }
+
+        next(); // ')'
+
+        if (match(TOKEN_KIND_COLON))
+            break;
+
+        if (!match(TOKEN_KIND_COMMA)) {
+            Logger::fatal(
+                "expected ',' to separate inline assembly input operands", 
+                lexer.last().loc);
+        }
+
+        next(); // ','
+    }
+    
+    next(); // ':'
+
+    while (!match(TOKEN_KIND_END_PAREN)) {
+        // Parse the clobbers.
+        if (!match(TOKEN_KIND_STRING)) {
+            Logger::fatal(
+                "expected string literal to define inline assembly clobber", 
+                lexer.last().loc);
+        }
+
+        clobbers.push_back(lexer.last().value);
+        next(); // "clobber"
+
+        if (match(TOKEN_KIND_END_PAREN))
+            break;
+
+        if (!match(TOKEN_KIND_COMMA)) {
+            Logger::fatal(
+                "expected ',' to separate inline assembly output operands", 
+                lexer.last().loc);
+        }
+
+        next(); // ','
+    }
+
+    const SourceLocation end = lexer.last().loc;
+    next(); // ')'
+
+    return new AsmStmt(
+        Span(begin, end), iasm, inputs, outputs, exprs, clobbers, is_volatile);
 }
 
 BlockStmt* Parser::parse_block() {

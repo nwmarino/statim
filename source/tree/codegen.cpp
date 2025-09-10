@@ -245,6 +245,10 @@ void Codegen::visit(StructDecl& node) {
     }
 }
 
+void Codegen::visit(AsmStmt& node) {
+    
+}
+
 void Codegen::visit(BlockStmt& node) {
     for (auto stmt : node.stmts) stmt->accept(*this);
 }

@@ -31,6 +31,7 @@ class EnumValueDecl;
 class EnumDecl;
 
 class Stmt;
+class AsmStmt;
 class BlockStmt;
 class BreakStmt;
 class ContinueStmt;
@@ -74,6 +75,7 @@ public:
     virtual void visit(EnumValueDecl& node) = 0;
     virtual void visit(EnumDecl& node) = 0;
 
+    virtual void visit(AsmStmt& node) = 0;
     virtual void visit(BlockStmt& node) = 0;
     virtual void visit(BreakStmt& node) = 0;
     virtual void visit(ContinueStmt& node) = 0;
@@ -123,6 +125,7 @@ public:
     void visit(EnumValueDecl& node) override {}
     void visit(EnumDecl& node) override {}
 
+    void visit(AsmStmt& node) override;
     void visit(BlockStmt& node) override;
     void visit(BreakStmt& node) override {}
     void visit(ContinueStmt& node) override {}
@@ -172,6 +175,7 @@ public:
     void visit(EnumValueDecl& node) override {}
     void visit(EnumDecl& node) override {}
 
+    void visit(AsmStmt& node) override;
     void visit(BlockStmt& node) override;
     void visit(BreakStmt& node) override;
     void visit(ContinueStmt& node) override;
@@ -302,6 +306,7 @@ public:
     void visit(EnumValueDecl& node) override {}
     void visit(EnumDecl& node) override {}
 
+    void visit(AsmStmt& node) override;
     void visit(BlockStmt& node) override;
     void visit(BreakStmt& node) override;
     void visit(ContinueStmt& node) override;
