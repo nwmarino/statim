@@ -85,8 +85,6 @@ static void link_imports(stm::UseDecl* use, stm::TranslationUnit* dst) {
                 "cannot import '" + exp->get_name() + 
                     "' since a symbol with the same name already exists",
                 use->get_span());
-        } else {
-            stm::Logger::info("imported over " + exp->get_name());
         }
 
         if (use->has_decorator(stm::Rune::Public))
@@ -264,7 +262,11 @@ stm::i32 main(stm::i32 argc, char** argv) {
 
         stm::SemanticAnalysis sema { options, root };
         root.accept(sema);
+
+        root.print(dump);
     }
+
+    dump.flush();
 
     stm::siir::Target target { 
         stm::siir::Target::amd64, 

@@ -1,8 +1,97 @@
 use "a.stm";
 
+$public
+FileFlags :: s32 {
+    FFLAGS_ReadOnly = 0,
+    FFLAGS_WriteOnly = 1,
+    FFLAGS_ReadWrite = 2,
+    FFLAGS_Create = 64,
+    FFLAGS_Truncate = 512,
+    FFLAGS_Append = 1024,
+}
+
+$public
+FileSeek :: s32 {
+    FSEEK_Set = 0,
+    FSEEK_Cur = 1,
+    FSEEK_End = 2,
+}
+
+$[public, intrinsic]
+File :: {
+private:
+    _M_fd: s64,
+    _M_buf: *char,
+    _M_size: u64,
+    _M_pos: u64,
+    _M_open: bool,
+}
+
+$public
+file_new :: (path: *char, flags: FileFlags) -> File {
+    let file: File;
+    ret file;
+}
+
+$public
+file_is_open :: (file: *File) -> bool {
+    //$assert(file && "file cannot be null!");
+    ret file._M_open;
+}
+
 Box :: {
     a: s64,
     b: u32,
+}
+
+test_iadd :: () -> void {
+    let x: s64 = 4;
+    $println("[test_iadd] 7 = {}", x + 3);
+}
+
+test_fadd :: () -> void {
+    let x: f32 = 0.14;
+    $println("[test_fadd] 3.14 = {}", 3.0 + x);
+}
+
+test_isub :: () -> void {
+    let x: s64 = 7;
+    $println("[test_isub] 11 = {}", 18 - x);
+}
+
+test_fsub :: () -> void {
+    let x: f64 = 0.55;
+    $println("[test_fsub] -1.5 = {}", x - 2.05);
+}
+
+test_smul :: () -> void {
+    let x: s64 = 6;
+    $println("[test_smul] -30 = {}", -5 * x);
+}
+
+test_umul :: () -> void {
+    let x: u64 = -3;
+    $println("[test_umul] 15 = {}", x * -5);
+}
+
+test_fmul :: () -> void {
+    let x: f32 = 1.5;
+    $println("[test_fmul] 30 = {}", cast<f64>(20) * x);
+}
+
+test_sdiv :: () -> void {
+    let x: s64 = -4;
+    $println("[test_sdiv] -6 = {}", 24 / x);
+}
+
+test_udiv :: () -> void {
+    let x: u64 = 16;
+    $println("[test_udiv] 8 = {}", x / 2);
+}
+
+test_fdiv :: () -> void {
+    let x: f64 = 2.5;
+    $println("[test_fdiv] 20 = {}", cast<f64>(50) / x);
 }
 
 main :: (argc: s64, argv: **char) -> s64 {
@@ -10,11 +99,17 @@ main :: (argc: s64, argv: **char) -> s64 {
     a.a = 1;
     a.b = 4;
 
-    $assert(true);
-    $assert(false);
+    test_iadd();
+    test_fadd();
+    test_isub();
+    test_fsub();
+    test_smul();
+    test_umul();
+    test_fmul();
+    test_sdiv();
+    test_udiv();
+    test_fdiv();
 
     $println("hello world!");
-    $println("this is 4 = {}", a.b);
-    $println("this is pi = {}", 3.14562);
     ret foo();
 }

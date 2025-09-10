@@ -313,7 +313,7 @@ void LLVMTranslatePass::convert(Instruction* inst) {
             translate(inst->get_type()), 
             translate(inst->get_operand(0)), 
             llvm::MaybeAlign(inst->data()));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
 
@@ -330,7 +330,7 @@ void LLVMTranslatePass::convert(Instruction* inst) {
             translate(inst->get_type()), 
             translate(inst->get_operand(0)), 
             { translate(inst->get_operand(1)) });
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
 
@@ -339,7 +339,7 @@ void LLVMTranslatePass::convert(Instruction* inst) {
             translate(inst->get_operand(0)), 
             translate(inst->get_operand(1)), 
             translate(inst->get_operand(2)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
 
@@ -401,28 +401,28 @@ void LLVMTranslatePass::convert(Instruction* inst) {
     case INST_OP_IADD: {
         llvm::Value* V = m_builder->CreateAdd(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
 
     case INST_OP_FADD: {
         llvm::Value* V = m_builder->CreateFAdd(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
 
     case INST_OP_ISUB: {
         llvm::Value* V = m_builder->CreateSub(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
 
     case INST_OP_FSUB: {
         llvm::Value* V = m_builder->CreateFSub(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
@@ -430,354 +430,354 @@ void LLVMTranslatePass::convert(Instruction* inst) {
     case INST_OP_UMUL: {
         llvm::Value* V = m_builder->CreateMul(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_FMUL: {
         llvm::Value* V = m_builder->CreateFMul(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_SDIV: {
         llvm::Value* V = m_builder->CreateSDiv(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_UDIV: {
         llvm::Value* V = m_builder->CreateUDiv(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_FDIV: {
         llvm::Value* V = m_builder->CreateFDiv(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_SREM: {
         llvm::Value* V = m_builder->CreateSRem(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_UREM: {
         llvm::Value* V = m_builder->CreateURem(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_FREM: {
         llvm::Value* V = m_builder->CreateFRem(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_AND: {
         llvm::Value* V = m_builder->CreateAnd(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_OR: {
         llvm::Value* V = m_builder->CreateOr(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_XOR: {
         llvm::Value* V = m_builder->CreateXor(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_SHL: {
         llvm::Value* V = m_builder->CreateShl(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_SHR: {
         llvm::Value* V = m_builder->CreateLShr(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_SAR: {
         llvm::Value* V = m_builder->CreateAShr(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_NOT: {
         llvm::Value* V = m_builder->CreateNot(translate(inst->get_operand(0)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_INEG: {
         llvm::Value* V = m_builder->CreateNeg(translate(inst->get_operand(0)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_FNEG: {
         llvm::Value* V = m_builder->CreateFNeg(translate(inst->get_operand(0)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_SEXT: {
         llvm::Value* V = m_builder->CreateSExt(
             translate(inst->get_operand(0)), translate(inst->get_type()));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_ZEXT: {
         llvm::Value* V = m_builder->CreateZExt(
             translate(inst->get_operand(0)), translate(inst->get_type()));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_FEXT: {
         llvm::Value* V = m_builder->CreateFPExt(
             translate(inst->get_operand(0)), translate(inst->get_type()));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_ITRUNC: {
         llvm::Value* V = m_builder->CreateTrunc(
             translate(inst->get_operand(0)), translate(inst->get_type()));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_FTRUNC: {
         llvm::Value* V = m_builder->CreateFPTrunc(
             translate(inst->get_operand(0)), translate(inst->get_type()));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_SI2FP: {
         llvm::Value* V = m_builder->CreateSIToFP(
             translate(inst->get_operand(0)), translate(inst->get_type()));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_UI2FP: {
         llvm::Value* V = m_builder->CreateUIToFP(
             translate(inst->get_operand(0)), translate(inst->get_type()));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_FP2SI: {
         llvm::Value* V = m_builder->CreateFPToSI(
             translate(inst->get_operand(0)), translate(inst->get_type()));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_FP2UI: {
         llvm::Value* V = m_builder->CreateFPToUI(
             translate(inst->get_operand(0)), translate(inst->get_type()));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_P2I: {
         llvm::Value* V = m_builder->CreatePtrToInt(
             translate(inst->get_operand(0)), translate(inst->get_type()));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_I2P: {
         llvm::Value* V = m_builder->CreateIntToPtr(
             translate(inst->get_operand(0)), translate(inst->get_type()));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_REINTERPET: {
         llvm::Value* V = m_builder->CreatePointerCast(
             translate(inst->get_operand(0)), translate(inst->get_type()));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_CMP_IEQ: {
         llvm::Value* V = m_builder->CreateICmpEQ(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_CMP_INE: {
         llvm::Value* V = m_builder->CreateICmpNE(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_CMP_OEQ: {
         llvm::Value* V = m_builder->CreateFCmpOEQ(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_CMP_ONE: {
         llvm::Value* V = m_builder->CreateFCmpONE(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_CMP_UNEQ: {
         llvm::Value* V = m_builder->CreateFCmpUEQ(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_CMP_UNNE: {
         llvm::Value* V = m_builder->CreateFCmpUNE(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_CMP_SLT: {
         llvm::Value* V = m_builder->CreateICmpSLT(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_CMP_SLE: {
         llvm::Value* V = m_builder->CreateICmpSLE(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_CMP_SGT: {
         llvm::Value* V = m_builder->CreateICmpSGT(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_CMP_SGE: {
         llvm::Value* V = m_builder->CreateICmpSGE(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_CMP_ULT: {
         llvm::Value* V = m_builder->CreateICmpULT(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_CMP_ULE: {
         llvm::Value* V = m_builder->CreateICmpULE(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_CMP_UGT: {
         llvm::Value* V = m_builder->CreateICmpUGT(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_CMP_UGE: {
         llvm::Value* V = m_builder->CreateICmpUGE(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_CMP_OLT: {
         llvm::Value* V = m_builder->CreateFCmpOLT(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_CMP_OLE: {
         llvm::Value* V = m_builder->CreateFCmpOLE(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_CMP_OGT: {
         llvm::Value* V = m_builder->CreateFCmpOGT(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_CMP_OGE: {
         llvm::Value* V = m_builder->CreateFCmpOGE(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_CMP_UNLT: {
         llvm::Value* V = m_builder->CreateFCmpULT(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_CMP_UNLE: {
         llvm::Value* V = m_builder->CreateFCmpULE(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_CMP_UNGT: {
         llvm::Value* V = m_builder->CreateFCmpUGT(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     
     case INST_OP_CMP_UNGE: {
         llvm::Value* V = m_builder->CreateFCmpUGE(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, llvm::dyn_cast<llvm::Instruction>(V));
+        m_insts.emplace(inst, V);
         break;
     }
     

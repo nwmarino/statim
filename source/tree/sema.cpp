@@ -300,7 +300,8 @@ void SemanticAnalysis::visit(BinaryExpr& node) {
     auto right_type = node.get_rhs()->get_type();
 
     TypeCheckMode mode = TypeCheckMode::AllowImplicit;
-    if (BinaryExpr::supports_ptr_arith(node.op)) {
+    if (BinaryExpr::supports_ptr_arith(node.op) || 
+        BinaryExpr::is_logical_comparison(node.op)) {
         // Since pointer arithmetic involves integers and pointers, but they
         // cannot be implicitly casted to one another, looser type checking is
         // necessary.
@@ -408,9 +409,11 @@ void SemanticAnalysis::visit(CallExpr& node) {
 }
 
 void SemanticAnalysis::visit(RuneExpr& node) {
-
+    for (auto& arg : node.rune()->args())
+        arg->accept(*this);
 }
 
 void SemanticAnalysis::visit(RuneStmt& node) {
-
+    for (auto& arg : node.rune()->args())
+        arg->accept(*this);
 }

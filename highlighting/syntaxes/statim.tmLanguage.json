@@ -102,11 +102,28 @@
 		},
 
 		"struct": {
-			"match": "\\b(\\w*)\\b\\s*(::)\\s*\\{",
-			"captures": {
+			"begin": "\\b(\\w*)\\b\\s*(::)\\s*\\{",
+			"beginCaptures": {
 				"1": { "name": "support.type.struct.statim entity.name.type.struct.statim" },
 				"2": { "name": "keyword.operator.colon.statim" }
-			}
+			},
+			"end": "\\}",
+			"patterns": [
+				{
+					"name": "meta.struct.access.modifier.statim",
+					"match": "\\b(public|private)(:)",
+					"captures": {
+						"1": { "name": "keyword.control.access.modifier.statim" },
+						"2": { "name": "keyword.operator.colon.statim" }
+					}
+				},
+				{
+					"include": "#comments"
+				},
+				{
+					"include": "#types"
+				}
+			]
 		},
 
 		"enum": {
@@ -285,8 +302,22 @@
 		"types": {
 			"patterns": [
 				{
+					"name": "support.type.builtin.statim",
+					"match": "(\\*)*\\b(?:bool|char|u8|u16|u32|u64|s8|s16|s32|s64|f32|f64)\\b",
+					"captures": {
+						"1": {
+							"name": "storage.modifier.pointer.statim"
+						}
+					}
+				},
+				{
 					"name": "support.type.custom.statim",
-					"match": "\\b[A-Z][A-Za-z0-9_]*\\b"
+					"match": "(\\*+)?\\b[A-Z][A-Za-z0-9_]*\\b",
+					"captures": {
+						"1": {
+							"name": "storage.modifier.pointer.statim"
+						}
+					}
 				}
 			]
 		}

@@ -285,7 +285,7 @@ void Parser::parse_rune_decorators() {
                 since(lexer.last().loc));
         }
 
-        runes.push_back(parse_rune());
+        runes.push_back(rune);
     }
 }
 
@@ -525,13 +525,47 @@ VariableDecl* Parser::parse_variable() {
 StructDecl* Parser::parse_struct(const Token& name) {
     next(); // '{'
 
+    std::vector<Rune*> struct_runes = runes;
+    runes.clear();
+
     std::vector<FieldDecl*> fields;
+    bool private_mod = false;
 
     while (!match(TOKEN_KIND_END_BRACE)) {
+        parse_rune_decorators();
+        std::vector<Rune*> field_runes = runes;
+        runes.clear();
+
         if (!match(TOKEN_KIND_IDENTIFIER)) {
             Logger::fatal(
                 "expected field name identifier",
                 since(name.loc));
+        }
+
+        if (match("public")) {
+            private_mod = false;
+            next(); // public
+
+            if (!match(TOKEN_KIND_COLON))
+                Logger::fatal(
+                    "expected ':' after 'public' modifier", lexer.last().loc);
+            
+            next(); // ':'
+        } else if (match("private")) {
+            private_mod = true;
+            next(); // private
+
+            if (!match(TOKEN_KIND_COLON))
+                Logger::fatal(
+                    "expected ':' after 'private' modifier", lexer.last().loc);
+            
+            next(); // ':'
+        }
+
+        if (private_mod) {
+            field_runes.push_back(new Rune(Rune::Private));
+        } else {
+            field_runes.push_back(new Rune(Rune::Public));
         }
 
         const Token fname = lexer.last();
@@ -550,7 +584,7 @@ StructDecl* Parser::parse_struct(const Token& name) {
         fields.push_back(new FieldDecl(
             since(fname.loc),
             fname.value,
-            {},
+            field_runes,
             ftype,
             nullptr,
             fields.size()));
@@ -592,6 +626,8 @@ StructDecl* Parser::parse_struct(const Token& name) {
 }
 
 EnumDecl* Parser::parse_enum(const Token& name) {
+    std::vector<Rune*> enum_runes = this->runes;
+    runes.clear();
     const Type* underlying = parse_type();
 
     if (!match(TOKEN_KIND_SET_BRACE)) {
@@ -605,7 +641,7 @@ EnumDecl* Parser::parse_enum(const Token& name) {
     EnumDecl* decl = new EnumDecl(
         since(name.loc),
         name.value,
-        {},
+        enum_runes,
         nullptr,
         {});
 
@@ -1123,7 +1159,7 @@ ReferenceExpr* Parser::parse_ref() {
 }
 
 CallExpr* Parser::parse_call() {
-    const Token& callee = lexer.last(1);
+    const Token callee = lexer.last(1);
     next(); // '('
 
     std::vector<Expr*> args;

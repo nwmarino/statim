@@ -546,7 +546,7 @@ void Codegen::codegen_rune_print(const RuneStmt& node) {
 
             m_builder.build_call(
                 rt_print_ui->get_type(), rt_print_ui, { fd, m_tmp, ten });
-        } else if (*arg->get_type() == *m_root.get_fp32_type()) {
+        } else if (m_tmp->get_type()->is_floating_point_type(32)) {
             siir::Function* rt_print_float = fetch_runtime_fn(
                 "__print_float", 
                 {
@@ -557,7 +557,7 @@ void Codegen::codegen_rune_print(const RuneStmt& node) {
 
             m_builder.build_call(
                 rt_print_float->get_type(), rt_print_float, { fd, m_tmp });
-        } else if (*arg->get_type() == *m_root.get_fp64_type()) {
+        } else if (m_tmp->get_type()->is_floating_point_type(64)) {
             siir::Function* rt_print_double = fetch_runtime_fn(
                 "__print_double", 
                 {
@@ -1265,13 +1265,11 @@ void Codegen::codegen_unary_negate(const UnaryExpr& node) {
     node.pExpr->accept(*this);
     assert(m_tmp);
 
-    siir::Value* value = m_tmp;
-
-    if (value->get_type()->is_integer_type()
-      || value->get_type()->is_pointer_type()) {
-        m_tmp = m_builder.build_ineg(value);
-    } else if (value->get_type()->is_floating_point_type()) {
-        m_tmp = m_builder.build_fneg(value);
+    if (m_tmp->get_type()->is_integer_type()
+      || m_tmp->get_type()->is_pointer_type()) {
+        m_tmp = m_builder.build_ineg(m_tmp);
+    } else if (m_tmp->get_type()->is_floating_point_type()) {
+        m_tmp = m_builder.build_fneg(m_tmp);
     } else Logger::fatal(
         "unsupported '-' operator between on type '" + 
             node.get_type()->to_string() + "'",

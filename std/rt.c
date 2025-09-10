@@ -89,6 +89,19 @@ void __print(char* __s) {
     );
 }
 
+void __print_fixed(char* __s, unsigned long __n) {
+    asm volatile (
+        "movq $1, %%rax\n"
+        "movq $1, %%rdi\n"
+        "movq %0, %%rsi\n"
+        "movq %1, %%rdx\n"
+        "syscall\n"
+        :
+        : "r" (__s), "r" (__n)
+        : "rax", "rdi", "rsi", "rdi"
+    );
+}
+
 void __err(char* __s) {
     unsigned long bytes = __strlen(__s);
     asm volatile (
@@ -99,6 +112,19 @@ void __err(char* __s) {
         "syscall\n"
         :
         : "r" (__s), "r" (bytes)
+        : "rax", "rdi", "rsi", "rdi"
+    );
+}
+
+void __err_fixed(char* __s, unsigned long __n) {
+    asm volatile (
+        "movq $1, %%rax\n"
+        "movq $2, %%rdi\n"
+        "movq %0, %%rsi\n"
+        "movq %1, %%rdx\n"
+        "syscall\n"
+        :
+        : "r" (__s), "r" (__n)
         : "rax", "rdi", "rsi", "rdi"
     );
 }
@@ -117,19 +143,29 @@ void __print_fd(long __fd, char* __s) {
     );
 }
 
+void __print_fd_fixed(long __fd, char* __s, unsigned long __n) {
+    asm volatile (
+        "movq $1, %%rax\n"
+        "movq %0, %%rdi\n"
+        "movq %1, %%rsi\n"
+        "movq %2, %%rdx\n"
+        "syscall\n"
+        :
+        : "r" (__fd), "r" (__s), "r" (__n)
+        : "rax", "rdi", "rsi", "rdi"
+    );
+}
+
 void __print_bool(long __fd, signed char __v) {
     if (__v) {
-        __print_fd(__fd, (char*) "true");
+        __print_fd_fixed(__fd, (char*) "true", 4);
     } else {
-        __print_fd(__fd, (char*) "false");
+        __print_fd_fixed(__fd, (char*) "false", 5);
     }
 }
 
 void __print_char(long __fd, char __c) {
-    char buf[2];
-    buf[0] = __c;
-    buf[1] = '\0';
-    __print_fd(__fd, buf);
+    __print_fd_fixed(__fd, &__c, 1);
 }
 
 void __print_si(long __fd, long __v, long __b) {
@@ -211,6 +247,9 @@ void __print_float(long __fd, float __v) {
     int iprt = (int) __v;
     float fprt = (__v - ((float) iprt)) * 1000000;
 
+    if (fprt < 0)
+        fprt = -fprt;
+
     __print_si(__fd, iprt, 10);
     __print_fd(__fd, (char*) ".");
     __print_si(__fd, (long) fprt, 10);
@@ -219,6 +258,9 @@ void __print_float(long __fd, float __v) {
 void __print_double(long __fd, double __v) {
     long iprt = (long) __v;
     double fprt = (__v - ((double) iprt)) * 1000000;
+
+    if (fprt < 0)
+        fprt = -fprt;
 
     __print_si(__fd, iprt, 10);
     __print_fd(__fd, (char*) ".");
