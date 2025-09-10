@@ -357,7 +357,8 @@ void Codegen::visit(RetStmt& node) {
 }
 
 void Codegen::codegen_rune_abort(const RuneStmt& node) {
-
+    siir::Function* abort_fn = fetch_runtime_fn("__abort");
+    m_builder.build_call(abort_fn->get_type(), abort_fn, {});
 }
 
 void Codegen::codegen_rune_assert(const RuneStmt& node) {
