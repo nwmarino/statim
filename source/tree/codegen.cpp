@@ -348,7 +348,10 @@ void Codegen::visit(CharLiteral& node) {
 }
 
 void Codegen::visit(StringLiteral& node) {
+    m_tmp = m_builder.build_string(
+        siir::ConstantString::get(m_cfg, node.get_value()));
 
+    //m_tmp = siir::ConstantString::get(m_cfg, node.get_value());
 }
 
 void Codegen::visit(NullLiteral& node) {
@@ -1087,7 +1090,12 @@ void Codegen::visit(CastExpr& node) {
     } else if (src_type->is_pointer_type() 
       && dst_type->is_pointer_type()) {
         // Pointer -> Pointer reinterpretations.
-        m_tmp = m_builder.build_reint(dst_type, m_tmp);
+        
+        if (dynamic_cast<siir::ConstantNull*>(m_tmp)) {
+            m_tmp = siir::ConstantNull::get(m_cfg, dst_type);
+        } else {
+            m_tmp = m_builder.build_reint(dst_type, m_tmp);
+        }
     } else if (src_type->is_array_type()
       && dst_type->is_pointer_type()) {
         // Array -> Pointer decay.

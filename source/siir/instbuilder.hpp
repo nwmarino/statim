@@ -65,6 +65,9 @@ public:
     /// Create a new const instruction defining |constant| as a value.
     Instruction* build_const(Constant* constant);
 
+    /// Create a new constant string instruction defining |string| as a value.
+    Instruction* build_string(ConstantString* string);
+
     /// Create a new load instruction that loads a value typed with |type| from
     /// source pointer |src|. The natural alignment of |type| will be used.
     Instruction* build_load(const Type* type, Value* src);

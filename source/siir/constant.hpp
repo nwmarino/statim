@@ -4,6 +4,7 @@
 #include "siir/user.hpp"
 
 #include <initializer_list>
+#include <string>
 
 namespace stm {
 namespace siir {
@@ -26,6 +27,8 @@ public:
     virtual ~Constant() = default;
 
     bool is_constant() const override { return true; }
+
+    virtual bool is_aggregate() const { return false; }
 };
 
 /// A constant integer literal.
@@ -128,6 +131,40 @@ public:
     /// Returns the block that this address refers to.
     const BasicBlock* get_block() const { return m_block; }
     BasicBlock* get_block() { return m_block; }
+
+    void print(std::ostream& os) const override;
+};
+
+class ConstantAggregate : public Constant {
+public:
+    ConstantAggregate(std::initializer_list<Value*> ops, const Type* type)
+        : Constant(ops, type) {}
+
+    ConstantAggregate(const ConstantAggregate&) = delete;
+    ConstantAggregate& operator = (const ConstantAggregate&) = delete;
+
+    bool is_aggregate() const override { return true; }
+};
+
+class ConstantString final : public ConstantAggregate {
+    friend class CFG;
+
+    /// The value of this literal.
+    const std::string m_value;
+
+    /// Private constructor. To be used by the graph context for pooling.
+    ConstantString(const std::string& value, const ArrayType* type) 
+        : ConstantAggregate({}, type), m_value(value) {}
+
+public:
+    ConstantString(const ConstantString&) = delete;
+    ConstantString& operator = (const ConstantString&) = delete;
+
+    /// Get a constant string for |string|.
+    static ConstantString* get(CFG& cfg, const std::string& string);
+
+    /// Returns the value of this string constant.
+    const std::string& get_value() const { return m_value; }
 
     void print(std::ostream& os) const override;
 };

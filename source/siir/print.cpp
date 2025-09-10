@@ -44,14 +44,15 @@ static void print_inst(std::ostream& os, Instruction* inst) {
 
     os << opcode_to_string(inst->opcode()) << ' ';
 
-    if (inst->is_def())
+    if (inst->is_def()) {
         os << inst->get_type()->to_string() << (inst->is_call() ? " " : ", ");
+    }
 
     for (u32 idx = 0, e = inst->num_operands(); idx != e; ++idx) {
         Value* operand = inst->get_operand(idx);
 
         if (operand->has_type()) {
-            if (!inst->has_type()) {
+            if (!inst->has_type() && (!inst->is_call() || idx != 0)) {
                 os << operand->get_type()->to_string() << ' ';
             } else if (inst->has_type() && !inst->is_call()
               && (*inst->get_type() != *operand->get_type())) {
@@ -65,10 +66,11 @@ static void print_inst(std::ostream& os, Instruction* inst) {
             os << '(';
         } else if (idx + 1 != e) {
             os << ", ";
-        } else if (inst->is_call()) {
-            os << ')';
         }
     }
+
+    if (inst->is_call())
+        os << ')';
 
     if (inst->is_load() || inst->is_store()) {
         os << ", align " << inst->get_data();
@@ -151,7 +153,12 @@ static void print_function(std::ostream& os, Function* function) {
     else
         os << "void";
 
-    os << " {\n";
+    if (function->empty()) {
+        os << "\n";
+        return;
+    } else {
+        os << " {\n";
+    }
 
     if (!function->locals().empty()) {
         for (auto [ name, local ] : function->locals()) {
@@ -196,9 +203,15 @@ void CFG::print(std::ostream& os) const {
     }
 
     if (!m_functions.empty()) {
-        for (auto& [ name, function ] : m_functions)
+        u32 idx = 0, e = m_functions.size();
+        for (auto& [ name, function ] : m_functions) {
             print_function(os, function);
+            if (++idx != e)
+                os << '\n';
+        }
     }
+
+    os << '\n';
 }
 
 void Global::print(std::ostream& os) const {
@@ -235,6 +248,41 @@ void ConstantNull::print(std::ostream& os) const {
 
 void BlockAddress::print(std::ostream& os) const {
     os << "bb" << m_block->get_number();
+}
+
+void ConstantString::print(std::ostream& os) const {
+    os << '"';
+
+    for (u32 idx = 0, e = m_value.size(); idx != e; ++idx) {
+        switch (m_value[idx]) {
+        case '\\':
+            os << "\\\\";
+            break;
+        case '\"':
+            os << "\\\"";
+            break;
+        case '\n':
+            os << "\\n";
+            break;
+        case '\t':
+            os << "\\t";
+            break;
+        case '\r':
+            os << "\\r";
+            break;
+        case '\b':
+            os << "\\b";
+            break;
+        case '\0':
+            os << "\\0";
+            break;
+        default:
+            os << m_value[idx];
+            break;
+        }
+    }
+
+    os << '"';
 }
 
 void PhiOperand::print(std::ostream& os) const {

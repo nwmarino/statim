@@ -57,7 +57,6 @@ void __attribute((noreturn)) __panic(char* __s, unsigned long __n) {
 void __memcpy(void* __d, void* __s, unsigned long __n) {
     char* dst = (char*) __d;
     char* src = (char*) __s;
-
     while (__n > 0) {
         dst[__n] = src[__n];
         __n--;
@@ -66,7 +65,6 @@ void __memcpy(void* __d, void* __s, unsigned long __n) {
 
 void __memset(void* __d, char __v, unsigned long __n) {
     char* dst = (char*) __d;
-
     while (__n > 0) {
         dst[__n] = __v;
         __n--;
@@ -77,4 +75,17 @@ unsigned long __strlen(char* __s) {
     unsigned long n = 0;
     while (__s[n++] != '\0');
     return n;
+}
+
+void __print(char* __s, unsigned long __n) {
+    asm volatile (
+        "movq $1, %%rax\n"
+        "movq $1, %%rdi\n"
+        "movq %0, %%rsi\n"
+        "movq %1, %%rdx\n"
+        "syscall\n"
+        :
+        : "r" (__s), "r" (__n)
+        : "rax", "rdi", "rsi", "rdi"
+    );
 }

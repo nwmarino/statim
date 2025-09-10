@@ -34,7 +34,21 @@ Instruction* InstBuilder::build_nop() {
 Instruction* InstBuilder::build_const(Constant* constant) {
     assert(constant && "constant cannot be null");
 
-    return insert(INST_OP_CONSTANT, m_cfg.get_def_id(), constant->get_type(), { constant });
+    return insert(
+        INST_OP_CONSTANT, 
+        m_cfg.get_def_id(), 
+        constant->get_type(), 
+        { constant });
+}
+
+Instruction* InstBuilder::build_string(ConstantString* string) {
+    assert(string && "string constant cannot be null");
+
+    return insert(
+        INST_OP_STRING,
+        m_cfg.get_def_id(),
+        string->get_type(),
+        { string });
 }
 
 Instruction* InstBuilder::build_load(const Type* type, Value* src) {
@@ -161,7 +175,7 @@ Instruction* InstBuilder::build_unreachable() {
 }
 
 Instruction* InstBuilder::build_call(const FunctionType* type, Value* callee, 
-                        const std::vector<Value*>& args) {
+                                     const std::vector<Value*>& args) {
     assert(type && "type cannot be null");
     assert(callee && "callee cannot be null");
 

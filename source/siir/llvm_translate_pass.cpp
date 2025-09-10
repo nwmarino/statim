@@ -154,7 +154,7 @@ llvm::BasicBlock* LLVMTranslatePass::translate(BasicBlock* blk) {
     return m_blocks[blk];
 }
 
-llvm::Instruction* LLVMTranslatePass::translate(Instruction* inst) {
+llvm::Value* LLVMTranslatePass::translate(Instruction* inst) {
     assert(m_insts.count(inst) == 1);
     return m_insts[inst];
 }
@@ -266,6 +266,13 @@ void LLVMTranslatePass::convert(BasicBlock* bb) {
 
 void LLVMTranslatePass::convert(Instruction* inst) {
     switch (inst->opcode()) { 
+    case INST_OP_STRING: {
+        llvm::GlobalVariable* GV = m_builder->CreateGlobalString(
+            static_cast<ConstantString*>(inst->get_operand(0))->get_value());
+        m_insts.emplace(inst, GV);
+        break;
+    }
+
     case INST_OP_LOAD: {
         llvm::Value* V = m_builder->CreateAlignedLoad(
             translate(inst->get_type()), 

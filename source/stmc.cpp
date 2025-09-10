@@ -32,6 +32,7 @@
 
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 
 static stm::TranslationUnit* 
 resolve_use(stm::UseDecl* use, stm::InputFile& req,
@@ -219,6 +220,8 @@ static void emit_module(const stm::Options& opts,
 stm::i32 main(stm::i32 argc, char** argv) {
     stm::Logger::init();
 
+    std::ofstream dump("dump");
+
     stm::Options options;
     options.output = "main";
     options.optlevel = 0;
@@ -278,6 +281,8 @@ stm::i32 main(stm::i32 argc, char** argv) {
     for (auto& unit : units) {
         stm::siir::CFG& graph = unit->get_graph();
 
+        graph.print(dump);
+
         if (options.optlevel >= 1) {
             stm::siir::SSARewrite ssar { graph };
             ssar.run();
@@ -286,6 +291,8 @@ stm::i32 main(stm::i32 argc, char** argv) {
             dce.run();
         }
     }
+
+    dump.close();
 
     if (options.llvm) {
         llvm::InitializeAllTargetInfos();

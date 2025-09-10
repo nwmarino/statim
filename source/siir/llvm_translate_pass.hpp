@@ -31,7 +31,7 @@ class LLVMTranslatePass final : public Pass {
     std::unordered_map<Function*, llvm::Function*> m_functions = {};
     std::unordered_map<Local*, llvm::AllocaInst*> m_locals = {};
     std::unordered_map<BasicBlock*, llvm::BasicBlock*> m_blocks = {};
-    std::unordered_map<Instruction*, llvm::Instruction*> m_insts = {};
+    std::unordered_map<Instruction*, llvm::Value*> m_insts = {};
     std::vector<std::pair<Instruction*, llvm::PHINode*>> m_delayed_phis = {};
 
     llvm::Type* translate(const Type* ty);
@@ -40,7 +40,7 @@ class LLVMTranslatePass final : public Pass {
     llvm::Argument* translate(Argument* arg);
     llvm::AllocaInst* translate(Local* local);
     llvm::BasicBlock* translate(BasicBlock* blk);
-    llvm::Instruction* translate(Instruction* inst);
+    llvm::Value* translate(Instruction* inst);
     llvm::Constant* translate(Constant* constant);
     llvm::Value* translate(Value* value);
 

@@ -30,6 +30,7 @@ class CFG final {
     friend class ConstantFP;
     friend class ConstantNull;
     friend class BlockAddress;
+    friend class ConstantString;
     friend class Instruction;
 
     /// Top-level graph items.
@@ -58,6 +59,7 @@ class CFG final {
     std::unordered_map<f64, ConstantFP*> m_pool_fp64 = {};
     std::unordered_map<const Type*, ConstantNull*> m_pool_null = {};
     std::unordered_map<const BasicBlock*, BlockAddress*> m_pool_baddr = {};
+    std::unordered_map<std::string, ConstantString*> m_pool_str = {};
 
     /// PHI operand pooling. This is only here because the memory cannot be 
     /// appropriately managed by the individual instructions 

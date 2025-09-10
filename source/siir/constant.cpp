@@ -129,3 +129,15 @@ Constant* BlockAddress::get(CFG& cfg, BasicBlock* blk) {
     cfg.m_pool_baddr.emplace(blk, null);
     return null;
 }
+
+ConstantString* ConstantString::get(CFG& cfg, const std::string& string) {
+    auto it = cfg.m_pool_str.find(string);
+    if (it != cfg.m_pool_str.end())
+        return it->second;
+
+    ConstantString* str = new ConstantString(
+        string, ArrayType::get(cfg, Type::get_i8_type(cfg), string.size() + 1));
+
+    cfg.m_pool_str.emplace(string, str);
+    return str;
+}
