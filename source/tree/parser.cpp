@@ -1,4 +1,5 @@
 #include "core/logger.hpp"
+#include "tree/rune.hpp"
 #include "tree/type.hpp"
 #include "tree/parser.hpp"
 #include "types/source_location.hpp"
@@ -681,6 +682,8 @@ EnumDecl* Parser::parse_enum(const Token& name) {
 Stmt* Parser::parse_stmt() {
     if (match(TOKEN_KIND_SET_BRACE))
         return parse_block();
+    else if (match(TOKEN_KIND_SIGN))
+        return parse_rune_stmt();
     else if (match("break"))
         return parse_break();
     else if (match("continue"))
@@ -807,6 +810,19 @@ RetStmt* Parser::parse_ret() {
     return new RetStmt(Span(begin, end), expr);
 }
 
+Stmt* Parser::parse_rune_stmt() {
+    next(); // '$'
+    SourceLocation loc = lexer.last().loc;
+    Rune* rune = parse_rune();
+    if (Rune::is_value(rune->kind())) {
+        return new RuneExpr(loc, nullptr, rune);
+    } else if (Rune::is_statement(rune->kind())) {
+        return new RuneStmt(loc, rune);
+    }
+
+    Logger::fatal("cannot use decorator rune as a statement", loc);
+}
+
 Expr* Parser::parse_expr() {
     Expr* base = parse_unary_prefix();
     assert(base && "could not parse expression base");
@@ -826,6 +842,8 @@ Expr* Parser::parse_primary() {
         return parse_char();
     else if (match(TOKEN_KIND_STRING))
         return parse_string();
+    else if (match(TOKEN_KIND_SIGN))
+        return parse_rune_expr();
     else
         return nullptr;
 }
@@ -1131,4 +1149,18 @@ CallExpr* Parser::parse_call() {
         nullptr, 
         callee.value, 
         args);
+}
+
+RuneExpr* Parser::parse_rune_expr() {
+    next(); // '$'
+    SourceLocation loc = lexer.last().loc;
+    Rune* rune = parse_rune();
+    if (!Rune::is_value(rune->kind())) {
+        Logger::fatal(
+            "rune '" + Rune::to_string(rune->kind()) + 
+                "' cannot be used as an expression", 
+            loc);
+    }
+
+    return new RuneExpr(loc, nullptr, rune);
 }

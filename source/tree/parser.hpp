@@ -67,6 +67,7 @@ private:
     IfStmt*         parse_if();
     WhileStmt*      parse_while();
     RetStmt*        parse_ret();
+    Stmt*           parse_rune_stmt();
 
     Expr* parse_expr();
     Expr* parse_primary();
@@ -87,6 +88,7 @@ private:
     SizeofExpr* parse_sizeof();
     ReferenceExpr* parse_ref();
     CallExpr* parse_call();
+    RuneExpr* parse_rune_expr();
 };
 
 } // namespace stm

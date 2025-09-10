@@ -13,6 +13,8 @@
 #include "tree/stmt.hpp"
 #include "tree/visitor.hpp"
 
+#include <string>
+
 using namespace stm;
 
 Codegen::Codegen(Options& opts, Root& root, siir::CFG& cfg)
@@ -24,6 +26,21 @@ const std::string& Codegen::mangle(const Decl* decl) {
         return it->second;
 
     return decl->get_name();
+}
+
+siir::Function* Codegen::fetch_runtime_fn(const std::string& name,
+                                          const std::vector<const siir::Type*>& params,
+                                          const siir::Type* ret) {
+    siir::Function* fn = nullptr;
+    fn = m_cfg.get_function(name);
+    if (fn)
+        return fn;
+
+    const siir::FunctionType* type =
+        siir::FunctionType::get(m_cfg, params, ret);
+
+    return new siir::Function(
+        m_cfg, siir::Function::LINKAGE_EXTERNAL, type, name, {});                       
 }
 
 const siir::Type* Codegen::lower_type(const Type* type) {
@@ -323,8 +340,216 @@ void Codegen::visit(RetStmt& node) {
     m_tmp = nullptr;
 }
 
-void Codegen::visit(RuneStmt& node) {
+void Codegen::codegen_rune_abort(const RuneStmt& node) {
+
+}
+
+void Codegen::codegen_rune_assert(const RuneStmt& node) {
+
+}
+
+void Codegen::codegen_rune_print(const RuneStmt& node) {
+    const Rune* rune = node.rune();
+    StringLiteral* strlit = dynamic_cast<StringLiteral*>(rune->args().at(0));
+    if (!strlit) {
+        Logger::fatal(
+            "expected first argument to '$print' to be a string literal",
+            node.get_span());
+    }
     
+    // Get the stdout file descriptor as a constant integer.
+    siir::Constant* fd = siir::ConstantInt::get(
+        m_cfg, siir::Type::get_i64_type(m_cfg), 1);
+
+    std::string str = strlit->get_value();
+    std::vector<std::string> parts;
+    parts.reserve(rune->num_args() + 1);
+    std::size_t pos = 0;
+    while (1) {
+        std::size_t open = str.find('{', pos);
+        if (open == std::string::npos) {
+            parts.push_back(str.substr(pos));
+            break;
+        }
+
+        // Check if there is a proper '{}' placeholder
+        if (open + 1 < str.size() && str[open + 1] == '}') {
+            parts.push_back(str.substr(pos, open - pos));
+            pos = open + 2; // skip "{}" in the format string.
+        } else {
+            // This is a lone '{' - treat it as any other character
+            std::size_t next_pos = open + 1;
+            std::size_t next_open = str.find('{', next_pos);
+            
+            // If there are no more placeholders, append everything
+            if (next_open == std::string::npos) {
+                parts.push_back(str.substr(pos));
+                break;
+            }
+            
+            // Check if the next '{' forms a valid placeholder
+            if (next_open + 1 < str.size() && str[next_open + 1] == '}') {
+                parts.push_back(str.substr(pos, next_open - pos));
+                pos = next_open + 2;
+            } else {
+                pos = next_open;
+            }
+        }
+    }
+
+    if (parts.size() - 1 != rune->num_args() - 1) {
+        Logger::fatal(
+            "argument count mismatch with bracket count, got '" + 
+                std::to_string(rune->num_args() - 1) + "', but expected '" + 
+                std::to_string(parts.size()) + "'", 
+            node.get_span());
+    }
+
+    for (u32 idx = 0, e = parts.size(); idx != e; ++idx) {
+        std::string part = parts.at(idx);
+
+        if (!part.empty()) {
+            // This part of the string isn't empty, so we treat it like a
+            // string literal.
+            siir::Instruction* string = m_builder.build_string(
+                siir::ConstantString::get(m_cfg, part));
+
+            siir::Function* rt_print = fetch_runtime_fn(
+                "__print_fd", 
+                {
+                    siir::Type::get_i64_type(m_cfg),
+                    siir::PointerType::get(m_cfg, siir::Type::get_i8_type(m_cfg))
+                }
+            );
+
+            m_builder.build_call(rt_print->get_type(), rt_print, { fd, string });
+        }
+
+        if (idx >= rune->num_args())
+            continue;
+    
+        Expr* arg = rune->args().at(idx);
+        m_vctx = RValue;
+        arg->accept(*this);
+        assert(m_tmp && "print argument does not produce a value!");
+
+        if (arg->get_type()->is_bool()) {
+            siir::Function* rt_print_bool = fetch_runtime_fn(
+                "__print_bool", 
+                {
+                    siir::Type::get_i64_type(m_cfg),
+                    siir::Type::get_i8_type(m_cfg),
+                }
+            );
+
+            m_builder.build_call(
+                rt_print_bool->get_type(), rt_print_bool, { fd, m_tmp });
+        } else if (*arg->get_type() == *m_root.get_char_type()) {
+            /// TODO: Add easier check for char type... and fp32/fp64.
+            siir::Function* rt_print_char = fetch_runtime_fn(
+                "__print_char", 
+                {
+                    siir::Type::get_i64_type(m_cfg),
+                    siir::Type::get_i8_type(m_cfg),
+                }
+            );
+
+            m_builder.build_call(
+                rt_print_char->get_type(), rt_print_char, { fd, m_tmp });
+        } else if (arg->get_type()->is_signed_int()) {
+            siir::Function* rt_print_si = fetch_runtime_fn(
+                "__print_si", 
+                {
+                    siir::Type::get_i64_type(m_cfg),
+                    siir::Type::get_i64_type(m_cfg),
+                    siir::Type::get_i64_type(m_cfg),
+                }
+            );
+
+            m_builder.build_call(
+                rt_print_si->get_type(), rt_print_si, { fd, m_tmp });
+        } else if (arg->get_type()->is_unsigned_int()) {
+            siir::Function* rt_print_ui = fetch_runtime_fn(
+                "__print_ui", 
+                {
+                    siir::Type::get_i64_type(m_cfg),
+                    siir::Type::get_i64_type(m_cfg),
+                    siir::Type::get_i64_type(m_cfg),
+                }
+            );
+
+            m_builder.build_call(
+                rt_print_ui->get_type(), rt_print_ui, { fd, m_tmp });
+        } else if (*arg->get_type() == *m_root.get_fp32_type()) {
+            siir::Function* rt_print_float = fetch_runtime_fn(
+                "__print_float", 
+                {
+                    siir::Type::get_i64_type(m_cfg),
+                    siir::Type::get_f32_type(m_cfg),
+                }
+            );
+
+            m_builder.build_call(
+                rt_print_float->get_type(), rt_print_float, { fd, m_tmp });
+        } else if (*arg->get_type() == *m_root.get_fp64_type()) {
+            siir::Function* rt_print_double = fetch_runtime_fn(
+                "__print_double", 
+                {
+                    siir::Type::get_i64_type(m_cfg),
+                    siir::Type::get_f64_type(m_cfg),
+                }
+            );
+
+            m_builder.build_call(
+                rt_print_double->get_type(), rt_print_double, { fd, m_tmp });
+        } else if (arg->get_type()->is_pointer()) {
+            siir::Function* rt_print_ptr = fetch_runtime_fn(
+                "__print_ptr", 
+                {
+                    siir::Type::get_i64_type(m_cfg),
+                    siir::PointerType::get(m_cfg, nullptr),
+                }
+            );
+
+            m_builder.build_call(
+                rt_print_ptr->get_type(), rt_print_ptr, { fd, m_tmp });
+        } else {
+            Logger::fatal(
+                "unsupported operand type to '$print': '" + 
+                    arg->get_type()->to_string() + "'", 
+                arg->get_span());
+        }
+    }
+}
+
+void Codegen::codegen_rune_write(const RuneStmt& node) {
+
+}
+
+void Codegen::visit(RuneStmt& node) {
+    switch (node.rune()->kind()) {
+    case Rune::Abort:
+        codegen_rune_abort(node);
+        break;
+    case Rune::Asm:
+        break;
+    case Rune::Assert:
+        codegen_rune_assert(node);
+        break;
+    case Rune::If:
+        break;
+    case Rune::Print:
+    case Rune::Println:
+        codegen_rune_print(node);
+        break;
+    case Rune::Write:
+    case Rune::Writeln:
+        codegen_rune_write(node);
+        break;
+    default:
+        assert(false && 
+            "cannot generate code for a non-statement rune as a statement!");
+    }
 }
 
 void Codegen::visit(BoolLiteral& node) {
@@ -1191,5 +1416,16 @@ void Codegen::visit(CallExpr& node) {
 }
 
 void Codegen::visit(RuneExpr& node) {
-
+    switch (node.rune()->kind()) {
+    case Rune::Comptime:
+        m_tmp = siir::ConstantInt::get_false(m_cfg);
+        break;
+    case Rune::Path:
+        m_tmp = m_builder.build_string(
+            siir::ConstantString::get(m_cfg, m_cfg.get_file().absolute()));
+        break;
+    default:
+        assert(false && 
+            "cannot generate code for a non-value rune as an expression!");
+    }
 }

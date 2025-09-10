@@ -221,6 +221,12 @@ class Codegen final : public Visitor {
     /// references.
     const std::string& mangle(const Decl* decl);
 
+    /// Fetch or create a runtime function with the given name and function 
+    /// signature |type| as an SIIR empty function.
+    siir::Function* fetch_runtime_fn(const std::string& name,
+                                     const std::vector<const siir::Type*>& params = {},
+                                     const siir::Type* ret = nullptr);
+
     /// Lower \p type to its SIIR equivelant, if it can be.
     const siir::Type* lower_type(const Type* type);
 
@@ -237,6 +243,11 @@ class Codegen final : public Visitor {
     
     /// Lower the structure \p decl to a new SIIR StructType. 
     void lower_structure(const StructDecl& decl);
+
+    void codegen_rune_abort(const RuneStmt& node);
+    void codegen_rune_assert(const RuneStmt& node);
+    void codegen_rune_print(const RuneStmt& node);
+    void codegen_rune_write(const RuneStmt& node);
 
     /// Binary operation code generation.
     void codegen_binary_assign(const BinaryExpr& node);

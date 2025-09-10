@@ -1,8 +1,6 @@
 use "a.stm";
 
-__print :: (__s: *char, __n: u64) -> void;
-
 main :: (argc: s64, argv: **char) -> s64 {
-    __print("hello world!\n", 13);
+    $println("hello world!");
     ret foo();
 }
