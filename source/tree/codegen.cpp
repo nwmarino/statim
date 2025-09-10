@@ -362,7 +362,46 @@ void Codegen::codegen_rune_abort(const RuneStmt& node) {
 }
 
 void Codegen::codegen_rune_assert(const RuneStmt& node) {
+    if (node.rune()->num_args() != 1) {
+        Logger::fatal(
+            "'$assert' rune must have exactly one argument",
+            node.get_span());
+    }
 
+    m_vctx = RValue;
+    node.rune()->args().front()->accept(*this);
+    assert(m_tmp && "assert rune expression does not produce a value!");
+    m_tmp = inject_bool_cmp(m_tmp);
+
+    siir::BasicBlock* fail = new siir::BasicBlock(m_func);
+    siir::BasicBlock* okay = new siir::BasicBlock(m_func);
+
+    m_builder.build_brif(m_tmp, okay, fail);
+
+    siir::Function* panic_fn = fetch_runtime_fn("__panic", {
+        siir::PointerType::get(m_cfg, siir::Type::get_i8_type(m_cfg)),
+        siir::Type::get_i64_type(m_cfg)
+    });
+
+    const SourceLocation& loc = node.rune()->args().front()->get_span().begin;
+    std::string msg = loc.file.filename() + ':' + std::to_string(loc.line) + 
+        ':' + std::to_string(loc.column) + ": assertion failed\n";
+        
+    siir::Instruction* string = m_builder.build_string(
+        siir::ConstantString::get(m_cfg, msg));
+    
+    m_builder.set_insert(fail);
+    m_builder.build_call(
+        panic_fn->get_type(), 
+        panic_fn, 
+        { 
+            string, 
+            siir::ConstantInt::get(
+                m_cfg, siir::Type::get_i64_type(m_cfg), msg.size()) 
+        }
+    );
+    m_builder.build_unreachable();
+    m_builder.set_insert(okay);
 }
 
 void Codegen::codegen_rune_print(const RuneStmt& node) {

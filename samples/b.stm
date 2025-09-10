@@ -10,7 +10,8 @@ main :: (argc: s64, argv: **char) -> s64 {
     a.a = 1;
     a.b = 4;
 
-    $abort;
+    $assert(true);
+    $assert(false);
 
     $println("hello world!");
     $println("this is 4 = {}", a.b);
