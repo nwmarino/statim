@@ -166,17 +166,31 @@ void Codegen::impl_function(const FunctionDecl& decl) {
 }
 
 void Codegen::lower_structure(const StructDecl& decl) {
+    siir::StructType* type = siir::StructType::get(m_cfg, decl.get_name());
+    assert(type && "structure shell type not created!");
 
+    for (auto& field : decl.get_fields()) {
+        const siir::Type* field_type = lower_type(field->get_type());
+        assert(field_type && "could not lower structure field type to SIIR!");
+
+        type->append_field(field_type);
+    }
 }
 
 void Codegen::visit(Root& node) {
-    for (auto& import : node.imports())
-        if (auto structure = dynamic_cast<StructDecl*>(import))
-            lower_structure(*structure);
+    for (auto& import : node.imports()) {
+        if (auto structure = dynamic_cast<StructDecl*>(import)) {
+            siir::StructType* type = siir::StructType::create(
+                m_cfg, structure->get_name(), {});
+        }
+    }
 
-    for (auto& decl : node.decls())
-        if (auto structure = dynamic_cast<StructDecl*>(decl))
-            lower_structure(*structure);
+    for (auto& decl : node.decls()) {
+        if (auto structure = dynamic_cast<StructDecl*>(decl)) {
+            siir::StructType* type = siir::StructType::create(
+                m_cfg, structure->get_name(), {});
+        }
+    }
 
     m_phase = PH_Declare;
     for (auto& import : node.imports()) 
@@ -203,6 +217,8 @@ void Codegen::visit(FunctionDecl& node) {
 
 void Codegen::visit(VariableDecl& node) {
     const siir::Type* type = lower_type(node.get_type());
+    assert(type && "could not resolve type for variable!");
+
     siir::Local* local = new siir::Local(
         m_cfg,
         type, 
@@ -461,6 +477,9 @@ void Codegen::codegen_rune_print(const RuneStmt& node) {
             m_builder.build_call(
                 rt_print_char->get_type(), rt_print_char, { fd, m_tmp });
         } else if (arg->get_type()->is_signed_int()) {
+            if (!m_tmp->get_type()->is_integer_type(64))
+                m_tmp = m_builder.build_sext(siir::Type::get_i64_type(m_cfg), m_tmp);
+
             siir::Function* rt_print_si = fetch_runtime_fn(
                 "__print_si", 
                 {
@@ -473,6 +492,9 @@ void Codegen::codegen_rune_print(const RuneStmt& node) {
             m_builder.build_call(
                 rt_print_si->get_type(), rt_print_si, { fd, m_tmp, ten });
         } else if (arg->get_type()->is_unsigned_int()) {
+            if (!m_tmp->get_type()->is_integer_type(64))
+                m_tmp = m_builder.build_zext(siir::Type::get_i64_type(m_cfg), m_tmp);
+
             siir::Function* rt_print_ui = fetch_runtime_fn(
                 "__print_ui", 
                 {
@@ -1405,7 +1427,36 @@ void Codegen::visit(ReferenceExpr& node) {
 }
 
 void Codegen::visit(MemberExpr& node) {
+    ValueContext vc = m_vctx;
+    siir::Value* base = nullptr;
 
+    const siir::Type* base_type = lower_type(node.get_base()->get_type());
+    const siir::StructType* struct_type = nullptr;
+
+    if (base_type->is_struct_type()) {
+        struct_type = static_cast<const siir::StructType*>(base_type);
+    } else if (struct_type->is_pointer_type()) {
+        struct_type = static_cast<const siir::StructType*>(
+            static_cast<const siir::PointerType*>(base_type)->get_pointee());
+    }
+
+    m_vctx = LValue;
+    if (base_type->is_pointer_type())
+        m_vctx = RValue;
+
+    node.pBase->accept(*this);
+    assert(m_tmp && "member access base does not produce a value!");
+
+    u32 field_idx = static_cast<const FieldDecl*>(node.get_decl())->get_index();
+
+    const siir::Type* field_type = lower_type(node.get_type());
+    m_tmp = m_builder.build_ap(
+        siir::PointerType::get(m_cfg, field_type), 
+        m_tmp, 
+        siir::ConstantInt::get(m_cfg, siir::Type::get_i64_type(m_cfg), field_idx));
+
+    if (vc == RValue)
+        m_tmp = m_builder.build_load(field_type, m_tmp);
 }
 
 void Codegen::visit(CallExpr& node) {

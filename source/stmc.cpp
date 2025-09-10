@@ -29,6 +29,7 @@
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
+#include "llvm/Transforms/Scalar/SROA.h"
 
 #include <cstdlib>
 #include <filesystem>
@@ -88,8 +89,8 @@ static void link_imports(stm::UseDecl* use, stm::TranslationUnit* dst) {
             stm::Logger::info("imported over " + exp->get_name());
         }
 
-        // if use has "public" decorator
-        //    add imp as an export to dst
+        if (use->has_decorator(stm::Rune::Public))
+            dst_imps.push_back(exp);
 
         if (auto ST = dynamic_cast<stm::StructDecl*>(exp)) {
             
@@ -188,6 +189,9 @@ static void emit_module(const stm::Options& opts,
     MPM.addPass(llvm::createModuleToFunctionPassAdaptor(
         llvm::SimplifyCFGPass()));
 
+    MPM.addPass(llvm::createModuleToFunctionPassAdaptor(
+        llvm::SROAPass(llvm::SROAOptions::ModifyCFG)));
+
     std::string ofile;
     switch (file_type) {
     case llvm::CodeGenFileType::AssemblyFile:
@@ -283,7 +287,7 @@ stm::i32 main(stm::i32 argc, char** argv) {
 
         graph.print(dump);
 
-        if (options.optlevel >= 1) {
+        if (!options.llvm && options.optlevel >= 1) {
             stm::siir::SSARewrite ssar { graph };
             ssar.run();
 

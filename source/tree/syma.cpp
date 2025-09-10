@@ -223,9 +223,11 @@ void SymbolAnalysis::visit(CallExpr& node) {
 }
 
 void SymbolAnalysis::visit(RuneExpr& node) {
-
+    for (auto& arg : node.rune()->args())
+        arg->accept(*this);
 }
 
 void SymbolAnalysis::visit(RuneStmt& node) {
-
+    for (auto& arg : node.rune()->args())
+        arg->accept(*this);
 }

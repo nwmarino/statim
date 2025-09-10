@@ -1,8 +1,17 @@
 use "a.stm";
 
+Box :: {
+    a: s64,
+    b: u32,
+}
+
 main :: (argc: s64, argv: **char) -> s64 {
+    let a: Box;
+    a.a = 1;
+    a.b = 4;
+
     $println("hello world!");
-    $println("this is 4 = {}", 4);
+    $println("this is 4 = {}", a.b);
     $println("this is pi = {}", 3.14562);
     ret foo();
 }

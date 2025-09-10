@@ -534,7 +534,7 @@ StructDecl* Parser::parse_struct(const Token& name) {
                 since(name.loc));
         }
 
-        const Token& fname = lexer.last();
+        const Token fname = lexer.last();
         const Type* ftype = nullptr;
         next(); // identifier
 

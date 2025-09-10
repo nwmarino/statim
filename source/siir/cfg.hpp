@@ -86,6 +86,10 @@ public:
     const Target& get_target() const { return m_target; }
     Target& get_target() { return m_target; }
 
+    /// Return a list of all the structure types in this graph, in order of
+    /// creation.
+    std::vector<StructType*> structs() const;
+
     /// Returns a list of all functions in this graph, in order of addition.
     std::vector<Global*> globals() const;
 

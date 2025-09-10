@@ -45,6 +45,7 @@ class LLVMTranslatePass final : public Pass {
     llvm::Constant* translate(Constant* constant);
     llvm::Value* translate(Value* value);
 
+    void convert(StructType* type);
     void convert(Global* global);
     void convert(Function* fn);
     void convert(BasicBlock* bb);

@@ -25,6 +25,13 @@ using namespace stm::siir;
 void LLVMTranslatePass::run() {
     m_builder = std::make_unique<llvm::IRBuilder<>>(*m_context);
 
+    std::vector<StructType*> structs = m_cfg.structs();
+    for (auto& type : structs)
+        llvm::StructType::create(*m_context, type->get_name());
+
+    for (auto& type : structs) 
+        convert(type);
+
     for (auto& global : m_cfg.globals()) {
         llvm::GlobalVariable::LinkageTypes linkage;
         switch (global->get_linkage()) {
@@ -192,6 +199,24 @@ llvm::Value* LLVMTranslatePass::translate(Value* value) {
     }
 
     assert(false && "no LLVM equivelant for SIIR value!");
+}
+
+void LLVMTranslatePass::convert(StructType* type) {
+    llvm::StructType* llvm_type = llvm::StructType::getTypeByName(
+        *m_context, type->get_name());
+    assert(llvm_type && 
+        "shell LLVM equivelant for struct type has not been created!");
+
+    std::vector<llvm::Type*> fields;
+    fields.reserve(type->num_fields());
+    for (auto& field : type->fields()) {
+        llvm::Type* field_type = translate(field);
+        assert(field_type && 
+            "could not lower SIIR struct field type to an LLVM equivelant!");
+        fields.push_back(field_type);
+    }
+
+    llvm_type->setBody(fields);
 }
 
 void LLVMTranslatePass::convert(Global* global) {
