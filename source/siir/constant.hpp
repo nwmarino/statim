@@ -153,7 +153,7 @@ class ConstantString final : public ConstantAggregate {
     const std::string m_value;
 
     /// Private constructor. To be used by the graph context for pooling.
-    ConstantString(const std::string& value, const ArrayType* type) 
+    ConstantString(const std::string& value, const Type* type) 
         : ConstantAggregate({}, type), m_value(value) {}
 
 public:

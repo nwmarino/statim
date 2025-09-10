@@ -136,7 +136,9 @@ ConstantString* ConstantString::get(CFG& cfg, const std::string& string) {
         return it->second;
 
     ConstantString* str = new ConstantString(
-        string, ArrayType::get(cfg, Type::get_i8_type(cfg), string.size() + 1));
+        string, 
+        PointerType::get(cfg, Type::get_i8_type(cfg)));
+        //ArrayType::get(cfg, Type::get_i8_type(cfg), string.size() + 1));
 
     cfg.m_pool_str.emplace(string, str);
     return str;

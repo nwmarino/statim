@@ -17,6 +17,7 @@ class EnumDecl;
 
 class DeferredType;
 class FunctionType;
+class ArrayType;
 class PointerType;
 class StructType;
 class EnumType;
@@ -78,6 +79,14 @@ public:
     virtual const FunctionType* as_function() const
     { assert(false && "cannot convert this type to a function type"); }
 
+    /// Returns true if this type is an array type.
+    virtual bool is_array() const { return false; }
+    
+    /// Returns this type as an array type, if it is one.
+    virtual const ArrayType* as_array() const {
+        assert(false && "cannot convert this type to an array type!");
+    }
+
     /// \returns `true` if this type is a pointer type.
     virtual bool is_pointer() const { return false; }
 
@@ -114,15 +123,28 @@ class DeferredType final : public Type {
 public:
     /// Contextual properties for a type reference.
     struct Context final {
-        std::string     base;
-        SourceLocation  meta;
-        bool            mut;
-        const Scope*    pScope;
-        u32             indirection;
+        /// The base of this type, i.e. i8 in *i8, i32 in [4]i32, etc.
+        std::string base;
+
+        /// The location at with this type was parsed.
+        SourceLocation meta;
+
+        /// If this type was marked as mutable or not.
+        bool mut;
+
+        /// The scope in which this type was referenced.
+        const Scope* pScope;
+
+        /// The size of this type if it was an array type, i.e. 4 in 4[i32].
+        u32 size = 0;
+
+        /// The level of indirection if this type was a pointer type, i.e. if
+        /// the type was parsed was **i32, then indirection = 2.
+        u32 indirection = 0;
     };
 
 private:
-    Context     context;
+    Context context;
     const Type* pResolved = nullptr;
 
     /// Private constructor for the type context.
@@ -256,6 +278,37 @@ public:
 
     std::string to_string() const override;
 };
+
+/// An array type - used for statically sized aggregates whose elements are
+/// the same type.
+/*
+class ArrayType final : public Type {
+    friend class TypeContext;
+
+    const Type* m_element;
+    u32 m_size;
+
+    ArrayType(const Type* element, u32 size) 
+        : m_element(element), m_size(size) {}
+
+public:
+    static const ArrayType* get(Root& root, const Type* element, u32 size);
+
+    /// Returns the element type of this array type.
+    const Type* get_element() const { return m_element; }
+
+    /// Returns the number of elements in this array type.
+    u32 get_size() const { return m_size; }
+
+    bool is_array() const override { return true; }
+
+    const ArrayType* as_array() const override { return this; }
+
+    bool can_cast(const Type* other, bool impl = false) const override;
+
+    std::string to_string() const override;
+};
+*/
 
 /// Represents the encapsulation of a type as a pointer.
 class PointerType final : public Type {
