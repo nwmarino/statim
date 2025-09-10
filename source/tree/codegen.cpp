@@ -392,18 +392,26 @@ void Codegen::codegen_rune_print(const RuneStmt& node) {
                 parts.push_back(str.substr(pos, next_open - pos));
                 pos = next_open + 2;
             } else {
-                pos = next_open;
+                pos = next_pos;
             }
         }
     }
 
-    if (parts.size() - 1 != rune->num_args() - 1) {
+    if (parts.size() != rune->num_args()) {
         Logger::fatal(
             "argument count mismatch with bracket count, got '" + 
                 std::to_string(rune->num_args() - 1) + "', but expected '" + 
                 std::to_string(parts.size()) + "'", 
             node.get_span());
     }
+
+    siir::Function* rt_print = fetch_runtime_fn(
+            "__print_fd", 
+            {
+                siir::Type::get_i64_type(m_cfg),
+                siir::PointerType::get(m_cfg, siir::Type::get_i8_type(m_cfg))
+            }
+        );
 
     for (u32 idx = 0, e = parts.size(); idx != e; ++idx) {
         std::string part = parts.at(idx);
@@ -414,18 +422,10 @@ void Codegen::codegen_rune_print(const RuneStmt& node) {
             siir::Instruction* string = m_builder.build_string(
                 siir::ConstantString::get(m_cfg, part));
 
-            siir::Function* rt_print = fetch_runtime_fn(
-                "__print_fd", 
-                {
-                    siir::Type::get_i64_type(m_cfg),
-                    siir::PointerType::get(m_cfg, siir::Type::get_i8_type(m_cfg))
-                }
-            );
-
             m_builder.build_call(rt_print->get_type(), rt_print, { fd, string });
         }
 
-        if (idx >= rune->num_args())
+        if (idx >= rune->num_args() - 1)
             continue;
     
         Expr* arg = rune->args().at(idx);
@@ -519,6 +519,12 @@ void Codegen::codegen_rune_print(const RuneStmt& node) {
                     arg->get_type()->to_string() + "'", 
                 arg->get_span());
         }
+    }
+
+    if (node.rune()->kind() == Rune::Println) {
+        siir::Instruction* string = m_builder.build_string(
+            siir::ConstantString::get(m_cfg, "\n"));
+        m_builder.build_call(rt_print->get_type(), rt_print, { fd, string });
     }
 }
 

@@ -1,7 +1,6 @@
 // clang -ffreestanding -fno-stack-protector -fno-builtin -nostdlib -c rt.c
 
 void __attribute__((noreturn)) exit(long code) {
-#if defined(__x86_64__)
     asm volatile (
         "movq %0, %%rdi\n"
         "movq $60, %%rax\n"
@@ -10,9 +9,6 @@ void __attribute__((noreturn)) exit(long code) {
         : "r" (code)
         : "rax", "rdi"
     );
-#else
-    #error "unsupported architecture"
-#endif // defined(__x86_64__)
     
     __builtin_unreachable();
 }
