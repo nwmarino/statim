@@ -431,7 +431,7 @@ void LLVMTranslatePass::convert(Instruction* inst) {
                 return_type, param_types, false);
 
             llvm::InlineAsm* llvm_iasm = llvm::InlineAsm::get(
-                type, string, constraints, iasm->has_side_effects(), true);
+                type, string, constraints, iasm->has_side_effects());
 
             std::vector<llvm::Value*> args;
             if (inst->num_operands() > 1)

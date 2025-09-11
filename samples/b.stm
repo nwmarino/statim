@@ -48,7 +48,7 @@ file_new :: (path: *char, flags: FileFlags) -> File {
 
 $public
 file_is_open :: (file: *File) -> bool {
-    //$assert(file && "file cannot be null!");
+    $assert(file && "file cannot be null!");
     ret file._M_open;
 }
 

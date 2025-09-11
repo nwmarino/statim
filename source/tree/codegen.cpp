@@ -1,4 +1,5 @@
 #include "core/logger.hpp"
+#include "siir/basicblock.hpp"
 #include "siir/inlineasm.hpp"
 #include "tree/type.hpp"
 #include "siir/constant.hpp"
@@ -1384,11 +1385,67 @@ void Codegen::codegen_binary_bitwise_xor_assign(const BinaryExpr& node) {
 }
 
 void Codegen::codegen_binary_logical_and(const BinaryExpr& node) {
+    siir::BasicBlock* right_bb = new siir::BasicBlock();
+    siir::BasicBlock* merge_bb = new siir::BasicBlock();
+
+    m_vctx = RValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp && "binary lhs does not produce a value!");
+    siir::Value* lhs = inject_bool_cmp(m_tmp);
+
+    siir::BasicBlock* false_bb = m_builder.get_insert();
+    m_builder.build_brif(lhs, right_bb, merge_bb);
+
+    m_func->push_back(right_bb);
+    m_builder.set_insert(right_bb);
+
+    m_vctx = RValue;
+    node.pRight->accept(*this);
+    assert(m_tmp && "binary rhs does not produce a value!");
+    siir::Value *rhs = inject_bool_cmp(m_tmp);
     
+    m_builder.build_jmp(merge_bb);
+
+    siir::BasicBlock* otherwise = m_builder.get_insert();
+    m_func->push_back(merge_bb);
+    m_builder.set_insert(merge_bb);
+    siir::Instruction* phi = m_builder.build_phi(siir::Type::get_i1_type(m_cfg));
+    phi->add_incoming(m_cfg, siir::ConstantInt::get_false(m_cfg), false_bb);
+    phi->add_incoming(m_cfg, rhs, otherwise);
+    
+    m_tmp = phi;
 }
 
 void Codegen::codegen_binary_logical_or(const BinaryExpr& node) {
+    siir::BasicBlock* right_bb = new siir::BasicBlock();
+    siir::BasicBlock* merge_bb = new siir::BasicBlock();
+
+    m_vctx = RValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp && "binary lhs does not produce a value!");
+    siir::Value* lhs = inject_bool_cmp(m_tmp);
+
+    siir::BasicBlock* true_bb = m_builder.get_insert();
+    m_builder.build_brif(lhs, merge_bb, right_bb);
+
+    m_func->push_back(right_bb);
+    m_builder.set_insert(right_bb);
+
+    m_vctx = RValue;
+    node.pRight->accept(*this);
+    assert(m_tmp && "binary rhs does not produce a value!");
+    siir::Value *rhs = inject_bool_cmp(m_tmp);
     
+    m_builder.build_jmp(merge_bb);
+
+    siir::BasicBlock* otherwise = m_builder.get_insert();
+    m_func->push_back(merge_bb);
+    m_builder.set_insert(merge_bb);
+    siir::Instruction* phi = m_builder.build_phi(siir::Type::get_i1_type(m_cfg));
+    phi->add_incoming(m_cfg, siir::ConstantInt::get_true(m_cfg), true_bb);
+    phi->add_incoming(m_cfg, rhs, otherwise);
+    
+    m_tmp = phi;
 }
 
 void Codegen::codegen_binary_left_shift(const BinaryExpr& node) {

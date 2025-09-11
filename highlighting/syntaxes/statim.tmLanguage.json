@@ -95,7 +95,7 @@
 		},
 
 		"function_use": {
-			"match": "(?!(until|if|ret)\\s+)([a-zA-Z_]\\w*)\\s*[\\(]",
+			"match": "(?!(__asm__|volatile|match|defer|while|if|ret)\\s+)([a-zA-Z_]\\w*)\\s*[\\(]",
 			"captures": {
 				"2": { "name": "entity.name.function.statim" }
 			}
@@ -127,7 +127,7 @@
 		},
 
 		"enum": {
-			"begin": "\\b(\\w*)\\b\\s*(::)\\s*(s8|s16|s32|s64|u8|u16|u32|u64|bool)\\s*\\{",
+			"begin": "\\b(\\w*)\\b\\s*(::)\\s*(s8|s16|s32|s64|u8|u16|u32|u64|bool|char)\\s*\\{",
 			"beginCaptures": {
 				"1": { "name": "support.type.enum.statim entity.name.type.enum.statim" },
 				"2": { "name": "keyword.operator.colon.statim" },
@@ -153,6 +153,10 @@
 				{
 					"name": "keyword.other.rune.statim",
 					"match": "\\$\\w*"
+				},
+				{
+					"name": "keyword.other.modifier.statim",
+					"match": "\\b(?:__asm__|volatile)\\b"
 				},
 				{
 					"name": "keyword.control.statim",
@@ -220,7 +224,7 @@
 			"patterns": [
 				{
 					"name": "storage.modifier.statim",
-					"match": "\\b(?:let)\\b"
+					"match": "\\b(?:let|mut)\\b"
 				},
 				{
 					"name": "storage.type.statim",
