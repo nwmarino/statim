@@ -717,8 +717,6 @@ void Codegen::visit(CharLiteral& node) {
 void Codegen::visit(StringLiteral& node) {
     m_tmp = m_builder.build_string(
         siir::ConstantString::get(m_cfg, node.get_value()));
-
-    //m_tmp = siir::ConstantString::get(m_cfg, node.get_value());
 }
 
 void Codegen::visit(NullLiteral& node) {
@@ -832,7 +830,39 @@ void Codegen::codegen_binary_add(const BinaryExpr& node) {
 }
 
 void Codegen::codegen_binary_add_assign(const BinaryExpr& node) {
-    
+    m_vctx = RValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp);
+    siir::Value* lhs = m_tmp;
+
+    m_vctx = RValue;
+    node.pRight->accept(*this);
+    assert(m_tmp);
+    siir::Value* rhs = m_tmp;
+
+    if (lhs->get_type()->is_pointer_type() 
+      && rhs->get_type()->is_integer_type()) {
+        m_tmp = m_builder.build_ap(
+            lower_type(node.get_type()), 
+            lhs, 
+            rhs);
+    } else if (lhs->get_type()->is_integer_type()) {
+        m_tmp = m_builder.build_iadd(lhs, rhs);
+    } else if (lhs->get_type()->is_floating_point_type()) {
+        m_tmp = m_builder.build_fadd(lhs, rhs);
+    } else Logger::fatal(
+        "unsupported '+' operator between on type '" + 
+            node.get_type()->to_string() + "'",
+        node.get_span() 
+    );
+
+    siir::Value* value = m_tmp;
+    m_vctx = LValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp && "binary lhs does not produce an lvalue!");
+
+    m_builder.build_store(value, m_tmp);
+    m_tmp = value;
 }
 
 void Codegen::codegen_binary_sub(const BinaryExpr& node) {
@@ -864,7 +894,39 @@ void Codegen::codegen_binary_sub(const BinaryExpr& node) {
 }
 
 void Codegen::codegen_binary_sub_assign(const BinaryExpr& node) {
-    
+    m_vctx = RValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp);
+    siir::Value* lhs = m_tmp;
+
+    m_vctx = RValue;
+    node.pRight->accept(*this);
+    assert(m_tmp);
+    siir::Value* rhs = m_tmp;
+
+    if (lhs->get_type()->is_pointer_type() 
+      && rhs->get_type()->is_integer_type()) {
+        m_tmp = m_builder.build_ap(
+            lower_type(node.get_type()), 
+            lhs, 
+            m_builder.build_ineg(rhs));
+    } else if (lhs->get_type()->is_integer_type()) {
+        m_tmp = m_builder.build_isub(lhs, rhs);
+    } else if (lhs->get_type()->is_floating_point_type()) {
+        m_tmp = m_builder.build_fsub(lhs, rhs);
+    } else Logger::fatal(
+        "unsupported '+' operator between on type '" + 
+            node.get_type()->to_string() + "'",
+        node.get_span() 
+    );
+
+    siir::Value* value = m_tmp;
+    m_vctx = LValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp && "binary lhs does not produce an lvalue!");
+
+    m_builder.build_store(value, m_tmp);
+    m_tmp = value;
 }
 
 void Codegen::codegen_binary_mul(const BinaryExpr& node) {
@@ -892,7 +954,35 @@ void Codegen::codegen_binary_mul(const BinaryExpr& node) {
 }
 
 void Codegen::codegen_binary_mul_assign(const BinaryExpr& node) {
-    
+    m_vctx = RValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp);
+    siir::Value* lhs = m_tmp;
+
+    m_vctx = RValue;
+    node.pRight->accept(*this);
+    assert(m_tmp);
+    siir::Value* rhs = m_tmp;
+
+    if (node.get_lhs()->get_type()->is_signed_int()) {
+        m_tmp = m_builder.build_smul(lhs, rhs);
+    } else if (node.get_lhs()->get_type()->is_unsigned_int()) {
+        m_tmp = m_builder.build_umul(lhs, rhs);
+    } else if (lhs->get_type()->is_floating_point_type()) {
+        m_tmp = m_builder.build_fmul(lhs, rhs);
+    } else Logger::fatal(
+        "unsupported '*' operator between on type '" + 
+            node.get_type()->to_string() + "'",
+        node.get_span() 
+    );
+
+    siir::Value* value = m_tmp;
+    m_vctx = LValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp && "binary lhs does not produce an lvalue!");
+
+    m_builder.build_store(value, m_tmp);
+    m_tmp = value;
 }
 
 void Codegen::codegen_binary_div(const BinaryExpr& node) {
@@ -920,7 +1010,35 @@ void Codegen::codegen_binary_div(const BinaryExpr& node) {
 }
 
 void Codegen::codegen_binary_div_assign(const BinaryExpr& node) {
-    
+    m_vctx = RValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp);
+    siir::Value* lhs = m_tmp;
+
+    m_vctx = RValue;
+    node.pRight->accept(*this);
+    assert(m_tmp);
+    siir::Value* rhs = m_tmp;
+
+    if (node.get_lhs()->get_type()->is_signed_int()) {
+        m_tmp = m_builder.build_sdiv(lhs, rhs);
+    } else if (node.get_lhs()->get_type()->is_unsigned_int()) {
+        m_tmp = m_builder.build_udiv(lhs, rhs);
+    } else if (lhs->get_type()->is_floating_point_type()) {
+        m_tmp = m_builder.build_fdiv(lhs, rhs);
+    } else Logger::fatal(
+        "unsupported '/' operator between on type '" + 
+            node.get_type()->to_string() + "'",
+        node.get_span() 
+    ); 
+
+    siir::Value* value = m_tmp;
+    m_vctx = LValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp && "binary lhs does not produce an lvalue!");
+
+    m_builder.build_store(value, m_tmp);
+    m_tmp = value;
 }
 
 void Codegen::codegen_binary_mod(const BinaryExpr& node) {
@@ -938,8 +1056,6 @@ void Codegen::codegen_binary_mod(const BinaryExpr& node) {
         m_tmp = m_builder.build_srem(lhs, rhs);
     } else if (node.get_lhs()->get_type()->is_unsigned_int()) {
         m_tmp = m_builder.build_urem(lhs, rhs);
-    } else if (lhs->get_type()->is_floating_point_type()) {
-        m_tmp = m_builder.build_frem(lhs, rhs);
     } else Logger::fatal(
         "unsupported '/' operator between on type '" + 
             node.get_type()->to_string() + "'",
@@ -948,7 +1064,33 @@ void Codegen::codegen_binary_mod(const BinaryExpr& node) {
 }
 
 void Codegen::codegen_binary_mod_assign(const BinaryExpr& node) {
+    m_vctx = RValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp);
+    siir::Value* lhs = m_tmp;
+
+    m_vctx = RValue;
+    node.pRight->accept(*this);
+    assert(m_tmp);
+    siir::Value* rhs = m_tmp;
+
+    if (node.get_lhs()->get_type()->is_signed_int()) {
+        m_tmp = m_builder.build_srem(lhs, rhs);
+    } else if (node.get_lhs()->get_type()->is_unsigned_int()) {
+        m_tmp = m_builder.build_urem(lhs, rhs);
+    } else Logger::fatal(
+        "unsupported '/' operator between on type '" + 
+            node.get_type()->to_string() + "'",
+        node.get_span() 
+    ); 
     
+    siir::Value* value = m_tmp;
+    m_vctx = LValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp && "binary lhs does not produce an lvalue!");
+
+    m_builder.build_store(value, m_tmp);
+    m_tmp = value;
 }
 
 void Codegen::codegen_binary_eq(const BinaryExpr& node) {
@@ -1118,7 +1260,31 @@ void Codegen::codegen_binary_bitwise_and(const BinaryExpr& node) {
 }
 
 void Codegen::codegen_binary_bitwise_and_assign(const BinaryExpr& node) {
-    
+    m_vctx = RValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp);
+    siir::Value* lhs = m_tmp;
+
+    m_vctx = RValue;
+    node.pRight->accept(*this);
+    assert(m_tmp);
+    siir::Value* rhs = m_tmp;
+
+    if (lhs->get_type()->is_integer_type()) {
+        m_tmp = m_builder.build_and(lhs, rhs);
+    } else Logger::fatal(
+        "unsupported '&' operator between on type '" + 
+            node.get_type()->to_string() + "'",
+        node.get_span() 
+    );
+
+    siir::Value* value = m_tmp;
+    m_vctx = LValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp && "binary lhs does not produce an lvalue!");
+
+    m_builder.build_store(value, m_tmp);
+    m_tmp = value;
 }
 
 void Codegen::codegen_binary_bitwise_or(const BinaryExpr& node) {
@@ -1142,7 +1308,31 @@ void Codegen::codegen_binary_bitwise_or(const BinaryExpr& node) {
 }
 
 void Codegen::codegen_binary_bitwise_or_assign(const BinaryExpr& node) {
+    m_vctx = RValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp);
+    siir::Value* lhs = m_tmp;
+
+    m_vctx = RValue;
+    node.pRight->accept(*this);
+    assert(m_tmp);
+    siir::Value* rhs = m_tmp;
+
+    if (lhs->get_type()->is_integer_type()) {
+        m_tmp = m_builder.build_or(lhs, rhs);
+    } else Logger::fatal(
+        "unsupported '|' operator between on type '" + 
+            node.get_type()->to_string() + "'",
+        node.get_span() 
+    );
     
+    siir::Value* value = m_tmp;
+    m_vctx = LValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp && "binary lhs does not produce an lvalue!");
+
+    m_builder.build_store(value, m_tmp);
+    m_tmp = value;
 }
 
 void Codegen::codegen_binary_bitwise_xor(const BinaryExpr& node) {
@@ -1166,7 +1356,31 @@ void Codegen::codegen_binary_bitwise_xor(const BinaryExpr& node) {
 }
 
 void Codegen::codegen_binary_bitwise_xor_assign(const BinaryExpr& node) {
-    
+    m_vctx = RValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp);
+    siir::Value* lhs = m_tmp;
+
+    m_vctx = RValue;
+    node.pRight->accept(*this);
+    assert(m_tmp);
+    siir::Value* rhs = m_tmp;
+
+    if (lhs->get_type()->is_integer_type()) {
+        m_tmp = m_builder.build_xor(lhs, rhs);
+    } else Logger::fatal(
+        "unsupported '^' operator between on type '" + 
+            node.get_type()->to_string() + "'",
+        node.get_span() 
+    );
+
+    siir::Value* value = m_tmp;
+    m_vctx = LValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp && "binary lhs does not produce an lvalue!");
+
+    m_builder.build_store(value, m_tmp);
+    m_tmp = value;
 }
 
 void Codegen::codegen_binary_logical_and(const BinaryExpr& node) {
@@ -1569,6 +1783,12 @@ void Codegen::visit(MemberExpr& node) {
 
 void Codegen::visit(CallExpr& node) {
     auto target = static_cast<const FunctionDecl*>(node.get_decl());
+    if (target->has_decorator(Rune::Deprecated)) {
+        Logger::warn(
+            "function '" + target->get_name() + "' has been marked deprecated",
+            node.get_span());
+    }
+
     siir::Function* callee = m_cfg.get_function(mangle(node.get_decl()));
     assert(callee);
 
