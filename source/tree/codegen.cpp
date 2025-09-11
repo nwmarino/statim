@@ -576,7 +576,6 @@ void Codegen::codegen_rune_print(const RuneStmt& node) {
             m_builder.build_call(
                 rt_print_bool->get_type(), rt_print_bool, { fd, m_tmp });
         } else if (arg->get_type()->is_char()) {
-            /// TODO: Add easier check for char type... and fp32/fp64.
             siir::Function* rt_print_char = fetch_runtime_fn(
                 "__print_char", 
                 {

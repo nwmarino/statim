@@ -403,7 +403,7 @@ void LLVMTranslatePass::convert(Instruction* inst) {
             for (u32 idx = 0, e = iasm->constraints().size(); idx != e; ++idx) {
                 std::string constraint = iasm->constraints().at(idx);
                 if (constraint.at(0) == '~') {
-                    constraints += "~{" + constraint + "}";
+                    constraints += "~{" + constraint.substr(1) + "}";
                 } else {
                     constraints += constraint;
                 }

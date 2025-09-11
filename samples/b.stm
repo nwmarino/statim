@@ -1,92 +1,5 @@
 use "a.stm";
 
-$public
-FileFlags :: s64 {
-    FFLAGS_ReadOnly = 0,
-    FFLAGS_WriteOnly = 1,
-    FFLAGS_ReadWrite = 2,
-    FFLAGS_Create = 64,
-    FFLAGS_Truncate = 512,
-    FFLAGS_Append = 1024,
-}
-
-$public
-FileSeek :: s64 {
-    FSEEK_Set = 0,
-    FSEEK_Cur = 1,
-    FSEEK_End = 2,
-}
-
-$[public, intrinsic]
-File :: {
-private:
-    _M_fd: s64,
-    _M_buf: *char,
-    _M_size: u64,
-    _M_pos: u64,
-    _M_open: bool,
-}
-
-$public
-file_open :: (file: mut *File, path: *char, flags: FileFlags) -> s64 {
-    file._M_buf = null;
-    file._M_size = 4096;
-    file._M_pos = 0;
-    file._M_open = true;
-
-    __asm__ (
-        "movq $$2, %rax\n"
-        "movq $1, %rdi\n"
-        "movq $2, %rsi\n"
-        "movq $$420, %rdx\n"
-        "syscall\n"
-        "movq %rax, $0"
-        : "=m" (file._M_fd)
-        : "r" (path), "r" (flags)
-        : "rax", "rdi", "rsi", "rdx", "memory"
-    );
-
-    ret file._M_fd;
-}
-
-$public
-file_close :: (file: mut *File) -> s64 {
-    if (!file_is_open(file))
-        ret 0;
-
-    if (file._M_pos > 0)
-        file_flush(file);
-
-    let result: mut s64;
-    __asm__ (
-        "movq $$3, %rax\n"
-        "movq $1, %rdi\n"
-        "syscall\n"
-        "movq %rax, $0"
-        : "=m" (result)
-        : "m" (file._M_fd)
-        : "rax", "rdi", "memory"
-    );
-
-    ret result;
-}
-
-$public
-file_flush :: (file: mut *File) -> s64 {
-    ret 0;
-}
-
-$public
-file_is_open :: (file: *File) -> bool {
-    $assert(file && "file cannot be null!");
-    ret file._M_open;
-}
-
-Box :: {
-    a: s64,
-    b: u32,
-}
-
 test_iadd :: () -> void {
     let x: s64 = 4;
     $println("[test_iadd] 7 = {}", x + 3);
@@ -135,6 +48,89 @@ test_udiv :: () -> void {
 test_fdiv :: () -> void {
     let x: f64 = 2.5;
     $println("[test_fdiv] 20 = {}", cast<f64>(50) / x);
+}
+
+
+$public
+FileFlags :: s64 {
+    FFLAGS_ReadOnly = 0,
+    FFLAGS_WriteOnly = 1,
+    FFLAGS_ReadWrite = 2,
+    FFLAGS_Create = 64,
+    FFLAGS_Truncate = 512,
+    FFLAGS_Append = 1024,
+}
+
+$public
+FileSeek :: s64 {
+    FSEEK_Set = 0,
+    FSEEK_Cur = 1,
+    FSEEK_End = 2,
+}
+
+$[public, intrinsic]
+File :: {
+private:
+    _M_fd: s64,
+    _M_buf: *char,
+    _M_size: u64,
+    _M_pos: u64,
+    _M_open: bool,
+}
+
+$public
+file_open :: (file: mut *File, path: *char, flags: FileFlags) -> s64 {
+    file._M_buf = null;
+    file._M_size = 4096;
+    file._M_pos = 0;
+    file._M_open = true;
+
+    __asm__ (
+        "movq $$2, %rax\n"
+        "movq $1, %rdi\n"
+        "movq $2, %rsi\n"
+        "movq $$420, %rdx\n"
+        "syscall\n"
+        "movq %rax, $0"
+        : "=r" (file._M_fd)
+        : "r" (path), "r" (flags)
+        : "rax", "rdi", "rsi", "rdx"
+    );
+
+    ret file._M_fd;
+}
+
+$public
+file_close :: (file: mut *File) -> s64 {
+    if (!file_is_open(file))
+        ret 0;
+
+    if (file._M_pos > 0)
+        file_flush(file);
+
+    let result: mut s64;
+    __asm__ (
+        "movq $$3, %rax\n"
+        "movq $1, %rdi\n"
+        "syscall\n"
+        "movq %rax, $0"
+        : "=r" (result)
+        : "r" (file._M_fd)
+        : "rax", "rdi"
+    );
+
+    ret result;
+}
+
+$public
+file_flush :: (file: mut *File) -> s64 {
+    ret 0;
+}
+
+$public
+file_is_open :: (file: *File) -> bool {
+    $assert(file && "file cannot be null!");
+    ret file._M_open;
 }
 
 main :: (argc: s64, argv: **char) -> s64 {
