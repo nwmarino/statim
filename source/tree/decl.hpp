@@ -119,6 +119,7 @@ public:
     const std::vector<ParameterDecl*>& get_params() const { return params; }
 
     const ParameterDecl* get_param(u32 idx) const { return params.at(idx); }
+    ParameterDecl* get_param(u32 idx) { return params.at(idx); }
 
     u32 num_params() const { return params.size(); }
 

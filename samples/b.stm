@@ -1,7 +1,7 @@
 use "a.stm";
 
 $public
-FileFlags :: s32 {
+FileFlags :: s64 {
     FFLAGS_ReadOnly = 0,
     FFLAGS_WriteOnly = 1,
     FFLAGS_ReadWrite = 2,
@@ -11,7 +11,7 @@ FileFlags :: s32 {
 }
 
 $public
-FileSeek :: s32 {
+FileSeek :: s64 {
     FSEEK_Set = 0,
     FSEEK_Cur = 1,
     FSEEK_End = 2,
@@ -28,22 +28,52 @@ private:
 }
 
 $public
-file_new :: (path: *char, flags: FileFlags) -> File {
-    let file: mut File;
+file_open :: (file: mut *File, path: *char, flags: FileFlags) -> s64 {
+    file._M_buf = null;
+    file._M_size = 4096;
+    file._M_pos = 0;
+    file._M_open = true;
 
     __asm__ (
         "movq $$2, %rax\n"
         "movq $1, %rdi\n"
-        "movl $2, %esi\n"
+        "movq $2, %rsi\n"
         "movq $$420, %rdx\n"
         "syscall\n"
         "movq %rax, $0"
         : "=m" (file._M_fd)
         : "r" (path), "r" (flags)
-        : "rax", "rdi", "rsi", "rdx"
+        : "rax", "rdi", "rsi", "rdx", "memory"
     );
 
-    ret file;
+    ret file._M_fd;
+}
+
+$public
+file_close :: (file: mut *File) -> s64 {
+    if (!file_is_open(file))
+        ret 0;
+
+    if (file._M_pos > 0)
+        file_flush(file);
+
+    let result: mut s64;
+    __asm__ (
+        "movq $$3, %rax\n"
+        "movq $1, %rdi\n"
+        "syscall\n"
+        "movq %rax, $0"
+        : "=m" (result)
+        : "m" (file._M_fd)
+        : "rax", "rdi", "memory"
+    );
+
+    ret result;
+}
+
+$public
+file_flush :: (file: mut *File) -> s64 {
+    ret 0;
 }
 
 $public
@@ -108,10 +138,6 @@ test_fdiv :: () -> void {
 }
 
 main :: (argc: s64, argv: **char) -> s64 {
-    let a: Box;
-    a.a = 1;
-    a.b = 4;
-
     test_iadd();
     test_fadd();
     test_isub();
@@ -122,6 +148,11 @@ main :: (argc: s64, argv: **char) -> s64 {
     test_sdiv();
     test_udiv();
     test_fdiv();
+
+    let file: mut File;
+    file_open(&file, "samples/a.stm", FFLAGS_ReadWrite);
+    $assert(file_is_open(&file));
+    file_close(&file);
 
     $println("hello world!");
     ret foo();

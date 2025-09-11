@@ -6,68 +6,16 @@
 
 using namespace stm;
 
-Type::id_t Type::it = 0;
-
 const DeferredType* DeferredType::get(Root& root, const Context& context) {
     return root.context().get(context);
 }
 
-bool DeferredType::is_void() const {
-    assert(pResolved && "deferred type unresolved");
-    return pResolved->is_void();
-}
-
-bool DeferredType::is_bool() const {
-    assert(pResolved && "deferred type unresolved");
-    return pResolved->is_bool();
-}
-
-bool DeferredType::is_int() const {
-    assert(pResolved && "deferred type unresolved");
-    return pResolved->is_int();
-}
-
-bool DeferredType::is_signed_int() const {
-    assert(pResolved && "deferred type unresolved");
-    return pResolved->is_signed_int();
-}
-
-bool DeferredType::is_unsigned_int() const {
-    assert(pResolved && "deferred type unresolved");
-    return pResolved->is_unsigned_int();
-}
-
-bool DeferredType::is_float() const {
-    assert(pResolved && "deferred type unresolved");
-    return pResolved->is_float();
-}
-
-const PointerType* DeferredType::as_pointer() const {
-    assert(pResolved && "deferred type unresolved");
-    return static_cast<const PointerType*>(pResolved);
-}
-
-const StructType* DeferredType::as_struct() const {
-    assert(pResolved && "deferred type unresolved");
-    return static_cast<const StructType*>(pResolved);
-}
-
-const EnumType* DeferredType::as_enum() const {
-    assert(pResolved && "deferred type unresolved");
-    return static_cast<const EnumType*>(pResolved);
-}
-
-bool DeferredType::can_cast(const Type* other, bool impl) const {
-    assert(pResolved && "deferred type unresolved");
-    return pResolved->can_cast(other, impl);
-}
-
 std::string DeferredType::to_string() const {
-    std::string str = "";
-    for (u32 p = 0; p != context.indirection; ++p)
+    std::string str = is_mut() ? "mut " : "";
+    for (u32 p = 0; p != m_context.indirection; ++p)
         str += '*';
 
-    return str + context.base;
+    return str + m_context.base;
 }
 
 std::string BuiltinType::get_name(Kind kind) {
@@ -132,69 +80,32 @@ const BuiltinType* BuiltinType::get(Root& root, Kind kind) {
     }
 }
 
-bool BuiltinType::is_int() const {
-    switch (kind) {
-    case Kind::Bool:
-    case Kind::Char:
-    case Kind::SInt8:
-    case Kind::SInt16:
-    case Kind::SInt32:
-    case Kind::SInt64:
-    case Kind::UInt8:
-    case Kind::UInt16:
-    case Kind::UInt32:
-    case Kind::UInt64:
-        return true;
-    default:
-        return false;
-    }
-}
+bool BuiltinType::compare(const Type* other) const {
+    assert(other && "other type cannot be null!");
 
-bool BuiltinType::is_signed_int() const {
-    switch (kind) {
-    case Kind::Bool:
-    case Kind::Char:
-    case Kind::SInt8:
-    case Kind::SInt16:
-    case Kind::SInt32:
-    case Kind::SInt64:
-        return true;
-    default:
-        return false;
-    }
-}
+    if (other->is_deferred())
+        other = other->as_deferred()->get_resolved();
 
-bool BuiltinType::is_unsigned_int() const {
-    switch (kind) {
-    case Kind::UInt8:
-    case Kind::UInt16:
-    case Kind::UInt32:
-    case Kind::UInt64:
-        return true;
-    default:
+    if (is_mut() != other->is_mut())
         return false;
-    }
-}
 
-bool BuiltinType::is_float() const {
-    switch (kind) {
-    case Kind::Float32:
-    case Kind::Float64:
-        return true;
-    default:
+    if (!other->is_builtin())
         return false;
-    }
+
+    return kind() == other->as_builtin()->kind();
 }
 
 bool BuiltinType::can_cast(const Type* other, bool impl) const {
-    assert(other && "other type cannot be null");
+    assert(other && "other type cannot be null!");
+
+    if (other->is_deferred())
+        other = other->as_deferred()->get_resolved();
+
+    if (is_mut() != other->is_mut())
+        return false;
 
     if (impl) {
-        if (auto deferred = dynamic_cast<const DeferredType*>(other))
-            return can_cast(deferred->get_resolved(), true);
-
-        auto builtin = dynamic_cast<const BuiltinType*>(other);
-        if (!builtin)
+        if (!other->is_builtin())
             return false;
 
         if (is_float() && other->is_int())
@@ -202,60 +113,74 @@ bool BuiltinType::can_cast(const Type* other, bool impl) const {
     
         return is_void() == other->is_void();
     } else {
-        if (auto builtin = dynamic_cast<const BuiltinType*>(other))
+        if (other->is_builtin())
             return is_void() == other->is_void();
-        else if (auto ptr = dynamic_cast<const PointerType*>(other))
+        else if (other->is_pointer())
             return is_int();
-        else if (auto deferred = dynamic_cast<const DeferredType*>(other))
-            return can_cast(deferred->get_resolved(), false);
 
         return false;
     }
 }
 
 std::string BuiltinType::to_string() const {
-    return std::string(get_name(this->kind));
+    return is_mut() ? "mut " : "" + std::string(get_name(kind()));
 }
 
-FunctionType::FunctionType(const Type* pReturn, const std::vector<const Type*>& params)
-    : pReturn(pReturn), params(params) {};
-
-const FunctionType* FunctionType::get(
-        Root& root, 
-        const Type *pReturn, 
-        const std::vector<const Type*>& params) {
-    return root.context().get(pReturn, params);
+const FunctionType* FunctionType::get(Root& root, const Type *ret, 
+                                      const std::vector<const Type*>& params) {
+    return root.context().get(ret, params);
 }
 
 std::string FunctionType::to_string() const {
     std::string str = "(";
 
-    for (u32 idx = 0, e = params.size(); idx != e; ++idx)
-        str += params[idx]->to_string() + (idx + 1 != e ? ", " : "");
+    for (u32 idx = 0, e = num_params(); idx != e; ++idx) {
+        str += get_param_type(idx)->to_string();
+        if (idx + 1 != e)
+            str += ", ";
+    }
 
-    return str + ") -> " + this->pReturn->to_string();
+    return str + ") -> " + get_return_type()->to_string();
 }
 
-const PointerType* PointerType::get(Root& root, const Type* pPointee) {
-    return root.context().get(pPointee);
+const PointerType* PointerType::get(Root& root, const Type* pointee) {
+    return root.context().get(pointee);
 }
 
 u32 PointerType::get_indirection() const {
     u32 indir = 1;
-    if (auto* ptr = dynamic_cast<const PointerType*>(this->pPointee))
-        indir += ptr->get_indirection();
+    if (get_pointee()->is_pointer())
+        indir += get_pointee()->as_pointer()->get_indirection();
 
     return indir;
 }
 
-bool PointerType::can_cast(const Type* other, bool impl) const {
-    assert(other && "other type cannot be null");
+bool PointerType::compare(const Type* other) const {
+    assert(other && "other type cannot be null!");
 
     if (other->is_deferred())
-        return can_cast(other->as_deferred()->get_resolved(), impl);
+        other = other->as_deferred()->get_resolved();
+
+    if (is_mut() != other->is_mut())
+        return false;
+
+    if (!other->is_pointer())
+        return false;
+
+    return get_pointee()->compare(other->as_pointer()->get_pointee());
+}
+
+bool PointerType::can_cast(const Type* other, bool impl) const {
+    assert(other && "other type cannot be null!");
+
+    if (other->is_deferred())
+        other = other->as_deferred()->get_resolved();
+
+    if (is_mut() != other->is_mut())
+        return false;
 
     if (impl) {
-        if (pPointee->is_void())
+        if (get_pointee()->is_void())
             return true;
         else if (other->is_pointer())
             return other->as_pointer()->get_pointee()->is_void();
@@ -265,7 +190,7 @@ bool PointerType::can_cast(const Type* other, bool impl) const {
 }
 
 std::string PointerType::to_string() const {
-    return "*" + this->pPointee->to_string();
+    return is_mut() ? "mut *" : "*" + get_pointee()->to_string();
 }
 
 const StructType* StructType::get(Root& root, const std::string& name) {
@@ -273,22 +198,36 @@ const StructType* StructType::get(Root& root, const std::string& name) {
     if (!type)
         return nullptr;
 
-    const StructType* st = dynamic_cast<const StructType*>(type);
-    if (!st)
+    auto structure = dynamic_cast<const StructType*>(type);
+    if (!structure)
         return nullptr;
 
-    return st;
+    return structure;
 }
 
-const StructType* StructType::create(
-        Root& root, 
-        const std::vector<const Type*>& fields, 
-        const StructDecl* decl) {
+const StructType* StructType::create(Root& root, 
+                                     const std::vector<const Type*>& fields, 
+                                     const StructDecl* decl) {
     return root.context().create(fields, decl);
 }
 
+bool StructType::compare(const Type* other) const {
+    assert(other && "other type cannot be null!");
+
+    if (other->is_deferred())
+        other = other->as_deferred()->get_resolved();
+
+    if (is_mut() != other->is_mut())
+        return false;
+
+    if (!other->is_struct())
+        return false;
+
+    return get_decl()->get_name() == other->as_struct()->get_decl()->get_name();
+}
+
 std::string StructType::to_string() const {
-    return m_decl->get_name();
+    return is_mut() ? "mut " : get_decl()->get_name();
 }
 
 const EnumType* EnumType::get(Root& root, const std::string& name) {
@@ -296,20 +235,33 @@ const EnumType* EnumType::get(Root& root, const std::string& name) {
     if (!type)
         return nullptr;
 
-    const EnumType* et = dynamic_cast<const EnumType*>(type);
-    if (!et)
+    auto enumeration = dynamic_cast<const EnumType*>(type);
+    if (!enumeration)
         return nullptr;
 
-    return et;
+    return enumeration;
 }
 
-const EnumType* EnumType::create(
-        Root& root,
-        const Type* underlying,
-        const EnumDecl* decl) {
+const EnumType* EnumType::create(Root& root, const Type* underlying,
+                                 const EnumDecl* decl) {
     return root.context().create(underlying, decl);
 }
 
+bool EnumType::compare(const Type* other) const {
+    assert(other && "other type cannot be null!");
+
+    if (other->is_deferred())
+        other = other->as_deferred()->get_resolved();
+
+    if (is_mut() != other->is_mut())
+        return false;
+
+    if (!other->is_enum())
+        return false;
+
+    return get_decl()->get_name() == other->as_enum()->get_decl()->get_name();
+}
+
 std::string EnumType::to_string() const {
-    return m_decl->get_name();
+    return is_mut() ? "mut " : "" + get_decl()->get_name();
 }

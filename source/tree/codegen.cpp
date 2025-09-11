@@ -56,7 +56,7 @@ const siir::Type* Codegen::lower_type(const Type* type) {
     } else if (type->is_enum()) {
         return lower_type(type->as_enum()->get_underlying());
     } else if (auto blt = dynamic_cast<const BuiltinType*>(type)) {
-        switch (blt->get_kind()) {
+        switch (blt->kind()) {
         case BuiltinType::Kind::Void:
             return nullptr;
         case BuiltinType::Kind::Bool:
@@ -575,7 +575,7 @@ void Codegen::codegen_rune_print(const RuneStmt& node) {
 
             m_builder.build_call(
                 rt_print_bool->get_type(), rt_print_bool, { fd, m_tmp });
-        } else if (*arg->get_type() == *m_root.get_char_type()) {
+        } else if (arg->get_type()->is_char()) {
             /// TODO: Add easier check for char type... and fp32/fp64.
             siir::Function* rt_print_char = fetch_runtime_fn(
                 "__print_char", 

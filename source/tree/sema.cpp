@@ -25,15 +25,10 @@ enum class TypeCheckResult : u8 {
 /// \returns The result of the check, either a match, mismatch, or if an
 /// implicit cast should be injected at the site of the given typed node.
 static TypeCheckResult type_check(
-        const Type* pActual, 
-        const Type* pExpected, 
+        const Type* actual, 
+        const Type* expected, 
         TypeCheckMode mode) {
-    if (auto actual_deferred = dynamic_cast<const DeferredType*>(pActual))
-        return type_check(actual_deferred->get_resolved(), pExpected, mode);
-    else if (auto expected_deferred = dynamic_cast<const DeferredType*>(pExpected))
-        return type_check(pActual, expected_deferred->get_resolved(), mode);
-    
-    if (*pActual == *pExpected)
+    if (actual->compare(expected))
         return TypeCheckResult::Match;
 
     switch (mode) {
@@ -44,28 +39,23 @@ static TypeCheckResult type_check(
     case TypeCheckMode::AllowImplicit:
         // If we can cast the actual type to the desired type, then respond
         // with a cast injection.
-        if (pActual->can_cast(pExpected, true))
+        if (actual->can_cast(expected, true))
             return TypeCheckResult::Cast;
 
         return TypeCheckResult::Mismatch;
         
-    case TypeCheckMode::Loose: {
-        if (pActual->can_cast(pExpected, true))
+    case TypeCheckMode::Loose:
+        if (actual->can_cast(expected, true))
             return TypeCheckResult::Cast;
         
         // Since pointer -> int and int -> pointer casts cannot be done 
-        // implicitly, this loose matching allows for it under rare 
-        // circumstances like in pointer arithmetic.
-        if (dynamic_cast<const PointerType*>(pActual) && pExpected->is_int())
-            return TypeCheckResult::Match;
-        else if (dynamic_cast<const PointerType*>(pActual) && dynamic_cast<const PointerType*>(pExpected))
-            return TypeCheckResult::Match;
-        else if (pActual->is_int() && dynamic_cast<const PointerType*>(pExpected))
+        // implicitly, loose matching allows for it under circumstances like 
+        // during pointer arithmetic.
+        if ((actual->is_int() || actual->is_pointer()) && 
+            (expected->is_int() || expected->is_pointer()))
             return TypeCheckResult::Match;
 
         return TypeCheckResult::Mismatch;
-    }
-    
     }
     
     return TypeCheckResult::Mismatch;
@@ -85,10 +75,7 @@ void SemanticAnalysis::visit(FunctionDecl& node) {
         const FunctionType* type = node.get_type();
 
         const Type* return_type = type->get_return_type();
-        if (return_type->is_deferred())
-            return_type = return_type->as_deferred()->get_resolved();
-        
-        if (*return_type != *root.get_si64_type()) {
+        if (!return_type->compare(root.get_si64_type())) {
             Logger::fatal(
                 "'main' function should return 's64' type, got '" + 
                     type->get_return_type()->to_string() + "' instead",
@@ -103,10 +90,7 @@ void SemanticAnalysis::visit(FunctionDecl& node) {
         }
 
         const Type* param1_type = node.get_param(0)->get_type();
-        if (param1_type->is_deferred())
-            param1_type = param1_type->as_deferred()->get_resolved();
-
-        if (*param1_type != *root.get_si64_type()) {
+        if (!param1_type->compare(root.get_si64_type())) {
             Logger::fatal(
                 "'main' function first parameter should have 's64' type, got '"
                     + param1_type->to_string() + "' instead",
@@ -114,25 +98,18 @@ void SemanticAnalysis::visit(FunctionDecl& node) {
         }
 
         const Type* param2_type = node.get_param(1)->get_type();
-        if (param2_type->is_deferred())
-            param2_type = param2_type->as_deferred()->get_resolved();
-
         bool param2_adequate = true;
 
         // Check that the parameter type is *...
         if (param2_type->is_pointer()) {
             const Type* pointee = param2_type->as_pointer()->get_pointee();
-            if (pointee->is_deferred())
-                pointee = pointee->as_deferred()->get_resolved();
 
             // Check that the parameter type is **...
             if (pointee->is_pointer()) {
                 const Type* base = pointee->as_pointer()->get_pointee();
-                if (base->is_deferred())
-                    base = base->as_deferred()->get_resolved();
 
                 // Check that the parameter type is **char
-                if (*base != *root.get_char_type())
+                if (!base->compare(root.get_char_type()))
                     param2_adequate = false;
             } else {
                 param2_adequate = false;
