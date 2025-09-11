@@ -185,10 +185,9 @@ static void emit_module(const stm::Options& opts,
 
     llvm::ModulePassManager MPM;
     MPM.addPass(llvm::createModuleToFunctionPassAdaptor(
-        llvm::SimplifyCFGPass()));
-
-    MPM.addPass(llvm::createModuleToFunctionPassAdaptor(
         llvm::SROAPass(llvm::SROAOptions::ModifyCFG)));
+    MPM.addPass(llvm::createModuleToFunctionPassAdaptor(
+        llvm::SimplifyCFGPass()));
 
     std::string ofile;
     switch (file_type) {

@@ -1,4 +1,5 @@
 #include "core/logger.hpp"
+#include "siir/inlineasm.hpp"
 #include "tree/type.hpp"
 #include "siir/constant.hpp"
 #include "siir/function.hpp"
@@ -246,7 +247,72 @@ void Codegen::visit(StructDecl& node) {
 }
 
 void Codegen::visit(AsmStmt& node) {
+    std::string string = node.string();
+    std::vector<std::string> constraints = {};
+    std::vector<siir::Value*> values = {};
+    bool side_effects = node.is_volatile();
+
+    for (auto& output : node.outputs()) {
+        std::string constraint = "";
+        if (output == "=r") {
+            constraint = "=*r";
+        } else if (output == "=m") {
+            constraint = "=*m";
+        } else {
+            Logger::fatal(
+                "unrecognized '__asm__' output constraint: '" + output + "'", 
+                node.get_span());
+        }
+
+        constraints.push_back(constraint);
+    }
+
+    for (auto& input : node.inputs()) {
+        std::string constraint = "";
+        if (input == "r") {
+            constraint = "r";
+        } else if (input == "m") {
+            constraint = "m";
+        } else {
+            Logger::fatal(
+                "unrecognized '__asm__' input constraint: '" + input + "'", 
+                node.get_span());
+        }
+
+        constraints.push_back(constraint);
+    }
+
+    for (auto& clobber : node.clobbers()) {
+        constraints.push_back('~' + clobber);
+    }
+
+    for (u32 idx = 0, e = node.exprs().size(); idx != e; ++idx) {
+        if (idx >= node.outputs().size()) {
+            m_vctx = RValue;
+        } else {
+            m_vctx = LValue;
+        }
+
+        node.exprs().at(idx)->accept(*this);
+        assert(m_tmp && "inline assembly operand does not produce a value!");
+        values.push_back(m_tmp);
+    }
     
+    std::vector<const siir::Type*> operand_types(values.size(), nullptr);
+    for (u32 idx = 0, e = values.size(); idx != e; ++idx)
+        operand_types[idx] = values[idx]->get_type();
+
+    const siir::FunctionType* type = siir::FunctionType::get(
+        m_cfg, operand_types, nullptr);
+
+    siir::InlineAsm* iasm = new siir::InlineAsm(
+        type,
+        string,
+        constraints,
+        side_effects
+    );
+
+    m_builder.build_call(type, iasm, values);
 }
 
 void Codegen::visit(BlockStmt& node) {

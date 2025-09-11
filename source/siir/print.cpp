@@ -6,6 +6,7 @@
 #include "siir/instruction.hpp"
 #include "siir/local.hpp"
 #include "siir/type.hpp"
+#include "siir/inlineasm.hpp"
 
 #include <iomanip>
 #include <iostream>
@@ -294,4 +295,52 @@ void PhiOperand::print(std::ostream& os) const {
 void Instruction::print(std::ostream& os) const {
     assert(is_def());
     os << 'v' << m_result;
+}
+
+void InlineAsm::print(std::ostream& os) const {
+    os << "asm \"";
+    
+    for (u32 idx = 0, e = m_iasm.size(); idx != e; ++idx) {
+        switch (m_iasm[idx]) {
+        case '\\':
+            os << "\\\\";
+            break;
+        case '\"':
+            os << "\\\"";
+            break;
+        case '\n':
+            os << "\\n";
+            break;
+        case '\t':
+            os << "\\t";
+            break;
+        case '\r':
+            os << "\\r";
+            break;
+        case '\b':
+            os << "\\b";
+            break;
+        case '\0':
+            os << "\\0";
+            break;
+        default:
+            os << m_iasm[idx];
+            break;
+        }
+    }
+
+    if (constraints().size() == 0) {
+        os << "\" ";
+        return;
+    }
+
+    os << "\" : ";
+
+    for (u32 idx = 0, e = constraints().size(); idx != e; ++idx) {
+        os << '"' << constraints().at(idx) << '"';
+        if (idx + 1 != e)
+            os << ", ";
+    }
+
+    os << ' ';
 }

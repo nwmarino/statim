@@ -1,16 +1,23 @@
 #include "siir/llvm_translate_pass.hpp"
 #include "siir/constant.hpp"
 #include "siir/function.hpp"
+#include "siir/inlineasm.hpp"
 #include "siir/instruction.hpp"
 #include "siir/type.hpp"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/FPEnv.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
@@ -183,6 +190,11 @@ llvm::Constant* LLVMTranslatePass::translate(Constant* constant) {
     assert(false && "no LLVM equivelant for SIIR constant!");
 }
 
+llvm::InlineAsm* LLVMTranslatePass::translate(InlineAsm* iasm) {
+    assert(m_iasm.count(iasm) == 1);
+    return m_iasm[iasm];
+}
+
 llvm::Value* LLVMTranslatePass::translate(Value* value) {
     if (auto A = dynamic_cast<Argument*>(value)) {
         return translate(A);
@@ -194,6 +206,8 @@ llvm::Value* LLVMTranslatePass::translate(Value* value) {
         return translate(G);
     } else if (auto I = dynamic_cast<Instruction*>(value)) {
         return translate(I);
+    } else if (auto IA = dynamic_cast<InlineAsm*>(value)) {
+        return translate(IA);
     } else if (auto L = dynamic_cast<Local*>(value)) {
         return translate(L);
     }
@@ -229,15 +243,14 @@ void LLVMTranslatePass::convert(Global* global) {
 void LLVMTranslatePass::convert(Function* fn) {
     llvm::Function* F = translate(fn);
 
-    F->addFnAttr(llvm::Attribute::StackProtectStrong);
-    F->addFnAttr("stack-protector-buffer-size", "8");
+    //F->addFnAttr(llvm::Attribute::StackProtectStrong);
+    //F->addFnAttr("stack-protector-buffer-size", "8");
     
     F->addFnAttr(llvm::Attribute::UWTable);
     F->addFnAttr(llvm::Attribute::NoUnwind);
     F->setUWTableKind(llvm::UWTableKind::Default);
 
     F->addFnAttr("frame-pointer", "all");
-    
     F->addFnAttr("target-cpu", "x86-64");
 
     for (auto& arg : fn->args()) {
@@ -383,18 +396,79 @@ void LLVMTranslatePass::convert(Instruction* inst) {
     }
     
     case INST_OP_CALL: {
-        llvm::Function* callee = 
-            llvm::dyn_cast<llvm::Function>(translate(inst->get_operand(0)));
+        if (InlineAsm* iasm = dynamic_cast<InlineAsm*>(inst->get_operand(0))) {
+            std::string string = iasm->string();
+            std::string constraints = "";
 
-        std::vector<llvm::Value*> args;
-        if (inst->num_operands() > 1)
-            args.reserve(inst->num_operands() - 1);
+            for (u32 idx = 0, e = iasm->constraints().size(); idx != e; ++idx) {
+                std::string constraint = iasm->constraints().at(idx);
+                if (constraint.at(0) == '~') {
+                    constraints += "~{" + constraint + "}";
+                } else {
+                    constraints += constraint;
+                }
+                
+                if (idx + 1 != e)
+                    constraints += ",";
+            }
 
-        for (u32 idx = 1, e = inst->num_operands(); idx != e; ++idx)
-            args.push_back(translate(inst->get_operand(idx)));
+            const siir::FunctionType* siir_type = 
+                dynamic_cast<const siir::FunctionType*>(iasm->get_type());
+            assert(siir_type);
 
-        llvm::CallInst* call = m_builder->CreateCall(callee, args);
-        m_insts.emplace(inst, call);
+            llvm::Type* return_type = nullptr;
+            if (siir_type->has_return_type()) {
+                return_type = translate(siir_type->get_return_type());
+            } else {
+                return_type = llvm::Type::getVoidTy(*m_context);
+            }
+
+            std::vector<llvm::Type*> param_types(siir_type->num_args(), nullptr);
+            for (u32 idx = 0, e = siir_type->num_args(); idx != e; ++idx)
+                param_types[idx] = translate(siir_type->args().at(idx));
+
+            llvm::FunctionType* type = llvm::FunctionType::get(
+                return_type, param_types, false);
+
+            llvm::InlineAsm* llvm_iasm = llvm::InlineAsm::get(
+                type, string, constraints, iasm->has_side_effects(), true);
+
+            std::vector<llvm::Value*> args;
+            if (inst->num_operands() > 1)
+                args.reserve(inst->num_operands() - 1);
+
+            for (u32 idx = 1, e = inst->num_operands(); idx != e; ++idx) {
+                args.push_back(translate(inst->get_operand(idx)));
+            }
+
+            llvm::CallInst* call = m_builder->CreateCall(type, llvm_iasm, args);
+            for (u32 idx = 0, e = iasm->constraints().size(); idx != e; ++idx) {
+                std::string constraint = iasm->constraints().at(idx);
+                if (constraint == "=*r" || constraint == "=*m") {
+                    call->addParamAttr(idx, llvm::Attribute::get(
+                        *m_context, 
+                        llvm::Attribute::ElementType, 
+                        translate(static_cast<const PointerType*>(siir_type->get_arg(idx))->get_pointee())));
+                }
+            }
+
+            m_insts.emplace(inst, call);
+            break;
+        } else {
+            llvm::Function* callee = llvm::dyn_cast<llvm::Function>(
+                translate(inst->get_operand(0)));
+            
+            std::vector<llvm::Value*> args;
+            if (inst->num_operands() > 1)
+                args.reserve(inst->num_operands() - 1);
+
+            for (u32 idx = 1, e = inst->num_operands(); idx != e; ++idx)
+                args.push_back(translate(inst->get_operand(idx)));
+
+            llvm::CallInst* call = m_builder->CreateCall(callee, args);
+            m_insts.emplace(inst, call);
+        }
+
         break;
     }
 
