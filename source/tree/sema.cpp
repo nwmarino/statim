@@ -7,6 +7,7 @@
 #include "tree/stmt.hpp"
 
 #include "tree/visitor.hpp"
+#include <string>
 
 using namespace stm;
 
@@ -24,15 +25,10 @@ enum class TypeCheckResult : u8 {
 /// \returns The result of the check, either a match, mismatch, or if an
 /// implicit cast should be injected at the site of the given typed node.
 static TypeCheckResult type_check(
-        const Type* pActual, 
-        const Type* pExpected, 
+        const Type* actual, 
+        const Type* expected, 
         TypeCheckMode mode) {
-    if (auto actual_deferred = dynamic_cast<const DeferredType*>(pActual))
-        return type_check(actual_deferred->get_resolved(), pExpected, mode);
-    else if (auto expected_deferred = dynamic_cast<const DeferredType*>(pExpected))
-        return type_check(pActual, expected_deferred->get_resolved(), mode);
-    
-    if (*pActual == *pExpected)
+    if (actual->compare(expected))
         return TypeCheckResult::Match;
 
     switch (mode) {
@@ -43,40 +39,96 @@ static TypeCheckResult type_check(
     case TypeCheckMode::AllowImplicit:
         // If we can cast the actual type to the desired type, then respond
         // with a cast injection.
-        if (pActual->can_cast(pExpected, true))
+        if (actual->can_cast(expected, true))
             return TypeCheckResult::Cast;
 
         return TypeCheckResult::Mismatch;
         
-    case TypeCheckMode::Loose: {
-        if (pActual->can_cast(pExpected, true))
+    case TypeCheckMode::Loose:
+        if (actual->can_cast(expected, true))
             return TypeCheckResult::Cast;
         
         // Since pointer -> int and int -> pointer casts cannot be done 
-        // implicitly, this loose matching allows for it under rare 
-        // circumstances like in pointer arithmetic.
-        if (dynamic_cast<const PointerType*>(pActual) && pExpected->is_int())
-            return TypeCheckResult::Match;
-        else if (dynamic_cast<const PointerType*>(pActual) && dynamic_cast<const PointerType*>(pExpected))
-            return TypeCheckResult::Match;
-        else if (pActual->is_int() && dynamic_cast<const PointerType*>(pExpected))
+        // implicitly, loose matching allows for it under circumstances like 
+        // during pointer arithmetic.
+        if ((actual->is_int() || actual->is_pointer()) && 
+            (expected->is_int() || expected->is_pointer()))
             return TypeCheckResult::Match;
 
         return TypeCheckResult::Mismatch;
-    }
-    
     }
     
     return TypeCheckResult::Mismatch;
 }
 
 void SemanticAnalysis::visit(Root& node) {
-    for (auto decl : node.decls) decl->accept(*this);
+    for (auto& decl : node.decls()) 
+        decl->accept(*this);
 }
 
 void SemanticAnalysis::visit(FunctionDecl& node) {
     pFunction = &node;
-    if (node.has_body()) node.pBody->accept(*this);
+
+    /// Function signature checking for 'main' function.
+    /// TODO: Improve this to unify errors with the expected signature.
+    if (node.get_name() == "main") {
+        const FunctionType* type = node.get_type();
+
+        const Type* return_type = type->get_return_type();
+        if (!return_type->compare(root.get_si64_type())) {
+            Logger::fatal(
+                "'main' function should return 's64' type, got '" + 
+                    type->get_return_type()->to_string() + "' instead",
+                node.get_span());
+        }
+
+        if (node.num_params() != 2) {
+            Logger::fatal(
+                "'main' function should have two parameters, got " + 
+                    std::to_string(node.num_params()) + " instead",
+                node.get_span());
+        }
+
+        const Type* param1_type = node.get_param(0)->get_type();
+        if (!param1_type->compare(root.get_si64_type())) {
+            Logger::fatal(
+                "'main' function first parameter should have 's64' type, got '"
+                    + param1_type->to_string() + "' instead",
+                node.get_param(0)->get_span());
+        }
+
+        const Type* param2_type = node.get_param(1)->get_type();
+        bool param2_adequate = true;
+
+        // Check that the parameter type is *...
+        if (param2_type->is_pointer()) {
+            const Type* pointee = param2_type->as_pointer()->get_pointee();
+
+            // Check that the parameter type is **...
+            if (pointee->is_pointer()) {
+                const Type* base = pointee->as_pointer()->get_pointee();
+
+                // Check that the parameter type is **char
+                if (!base->compare(root.get_char_type()))
+                    param2_adequate = false;
+            } else {
+                param2_adequate = false;
+            }
+        } else {
+            param2_adequate = false;
+        }
+
+        if (!param2_adequate) {
+            Logger::fatal(
+                "'main' function second parameter should have '**char' type, got '"
+                    + param2_type->to_string() + "' instead",
+                node.get_param(1)->get_span());
+        }
+    }
+
+    if (node.has_body()) 
+        node.pBody->accept(*this);
+    
     pFunction = nullptr;
 }
 
@@ -104,6 +156,11 @@ void SemanticAnalysis::visit(VariableDecl& node) {
                 node.get_span());
         }
     }
+}
+
+void SemanticAnalysis::visit(AsmStmt& node) {
+    for (auto& expr : node.m_exprs)
+        expr->accept(*this);
 }
 
 void SemanticAnalysis::visit(BlockStmt& node) {
@@ -217,10 +274,6 @@ void SemanticAnalysis::visit(RetStmt& node) {
     }
 }
 
-void SemanticAnalysis::visit(Rune& node) {
-
-}
-
 void SemanticAnalysis::visit(BinaryExpr& node) {
     node.pLeft->accept(*this);
     node.pRight->accept(*this);
@@ -228,8 +281,15 @@ void SemanticAnalysis::visit(BinaryExpr& node) {
     auto left_type = node.get_lhs()->get_type();
     auto right_type = node.get_rhs()->get_type();
 
+    /// TODO: Some considerations to be had:
+    ///
+    /// int == float, fails since LHS != RHS and RHS cannot implicitly cast to
+    /// LHS. Ideally, LHS -> RHS instead since it's possible and some 
+    /// comparisons/operators are loose WRT to ordering.
+
     TypeCheckMode mode = TypeCheckMode::AllowImplicit;
-    if (BinaryExpr::supports_ptr_arith(node.op)) {
+    if (BinaryExpr::supports_ptr_arith(node.op) || 
+        BinaryExpr::is_logical_comparison(node.op)) {
         // Since pointer arithmetic involves integers and pointers, but they
         // cannot be implicitly casted to one another, looser type checking is
         // necessary.
@@ -276,6 +336,8 @@ void SemanticAnalysis::visit(BinaryExpr& node) {
 
 void SemanticAnalysis::visit(UnaryExpr& node) {
     node.pExpr->accept(*this);
+
+    /// TODO: Perform mutability checks for increment/decrement operators.
 }
 
 void SemanticAnalysis::visit(CastExpr& node) {
@@ -337,5 +399,11 @@ void SemanticAnalysis::visit(CallExpr& node) {
 }
 
 void SemanticAnalysis::visit(RuneExpr& node) {
+    for (auto& arg : node.rune()->args())
+        arg->accept(*this);
+}
 
+void SemanticAnalysis::visit(RuneStmt& node) {
+    for (auto& arg : node.rune()->args())
+        arg->accept(*this);
 }

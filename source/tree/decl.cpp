@@ -2,11 +2,23 @@
 #include "tree/expr.hpp"
 #include "tree/stmt.hpp"
 
-stm::Decl::Decl(
-        const Span& span, 
-        const std::string& name, 
-        const std::vector<Rune*>& decorators)
-    : span(span), name(name), decorators(decorators) {};
+using namespace stm;
+
+Decl::Decl(const Span& span, const std::string& name, 
+           const std::vector<Rune*>& decorators)
+    : span(span), name(name), decorators(decorators) {}
+
+bool Decl::has_decorator(Rune::Kind kind) const {
+    for (auto& dec : decorators)
+        if (dec->kind() == kind)
+            return true;
+
+    return false;
+}
+
+UseDecl::UseDecl(const Span& span, const std::string& path,
+                 const std::vector<Rune*>& decorators)
+    : Decl(span, path, decorators) {}
 
 stm::FunctionDecl::FunctionDecl(
         const Span& span, 

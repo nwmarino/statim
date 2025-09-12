@@ -43,6 +43,7 @@ public:
 enum Opcode : u16 {
     INST_OP_NOP,
     INST_OP_CONSTANT,
+    INST_OP_STRING,
     INST_OP_LOAD,
     INST_OP_STORE,
     INST_OP_ACCESS_PTR,

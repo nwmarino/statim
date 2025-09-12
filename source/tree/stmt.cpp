@@ -2,6 +2,24 @@
 #include "tree/rune.hpp"
 #include "tree/stmt.hpp"
 
+using namespace stm;
+
+AsmStmt::AsmStmt(const Span& span, const std::string& str,
+                 const std::vector<std::string>& inputs,
+                 const std::vector<std::string>& outputs,
+                 const std::vector<Expr*>& exprs,
+                 const std::vector<std::string>& clobbers,
+                 bool is_volatile)
+    : Stmt(span), m_asm(str), m_inputs(inputs), m_outputs(outputs), 
+      m_exprs(exprs), m_clobbers(clobbers), m_volatile(is_volatile) {}
+
+AsmStmt::~AsmStmt() {
+    for (auto& expr : m_exprs) 
+        delete expr;
+        
+    m_exprs.clear();
+}
+
 stm::BlockStmt::BlockStmt(
         const Span& span, 
         const std::vector<Rune*>& runes, 

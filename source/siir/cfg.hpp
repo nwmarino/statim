@@ -30,6 +30,7 @@ class CFG final {
     friend class ConstantFP;
     friend class ConstantNull;
     friend class BlockAddress;
+    friend class ConstantString;
     friend class Instruction;
 
     /// Top-level graph items.
@@ -58,6 +59,7 @@ class CFG final {
     std::unordered_map<f64, ConstantFP*> m_pool_fp64 = {};
     std::unordered_map<const Type*, ConstantNull*> m_pool_null = {};
     std::unordered_map<const BasicBlock*, BlockAddress*> m_pool_baddr = {};
+    std::unordered_map<std::string, ConstantString*> m_pool_str = {};
 
     /// PHI operand pooling. This is only here because the memory cannot be 
     /// appropriately managed by the individual instructions 
@@ -83,6 +85,10 @@ public:
     /// Returns the target of this control flow graph.
     const Target& get_target() const { return m_target; }
     Target& get_target() { return m_target; }
+
+    /// Return a list of all the structure types in this graph, in order of
+    /// creation.
+    std::vector<StructType*> structs() const;
 
     /// Returns a list of all functions in this graph, in order of addition.
     std::vector<Global*> globals() const;

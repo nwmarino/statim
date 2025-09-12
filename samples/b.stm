@@ -1,9 +1,155 @@
-__memcpy :: (__d: *void, __s: *void, __n: mut u64) -> void {
-    let dst: mut *char = __d;
-    let src: mut *char = __s;
+use "a.stm";
 
-    while __n != 0 {
-        dst[__n] = src[__n]; 
-        __n = __n - 1;
-    }
+test_iadd :: () -> void {
+    let x: s64 = 4;
+    $assert(7 == x + 3);
+}
+
+test_fadd :: () -> void {
+    let x: f64 = 0.14;
+    $assert(3.14 == 3.0 + x);
+}
+
+test_isub :: () -> void {
+    let x: s64 = 7;
+    $assert(11 == 18 - x);
+}
+
+test_fsub :: () -> void {
+    let x: f32 = 0.55;
+    $assert(-1.5 == x - 2.05);
+}
+
+test_smul :: () -> void {
+    let x: s64 = 6;
+    $assert(-30 == -5 * x);
+}
+
+test_umul :: () -> void {
+    let x: u64 = -3;
+    $assert(15 == x * -5);
+}
+
+test_fmul :: () -> void {
+    let x: f32 = 1.5;
+    $assert(cast<f32>(30) == cast<f32>(20) * 1.5);
+}
+
+test_sdiv :: () -> void {
+    let x: s64 = -4;
+    $assert(-6 == 24 / x);
+}
+
+test_udiv :: () -> void {
+    let x: u64 = 16;
+    $assert(8 == x / 2);
+}
+
+test_fdiv :: () -> void {
+    let x: f64 = 2.5;
+    $assert(cast<f64>(20) == cast<f64>(50) / x);
+}
+
+$[public]
+FileFlags :: s64 {
+    FILE_FLAGS_READ_ONLY = 0,
+    FILE_FLAGS_WRITE_ONLY = 1,
+    FILE_FLAGS_READ_WRITE = 2,
+    FILE_FLAGS_CREATE = 64,
+    FILE_FLAGS_TRUNCATE = 512,
+    FILE_FLAGS_APPEND = 1024,
+}
+
+$[public]
+FileSeek :: s64 {
+    FILE_SEEK_SET = 0,
+    FILE_SEEK_CUR = 1,
+    FILE_SEEK_END = 2,
+}
+
+$[public, intrinsic]
+File :: {
+private:
+    _M_fd: s64,
+    _M_buf: *char,
+    _M_size: u64,
+    _M_pos: u64,
+    _M_open: bool,
+}
+
+$[public]
+file_open :: (file: mut *File, path: *char, flags: FileFlags) -> s64 {
+    file._M_buf = null;
+    file._M_size = 4096;
+    file._M_pos = 0;
+    file._M_open = true;
+
+    __asm__ (
+        "movq $$2, %rax\n"
+        "movq $1, %rdi\n"
+        "movq $2, %rsi\n"
+        "movq $$420, %rdx\n"
+        "syscall\n"
+        "movq %rax, $0"
+        : "=r" (file._M_fd)
+        : "r" (path), "r" (flags)
+        : "rax", "rdi", "rsi", "rdx"
+    );
+
+    ret file._M_fd;
+}
+
+$[public]
+file_close :: (file: mut *File) -> s64 {
+    if (!file_is_open(file))
+        ret 0;
+
+    if (file._M_pos > 0)
+        file_flush(file);
+
+    let result: mut s64;
+    __asm__ (
+        "movq $$3, %rax\n"
+        "movq $1, %rdi\n"
+        "syscall\n"
+        "movq %rax, $0"
+        : "=r" (result)
+        : "r" (file._M_fd)
+        : "rax", "rdi"
+    );
+
+    ret result;
+}
+
+$[public]
+file_flush :: (file: mut *File) -> s64 {
+    ret 0;
+}
+
+$[public]
+file_is_open :: (file: *File) -> bool {
+    $assert(file && "file cannot be null!");
+    ret file._M_open;
+}
+
+main :: (argc: s64, argv: **char) -> s64 {
+    test_iadd();
+    test_fadd();
+    test_isub();
+    test_fsub();
+    test_smul();
+    test_umul();
+    test_fmul();
+    test_sdiv();
+    test_udiv();
+    test_fdiv();
+
+    let file: mut File;
+    file_open(&file, "samples/test", FILE_FLAGS_CREATE | FILE_FLAGS_READ_WRITE | FILE_FLAGS_TRUNCATE);
+    $assert(file_is_open(&file));
+    $writeln(file, "hey!");
+    file_close(&file);
+
+    $println("hello world!");
+    ret foo();
 }

@@ -1,4 +1,5 @@
 #include "core/logger.hpp"
+#include "tree/rune.hpp"
 #include "tree/type.hpp"
 #include "tree/parser.hpp"
 #include "types/source_location.hpp"
@@ -21,6 +22,10 @@ void Parser::parse(TranslationUnit& unit) {
         Decl* decl = parse_decl();
         assert(decl && "could not parse declaration");
         root->add_decl(decl);
+
+        if (decl->has_decorator(Rune::Public)) {
+            root->exports().push_back(decl);
+        }
     }
 
     unit.set_root(std::move(root));
@@ -190,8 +195,98 @@ UnaryExpr::Operator Parser::unop(TokenKind kind) const {
     }
 }
 
-void Parser::parse_rune_decorators() {
+Rune* Parser::parse_rune() {
+    if (!match(TOKEN_KIND_IDENTIFIER)) {
+        Logger::info(token_kind_to_string(lexer.last().kind));
+        Logger::fatal(
+                "expected rune identifier after '$'", since(lexer.last().loc));
+    }
 
+    Rune::Kind kind = Rune::from_string(lexer.last().value);
+    if (kind == Rune::Unknown) {
+        Logger::fatal(
+            "unrecognized rune: '$" + lexer.last().value + "'",
+            since(lexer.last().loc));
+    }
+
+    next(); // identifier
+    std::vector<Expr*> args = {};
+    if (match(TOKEN_KIND_SET_PAREN)) {
+        next(); // '('
+
+        while (!match(TOKEN_KIND_END_PAREN)) {
+            auto* expr = parse_expr();
+            assert(expr && "could not parse rune argument!");
+            args.push_back(expr);
+
+            if (match(TOKEN_KIND_END_PAREN))
+                break;
+
+            if (!match(TOKEN_KIND_COMMA)) {
+                Logger::fatal(
+                    "expected ',' or ')' after rune argument list",
+                    lexer.last().loc);
+            }
+
+            next(); // ','
+        }
+
+        next(); // ')'
+    };
+
+    if (!Rune::accepts_args(kind) && !args.empty()) {
+        Logger::fatal(
+            "rune '" + Rune::to_string(kind) + "' does not accept arguments", 
+            since(lexer.last().loc)); 
+    }
+
+    return new Rune(kind, args);
+}
+
+void Parser::parse_rune_decorators() {
+    runes.clear();
+
+    if (!match(TOKEN_KIND_SIGN))
+        return;
+
+    next(); // '$'
+
+    if (match(TOKEN_KIND_SET_BRACKET)) {
+        next(); // '['
+
+        while (!match(TOKEN_KIND_END_BRACKET)) {
+            auto* rune = parse_rune();
+            if (!Rune::is_decorator(rune->kind())) {
+                Logger::fatal(
+                    "non-decorator rune in decorator list", 
+                    since(lexer.last().loc));
+            }
+
+            runes.push_back(rune);
+
+            if (match(TOKEN_KIND_END_BRACKET))
+                break;
+
+            if (!match(TOKEN_KIND_COMMA)) {
+                Logger::fatal(
+                    "expected ',' or ']' after rune decorator list", 
+                    since(lexer.last().loc));
+            }
+
+            next(); // ','
+        }
+
+        next(); // ']'
+    } else {
+        auto* rune = parse_rune();
+        if (!Rune::is_decorator(rune->kind())) {
+            Logger::fatal(
+                "non-decorator rune in decorator list", 
+                since(lexer.last().loc));
+        }
+
+        runes.push_back(rune);
+    }
 }
 
 const Type* Parser::parse_type() {
@@ -219,14 +314,17 @@ const Type* Parser::parse_type() {
     return DeferredType::get(*root, context);
 }
 
-Decl* Parser::parse_decl() {
-    if (match(TOKEN_KIND_SIGN)) parse_rune_decorators();
+Decl* Parser::parse_decl() { 
+    parse_rune_decorators();
 
     if (!match(TOKEN_KIND_IDENTIFIER)) {
         Logger::fatal(
             "expected declaration name identifier",
             Span(lexer.last().loc));
     }
+
+    if (lexer.last().value == "use")
+        return parse_use();
 
     const Token name = lexer.last();
     next(); // identifier
@@ -251,6 +349,31 @@ Decl* Parser::parse_decl() {
             "expected declaration after binding operator '::'",
             since(name.loc));
     }
+}
+
+UseDecl* Parser::parse_use() {
+    SourceLocation loc = lexer.last().loc;
+    next(); // 'use'
+
+    std::vector<Rune*> use_runes = this->runes;
+    this->runes.clear();
+
+    if (!match(TOKEN_KIND_STRING)) {
+        Logger::fatal(
+            "expected string literal enclosed by '\"' after 'use' keyword",
+            since(lexer.last().loc));
+    }
+
+    std::string path = lexer.last().value;
+    next(); // "path"
+
+    if (!match(TOKEN_KIND_SEMICOLON)) {
+        Logger::fatal("expected ';' after 'use' declaration", since(loc));
+    }
+
+    next(); // ';'
+
+    return new UseDecl(since(loc), path, use_runes);
 }
 
 FunctionDecl* Parser::parse_function(const Token& name) {
@@ -325,19 +448,21 @@ FunctionDecl* Parser::parse_function(const Token& name) {
     const FunctionType* type = FunctionType::get(
         *root, return_type, param_types);
     
-    if (!match(TOKEN_KIND_SET_BRACE)) {
-        Logger::fatal("expected '{' after function signature", 
+    if (match(TOKEN_KIND_SET_BRACE)) {
+        body = parse_stmt();
+        assert(body && "could not parse function body");
+    } else if (!match(TOKEN_KIND_SEMICOLON)) {
+        Logger::fatal("expected '{' or ';' after function signature", 
             since(name.loc));
+    } else {
+        next(); // ';'
     }
-
-    body = parse_stmt();
-    assert(body && "could not parse function body");
 
     exit_scope();
     FunctionDecl* function = new FunctionDecl(
-        Span(name.loc, body->get_span().end),
+        Span(name.loc, body != nullptr ? body->get_span().end : name.loc),
         name.value,
-        runes,
+        function_runes,
         type,
         params,
         scope,
@@ -400,16 +525,50 @@ VariableDecl* Parser::parse_variable() {
 StructDecl* Parser::parse_struct(const Token& name) {
     next(); // '{'
 
+    std::vector<Rune*> struct_runes = runes;
+    runes.clear();
+
     std::vector<FieldDecl*> fields;
+    bool private_mod = false;
 
     while (!match(TOKEN_KIND_END_BRACE)) {
+        parse_rune_decorators();
+        std::vector<Rune*> field_runes = runes;
+        runes.clear();
+
         if (!match(TOKEN_KIND_IDENTIFIER)) {
             Logger::fatal(
                 "expected field name identifier",
                 since(name.loc));
         }
 
-        const Token& fname = lexer.last();
+        if (match("public")) {
+            private_mod = false;
+            next(); // public
+
+            if (!match(TOKEN_KIND_COLON))
+                Logger::fatal(
+                    "expected ':' after 'public' modifier", lexer.last().loc);
+            
+            next(); // ':'
+        } else if (match("private")) {
+            private_mod = true;
+            next(); // private
+
+            if (!match(TOKEN_KIND_COLON))
+                Logger::fatal(
+                    "expected ':' after 'private' modifier", lexer.last().loc);
+            
+            next(); // ':'
+        }
+
+        if (private_mod) {
+            field_runes.push_back(new Rune(Rune::Private));
+        } else {
+            field_runes.push_back(new Rune(Rune::Public));
+        }
+
+        const Token fname = lexer.last();
         const Type* ftype = nullptr;
         next(); // identifier
 
@@ -425,7 +584,7 @@ StructDecl* Parser::parse_struct(const Token& name) {
         fields.push_back(new FieldDecl(
             since(fname.loc),
             fname.value,
-            {},
+            field_runes,
             ftype,
             nullptr,
             fields.size()));
@@ -447,7 +606,7 @@ StructDecl* Parser::parse_struct(const Token& name) {
     StructDecl* decl = new StructDecl(
         Span(name.loc, end),
         name.value,
-        {},
+        struct_runes,
         nullptr,
         fields);
 
@@ -467,6 +626,8 @@ StructDecl* Parser::parse_struct(const Token& name) {
 }
 
 EnumDecl* Parser::parse_enum(const Token& name) {
+    std::vector<Rune*> enum_runes = this->runes;
+    runes.clear();
     const Type* underlying = parse_type();
 
     if (!match(TOKEN_KIND_SET_BRACE)) {
@@ -480,7 +641,7 @@ EnumDecl* Parser::parse_enum(const Token& name) {
     EnumDecl* decl = new EnumDecl(
         since(name.loc),
         name.value,
-        {},
+        enum_runes,
         nullptr,
         {});
 
@@ -557,6 +718,10 @@ EnumDecl* Parser::parse_enum(const Token& name) {
 Stmt* Parser::parse_stmt() {
     if (match(TOKEN_KIND_SET_BRACE))
         return parse_block();
+    else if (match(TOKEN_KIND_SIGN))
+        return parse_rune_stmt();
+    else if (match("__asm__"))
+        return parse_asm();
     else if (match("break"))
         return parse_break();
     else if (match("continue"))
@@ -571,6 +736,165 @@ Stmt* Parser::parse_stmt() {
         return parse_ret();
     else
         return parse_expr();
+}
+
+AsmStmt* Parser::parse_asm() {
+    const SourceLocation begin = lexer.last().loc;
+    next(); // 'asm'
+
+    bool is_volatile = false;
+    if (match("volatile")) {
+        is_volatile = true;
+        next(); // 'volatile'
+    }
+
+    if (!match(TOKEN_KIND_SET_PAREN))
+        Logger::fatal("expected '(' after 'asm' keyword", lexer.last().loc);
+    
+    next(); // '('
+
+    std::string iasm = "";    
+    std::vector<std::string> outputs = {};
+    std::vector<std::string> inputs = {};
+    std::vector<Expr*> exprs = {};
+    std::vector<std::string> clobbers = {};
+
+    while (!match(TOKEN_KIND_COLON)) {
+        if (!match(TOKEN_KIND_STRING)) {
+            Logger::fatal(
+                "expected inline assembly string literal", lexer.last().loc);
+        }
+
+        iasm += lexer.last().value;
+        next(); // "string"
+    }
+
+    if (!match(TOKEN_KIND_COLON)) {
+        Logger::fatal(
+            "expected ':' after inline assembly to define input operands", 
+            lexer.last().loc);
+    }
+
+    next(); // ':'
+
+    while (!match(TOKEN_KIND_COLON)) {
+        // Parse the output operands.
+        if (!match(TOKEN_KIND_STRING)) {
+            Logger::fatal(
+                "expected string literal to define inline output constraint", 
+                lexer.last().loc);
+        }
+
+        outputs.push_back(lexer.last().value);
+        next(); // "constraint"
+
+        if (!match(TOKEN_KIND_SET_PAREN)) {
+            Logger::fatal(
+                "expected '(' to define output operand expression", 
+                lexer.last().loc);
+        }
+
+        next(); // '('
+
+        Expr* expr = parse_expr();
+        assert(expr && "could not parse inline assembly output expression!");
+        exprs.push_back(expr);
+
+        if (!match(TOKEN_KIND_END_PAREN)) {
+            Logger::fatal(
+                "expected ')' to define output operand expression", 
+                lexer.last().loc);
+        }
+
+        next(); // ')'
+
+        if (match(TOKEN_KIND_COLON))
+            break;
+
+        if (!match(TOKEN_KIND_COMMA)) {
+            Logger::fatal(
+                "expected ',' to separate inline assembly output operands", 
+                lexer.last().loc);
+        }
+
+        next(); // ','
+    }
+
+    next(); // ':'
+
+    while (!match(TOKEN_KIND_COLON)) {
+        // Parse the input operands.
+        if (!match(TOKEN_KIND_STRING)) {
+            Logger::fatal(
+                "expected string literal to define inline assembly input constraint", 
+                lexer.last().loc);
+        }
+
+        inputs.push_back(lexer.last().value);
+        next(); // "constraint"
+
+        if (!match(TOKEN_KIND_SET_PAREN)) {
+            Logger::fatal(
+                "expected '(' to define input operand expression", 
+                lexer.last().loc);
+        }
+
+        next(); // '('
+
+        Expr* expr = parse_expr();
+        assert(expr && "could not parse inline assembly input expression!");
+        exprs.push_back(expr);
+
+        if (!match(TOKEN_KIND_END_PAREN)) {
+            Logger::fatal(
+                "expected ')' to define input operand expression", 
+                lexer.last().loc);
+        }
+
+        next(); // ')'
+
+        if (match(TOKEN_KIND_COLON))
+            break;
+
+        if (!match(TOKEN_KIND_COMMA)) {
+            Logger::fatal(
+                "expected ',' to separate inline assembly input operands", 
+                lexer.last().loc);
+        }
+
+        next(); // ','
+    }
+    
+    next(); // ':'
+
+    while (!match(TOKEN_KIND_END_PAREN)) {
+        // Parse the clobbers.
+        if (!match(TOKEN_KIND_STRING)) {
+            Logger::fatal(
+                "expected string literal to define inline assembly clobber", 
+                lexer.last().loc);
+        }
+
+        clobbers.push_back(lexer.last().value);
+        next(); // "clobber"
+
+        if (match(TOKEN_KIND_END_PAREN))
+            break;
+
+        if (!match(TOKEN_KIND_COMMA)) {
+            Logger::fatal(
+                "expected ',' to separate inline assembly output operands", 
+                lexer.last().loc);
+        }
+
+        next(); // ','
+    }
+
+    const SourceLocation end = lexer.last().loc;
+    next(); // ')'
+
+    return new AsmStmt(
+        Span(begin, end), iasm, inputs, outputs, exprs, clobbers, is_volatile);
 }
 
 BlockStmt* Parser::parse_block() {
@@ -683,6 +1007,19 @@ RetStmt* Parser::parse_ret() {
     return new RetStmt(Span(begin, end), expr);
 }
 
+Stmt* Parser::parse_rune_stmt() {
+    next(); // '$'
+    SourceLocation loc = lexer.last().loc;
+    Rune* rune = parse_rune();
+    if (Rune::is_value(rune->kind())) {
+        return new RuneExpr(loc, nullptr, rune);
+    } else if (Rune::is_statement(rune->kind())) {
+        return new RuneStmt(loc, rune);
+    }
+
+    Logger::fatal("cannot use decorator rune as a statement", loc);
+}
+
 Expr* Parser::parse_expr() {
     Expr* base = parse_unary_prefix();
     assert(base && "could not parse expression base");
@@ -702,6 +1039,8 @@ Expr* Parser::parse_primary() {
         return parse_char();
     else if (match(TOKEN_KIND_STRING))
         return parse_string();
+    else if (match(TOKEN_KIND_SIGN))
+        return parse_rune_expr();
     else
         return nullptr;
 }
@@ -981,7 +1320,7 @@ ReferenceExpr* Parser::parse_ref() {
 }
 
 CallExpr* Parser::parse_call() {
-    const Token& callee = lexer.last(1);
+    const Token callee = lexer.last(1);
     next(); // '('
 
     std::vector<Expr*> args;
@@ -1007,4 +1346,18 @@ CallExpr* Parser::parse_call() {
         nullptr, 
         callee.value, 
         args);
+}
+
+RuneExpr* Parser::parse_rune_expr() {
+    next(); // '$'
+    SourceLocation loc = lexer.last().loc;
+    Rune* rune = parse_rune();
+    if (!Rune::is_value(rune->kind())) {
+        Logger::fatal(
+            "rune '" + Rune::to_string(rune->kind()) + 
+                "' cannot be used as an expression", 
+            loc);
+    }
+
+    return new RuneExpr(loc, nullptr, rune);
 }

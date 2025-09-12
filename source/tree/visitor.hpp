@@ -21,6 +21,7 @@ class Frame;
 class Root;
 
 class Decl;
+class UseDecl;
 class FunctionDecl;
 class ParameterDecl;
 class VariableDecl;
@@ -30,6 +31,7 @@ class EnumValueDecl;
 class EnumDecl;
 
 class Stmt;
+class AsmStmt;
 class BlockStmt;
 class BreakStmt;
 class ContinueStmt;
@@ -37,8 +39,7 @@ class DeclStmt;
 class IfStmt;
 class WhileStmt;
 class RetStmt;
-
-class Rune;
+class RuneStmt;
 
 class Expr;
 class BoolLiteral;
@@ -65,6 +66,7 @@ public:
 
     virtual void visit(Root& node) = 0;
     
+    virtual void visit(UseDecl& node) = 0;
     virtual void visit(FunctionDecl& node) = 0;
     virtual void visit(ParameterDecl& node) = 0;
     virtual void visit(VariableDecl& node) = 0;
@@ -73,6 +75,7 @@ public:
     virtual void visit(EnumValueDecl& node) = 0;
     virtual void visit(EnumDecl& node) = 0;
 
+    virtual void visit(AsmStmt& node) = 0;
     virtual void visit(BlockStmt& node) = 0;
     virtual void visit(BreakStmt& node) = 0;
     virtual void visit(ContinueStmt& node) = 0;
@@ -80,7 +83,7 @@ public:
     virtual void visit(IfStmt& node) = 0;
     virtual void visit(WhileStmt& node) = 0;
     virtual void visit(RetStmt& node) = 0;
-    virtual void visit(Rune& node) = 0;
+    virtual void visit(RuneStmt& node) = 0;
 
     virtual void visit(BoolLiteral& node) = 0;
     virtual void visit(IntegerLiteral& node) = 0;
@@ -113,34 +116,36 @@ public:
 
     void visit(Root& node) override;
 
+    void visit(UseDecl& node) override {}
     void visit(FunctionDecl& node) override;
-    void visit(ParameterDecl& node) override {};
+    void visit(ParameterDecl& node) override {}
     void visit(VariableDecl& node) override;
-    void visit(FieldDecl& node) override {};
-    void visit(StructDecl& node) override {};
-    void visit(EnumValueDecl& node) override {};
-    void visit(EnumDecl& node) override {};
+    void visit(FieldDecl& node) override {}
+    void visit(StructDecl& node) override {}
+    void visit(EnumValueDecl& node) override {}
+    void visit(EnumDecl& node) override {}
 
+    void visit(AsmStmt& node) override;
     void visit(BlockStmt& node) override;
-    void visit(BreakStmt& node) override {};
-    void visit(ContinueStmt& node) override {};
+    void visit(BreakStmt& node) override {}
+    void visit(ContinueStmt& node) override {}
     void visit(DeclStmt& node) override;
     void visit(IfStmt& node) override;
     void visit(WhileStmt& node) override;
     void visit(RetStmt& node) override;
-    void visit(Rune& node) override;
+    void visit(RuneStmt& node) override;
 
-    void visit(BoolLiteral& node) override {};
-    void visit(IntegerLiteral& node) override {};
-    void visit(FloatLiteral& node) override {};
-    void visit(CharLiteral& node) override {};
-    void visit(StringLiteral& node) override {};
-    void visit(NullLiteral& node) override {};
+    void visit(BoolLiteral& node) override {}
+    void visit(IntegerLiteral& node) override {}
+    void visit(FloatLiteral& node) override {}
+    void visit(CharLiteral& node) override {}
+    void visit(StringLiteral& node) override {}
+    void visit(NullLiteral& node) override {}
     void visit(BinaryExpr& node) override;
     void visit(UnaryExpr& node) override;
     void visit(CastExpr& node) override;
     void visit(ParenExpr& node) override;
-    void visit(SizeofExpr& node) override {};
+    void visit(SizeofExpr& node) override {}
     void visit(SubscriptExpr& node) override;
     void visit(ReferenceExpr& node) override;
     void visit(MemberExpr& node) override;
@@ -161,14 +166,16 @@ public:
 
     void visit(Root& node) override;
 
+    void visit(UseDecl& node) override {}
     void visit(FunctionDecl& node) override;
-    void visit(ParameterDecl& node) override {};
+    void visit(ParameterDecl& node) override {}
     void visit(VariableDecl& node) override;
-    void visit(FieldDecl& node) override {};
-    void visit(StructDecl& node) override {};
-    void visit(EnumValueDecl& node) override {};
-    void visit(EnumDecl& node) override {};
+    void visit(FieldDecl& node) override {}
+    void visit(StructDecl& node) override {}
+    void visit(EnumValueDecl& node) override {}
+    void visit(EnumDecl& node) override {}
 
+    void visit(AsmStmt& node) override;
     void visit(BlockStmt& node) override;
     void visit(BreakStmt& node) override;
     void visit(ContinueStmt& node) override;
@@ -176,21 +183,21 @@ public:
     void visit(IfStmt& node) override;
     void visit(WhileStmt& node) override;
     void visit(RetStmt& node) override;
-    void visit(Rune& node) override;
+    void visit(RuneStmt& node) override;
 
-    void visit(BoolLiteral& node) override {};
-    void visit(IntegerLiteral& node) override {};
-    void visit(FloatLiteral& node) override {};
-    void visit(CharLiteral& node) override {};
-    void visit(StringLiteral& node) override {};
-    void visit(NullLiteral& node) override {};
+    void visit(BoolLiteral& node) override {}
+    void visit(IntegerLiteral& node) override {}
+    void visit(FloatLiteral& node) override {}
+    void visit(CharLiteral& node) override {}
+    void visit(StringLiteral& node) override {}
+    void visit(NullLiteral& node) override {}
     void visit(BinaryExpr& node) override;
     void visit(UnaryExpr& node) override;
     void visit(CastExpr& node) override;
     void visit(ParenExpr& node) override;
-    void visit(SizeofExpr& node) override {};
+    void visit(SizeofExpr& node) override {}
     void visit(SubscriptExpr& node) override;
-    void visit(ReferenceExpr& node) override {};
+    void visit(ReferenceExpr& node) override {}
     void visit(MemberExpr& node) override;
     void visit(CallExpr& node) override;
     void visit(RuneExpr& node) override;
@@ -218,6 +225,12 @@ class Codegen final : public Visitor {
     /// references.
     const std::string& mangle(const Decl* decl);
 
+    /// Fetch or create a runtime function with the given name and function 
+    /// signature |type| as an SIIR empty function.
+    siir::Function* fetch_runtime_fn(const std::string& name,
+                                     const std::vector<const siir::Type*>& params = {},
+                                     const siir::Type* ret = nullptr);
+
     /// Lower \p type to its SIIR equivelant, if it can be.
     const siir::Type* lower_type(const Type* type);
 
@@ -234,6 +247,11 @@ class Codegen final : public Visitor {
     
     /// Lower the structure \p decl to a new SIIR StructType. 
     void lower_structure(const StructDecl& decl);
+
+    void codegen_rune_abort(const RuneStmt& node);
+    void codegen_rune_assert(const RuneStmt& node);
+
+    void codegen_rune_write(const RuneStmt& node);
 
     /// Binary operation code generation.
     void codegen_binary_assign(const BinaryExpr& node);
@@ -279,14 +297,16 @@ public:
 
     void visit(Root& node) override;
 
+    void visit(UseDecl& node) override {}
     void visit(FunctionDecl& node) override;
-    void visit(ParameterDecl& node) override {};
+    void visit(ParameterDecl& node) override {}
     void visit(VariableDecl& node) override;
-    void visit(FieldDecl& node) override {};
+    void visit(FieldDecl& node) override {}
     void visit(StructDecl& node) override;
-    void visit(EnumValueDecl& node) override {};
-    void visit(EnumDecl& node) override {};
+    void visit(EnumValueDecl& node) override {}
+    void visit(EnumDecl& node) override {}
 
+    void visit(AsmStmt& node) override;
     void visit(BlockStmt& node) override;
     void visit(BreakStmt& node) override;
     void visit(ContinueStmt& node) override;
@@ -294,7 +314,7 @@ public:
     void visit(IfStmt& node) override;
     void visit(WhileStmt& node) override;
     void visit(RetStmt& node) override;
-    void visit(Rune& node) override;
+    void visit(RuneStmt& node) override;
 
     void visit(BoolLiteral& node) override;
     void visit(IntegerLiteral& node) override;

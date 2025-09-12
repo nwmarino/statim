@@ -14,6 +14,25 @@ namespace test {
 
 class ParserTest : public ::testing::Test {};
 
+TEST_F(ParserTest, parse_use_basic) {
+    InputFile file { "test" };
+    file.overwrite("use \"testing\";");
+
+    TranslationUnit unit { file };
+    Parser parser { file };
+    parser.parse(unit);
+
+    Root& root = unit.get_root();
+    EXPECT_EQ(root.num_decls(), 1);
+
+    auto decl = root.decls()[0];
+    EXPECT_NE(decl, nullptr);
+
+    auto use = dynamic_cast<UseDecl*>(decl);
+    EXPECT_NE(use, nullptr);
+    EXPECT_EQ(use->path(), "testing");
+}
+
 TEST_F(ParserTest, parse_function_basic) {
     InputFile file { "test" };
     file.overwrite("main :: () -> void {}");
@@ -25,7 +44,7 @@ TEST_F(ParserTest, parse_function_basic) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -52,7 +71,7 @@ TEST_F(ParserTest, parse_function_params) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -82,7 +101,7 @@ TEST_F(ParserTest, parse_variable_local) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -123,7 +142,7 @@ TEST_F(ParserTest, parse_variable_local_with_init) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -171,7 +190,7 @@ TEST_F(ParserTest, parse_struct) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
     
     auto structure = dynamic_cast<const StructDecl*>(decl);
@@ -211,7 +230,7 @@ TEST_F(ParserTest, parse_enum) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto enumeration = dynamic_cast<const EnumDecl*>(decl);
@@ -254,7 +273,7 @@ TEST_F(ParserTest, parse_break_stmt) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -286,7 +305,7 @@ TEST_F(ParserTest, parse_continue_stmt) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -318,7 +337,7 @@ TEST_F(ParserTest, parse_if_stmt) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -365,7 +384,7 @@ TEST_F(ParserTest, parse_if_stmt_with_else) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -419,7 +438,7 @@ TEST_F(ParserTest, parse_if_stmt_with_else_if_else) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -487,7 +506,7 @@ TEST_F(ParserTest, parse_while_stmt) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -535,7 +554,7 @@ TEST_F(ParserTest, parse_return_basic) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -576,7 +595,7 @@ TEST_F(ParserTest, parse_bool_literal) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -610,7 +629,7 @@ TEST_F(ParserTest, parse_float_literal) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -644,7 +663,7 @@ TEST_F(ParserTest, parse_char_literal) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -678,7 +697,7 @@ TEST_F(ParserTest, parse_string_literal) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -712,7 +731,7 @@ TEST_F(ParserTest, parse_null_literal) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -745,7 +764,7 @@ TEST_F(ParserTest, parse_binary_expr_basic) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -801,7 +820,7 @@ TEST_F(ParserTest, parse_unary_expr_prefix_basic) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -836,7 +855,7 @@ TEST_F(ParserTest, parse_unary_expr_postfix_basic) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -871,7 +890,7 @@ TEST_F(ParserTest, parse_unary_expr_complex) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -914,7 +933,7 @@ TEST_F(ParserTest, parse_cast_expr) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -955,7 +974,7 @@ TEST_F(ParserTest, parse_paren_expr) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -995,7 +1014,7 @@ TEST_F(ParserTest, parse_sizeof_expr) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -1029,7 +1048,7 @@ TEST_F(ParserTest, parse_subscript_expr) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -1076,7 +1095,7 @@ TEST_F(ParserTest, parse_member_expr) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -1117,7 +1136,7 @@ TEST_F(ParserTest, parse_call_expr) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);
@@ -1152,7 +1171,7 @@ TEST_F(ParserTest, parse_call_expr_with_args) {
     Root& root = unit.get_root();
     EXPECT_EQ(root.num_decls(), 1);
 
-    auto decl = root.get_decls()[0];
+    auto decl = root.decls()[0];
     EXPECT_NE(decl, nullptr);
 
     auto function = dynamic_cast<FunctionDecl*>(decl);

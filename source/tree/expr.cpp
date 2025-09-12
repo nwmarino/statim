@@ -40,6 +40,16 @@ bool stm::BinaryExpr::is_comparison(Operator op) {
     }
 }
 
+bool stm::BinaryExpr::is_logical_comparison(Operator op) {
+    switch (op) {
+    case Operator::Logical_And:
+    case Operator::Logical_Or:
+        return true;
+    default:
+        return false;
+    }
+}
+
 bool stm::BinaryExpr::is_assignment(Operator op) {
     switch (op) {
     case Operator::Assign:

@@ -1,3 +1,4 @@
+#include "core/logger.hpp"
 #include "siir/cfg.hpp"
 #include "siir/type.hpp"
 
@@ -159,9 +160,11 @@ StructType* StructType::get(CFG& cfg, const std::string& name) {
 StructType* 
 StructType::create(CFG& cfg, const std::string& name,
                    const std::vector<const Type*> &fields) {
-    assert(get(cfg, name) != nullptr && "struct type with name already exists");
+    assert(!get(cfg, name) && 
+        "struct type with name already exists");
 
     StructType* type = new StructType(name, fields);
+    assert(type);
     cfg.m_types_structs.emplace(name, type);
     return type;
 }

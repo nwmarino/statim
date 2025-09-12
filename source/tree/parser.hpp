@@ -47,24 +47,28 @@ private:
 
     UnaryExpr::Operator unop(TokenKind kind) const;
 
+    Rune* parse_rune();
     void parse_rune_decorators();
 
     const Type* parse_type();
 
-    Decl*           parse_decl();
-    FunctionDecl*   parse_function(const Token& name);
-    VariableDecl*   parse_variable();
-    StructDecl*     parse_struct(const Token& name);
-    EnumDecl*       parse_enum(const Token& name);
+    Decl* parse_decl();
+    UseDecl* parse_use();
+    FunctionDecl* parse_function(const Token& name);
+    VariableDecl* parse_variable();
+    StructDecl* parse_struct(const Token& name);
+    EnumDecl* parse_enum(const Token& name);
 
-    Stmt*           parse_stmt();
-    BlockStmt*      parse_block();
-    BreakStmt*      parse_break();
-    ContinueStmt*   parse_continue();
-    DeclStmt*       parse_decl_stmt();
-    IfStmt*         parse_if();
-    WhileStmt*      parse_while();
-    RetStmt*        parse_ret();
+    Stmt* parse_stmt();
+    AsmStmt* parse_asm();
+    BlockStmt* parse_block();
+    BreakStmt* parse_break();
+    ContinueStmt* parse_continue();
+    DeclStmt* parse_decl_stmt();
+    IfStmt* parse_if();
+    WhileStmt* parse_while();
+    RetStmt* parse_ret();
+    Stmt* parse_rune_stmt();
 
     Expr* parse_expr();
     Expr* parse_primary();
@@ -85,6 +89,7 @@ private:
     SizeofExpr* parse_sizeof();
     ReferenceExpr* parse_ref();
     CallExpr* parse_call();
+    RuneExpr* parse_rune_expr();
 };
 
 } // namespace stm

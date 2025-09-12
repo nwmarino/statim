@@ -14,7 +14,8 @@ SymbolAnalysis::SymbolAnalysis(Options& opts, Root& root)
     : opts(opts), root(root), pScope(root.get_scope()) {};
 
 void SymbolAnalysis::visit(Root& node) {
-    for (auto decl : node.decls) decl->accept(*this);
+    for (auto& decl : node.decls()) 
+        decl->accept(*this);
 }
 
 void SymbolAnalysis::visit(FunctionDecl& node) {
@@ -41,6 +42,11 @@ void SymbolAnalysis::visit(VariableDecl& node) {
     node.pType = node.get_init()->get_type();
 }
 
+void SymbolAnalysis::visit(AsmStmt& node) {
+    for (auto& expr : node.m_exprs)
+        expr->accept(*this);
+}
+
 void SymbolAnalysis::visit(BlockStmt& node) {
     pScope = node.get_scope();
     for (auto stmt : node.get_stmts()) stmt->accept(*this);
@@ -65,10 +71,6 @@ void SymbolAnalysis::visit(WhileStmt& node) {
 
 void SymbolAnalysis::visit(RetStmt& node) {
     if (node.has_expr()) node.pExpr->accept(*this);
-}
-
-void SymbolAnalysis::visit(Rune& node) {
-
 }
 
 void SymbolAnalysis::visit(BinaryExpr& node) {
@@ -226,5 +228,11 @@ void SymbolAnalysis::visit(CallExpr& node) {
 }
 
 void SymbolAnalysis::visit(RuneExpr& node) {
-    node.pRune->accept(*this);
+    for (auto& arg : node.rune()->args())
+        arg->accept(*this);
+}
+
+void SymbolAnalysis::visit(RuneStmt& node) {
+    for (auto& arg : node.rune()->args())
+        arg->accept(*this);
 }

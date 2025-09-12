@@ -2,6 +2,8 @@
 #include "tree/decl.hpp"
 #include "tree/root.hpp"
 
+using namespace stm;
+
 const stm::Type* stm::TypeContext::get(const std::string& name) const {
     auto it = types.find(name);
     if (it != types.end())
@@ -64,7 +66,7 @@ stm::TypeContext::TypeContext() {
 }
 
 stm::TypeContext::~TypeContext() {
-    for (auto [ kind, type ] : builtins)
+    for (auto [kind, type] : builtins)
         delete type;
 
     for (auto& type : deferred)
@@ -73,7 +75,7 @@ stm::TypeContext::~TypeContext() {
     for (auto& type : functions)
         delete type;
 
-    for (auto [ pointee, type ] : pointers)
+    for (auto [pointee, type] : pointers)
         delete type;
 
     builtins.clear();
@@ -82,28 +84,36 @@ stm::TypeContext::~TypeContext() {
     pointers.clear();
 }
 
-stm::Root::Root(InputFile& file, Scope* pScope)
-    : file(file), context(), pScope(pScope), decls(), imports(), exports() {};
+Root::Root(InputFile& file, Scope* scope) : m_file(file), m_scope(scope) {}
 
 stm::Root::~Root() {
-    delete pScope;
-    pScope = nullptr;
+    delete m_scope;
 
-    for (auto decl : decls) delete decl;
+    for (auto& decl : decls()) 
+        delete decl;
 
-    decls.clear();
-    imports.clear();
-    exports.clear();
+    m_decls.clear();
+    m_imports.clear();
+    m_exports.clear();
+}
+
+std::vector<UseDecl*> Root::uses() const {
+    std::vector<UseDecl*> uses = {};
+    for (auto& decl : decls())
+        if (auto* use = dynamic_cast<UseDecl*>(decl))
+            uses.push_back(use);
+
+    return uses;
 }
 
 void stm::Root::validate() {
     // For each type which was deferred at parse-time, we need to resolve it
     // based on the context in which it was parsed.
-    for (auto& deferred : context.deferred) {
+    for (auto& deferred : m_context.deferred) {
         const DeferredType::Context& ctx = deferred->get_context();
 
         // Try to resolve the base of the type.
-        const Type* type = context.get(ctx.base);
+        const Type* type = m_context.get(ctx.base);
         if (!type)
             stm::Logger::fatal("unresolved type: " + ctx.base);
 

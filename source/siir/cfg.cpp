@@ -87,6 +87,15 @@ CFG::~CFG() {
     m_pool_incomings.clear();
 }
 
+std::vector<StructType*> CFG::structs() const {
+    std::vector<StructType*> structs;
+    structs.reserve(m_types_structs.size());
+    for (auto& [name, type] : m_types_structs)
+        structs.push_back(type);
+
+    return structs;
+}
+
 std::vector<Global*> CFG::globals() const {
     std::vector<Global*> globals;
     globals.reserve(m_globals.size());

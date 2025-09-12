@@ -1,4 +1,3 @@
-#include "core/logger.hpp"
 #include "siir/basicblock.hpp"
 #include "siir/cfg.hpp"
 #include "siir/user.hpp"
@@ -17,6 +16,8 @@ std::string stm::siir::opcode_to_string(Opcode op) {
         return "Nop";
     case INST_OP_CONSTANT:
         return "Constant";
+    case INST_OP_STRING:
+        return "String";
     case INST_OP_LOAD:
         return "Load";
     case INST_OP_STORE:
@@ -347,6 +348,7 @@ bool Instruction::is_trivially_dead() const {
     switch (opcode()) {
     case INST_OP_NOP:
     case INST_OP_CONSTANT:
+    case INST_OP_STRING:
     case INST_OP_LOAD:
     case INST_OP_ACCESS_PTR:
     case INST_OP_SELECT:

@@ -174,6 +174,8 @@ public:
 
     static bool is_comparison(Operator op);
 
+    static bool is_logical_comparison(Operator op);
+
     static bool is_assignment(Operator op);
 
     static bool supports_ptr_arith(Operator op);

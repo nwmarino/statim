@@ -8,6 +8,8 @@
 
 namespace stm {
 
+class Rune;
+
 class Stmt {
     friend class SymbolAnalysis;
     friend class SemanticAnalysis;
@@ -26,6 +28,57 @@ public:
     virtual void accept(Visitor& visitor) = 0;
 
     virtual void print(std::ostream& os) const = 0;
+};
+
+class AsmStmt final : public Stmt {
+    friend class SymbolAnalysis;
+    friend class SemanticAnalysis;
+    friend class Codegen;
+
+    std::string m_asm;
+    std::vector<std::string> m_inputs;
+    std::vector<std::string> m_outputs;
+    std::vector<Expr*> m_exprs;
+    std::vector<std::string> m_clobbers;
+    bool m_volatile;
+
+public:
+    AsmStmt(const Span& span, const std::string& str,
+            const std::vector<std::string>& inputs,
+            const std::vector<std::string>& outputs,
+            const std::vector<Expr*>& exprs,
+            const std::vector<std::string>& clobbers,
+            bool is_volatile = false);
+    
+    AsmStmt(const AsmStmt&) = delete;
+    AsmStmt& operator = (const AsmStmt&) = delete;
+
+    ~AsmStmt() override;
+
+    /// Returns the assembly string as part of this inline assembly statement.
+    const std::string& string() const { return m_asm; }
+
+    /// Returns the list of input strings for this inline assembly.
+    const std::vector<std::string>& inputs() const { return m_inputs; }
+
+    /// Returns the list of output strings for this inline assembly.
+    const std::vector<std::string>& outputs() const { return m_outputs; }
+
+    /// Returns the list of expressions used in this inline assembly.
+    const std::vector<Expr*> exprs() const { return m_exprs; }
+
+    /// Returns the list of clobbers declared as part of this inline assembly.
+    const std::vector<std::string>& clobbers() const { return m_clobbers; }
+
+    /// Returns true if this inline assembly is considered to have side
+    /// effects.
+    bool is_volatile() const { return m_volatile; }
+
+    void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+
+    void print(std::ostream& os) const override;
 };
 
 class BlockStmt final : public Stmt {

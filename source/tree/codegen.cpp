@@ -1,4 +1,6 @@
 #include "core/logger.hpp"
+#include "siir/basicblock.hpp"
+#include "siir/inlineasm.hpp"
 #include "tree/type.hpp"
 #include "siir/constant.hpp"
 #include "siir/function.hpp"
@@ -13,6 +15,8 @@
 #include "tree/stmt.hpp"
 #include "tree/visitor.hpp"
 
+#include <string>
+
 using namespace stm;
 
 Codegen::Codegen(Options& opts, Root& root, siir::CFG& cfg)
@@ -26,6 +30,21 @@ const std::string& Codegen::mangle(const Decl* decl) {
     return decl->get_name();
 }
 
+siir::Function* Codegen::fetch_runtime_fn(const std::string& name,
+                                          const std::vector<const siir::Type*>& params,
+                                          const siir::Type* ret) {
+    siir::Function* fn = nullptr;
+    fn = m_cfg.get_function(name);
+    if (fn)
+        return fn;
+
+    const siir::FunctionType* type =
+        siir::FunctionType::get(m_cfg, params, ret);
+
+    return new siir::Function(
+        m_cfg, siir::Function::LINKAGE_EXTERNAL, type, name, {});                       
+}
+
 const siir::Type* Codegen::lower_type(const Type* type) {
     if (type->is_deferred()) {
         return lower_type(type->as_deferred()->get_resolved());
@@ -37,7 +56,7 @@ const siir::Type* Codegen::lower_type(const Type* type) {
     } else if (type->is_enum()) {
         return lower_type(type->as_enum()->get_underlying());
     } else if (auto blt = dynamic_cast<const BuiltinType*>(type)) {
-        switch (blt->get_kind()) {
+        switch (blt->kind()) {
         case BuiltinType::Kind::Void:
             return nullptr;
         case BuiltinType::Kind::Bool:
@@ -149,24 +168,42 @@ void Codegen::impl_function(const FunctionDecl& decl) {
 }
 
 void Codegen::lower_structure(const StructDecl& decl) {
+    siir::StructType* type = siir::StructType::get(m_cfg, decl.get_name());
+    assert(type && "structure shell type not created!");
 
+    for (auto& field : decl.get_fields()) {
+        const siir::Type* field_type = lower_type(field->get_type());
+        assert(field_type && "could not lower structure field type to SIIR!");
+
+        type->append_field(field_type);
+    }
 }
 
 void Codegen::visit(Root& node) {
-    for (auto import : node.imports)
-        if (auto structure = dynamic_cast<StructDecl*>(import))
-            lower_structure(*structure);
+    for (auto& import : node.imports()) {
+        if (auto structure = dynamic_cast<StructDecl*>(import)) {
+            siir::StructType* type = siir::StructType::create(
+                m_cfg, structure->get_name(), {});
+        }
+    }
 
-    for (auto decl : node.decls)
-        if (auto structure = dynamic_cast<StructDecl*>(decl))
-            lower_structure(*structure);
+    for (auto& decl : node.decls()) {
+        if (auto structure = dynamic_cast<StructDecl*>(decl)) {
+            siir::StructType* type = siir::StructType::create(
+                m_cfg, structure->get_name(), {});
+        }
+    }
 
     m_phase = PH_Declare;
-    for (auto import : node.imports) import->accept(*this);
-    for (auto decl : node.decls) decl->accept(*this);
+    for (auto& import : node.imports()) 
+        import->accept(*this);
+
+    for (auto& decl : node.decls()) 
+        decl->accept(*this);
 
     m_phase = PH_Define;
-    for (auto decl : node.decls) decl->accept(*this);
+    for (auto& decl : node.decls()) 
+        decl->accept(*this);
 }
 
 void Codegen::visit(FunctionDecl& node) {
@@ -182,6 +219,8 @@ void Codegen::visit(FunctionDecl& node) {
 
 void Codegen::visit(VariableDecl& node) {
     const siir::Type* type = lower_type(node.get_type());
+    assert(type && "could not resolve type for variable!");
+
     siir::Local* local = new siir::Local(
         m_cfg,
         type, 
@@ -206,6 +245,75 @@ void Codegen::visit(StructDecl& node) {
     case PH_Define:
         break;
     }
+}
+
+void Codegen::visit(AsmStmt& node) {
+    std::string string = node.string();
+    std::vector<std::string> constraints = {};
+    std::vector<siir::Value*> values = {};
+    bool side_effects = node.is_volatile();
+
+    for (auto& output : node.outputs()) {
+        std::string constraint = "";
+        if (output == "=r") {
+            constraint = "=*r";
+        } else if (output == "=m") {
+            constraint = "=*m";
+        } else {
+            Logger::fatal(
+                "unrecognized '__asm__' output constraint: '" + output + "'", 
+                node.get_span());
+        }
+
+        constraints.push_back(constraint);
+    }
+
+    for (auto& input : node.inputs()) {
+        std::string constraint = "";
+        if (input == "r") {
+            constraint = "r";
+        } else if (input == "m") {
+            constraint = "m";
+        } else {
+            Logger::fatal(
+                "unrecognized '__asm__' input constraint: '" + input + "'", 
+                node.get_span());
+        }
+
+        constraints.push_back(constraint);
+    }
+
+    for (auto& clobber : node.clobbers()) {
+        constraints.push_back('~' + clobber);
+    }
+
+    for (u32 idx = 0, e = node.exprs().size(); idx != e; ++idx) {
+        if (idx >= node.outputs().size()) {
+            m_vctx = RValue;
+        } else {
+            m_vctx = LValue;
+        }
+
+        node.exprs().at(idx)->accept(*this);
+        assert(m_tmp && "inline assembly operand does not produce a value!");
+        values.push_back(m_tmp);
+    }
+    
+    std::vector<const siir::Type*> operand_types(values.size(), nullptr);
+    for (u32 idx = 0, e = values.size(); idx != e; ++idx)
+        operand_types[idx] = values[idx]->get_type();
+
+    const siir::FunctionType* type = siir::FunctionType::get(
+        m_cfg, operand_types, nullptr);
+
+    siir::InlineAsm* iasm = new siir::InlineAsm(
+        type,
+        string,
+        constraints,
+        side_effects
+    );
+
+    m_builder.build_call(type, iasm, values);
 }
 
 void Codegen::visit(BlockStmt& node) {
@@ -319,8 +427,318 @@ void Codegen::visit(RetStmt& node) {
     m_tmp = nullptr;
 }
 
-void Codegen::visit(Rune& node) {
+void Codegen::codegen_rune_abort(const RuneStmt& node) {
+    siir::Function* abort_fn = fetch_runtime_fn("__abort");
+    m_builder.build_call(abort_fn->get_type(), abort_fn, {});
+}
 
+void Codegen::codegen_rune_assert(const RuneStmt& node) {
+    if (node.rune()->num_args() != 1) {
+        Logger::fatal(
+            "'$assert' rune must have exactly one argument",
+            node.get_span());
+    }
+
+    m_vctx = RValue;
+    node.rune()->args().front()->accept(*this);
+    assert(m_tmp && "assert rune expression does not produce a value!");
+    m_tmp = inject_bool_cmp(m_tmp);
+
+    siir::BasicBlock* fail = new siir::BasicBlock(m_func);
+    siir::BasicBlock* okay = new siir::BasicBlock(m_func);
+
+    m_builder.build_brif(m_tmp, okay, fail);
+
+    siir::Function* panic_fn = fetch_runtime_fn("__panic", {
+        siir::PointerType::get(m_cfg, siir::Type::get_i8_type(m_cfg)),
+        siir::Type::get_i64_type(m_cfg)
+    });
+
+    const SourceLocation& loc = node.rune()->args().front()->get_span().begin;
+    std::string msg = loc.file.filename() + ':' + std::to_string(loc.line) + 
+        ':' + std::to_string(loc.column) + ": assertion failed\n";
+        
+    siir::Instruction* string = m_builder.build_string(
+        siir::ConstantString::get(m_cfg, msg));
+    
+    m_builder.set_insert(fail);
+    m_builder.build_call(
+        panic_fn->get_type(), 
+        panic_fn, 
+        { 
+            string, 
+            siir::ConstantInt::get(
+                m_cfg, siir::Type::get_i64_type(m_cfg), msg.size()) 
+        }
+    );
+    m_builder.build_unreachable();
+    m_builder.set_insert(okay);
+}
+
+void Codegen::codegen_rune_write(const RuneStmt& node) {
+    const Rune* rune = node.rune();
+    bool is_print = rune->kind() == Rune::Print || 
+        rune->kind() == Rune::Println;
+
+    // Check that there are atleast 1-2 arguments to the rune.
+    u32 min_args = is_print ? 1 : 2;
+    if (rune->num_args() < min_args) {
+        Logger::fatal(
+            "expected atleast " + std::to_string(min_args) + " to '$" + 
+                Rune::to_string(rune->kind()) + "' rune, got " + 
+                std::to_string(rune->num_args()),
+            node.get_span());
+    }
+
+    u32 string_idx = is_print ? 0 : 1;
+    StringLiteral* strlit = dynamic_cast<StringLiteral*>(rune->args().at(string_idx));
+    if (!strlit) {
+        Logger::fatal(
+            "expected first argument to '$print' to be a string literal",
+            node.get_span());
+    }
+    
+    // Get the stdout file descriptor as a constant integer.
+    siir::Value* fd = nullptr;
+    if (is_print) {
+        fd = siir::ConstantInt::get(
+            m_cfg, siir::Type::get_i64_type(m_cfg), 1);
+    } else {
+
+        // Lower the first argument as a "file" instance.
+        Expr* file_expr = node.rune()->args().front();
+        const Type* file_type = file_expr->get_type();
+        if (file_type->is_deferred())
+            file_type = file_type->as_deferred()->get_resolved();
+
+        /// TODO: Adjust with mutability changes.
+        //if (!file_type->is_mut() || !file_type->is_struct()) {
+        bool file_type_correct = true;
+        if (!file_type->is_struct()) {
+            file_type_correct = false;
+        } else {
+            const StructDecl* decl = file_type->as_struct()->get_decl();
+            if (decl->get_name() != "File" || !decl->has_decorator(Rune::Intrinsic))
+                file_type_correct = false;
+        }
+
+        if (!file_type_correct) {
+            Logger::fatal(
+                "expected intrinsic, mutable 'File' type, got '" + 
+                    file_type->to_string() + "'", 
+                file_expr->get_span());
+        }
+
+        m_vctx = LValue;
+        file_expr->accept(*this);
+        assert(m_tmp && "$write file does not produce a value!");
+
+        m_tmp = m_builder.build_ap(
+            siir::PointerType::get(m_cfg, siir::Type::get_i64_type(m_cfg)), 
+            m_tmp, 
+            siir::ConstantInt::get_zero(m_cfg, siir::Type::get_i64_type(m_cfg)));
+        fd = m_builder.build_load(siir::Type::get_i64_type(m_cfg), m_tmp); 
+    }
+
+    /// Get constant 10 for base 10 integer prints.
+    siir::Constant* ten = siir::ConstantInt::get(
+        m_cfg, siir::Type::get_i64_type(m_cfg), 10);
+
+    std::string str = strlit->get_value();
+    std::vector<std::string> parts;
+    parts.reserve(rune->num_args() + 1);
+    std::size_t pos = 0;
+    while (1) {
+        std::size_t open = str.find('{', pos);
+        if (open == std::string::npos) {
+            parts.push_back(str.substr(pos));
+            break;
+        }
+
+        // Check if there is a proper '{}' placeholder
+        if (open + 1 < str.size() && str[open + 1] == '}') {
+            parts.push_back(str.substr(pos, open - pos));
+            pos = open + 2; // skip "{}" in the format string.
+        } else {
+            // This is a lone '{' - treat it as any other character
+            std::size_t next_pos = open + 1;
+            std::size_t next_open = str.find('{', next_pos);
+            
+            // If there are no more placeholders, append everything
+            if (next_open == std::string::npos) {
+                parts.push_back(str.substr(pos));
+                break;
+            }
+            
+            // Check if the next '{' forms a valid placeholder
+            if (next_open + 1 < str.size() && str[next_open + 1] == '}') {
+                parts.push_back(str.substr(pos, next_open - pos));
+                pos = next_open + 2;
+            } else {
+                pos = next_pos;
+            }
+        }
+    }
+
+    u32 num_args = is_print ? rune->num_args() - 1 : rune->num_args() - 2;
+    if (parts.size() - 1 != num_args) {
+        Logger::fatal(
+            "argument count mismatch with bracket count, found " + 
+                std::to_string(parts.size() - 1) + " bracket(s), but got " + 
+                std::to_string(num_args) + " arguments", 
+            node.get_span());
+    }
+
+    siir::Function* rt_print = fetch_runtime_fn(
+        "__print_fd", 
+        {
+            siir::Type::get_i64_type(m_cfg),
+            siir::PointerType::get(m_cfg, siir::Type::get_i8_type(m_cfg))
+        }
+    );
+
+    for (u32 idx = 0, e = parts.size(); idx != e; ++idx) {
+        std::string part = parts.at(idx);
+
+        if (!part.empty()) {
+            // This part of the string isn't empty, so we treat it like a
+            // string literal.
+            siir::Instruction* string = m_builder.build_string(
+                siir::ConstantString::get(m_cfg, part));
+
+            m_builder.build_call(rt_print->get_type(), rt_print, { fd, string });
+        }
+
+        if (idx >= is_print ? num_args - 1 : num_args - 2)
+            continue;
+    
+        Expr* arg = rune->args().at(idx + (is_print ? 1 : 2));
+        m_vctx = RValue;
+        arg->accept(*this);
+        assert(m_tmp && "print argument does not produceConstantString *string a value!");
+
+        if (arg->get_type()->is_bool()) {
+            siir::Function* rt_print_bool = fetch_runtime_fn(
+                "__print_bool", 
+                {
+                    siir::Type::get_i64_type(m_cfg),
+                    siir::Type::get_i8_type(m_cfg),
+                }
+            );
+
+            m_builder.build_call(
+                rt_print_bool->get_type(), rt_print_bool, { fd, m_tmp });
+        } else if (arg->get_type()->is_char()) {
+            siir::Function* rt_print_char = fetch_runtime_fn(
+                "__print_char", 
+                {
+                    siir::Type::get_i64_type(m_cfg),
+                    siir::Type::get_i8_type(m_cfg),
+                }
+            );
+
+            m_builder.build_call(
+                rt_print_char->get_type(), rt_print_char, { fd, m_tmp });
+        } else if (arg->get_type()->is_signed_int()) {
+            if (!m_tmp->get_type()->is_integer_type(64))
+                m_tmp = m_builder.build_sext(siir::Type::get_i64_type(m_cfg), m_tmp);
+
+            siir::Function* rt_print_si = fetch_runtime_fn(
+                "__print_si", 
+                {
+                    siir::Type::get_i64_type(m_cfg),
+                    siir::Type::get_i64_type(m_cfg),
+                    siir::Type::get_i64_type(m_cfg),
+                }
+            );
+
+            m_builder.build_call(
+                rt_print_si->get_type(), rt_print_si, { fd, m_tmp, ten });
+        } else if (arg->get_type()->is_unsigned_int()) {
+            if (!m_tmp->get_type()->is_integer_type(64))
+                m_tmp = m_builder.build_zext(siir::Type::get_i64_type(m_cfg), m_tmp);
+
+            siir::Function* rt_print_ui = fetch_runtime_fn(
+                "__print_ui", 
+                {
+                    siir::Type::get_i64_type(m_cfg),
+                    siir::Type::get_i64_type(m_cfg),
+                    siir::Type::get_i64_type(m_cfg),
+                }
+            );
+
+            m_builder.build_call(
+                rt_print_ui->get_type(), rt_print_ui, { fd, m_tmp, ten });
+        } else if (m_tmp->get_type()->is_floating_point_type(32)) {
+            siir::Function* rt_print_float = fetch_runtime_fn(
+                "__print_float", 
+                {
+                    siir::Type::get_i64_type(m_cfg),
+                    siir::Type::get_f32_type(m_cfg),
+                }
+            );
+
+            m_builder.build_call(
+                rt_print_float->get_type(), rt_print_float, { fd, m_tmp });
+        } else if (m_tmp->get_type()->is_floating_point_type(64)) {
+            siir::Function* rt_print_double = fetch_runtime_fn(
+                "__print_double", 
+                {
+                    siir::Type::get_i64_type(m_cfg),
+                    siir::Type::get_f64_type(m_cfg),
+                }
+            );
+
+            m_builder.build_call(
+                rt_print_double->get_type(), rt_print_double, { fd, m_tmp });
+        } else if (arg->get_type()->is_pointer()) {
+            siir::Function* rt_print_ptr = fetch_runtime_fn(
+                "__print_ptr", 
+                {
+                    siir::Type::get_i64_type(m_cfg),
+                    siir::PointerType::get(m_cfg, nullptr),
+                }
+            );
+
+            m_builder.build_call(
+                rt_print_ptr->get_type(), rt_print_ptr, { fd, m_tmp });
+        } else {
+            Logger::fatal(
+                "unsupported operand type to '$print': '" + 
+                    arg->get_type()->to_string() + "'", 
+                arg->get_span());
+        }
+    }
+
+    if (rune->kind() == Rune::Println || rune->kind() == Rune::Writeln) {
+        siir::Instruction* string = m_builder.build_string(
+            siir::ConstantString::get(m_cfg, "\n"));
+        m_builder.build_call(rt_print->get_type(), rt_print, { fd, string });
+    }
+}
+
+void Codegen::visit(RuneStmt& node) {
+    switch (node.rune()->kind()) {
+    case Rune::Abort:
+        codegen_rune_abort(node);
+        break;
+    case Rune::Asm:
+        break;
+    case Rune::Assert:
+        codegen_rune_assert(node);
+        break;
+    case Rune::If:
+        break;
+    case Rune::Print:
+    case Rune::Println:
+    case Rune::Write:
+    case Rune::Writeln:
+        codegen_rune_write(node);
+        break;
+    default:
+        assert(false && 
+            "cannot generate code for a non-statement rune as a statement!");
+    }
 }
 
 void Codegen::visit(BoolLiteral& node) {
@@ -344,7 +762,8 @@ void Codegen::visit(CharLiteral& node) {
 }
 
 void Codegen::visit(StringLiteral& node) {
-
+    m_tmp = m_builder.build_string(
+        siir::ConstantString::get(m_cfg, node.get_value()));
 }
 
 void Codegen::visit(NullLiteral& node) {
@@ -458,7 +877,39 @@ void Codegen::codegen_binary_add(const BinaryExpr& node) {
 }
 
 void Codegen::codegen_binary_add_assign(const BinaryExpr& node) {
-    
+    m_vctx = RValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp);
+    siir::Value* lhs = m_tmp;
+
+    m_vctx = RValue;
+    node.pRight->accept(*this);
+    assert(m_tmp);
+    siir::Value* rhs = m_tmp;
+
+    if (lhs->get_type()->is_pointer_type() 
+      && rhs->get_type()->is_integer_type()) {
+        m_tmp = m_builder.build_ap(
+            lower_type(node.get_type()), 
+            lhs, 
+            rhs);
+    } else if (lhs->get_type()->is_integer_type()) {
+        m_tmp = m_builder.build_iadd(lhs, rhs);
+    } else if (lhs->get_type()->is_floating_point_type()) {
+        m_tmp = m_builder.build_fadd(lhs, rhs);
+    } else Logger::fatal(
+        "unsupported '+' operator between on type '" + 
+            node.get_type()->to_string() + "'",
+        node.get_span() 
+    );
+
+    siir::Value* value = m_tmp;
+    m_vctx = LValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp && "binary lhs does not produce an lvalue!");
+
+    m_builder.build_store(value, m_tmp);
+    m_tmp = value;
 }
 
 void Codegen::codegen_binary_sub(const BinaryExpr& node) {
@@ -490,7 +941,39 @@ void Codegen::codegen_binary_sub(const BinaryExpr& node) {
 }
 
 void Codegen::codegen_binary_sub_assign(const BinaryExpr& node) {
-    
+    m_vctx = RValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp);
+    siir::Value* lhs = m_tmp;
+
+    m_vctx = RValue;
+    node.pRight->accept(*this);
+    assert(m_tmp);
+    siir::Value* rhs = m_tmp;
+
+    if (lhs->get_type()->is_pointer_type() 
+      && rhs->get_type()->is_integer_type()) {
+        m_tmp = m_builder.build_ap(
+            lower_type(node.get_type()), 
+            lhs, 
+            m_builder.build_ineg(rhs));
+    } else if (lhs->get_type()->is_integer_type()) {
+        m_tmp = m_builder.build_isub(lhs, rhs);
+    } else if (lhs->get_type()->is_floating_point_type()) {
+        m_tmp = m_builder.build_fsub(lhs, rhs);
+    } else Logger::fatal(
+        "unsupported '+' operator between on type '" + 
+            node.get_type()->to_string() + "'",
+        node.get_span() 
+    );
+
+    siir::Value* value = m_tmp;
+    m_vctx = LValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp && "binary lhs does not produce an lvalue!");
+
+    m_builder.build_store(value, m_tmp);
+    m_tmp = value;
 }
 
 void Codegen::codegen_binary_mul(const BinaryExpr& node) {
@@ -518,7 +1001,35 @@ void Codegen::codegen_binary_mul(const BinaryExpr& node) {
 }
 
 void Codegen::codegen_binary_mul_assign(const BinaryExpr& node) {
-    
+    m_vctx = RValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp);
+    siir::Value* lhs = m_tmp;
+
+    m_vctx = RValue;
+    node.pRight->accept(*this);
+    assert(m_tmp);
+    siir::Value* rhs = m_tmp;
+
+    if (node.get_lhs()->get_type()->is_signed_int()) {
+        m_tmp = m_builder.build_smul(lhs, rhs);
+    } else if (node.get_lhs()->get_type()->is_unsigned_int()) {
+        m_tmp = m_builder.build_umul(lhs, rhs);
+    } else if (lhs->get_type()->is_floating_point_type()) {
+        m_tmp = m_builder.build_fmul(lhs, rhs);
+    } else Logger::fatal(
+        "unsupported '*' operator between on type '" + 
+            node.get_type()->to_string() + "'",
+        node.get_span() 
+    );
+
+    siir::Value* value = m_tmp;
+    m_vctx = LValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp && "binary lhs does not produce an lvalue!");
+
+    m_builder.build_store(value, m_tmp);
+    m_tmp = value;
 }
 
 void Codegen::codegen_binary_div(const BinaryExpr& node) {
@@ -546,7 +1057,35 @@ void Codegen::codegen_binary_div(const BinaryExpr& node) {
 }
 
 void Codegen::codegen_binary_div_assign(const BinaryExpr& node) {
-    
+    m_vctx = RValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp);
+    siir::Value* lhs = m_tmp;
+
+    m_vctx = RValue;
+    node.pRight->accept(*this);
+    assert(m_tmp);
+    siir::Value* rhs = m_tmp;
+
+    if (node.get_lhs()->get_type()->is_signed_int()) {
+        m_tmp = m_builder.build_sdiv(lhs, rhs);
+    } else if (node.get_lhs()->get_type()->is_unsigned_int()) {
+        m_tmp = m_builder.build_udiv(lhs, rhs);
+    } else if (lhs->get_type()->is_floating_point_type()) {
+        m_tmp = m_builder.build_fdiv(lhs, rhs);
+    } else Logger::fatal(
+        "unsupported '/' operator between on type '" + 
+            node.get_type()->to_string() + "'",
+        node.get_span() 
+    ); 
+
+    siir::Value* value = m_tmp;
+    m_vctx = LValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp && "binary lhs does not produce an lvalue!");
+
+    m_builder.build_store(value, m_tmp);
+    m_tmp = value;
 }
 
 void Codegen::codegen_binary_mod(const BinaryExpr& node) {
@@ -564,8 +1103,6 @@ void Codegen::codegen_binary_mod(const BinaryExpr& node) {
         m_tmp = m_builder.build_srem(lhs, rhs);
     } else if (node.get_lhs()->get_type()->is_unsigned_int()) {
         m_tmp = m_builder.build_urem(lhs, rhs);
-    } else if (lhs->get_type()->is_floating_point_type()) {
-        m_tmp = m_builder.build_frem(lhs, rhs);
     } else Logger::fatal(
         "unsupported '/' operator between on type '" + 
             node.get_type()->to_string() + "'",
@@ -574,7 +1111,33 @@ void Codegen::codegen_binary_mod(const BinaryExpr& node) {
 }
 
 void Codegen::codegen_binary_mod_assign(const BinaryExpr& node) {
+    m_vctx = RValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp);
+    siir::Value* lhs = m_tmp;
+
+    m_vctx = RValue;
+    node.pRight->accept(*this);
+    assert(m_tmp);
+    siir::Value* rhs = m_tmp;
+
+    if (node.get_lhs()->get_type()->is_signed_int()) {
+        m_tmp = m_builder.build_srem(lhs, rhs);
+    } else if (node.get_lhs()->get_type()->is_unsigned_int()) {
+        m_tmp = m_builder.build_urem(lhs, rhs);
+    } else Logger::fatal(
+        "unsupported '/' operator between on type '" + 
+            node.get_type()->to_string() + "'",
+        node.get_span() 
+    ); 
     
+    siir::Value* value = m_tmp;
+    m_vctx = LValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp && "binary lhs does not produce an lvalue!");
+
+    m_builder.build_store(value, m_tmp);
+    m_tmp = value;
 }
 
 void Codegen::codegen_binary_eq(const BinaryExpr& node) {
@@ -744,7 +1307,31 @@ void Codegen::codegen_binary_bitwise_and(const BinaryExpr& node) {
 }
 
 void Codegen::codegen_binary_bitwise_and_assign(const BinaryExpr& node) {
-    
+    m_vctx = RValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp);
+    siir::Value* lhs = m_tmp;
+
+    m_vctx = RValue;
+    node.pRight->accept(*this);
+    assert(m_tmp);
+    siir::Value* rhs = m_tmp;
+
+    if (lhs->get_type()->is_integer_type()) {
+        m_tmp = m_builder.build_and(lhs, rhs);
+    } else Logger::fatal(
+        "unsupported '&' operator between on type '" + 
+            node.get_type()->to_string() + "'",
+        node.get_span() 
+    );
+
+    siir::Value* value = m_tmp;
+    m_vctx = LValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp && "binary lhs does not produce an lvalue!");
+
+    m_builder.build_store(value, m_tmp);
+    m_tmp = value;
 }
 
 void Codegen::codegen_binary_bitwise_or(const BinaryExpr& node) {
@@ -768,7 +1355,31 @@ void Codegen::codegen_binary_bitwise_or(const BinaryExpr& node) {
 }
 
 void Codegen::codegen_binary_bitwise_or_assign(const BinaryExpr& node) {
+    m_vctx = RValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp);
+    siir::Value* lhs = m_tmp;
+
+    m_vctx = RValue;
+    node.pRight->accept(*this);
+    assert(m_tmp);
+    siir::Value* rhs = m_tmp;
+
+    if (lhs->get_type()->is_integer_type()) {
+        m_tmp = m_builder.build_or(lhs, rhs);
+    } else Logger::fatal(
+        "unsupported '|' operator between on type '" + 
+            node.get_type()->to_string() + "'",
+        node.get_span() 
+    );
     
+    siir::Value* value = m_tmp;
+    m_vctx = LValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp && "binary lhs does not produce an lvalue!");
+
+    m_builder.build_store(value, m_tmp);
+    m_tmp = value;
 }
 
 void Codegen::codegen_binary_bitwise_xor(const BinaryExpr& node) {
@@ -792,15 +1403,95 @@ void Codegen::codegen_binary_bitwise_xor(const BinaryExpr& node) {
 }
 
 void Codegen::codegen_binary_bitwise_xor_assign(const BinaryExpr& node) {
-    
+    m_vctx = RValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp);
+    siir::Value* lhs = m_tmp;
+
+    m_vctx = RValue;
+    node.pRight->accept(*this);
+    assert(m_tmp);
+    siir::Value* rhs = m_tmp;
+
+    if (lhs->get_type()->is_integer_type()) {
+        m_tmp = m_builder.build_xor(lhs, rhs);
+    } else Logger::fatal(
+        "unsupported '^' operator between on type '" + 
+            node.get_type()->to_string() + "'",
+        node.get_span() 
+    );
+
+    siir::Value* value = m_tmp;
+    m_vctx = LValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp && "binary lhs does not produce an lvalue!");
+
+    m_builder.build_store(value, m_tmp);
+    m_tmp = value;
 }
 
 void Codegen::codegen_binary_logical_and(const BinaryExpr& node) {
+    siir::BasicBlock* right_bb = new siir::BasicBlock();
+    siir::BasicBlock* merge_bb = new siir::BasicBlock();
+
+    m_vctx = RValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp && "binary lhs does not produce a value!");
+    siir::Value* lhs = inject_bool_cmp(m_tmp);
+
+    siir::BasicBlock* false_bb = m_builder.get_insert();
+    m_builder.build_brif(lhs, right_bb, merge_bb);
+
+    m_func->push_back(right_bb);
+    m_builder.set_insert(right_bb);
+
+    m_vctx = RValue;
+    node.pRight->accept(*this);
+    assert(m_tmp && "binary rhs does not produce a value!");
+    siir::Value *rhs = inject_bool_cmp(m_tmp);
     
+    m_builder.build_jmp(merge_bb);
+
+    siir::BasicBlock* otherwise = m_builder.get_insert();
+    m_func->push_back(merge_bb);
+    m_builder.set_insert(merge_bb);
+    siir::Instruction* phi = m_builder.build_phi(siir::Type::get_i1_type(m_cfg));
+    phi->add_incoming(m_cfg, siir::ConstantInt::get_false(m_cfg), false_bb);
+    phi->add_incoming(m_cfg, rhs, otherwise);
+    
+    m_tmp = phi;
 }
 
 void Codegen::codegen_binary_logical_or(const BinaryExpr& node) {
+    siir::BasicBlock* right_bb = new siir::BasicBlock();
+    siir::BasicBlock* merge_bb = new siir::BasicBlock();
+
+    m_vctx = RValue;
+    node.pLeft->accept(*this);
+    assert(m_tmp && "binary lhs does not produce a value!");
+    siir::Value* lhs = inject_bool_cmp(m_tmp);
+
+    siir::BasicBlock* true_bb = m_builder.get_insert();
+    m_builder.build_brif(lhs, merge_bb, right_bb);
+
+    m_func->push_back(right_bb);
+    m_builder.set_insert(right_bb);
+
+    m_vctx = RValue;
+    node.pRight->accept(*this);
+    assert(m_tmp && "binary rhs does not produce a value!");
+    siir::Value *rhs = inject_bool_cmp(m_tmp);
     
+    m_builder.build_jmp(merge_bb);
+
+    siir::BasicBlock* otherwise = m_builder.get_insert();
+    m_func->push_back(merge_bb);
+    m_builder.set_insert(merge_bb);
+    siir::Instruction* phi = m_builder.build_phi(siir::Type::get_i1_type(m_cfg));
+    phi->add_incoming(m_cfg, siir::ConstantInt::get_true(m_cfg), true_bb);
+    phi->add_incoming(m_cfg, rhs, otherwise);
+    
+    m_tmp = phi;
 }
 
 void Codegen::codegen_binary_left_shift(const BinaryExpr& node) {
@@ -961,13 +1652,11 @@ void Codegen::codegen_unary_negate(const UnaryExpr& node) {
     node.pExpr->accept(*this);
     assert(m_tmp);
 
-    siir::Value* value = m_tmp;
-
-    if (value->get_type()->is_integer_type()
-      || value->get_type()->is_pointer_type()) {
-        m_tmp = m_builder.build_ineg(value);
-    } else if (value->get_type()->is_floating_point_type()) {
-        m_tmp = m_builder.build_fneg(value);
+    if (m_tmp->get_type()->is_integer_type()
+      || m_tmp->get_type()->is_pointer_type()) {
+        m_tmp = m_builder.build_ineg(m_tmp);
+    } else if (m_tmp->get_type()->is_floating_point_type()) {
+        m_tmp = m_builder.build_fneg(m_tmp);
     } else Logger::fatal(
         "unsupported '-' operator between on type '" + 
             node.get_type()->to_string() + "'",
@@ -1083,7 +1772,12 @@ void Codegen::visit(CastExpr& node) {
     } else if (src_type->is_pointer_type() 
       && dst_type->is_pointer_type()) {
         // Pointer -> Pointer reinterpretations.
-        m_tmp = m_builder.build_reint(dst_type, m_tmp);
+        
+        if (dynamic_cast<siir::ConstantNull*>(m_tmp)) {
+            m_tmp = siir::ConstantNull::get(m_cfg, dst_type);
+        } else {
+            m_tmp = m_builder.build_reint(dst_type, m_tmp);
+        }
     } else if (src_type->is_array_type()
       && dst_type->is_pointer_type()) {
         // Array -> Pointer decay.
@@ -1158,11 +1852,46 @@ void Codegen::visit(ReferenceExpr& node) {
 }
 
 void Codegen::visit(MemberExpr& node) {
+    ValueContext vc = m_vctx;
+    siir::Value* base = nullptr;
 
+    const siir::Type* base_type = lower_type(node.get_base()->get_type());
+    const siir::StructType* struct_type = nullptr;
+
+    if (base_type->is_struct_type()) {
+        struct_type = static_cast<const siir::StructType*>(base_type);
+    } else if (struct_type->is_pointer_type()) {
+        struct_type = static_cast<const siir::StructType*>(
+            static_cast<const siir::PointerType*>(base_type)->get_pointee());
+    }
+
+    m_vctx = LValue;
+    if (base_type->is_pointer_type())
+        m_vctx = RValue;
+
+    node.pBase->accept(*this);
+    assert(m_tmp && "member access base does not produce a value!");
+
+    u32 field_idx = static_cast<const FieldDecl*>(node.get_decl())->get_index();
+
+    const siir::Type* field_type = lower_type(node.get_type());
+    m_tmp = m_builder.build_ap(
+        siir::PointerType::get(m_cfg, field_type), 
+        m_tmp, 
+        siir::ConstantInt::get(m_cfg, siir::Type::get_i64_type(m_cfg), field_idx));
+
+    if (vc == RValue)
+        m_tmp = m_builder.build_load(field_type, m_tmp);
 }
 
 void Codegen::visit(CallExpr& node) {
     auto target = static_cast<const FunctionDecl*>(node.get_decl());
+    if (target->has_decorator(Rune::Deprecated)) {
+        Logger::warn(
+            "function '" + target->get_name() + "' has been marked deprecated",
+            node.get_span());
+    }
+
     siir::Function* callee = m_cfg.get_function(mangle(node.get_decl()));
     assert(callee);
 
@@ -1175,9 +1904,20 @@ void Codegen::visit(CallExpr& node) {
         args.push_back(m_tmp);
     }
 
-    m_builder.build_call(callee->get_type(), callee, args);
+    m_tmp = m_builder.build_call(callee->get_type(), callee, args);
 }
 
 void Codegen::visit(RuneExpr& node) {
-
+    switch (node.rune()->kind()) {
+    case Rune::Comptime:
+        m_tmp = siir::ConstantInt::get_false(m_cfg);
+        break;
+    case Rune::Path:
+        m_tmp = m_builder.build_string(
+            siir::ConstantString::get(m_cfg, m_cfg.get_file().absolute()));
+        break;
+    default:
+        assert(false && 
+            "cannot generate code for a non-value rune as an expression!");
+    }
 }
