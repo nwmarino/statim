@@ -68,7 +68,7 @@ Box :: {
     width: u32,
     height: u32,
 
-$private
+private:
     contents: mut *void,
 };
 ```
@@ -78,13 +78,12 @@ traditional sense, but can be achieved by designating a receiver in a function,
 i.e. for the `Box` type,
 
 ```
-foo :: (self: mut *Box) -> i32 {
+foo :: (self: mut *Box) -> s32 {
     ...
 }
 ```
 
-will allow for both `foo(x)` and `x.foo()`, but only the former if `x` has
-type `*Box`.
+will allow for both `foo(x)` (if `x: *Box`) and `x.foo()`.
 
 This means that with the all familiar method call syntax `.<name>()`, we can 
 also add methods to built-in types:
@@ -99,7 +98,7 @@ One important note is that since the methods are defined outside of the
 structure, they have be in scope in order to be used. This means that apart
 from traditional visiblity via `$public` and `$private`, certain methods can
 be hidden if they are defined in a scope different from the parent scope of the
-receiving struct. 
+receiving struct.
 
 ### Operator Overloading
 
@@ -157,10 +156,6 @@ Aborts the current process.
 
 Specify the alignment for a struct member.
 
-### `$asm`
-
-Marks the beginning of an inline assembly block.
-
 ### `$assert`
 
 A regular assert statement, configurably compiled.
@@ -189,7 +184,7 @@ Compile-time if statement.
 
 ### `$inline`
 
-Suggest (not force) the compiler to inline a function at callsites.
+Suggest the compiler to inline a function at callsites.
 
 ### `$intrinsic`
 
@@ -201,7 +196,7 @@ value on unrecognized code, i.e. that outside of the standard library.
 Enforce the usage of a function return value, can be configured to only present 
 a warning or crash the compilation process on discard.
 
-### `$no_optimize`
+### `$no_opt`
 
 Mark a function as not to be optimized at any point during compilation.
 
