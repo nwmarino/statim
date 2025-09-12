@@ -51,7 +51,8 @@ void LLVMTranslatePass::run() {
         }
 
         llvm::GlobalVariable* GV = new llvm::GlobalVariable(
-            translate(global->get_type()), // TODO: Change to pointee type possibly.
+            /// TODO: Change to pointee type, needs testing first.
+            translate(global->get_type()),
             global->is_read_only(), 
             linkage,
             nullptr,

@@ -249,7 +249,6 @@ stm::i32 main(stm::i32 argc, char** argv) {
         units.push_back(std::move(unit));
     }
 
-    /// TODO: Resolve imports at this point.
     link_trees(units);
 
     for (auto& unit : units) {

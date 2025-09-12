@@ -50,7 +50,7 @@ test_fdiv :: () -> void {
     $assert(cast<f64>(20) == cast<f64>(50) / x);
 }
 
-$public
+$[public]
 FileFlags :: s64 {
     FILE_FLAGS_READ_ONLY = 0,
     FILE_FLAGS_WRITE_ONLY = 1,
@@ -60,7 +60,7 @@ FileFlags :: s64 {
     FILE_FLAGS_APPEND = 1024,
 }
 
-$public
+$[public]
 FileSeek :: s64 {
     FILE_SEEK_SET = 0,
     FILE_SEEK_CUR = 1,

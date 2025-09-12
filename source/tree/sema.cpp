@@ -336,6 +336,8 @@ void SemanticAnalysis::visit(BinaryExpr& node) {
 
 void SemanticAnalysis::visit(UnaryExpr& node) {
     node.pExpr->accept(*this);
+
+    /// TODO: Perform mutability checks for increment/decrement operators.
 }
 
 void SemanticAnalysis::visit(CastExpr& node) {
