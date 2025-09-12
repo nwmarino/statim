@@ -134,7 +134,7 @@ void SemanticAnalysis::visit(FunctionDecl& node) {
 
 void SemanticAnalysis::visit(VariableDecl& node) {
     if (node.has_init()) {
-        node.pInit->accept(*this);
+        node.get_init()->accept(*this);
 
         // Perform a type check to try and match the type of the initializer
         // to the type presented in the variable declaration.
@@ -144,10 +144,10 @@ void SemanticAnalysis::visit(VariableDecl& node) {
             TypeCheckMode::AllowImplicit);
 
         if (tc == TypeCheckResult::Cast) {
-            node.pInit = new CastExpr(
+            node.m_init = new CastExpr(
                 node.get_init()->get_span(),
                 node.get_type(),
-                node.pInit);
+                node.get_init());
         } else if (tc == TypeCheckResult::Mismatch) {
             Logger::fatal(
                 "variable type mismatch, got '" + 

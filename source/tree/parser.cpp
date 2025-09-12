@@ -1,4 +1,5 @@
 #include "core/logger.hpp"
+#include "tree/decl.hpp"
 #include "tree/rune.hpp"
 #include "tree/type.hpp"
 #include "tree/parser.hpp"
@@ -351,10 +352,11 @@ Decl* Parser::parse_decl() {
     } else if (match(TOKEN_KIND_SET_PAREN)) {
         return parse_function(name);
     } else {
-        Logger::fatal(
-            "expected declaration after binding operator '::'",
-            since(name.loc));
+        return parse_global_variable(name);
     }
+    //    Logger::fatal(
+    //        "expected declaration after binding operator '::'",
+    //        since(name.loc));
 }
 
 UseDecl* Parser::parse_use() {
@@ -482,6 +484,46 @@ FunctionDecl* Parser::parse_function(const Token& name) {
     }
 
     return function;
+}
+
+VariableDecl* Parser::parse_global_variable(const Token& name) {
+    std::vector<Rune*> var_runes = runes;
+    runes.clear();
+    const Type* ty = parse_type();
+    Expr* init = nullptr;
+
+    if (!match(TOKEN_KIND_EQUALS)) {
+        Logger::fatal(
+            "expected '=' after variable declaration name", 
+            lexer.last().loc);
+    }
+
+    next(); // '='
+
+    init = parse_expr();
+    assert(init && "could not parse global variable initializer!");
+
+    if (!match(TOKEN_KIND_SEMICOLON))
+        Logger::fatal("expected ';' after variable declaration", lexer.last().loc);
+    
+    while (match(TOKEN_KIND_SEMICOLON))
+        next(); // ';'
+
+    VariableDecl* decl = new VariableDecl(
+        since(name.loc),
+        name.value,
+        var_runes,
+        ty,
+        init,
+        true);
+
+    if (!pScope->add(decl)) {
+        Logger::fatal(
+            "variable reuses existing name in scope: '" + name.value + "'",
+            since(name.loc));
+    }
+
+    return decl;
 }
 
 VariableDecl* Parser::parse_variable() {

@@ -28,7 +28,7 @@ stm::FunctionDecl::FunctionDecl(
         const std::vector<ParameterDecl*>& params,
         Scope* pScope,
         Stmt* pBody)
-    : Decl(span, name, decorators), pType(pType), params(params), pScope(pScope), pBody(pBody) {};
+    : Decl(span, name, decorators), pType(pType), params(params), pScope(pScope), pBody(pBody) {}
 
 stm::FunctionDecl::~FunctionDecl() {
     for (auto param : params) delete param;
@@ -46,21 +46,17 @@ stm::ParameterDecl::ParameterDecl(
         const std::string& name,
         const std::vector<Rune*>& decorators,
         const Type* pType)
-    : Decl(span, name, decorators), pType(pType) {};
+    : Decl(span, name, decorators), pType(pType) {}
 
-stm::VariableDecl::VariableDecl(
-        const Span& span,
-        const std::string& name,
-        const std::vector<Rune*>& decorators,
-        const Type* pType,
-        Expr* pInit)
-    : Decl(span, name, decorators), pType(pType), pInit(pInit) {};
+VariableDecl::VariableDecl(const Span& span, const std::string& name,
+                           const std::vector<Rune*>& decorators, const Type* ty,
+                           Expr* init, bool global)
+    : Decl(span, name, decorators), m_type(ty), m_init(init), 
+      m_global(global) {}
 
 stm::VariableDecl::~VariableDecl() {
-    if (pInit != nullptr) {
-        delete pInit;
-        pInit = nullptr;
-    }
+    if (has_init())
+        delete m_init;
 }
 
 stm::FieldDecl::FieldDecl(

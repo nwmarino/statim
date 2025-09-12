@@ -230,7 +230,7 @@ void Codegen::visit(VariableDecl& node) {
         
     if (node.has_init()) {
         m_vctx = RValue;
-        node.pInit->accept(*this);
+        node.get_init()->accept(*this);
         assert(m_tmp);
 
         m_builder.build_store(m_tmp, local);

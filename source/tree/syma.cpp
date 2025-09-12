@@ -26,7 +26,7 @@ void SymbolAnalysis::visit(FunctionDecl& node) {
 
 void SymbolAnalysis::visit(VariableDecl& node) {
     if (node.has_init()) 
-        node.pInit->accept(*this);
+        node.get_init()->accept(*this);
 
     if (node.get_type() != nullptr)
         return;
@@ -39,7 +39,7 @@ void SymbolAnalysis::visit(VariableDecl& node) {
             node.get_span());
     }
 
-    node.pType = node.get_init()->get_type();
+    node.m_type = node.get_init()->get_type();
 }
 
 void SymbolAnalysis::visit(AsmStmt& node) {
