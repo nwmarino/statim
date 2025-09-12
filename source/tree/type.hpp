@@ -193,7 +193,10 @@ public:
     const Context& get_context() const { return m_context; }
 
     /// Returns the resolved type, if it exists yet.
-    const Type* get_resolved() const { return m_resolved; }
+    const Type* get_resolved() const {
+        assert(m_resolved && "deferred type unresolved!"); 
+        return m_resolved; 
+    }
 
     /// Returns true if the underlying type has been resolved yet.
     bool is_resolved() const { return m_resolved != nullptr; }
@@ -237,6 +240,16 @@ public:
     bool is_float() const override {
         assert(is_resolved() && "deferred type unresolved!");
         return m_resolved->is_float();
+    }
+
+    constexpr bool is_builtin() const override {
+        assert(is_resolved() && "deferred type unresolved!");
+        return m_resolved->is_builtin(); 
+    }
+
+    const BuiltinType* as_builtin() const override {
+        assert(is_resolved() && "deferred type unresolved!");
+        return m_resolved->as_builtin(); 
     }
 
     constexpr bool is_deferred() const override { return true; }

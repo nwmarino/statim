@@ -255,6 +255,12 @@ stm::i32 main(stm::i32 argc, char** argv) {
     for (auto& unit : units) {
         stm::Root& root = unit->get_root();
         root.validate();
+    }
+
+    link_trees(units);
+
+    for (auto& unit : units) {
+        stm::Root& root = unit->get_root();
 
         stm::SymbolAnalysis syma { options, root };
         root.accept(syma);
@@ -297,6 +303,7 @@ stm::i32 main(stm::i32 argc, char** argv) {
         }
     }
 
+    dump.flush();
     dump.close();
 
     if (options.llvm) {

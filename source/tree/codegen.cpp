@@ -15,6 +15,7 @@
 #include "tree/stmt.hpp"
 #include "tree/visitor.hpp"
 
+#include <llvm/IR/GlobalVariable.h>
 #include <string>
 
 using namespace stm;
@@ -101,7 +102,9 @@ siir::Value* Codegen::inject_bool_cmp(siir::Value* value) {
 }
 
 void Codegen::lower_function(const FunctionDecl& decl) {
-    auto linkage = siir::Function::LINKAGE_EXTERNAL;
+    siir::Function::LinkageType linkage = siir::Function::LINKAGE_INTERNAL;
+    if (decl.has_decorator(Rune::Public))
+        linkage = siir::Function::LINKAGE_EXTERNAL;
 
     std::vector<const siir::Type*> arg_types;
     std::vector<siir::Argument*> args;
@@ -221,19 +224,41 @@ void Codegen::visit(VariableDecl& node) {
     const siir::Type* type = lower_type(node.get_type());
     assert(type && "could not resolve type for variable!");
 
-    siir::Local* local = new siir::Local(
-        m_cfg,
-        type, 
-        m_cfg.get_target().get_type_align(type),
-        node.get_name(), 
-        m_func);
-        
-    if (node.has_init()) {
-        m_vctx = RValue;
-        node.get_init()->accept(*this);
-        assert(m_tmp);
+    if (node.is_global()) {
+        if (m_phase == PH_Declare) {
+            siir::Global::LinkageType linkage = siir::Global::LINKAGE_INTERNAL;
+            if (node.has_decorator(Rune::Public))
+                linkage = siir::Global::LINKAGE_EXTERNAL;
 
-        m_builder.build_store(m_tmp, local);
+            siir::Global* G = new siir::Global(
+                m_cfg, type, linkage, false, mangle(&node), nullptr);
+        } else if (m_phase == PH_Define) {
+            siir::Global* G = m_cfg.get_global(mangle(&node));
+            assert(G && "global has not been lowered correctly!");
+
+            m_vctx = RValue;
+            node.get_init()->accept(*this);
+            assert(m_tmp && "global initializer does not produce a value!");
+            siir::Constant* init = dynamic_cast<siir::Constant*>(m_tmp);
+            assert(init && "global initializer is not a constant value!");
+
+            G->set_initializer(init);
+        }
+    } else {
+        siir::Local* local = new siir::Local(
+            m_cfg,
+            type, 
+            m_cfg.get_target().get_type_align(type),
+            node.get_name(), 
+            m_func);
+            
+        if (node.has_init()) {
+            m_vctx = RValue;
+            node.get_init()->accept(*this);
+            assert(m_tmp);
+
+            m_builder.build_store(m_tmp, local);
+        }
     }
 }
 
@@ -612,7 +637,7 @@ void Codegen::codegen_rune_write(const RuneStmt& node) {
         if (idx >= is_print ? num_args - 1 : num_args - 2)
             continue;
     
-        Expr* arg = rune->args().at(idx + (is_print ? 1 : 2));
+        Expr* arg = rune->args().at(idx + (is_print ? 0 : 1));
         m_vctx = RValue;
         arg->accept(*this);
         assert(m_tmp && "print argument does not produceConstantString *string a value!");
@@ -1633,7 +1658,7 @@ void Codegen::codegen_unary_decrement(const UnaryExpr& node) {
 
 void Codegen::codegen_unary_dereference(const UnaryExpr& node) {
     ValueContext vctx = m_vctx;
-    m_vctx = LValue;
+    m_vctx = RValue;
     node.pExpr->accept(*this);
     assert(m_tmp);
 
@@ -1841,14 +1866,25 @@ void Codegen::visit(ReferenceExpr& node) {
         return;
     }
 
-    // Resolve the referenced local in the current function.
-    siir::Local* local = m_func->get_local(node.get_name());
-    assert(local);
+    auto var = dynamic_cast<const VariableDecl*>(node.get_decl());
+    if (var && var->is_global()) {
+        siir::Global* global = m_cfg.get_global(mangle(node.get_decl()));
+        assert(global && "unresolved reference to global!");
 
-    m_tmp = local;
+        m_tmp = global;
 
-    if (m_vctx == RValue)
-        m_tmp = m_builder.build_load(lower_type(node.get_type()), local);    
+        if (m_vctx == RValue)
+            m_tmp = m_builder.build_load(lower_type(node.get_type()), global);
+    } else {
+        // Resolve the referenced local in the current function.
+        siir::Local* local = m_func->get_local(node.get_name());
+        assert(local && "unresolved reference to local!");
+
+        m_tmp = local;
+
+        if (m_vctx == RValue)
+            m_tmp = m_builder.build_load(lower_type(node.get_type()), local);    
+    }
 }
 
 void Codegen::visit(MemberExpr& node) {
