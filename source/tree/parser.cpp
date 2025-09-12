@@ -606,7 +606,7 @@ StructDecl* Parser::parse_struct(const Token& name) {
     StructDecl* decl = new StructDecl(
         Span(name.loc, end),
         name.value,
-        {},
+        struct_runes,
         nullptr,
         fields);
 

@@ -72,7 +72,7 @@ void __memset(void* __d, char __v, unsigned long __n) {
 unsigned long __strlen(char* __s) {
     unsigned long n = 0;
     while (__s[n++] != '\0');
-    return n;
+    return n - 1;
 }
 
 void __print(char* __s) {

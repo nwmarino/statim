@@ -281,6 +281,12 @@ void SemanticAnalysis::visit(BinaryExpr& node) {
     auto left_type = node.get_lhs()->get_type();
     auto right_type = node.get_rhs()->get_type();
 
+    /// TODO: Some considerations to be had:
+    ///
+    /// int == float, fails since LHS != RHS and RHS cannot implicitly cast to
+    /// LHS. Ideally, LHS -> RHS instead since it's possible and some 
+    /// comparisons/operators are loose WRT to ordering.
+
     TypeCheckMode mode = TypeCheckMode::AllowImplicit;
     if (BinaryExpr::supports_ptr_arith(node.op) || 
         BinaryExpr::is_logical_comparison(node.op)) {

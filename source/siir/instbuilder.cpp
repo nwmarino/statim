@@ -227,9 +227,6 @@ Instruction* InstBuilder::build_cmp_oeq(Value* lhs, Value* rhs) {
     assert(rhs && "rhs cannot be null");
     assert(lhs->get_type()->is_floating_point_type() && 
         "lhs type must be a floating point type");
-    assert((rhs->get_type()->is_integer_type() ||
-        rhs->get_type()->is_pointer_type()) && 
-        "rhs type must be a floating point type");
     assert(*lhs->get_type() == *rhs->get_type() && 
         "lhs and rhs must have the same type");
 
@@ -242,9 +239,6 @@ Instruction* InstBuilder::build_cmp_one(Value* lhs, Value* rhs) {
     assert(rhs && "rhs cannot be null");
     assert(lhs->get_type()->is_floating_point_type() && 
         "lhs type must be a floating point type");
-    assert((rhs->get_type()->is_integer_type() ||
-        rhs->get_type()->is_pointer_type()) && 
-        "rhs type must be a floating point type");
     assert(*lhs->get_type() == *rhs->get_type() && 
         "lhs and rhs must have the same type");
 
@@ -257,9 +251,6 @@ Instruction* InstBuilder::build_cmp_uneq(Value* lhs, Value* rhs) {
     assert(rhs && "rhs cannot be null");
     assert(lhs->get_type()->is_floating_point_type() && 
         "lhs type must be a floating point type");
-    assert((rhs->get_type()->is_integer_type() ||
-        rhs->get_type()->is_pointer_type()) && 
-        "rhs type must be a floating point type");
     assert(*lhs->get_type() == *rhs->get_type() && 
         "lhs and rhs must have the same type");
 
@@ -272,9 +263,6 @@ Instruction* InstBuilder::build_cmp_unne(Value* lhs, Value* rhs) {
     assert(rhs && "rhs cannot be null");
     assert(lhs->get_type()->is_floating_point_type() && 
         "lhs type must be a floating point type");
-    assert((rhs->get_type()->is_integer_type() ||
-        rhs->get_type()->is_pointer_type()) && 
-        "rhs type must be a floating point type");
     assert(*lhs->get_type() == *rhs->get_type() && 
         "lhs and rhs must have the same type");
 
@@ -415,9 +403,6 @@ Instruction* InstBuilder::build_cmp_olt(Value* lhs, Value* rhs) {
     assert(rhs && "rhs cannot be null");
     assert(lhs->get_type()->is_floating_point_type() && 
         "lhs type must be a floating point type");
-    assert((rhs->get_type()->is_integer_type() ||
-        rhs->get_type()->is_pointer_type()) && 
-        "rhs type must be a floating point type");
     assert(*lhs->get_type() == *rhs->get_type() && 
         "lhs and rhs must have the same type");
 
@@ -430,9 +415,6 @@ Instruction* InstBuilder::build_cmp_ole(Value* lhs, Value* rhs) {
     assert(rhs && "rhs cannot be null");
     assert(lhs->get_type()->is_floating_point_type() && 
         "lhs type must be a floating point type");
-    assert((rhs->get_type()->is_integer_type() ||
-        rhs->get_type()->is_pointer_type()) && 
-        "rhs type must be a floating point type");
     assert(*lhs->get_type() == *rhs->get_type() && 
         "lhs and rhs must have the same type");
 
@@ -445,9 +427,6 @@ Instruction* InstBuilder::build_cmp_ogt(Value* lhs, Value* rhs) {
     assert(rhs && "rhs cannot be null");
     assert(lhs->get_type()->is_floating_point_type() && 
         "lhs type must be a floating point type");
-    assert((rhs->get_type()->is_integer_type() ||
-        rhs->get_type()->is_pointer_type()) && 
-        "rhs type must be a floating point type");
     assert(*lhs->get_type() == *rhs->get_type() && 
         "lhs and rhs must have the same type");
 
@@ -460,9 +439,6 @@ Instruction* InstBuilder::build_cmp_oge(Value* lhs, Value* rhs) {
     assert(rhs && "rhs cannot be null");
     assert(lhs->get_type()->is_floating_point_type() && 
         "lhs type must be a floating point type");
-    assert((rhs->get_type()->is_integer_type() ||
-        rhs->get_type()->is_pointer_type()) && 
-        "rhs type must be a floating point type");
     assert(*lhs->get_type() == *rhs->get_type() && 
         "lhs and rhs must have the same type");
 
@@ -475,9 +451,6 @@ Instruction* InstBuilder::build_cmp_unlt(Value* lhs, Value* rhs) {
     assert(rhs && "rhs cannot be null");
     assert(lhs->get_type()->is_floating_point_type() && 
         "lhs type must be a floating point type");
-    assert((rhs->get_type()->is_integer_type() ||
-        rhs->get_type()->is_pointer_type()) && 
-        "rhs type must be a floating point type");
     assert(*lhs->get_type() == *rhs->get_type() && 
         "lhs and rhs must have the same type");
 
@@ -490,9 +463,6 @@ Instruction* InstBuilder::build_cmp_unle(Value* lhs, Value* rhs) {
     assert(rhs && "rhs cannot be null");
     assert(lhs->get_type()->is_floating_point_type() && 
         "lhs type must be a floating point type");
-    assert((rhs->get_type()->is_integer_type() ||
-        rhs->get_type()->is_pointer_type()) && 
-        "rhs type must be a floating point type");
     assert(*lhs->get_type() == *rhs->get_type() && 
         "lhs and rhs must have the same type");
 
@@ -505,9 +475,6 @@ Instruction* InstBuilder::build_cmp_ungt(Value* lhs, Value* rhs) {
     assert(rhs && "rhs cannot be null");
     assert(lhs->get_type()->is_floating_point_type() && 
         "lhs type must be a floating point type");
-    assert((rhs->get_type()->is_integer_type() ||
-        rhs->get_type()->is_pointer_type()) && 
-        "rhs type must be a floating point type");
     assert(*lhs->get_type() == *rhs->get_type() && 
         "lhs and rhs must have the same type");
 
@@ -520,9 +487,6 @@ Instruction* InstBuilder::build_cmp_unge(Value* lhs, Value* rhs) {
     assert(rhs && "rhs cannot be null");
     assert(lhs->get_type()->is_floating_point_type() && 
         "lhs type must be a floating point type");
-    assert((rhs->get_type()->is_integer_type() ||
-        rhs->get_type()->is_pointer_type()) && 
-        "rhs type must be a floating point type");
     assert(*lhs->get_type() == *rhs->get_type() && 
         "lhs and rhs must have the same type");
 

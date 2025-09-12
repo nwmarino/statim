@@ -250,7 +250,7 @@ class Codegen final : public Visitor {
 
     void codegen_rune_abort(const RuneStmt& node);
     void codegen_rune_assert(const RuneStmt& node);
-    void codegen_rune_print(const RuneStmt& node);
+
     void codegen_rune_write(const RuneStmt& node);
 
     /// Binary operation code generation.

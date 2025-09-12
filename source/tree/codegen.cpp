@@ -475,9 +475,23 @@ void Codegen::codegen_rune_assert(const RuneStmt& node) {
     m_builder.set_insert(okay);
 }
 
-void Codegen::codegen_rune_print(const RuneStmt& node) {
+void Codegen::codegen_rune_write(const RuneStmt& node) {
     const Rune* rune = node.rune();
-    StringLiteral* strlit = dynamic_cast<StringLiteral*>(rune->args().at(0));
+    bool is_print = rune->kind() == Rune::Print || 
+        rune->kind() == Rune::Println;
+
+    // Check that there are atleast 1-2 arguments to the rune.
+    u32 min_args = is_print ? 1 : 2;
+    if (rune->num_args() < min_args) {
+        Logger::fatal(
+            "expected atleast " + std::to_string(min_args) + " to '$" + 
+                Rune::to_string(rune->kind()) + "' rune, got " + 
+                std::to_string(rune->num_args()),
+            node.get_span());
+    }
+
+    u32 string_idx = is_print ? 0 : 1;
+    StringLiteral* strlit = dynamic_cast<StringLiteral*>(rune->args().at(string_idx));
     if (!strlit) {
         Logger::fatal(
             "expected first argument to '$print' to be a string literal",
@@ -485,8 +499,46 @@ void Codegen::codegen_rune_print(const RuneStmt& node) {
     }
     
     // Get the stdout file descriptor as a constant integer.
-    siir::Constant* fd = siir::ConstantInt::get(
-        m_cfg, siir::Type::get_i64_type(m_cfg), 1);
+    siir::Value* fd = nullptr;
+    if (is_print) {
+        fd = siir::ConstantInt::get(
+            m_cfg, siir::Type::get_i64_type(m_cfg), 1);
+    } else {
+
+        // Lower the first argument as a "file" instance.
+        Expr* file_expr = node.rune()->args().front();
+        const Type* file_type = file_expr->get_type();
+        if (file_type->is_deferred())
+            file_type = file_type->as_deferred()->get_resolved();
+
+        /// TODO: Adjust with mutability changes.
+        //if (!file_type->is_mut() || !file_type->is_struct()) {
+        bool file_type_correct = true;
+        if (!file_type->is_struct()) {
+            file_type_correct = false;
+        } else {
+            const StructDecl* decl = file_type->as_struct()->get_decl();
+            if (decl->get_name() != "File" || !decl->has_decorator(Rune::Intrinsic))
+                file_type_correct = false;
+        }
+
+        if (!file_type_correct) {
+            Logger::fatal(
+                "expected intrinsic, mutable 'File' type, got '" + 
+                    file_type->to_string() + "'", 
+                file_expr->get_span());
+        }
+
+        m_vctx = LValue;
+        file_expr->accept(*this);
+        assert(m_tmp && "$write file does not produce a value!");
+
+        m_tmp = m_builder.build_ap(
+            siir::PointerType::get(m_cfg, siir::Type::get_i64_type(m_cfg)), 
+            m_tmp, 
+            siir::ConstantInt::get_zero(m_cfg, siir::Type::get_i64_type(m_cfg)));
+        fd = m_builder.build_load(siir::Type::get_i64_type(m_cfg), m_tmp); 
+    }
 
     /// Get constant 10 for base 10 integer prints.
     siir::Constant* ten = siir::ConstantInt::get(
@@ -528,21 +580,22 @@ void Codegen::codegen_rune_print(const RuneStmt& node) {
         }
     }
 
-    if (parts.size() != rune->num_args()) {
+    u32 num_args = is_print ? rune->num_args() - 1 : rune->num_args() - 2;
+    if (parts.size() - 1 != num_args) {
         Logger::fatal(
-            "argument count mismatch with bracket count, got '" + 
-                std::to_string(rune->num_args()) + "', but expected '" + 
-                std::to_string(parts.size()) + "'", 
+            "argument count mismatch with bracket count, found " + 
+                std::to_string(parts.size() - 1) + " bracket(s), but got " + 
+                std::to_string(num_args) + " arguments", 
             node.get_span());
     }
 
     siir::Function* rt_print = fetch_runtime_fn(
-            "__print_fd", 
-            {
-                siir::Type::get_i64_type(m_cfg),
-                siir::PointerType::get(m_cfg, siir::Type::get_i8_type(m_cfg))
-            }
-        );
+        "__print_fd", 
+        {
+            siir::Type::get_i64_type(m_cfg),
+            siir::PointerType::get(m_cfg, siir::Type::get_i8_type(m_cfg))
+        }
+    );
 
     for (u32 idx = 0, e = parts.size(); idx != e; ++idx) {
         std::string part = parts.at(idx);
@@ -556,10 +609,10 @@ void Codegen::codegen_rune_print(const RuneStmt& node) {
             m_builder.build_call(rt_print->get_type(), rt_print, { fd, string });
         }
 
-        if (idx >= rune->num_args() - 1)
+        if (idx >= is_print ? num_args - 1 : num_args - 2)
             continue;
     
-        Expr* arg = rune->args().at(idx + 1);
+        Expr* arg = rune->args().at(idx + (is_print ? 1 : 2));
         m_vctx = RValue;
         arg->accept(*this);
         assert(m_tmp && "print argument does not produceConstantString *string a value!");
@@ -657,15 +710,11 @@ void Codegen::codegen_rune_print(const RuneStmt& node) {
         }
     }
 
-    if (node.rune()->kind() == Rune::Println) {
+    if (rune->kind() == Rune::Println || rune->kind() == Rune::Writeln) {
         siir::Instruction* string = m_builder.build_string(
             siir::ConstantString::get(m_cfg, "\n"));
         m_builder.build_call(rt_print->get_type(), rt_print, { fd, string });
     }
-}
-
-void Codegen::codegen_rune_write(const RuneStmt& node) {
-
 }
 
 void Codegen::visit(RuneStmt& node) {
@@ -682,8 +731,6 @@ void Codegen::visit(RuneStmt& node) {
         break;
     case Rune::Print:
     case Rune::Println:
-        codegen_rune_print(node);
-        break;
     case Rune::Write:
     case Rune::Writeln:
         codegen_rune_write(node);
