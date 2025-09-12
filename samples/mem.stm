@@ -1,0 +1,34 @@
+BlockMeta :: struct {
+    size: u64,
+    next: *BlockMeta,
+    free: bool,
+    mmap: bool,
+}
+
+$public
+enum s32 {
+    MMAP_PROT_NONE = 0,
+    MMAP_PROT_READ = 1,
+    MMAP_PROT_WRITE = 2,
+    MMAP_PROT_EXEC = 4,
+    MMAP_PROT_GROSDOWN = 16777216,
+    MMAP_PROT_GROWSUP = 33554432,
+}
+
+$public
+enum s32 {
+    MMAP_FLAGS_FILE = 0,
+    MMAP_FLAGS_SHARED = 1,
+    MMAP_FLAGS_PRIVATE = 2,
+    MMAP_FLAGS_SHARED_VALIDATE = 3,
+    MMAP_FLAGS_FIXED = 10,
+    MMAP_FLAGS_TYPE = 16,
+    MMAP_FLAGS_ANONYMOUS = 20,
+    MMAP_FLAGS_GROWSDOWN = 256,
+    MMAP_FLAGS_DENY_WRITE = 2048,
+    MMAP_FLAGS_EXECUTABLE = 4096,
+    MMAP_FLAGS_LOCKED = 8192,
+    MMAP_FLAGS_NO_RESERVE = 16384,
+    MMAP_FLAGS_POPULATE = 32768,
+    MMAP_FLAGS_NON_BLOCK = 65536,
+}

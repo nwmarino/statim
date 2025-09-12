@@ -299,7 +299,7 @@ class EnumValueDecl final : public Decl {
     friend class SemanticAnalysis;
     friend class Codegen;
 
-    const EnumType* m_type;
+    const Type* m_type;
     i64 m_value;
 
 public:
@@ -307,11 +307,11 @@ public:
         const Span& span,
         const std::string& name,
         const std::vector<Rune*>& runes,
-        const EnumType* type,
+        const Type* type,
         i64 value);
 
     /// \returns The type of this enum variant.
-    const EnumType* get_type() const { return m_type; }
+    const Type* get_type() const { return m_type; }
 
     /// \returns The value of this enum variant.
     i64 get_value() const { return m_value; }

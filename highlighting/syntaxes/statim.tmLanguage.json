@@ -17,6 +17,7 @@
 				{ "include": "#function" },
 				{ "include": "#struct" },
 				{ "include": "#enum" },
+				{ "include": "#enum-noname" },
 				{ "include": "#keywords" },
 				{ "include": "#comments" },
 				{ "include": "#constants" },
@@ -102,10 +103,11 @@
 		},
 
 		"struct": {
-			"begin": "\\b(\\w*)\\b\\s*(::)\\s*\\{",
+			"begin": "\\b(\\w*)\\b\\s*(::)\\s*\\b(struct)\\b\\s*\\{",
 			"beginCaptures": {
 				"1": { "name": "support.type.struct.statim entity.name.type.struct.statim" },
-				"2": { "name": "keyword.operator.colon.statim" }
+				"2": { "name": "keyword.operator.colon.statim" },
+				"3": { "name": "keyword.declaration.struct.statim" }
 			},
 			"end": "\\}",
 			"patterns": [
@@ -118,7 +120,22 @@
 					}
 				},
 				{
+					"name": "meta.struct.field.statim",
+					"match": "\\b(\\w*)\\b(:)\\s*",
+					"captures": {
+						"2": { "name": "keyword.operator.colon.statim" }
+					},
+					"patterns": [
+						{
+							"include": "#types"
+						}
+					]
+				},
+				{
 					"include": "#comments"
+				},
+				{
+					"include": "#storage"
 				},
 				{
 					"include": "#types"
@@ -127,11 +144,33 @@
 		},
 
 		"enum": {
-			"begin": "\\b(\\w*)\\b\\s*(::)\\s*(s8|s16|s32|s64|u8|u16|u32|u64|bool|char)\\s*\\{",
+			"begin": "\\b(\\w*)\\b\\s*(::)\\s*\\b(enum)\\b\\s+(s8|s16|s32|s64|u8|u16|u32|u64|bool|char)\\s*\\{",
 			"beginCaptures": {
 				"1": { "name": "support.type.enum.statim entity.name.type.enum.statim" },
 				"2": { "name": "keyword.operator.colon.statim" },
-				"3": { "name": "storage.type.statim" }
+				"3": { "name": "keyword.declaration.enum.statim" },
+				"4": { "name": "storage.type.statim" }
+			},
+			"end": "\\}",
+			"patterns": [
+				{
+					"name": "meta.enum.variant.statim",
+					"match": "\\b([A-Za-z_][A-Za-z0-9_]*)\\b(\\s*=\\s*([^,\\s]+))?",
+					"captures": {
+						"1": { "name": "constant.other.enum.variant.statim" },
+						"2": { "name": "keyword.operator.assignment.equal.statim" },
+						"3": { "name": "constant.numeric.integer.statim" }
+					}
+				},
+				{ "include": "#comments" }
+			]
+		},
+
+		"enum-noname": {
+			"begin": "\\b(enum)\\b\\s+(s8|s16|s32|s64|u8|u16|u32|u64|bool|char)\\s*\\{",
+			"beginCaptures": {
+				"1": { "name": "keyword.declaration.enum.statim" },
+				"2": { "name": "storage.type.statim" }
 			},
 			"end": "\\}",
 			"patterns": [
@@ -307,7 +346,7 @@
 			"patterns": [
 				{
 					"name": "support.type.builtin.statim",
-					"match": "(\\*)*\\b(?:bool|char|u8|u16|u32|u64|s8|s16|s32|s64|f32|f64)\\b",
+					"match": "(\\*)*\\b(?:void|bool|char|u8|u16|u32|u64|s8|s16|s32|s64|f32|f64)\\b",
 					"captures": {
 						"1": {
 							"name": "storage.modifier.pointer.statim"

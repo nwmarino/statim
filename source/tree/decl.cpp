@@ -101,7 +101,7 @@ stm::EnumValueDecl::EnumValueDecl(
         const Span& span,
         const std::string& name,
         const std::vector<Rune*>& runes,
-        const EnumType* type,
+        const Type* type,
         i64 value)
     : Decl(span, name, runes), m_type(type), m_value(value) {}
 

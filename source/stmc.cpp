@@ -236,8 +236,9 @@ stm::i32 main(stm::i32 argc, char** argv) {
     std::vector<std::unique_ptr<stm::InputFile>> files;
     std::vector<std::unique_ptr<stm::TranslationUnit>> units;
     
-    files.push_back(std::make_unique<stm::InputFile>("samples/a.stm"));
+    files.push_back(std::make_unique<stm::InputFile>("samples/natives.stm"));
     files.push_back(std::make_unique<stm::InputFile>("samples/b.stm"));
+    files.push_back(std::make_unique<stm::InputFile>("samples/mem.stm"));
     
     for (auto& file : files) {
         std::unique_ptr<stm::TranslationUnit> unit =
