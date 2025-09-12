@@ -60,15 +60,10 @@ build/
 docs/rega.md
 stmc
 stmc_test
-scratch/
 dump
-pre_ssa
-post_ssa
-braun13cc.pdf
-a.cpp
-a.ll
 main
 vgcore.*
 *.stm.o
 *.stm.s
 std/*.s
+std/*.ll
