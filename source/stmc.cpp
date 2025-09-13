@@ -235,10 +235,45 @@ stm::i32 main(stm::i32 argc, char** argv) {
 
     std::vector<std::unique_ptr<stm::InputFile>> files;
     std::vector<std::unique_ptr<stm::TranslationUnit>> units;
+
+    for (stm::u32 i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "-o") {
+            if (++i >= argc)
+                stm::Logger::fatal("expected identifier after '-o' argument to specify output name");
+            
+            options.output = argv[i];
+        } else if (arg == "-O0") {
+            options.optlevel = 0;
+        } else if (arg == "-O1") {
+            options.optlevel = 1;
+        } else if (arg == "-O2") {
+            options.optlevel = 2;
+        } else if (arg == "-O3") {
+            options.optlevel = 3;
+        } else if (arg == "-g") {
+            options.debug = true;
+        } else if (arg == "-d") {
+            options.devel = true;
+        } else if (arg == "-S") {
+            options.emit_asm = true;
+        } else if (arg == "-c") {
+            options.keep_obj = true;
+        } else if (arg == "-ll") {
+            options.llvm = true;
+        } else if (arg == "-t") {
+            options.time = true;
+        } else {
+            files.push_back(std::make_unique<stm::InputFile>(argv[i]));
+        }
+    }
     
     files.push_back(std::make_unique<stm::InputFile>("samples/natives.stm"));
     files.push_back(std::make_unique<stm::InputFile>("samples/b.stm"));
     files.push_back(std::make_unique<stm::InputFile>("samples/mem.stm"));
+
+    if (files.empty())
+        stm::Logger::fatal("no input files");
     
     for (auto& file : files) {
         std::unique_ptr<stm::TranslationUnit> unit =
