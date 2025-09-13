@@ -1,0 +1,3 @@
+TokenKind :: enum s32 {
+    TOKEN_KIND_
+}
