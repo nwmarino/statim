@@ -1,22 +1,23 @@
-✓×
-
 ✓ Multi-file support
 ✓ GCC Inline Assembly
 ✓ Unnamed enums
 ✓ Global variables
 × Operator overloading
+× Method calls
+× Strings
 × Templates
 × Multiple return values
 × Namespaces
 × The `defer` statement
 × C `for` statement
 × Bounds, null pointer checks
-× Method calls
 × Build system
 × CTFE
 × Runtime type reflection
 × Native backend
 × Enum flags
+× Virtual machine
+× Hexadecimal, octal, bitwise integers
 
 Runes
 × abi()
