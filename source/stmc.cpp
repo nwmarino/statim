@@ -34,6 +34,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <memory>
 
 static stm::TranslationUnit* 
 resolve_use(stm::UseDecl* use, stm::InputFile& req,
@@ -271,6 +272,7 @@ stm::i32 main(stm::i32 argc, char** argv) {
     files.push_back(std::make_unique<stm::InputFile>("samples/natives.stm"));
     files.push_back(std::make_unique<stm::InputFile>("samples/b.stm"));
     files.push_back(std::make_unique<stm::InputFile>("samples/mem.stm"));
+    files.push_back(std::make_unique<stm::InputFile>("samples/string.stm"));
 
     if (files.empty())
         stm::Logger::fatal("no input files");

@@ -1323,7 +1323,7 @@ CharLiteral* Parser::parse_char() {
     CharLiteral* character = new CharLiteral(
         Span(lexer.last().loc),
         root->get_char_type(),
-        lexer.last().value.at(0)
+        lexer.last().value[0]
     );
     next(); // '...'
     return character;
