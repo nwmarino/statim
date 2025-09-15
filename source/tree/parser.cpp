@@ -1,4 +1,5 @@
 #include "core/logger.hpp"
+#include "tree/decl.hpp"
 #include "tree/rune.hpp"
 #include "tree/type.hpp"
 #include "tree/parser.hpp"
@@ -20,11 +21,11 @@ void Parser::parse(TranslationUnit& unit) {
 
     while (!lexer.is_eof()) {
         Decl* decl = parse_decl();
-        assert(decl && "could not parse declaration");
-        root->add_decl(decl);
-
-        if (decl->has_decorator(Rune::Public)) {
-            root->exports().push_back(decl);
+        if (decl) {
+            root->add_decl(decl);
+            if (decl->has_decorator(Rune::Public)) {
+                root->exports().push_back(decl);
+            }
         }
     }
 
@@ -323,8 +324,13 @@ Decl* Parser::parse_decl() {
             Span(lexer.last().loc));
     }
 
-    if (lexer.last().value == "use")
+    if (match("use"))
         return parse_use();
+    else if (match("enum")) {
+        next(); // 'enum'
+        parse_unnamed_enum();
+        return nullptr;
+    }
 
     const Token name = lexer.last();
     next(); // identifier
@@ -337,18 +343,20 @@ Decl* Parser::parse_decl() {
 
     next(); // '::'
 
-    switch (lexer.last().kind) {
-    case TOKEN_KIND_SET_PAREN:
-        return parse_function(name);
-    case TOKEN_KIND_SET_BRACE:
+    if (match("struct")) {
+        next(); // 'struct'
         return parse_struct(name);
-    case TOKEN_KIND_IDENTIFIER:
+    } else if (match("enum")) {
+        next(); // 'enum'
         return parse_enum(name);
-    default:
-        Logger::fatal(
-            "expected declaration after binding operator '::'",
-            since(name.loc));
+    } else if (match(TOKEN_KIND_SET_PAREN)) {
+        return parse_function(name);
+    } else {
+        return parse_global_variable(name);
     }
+    //    Logger::fatal(
+    //        "expected declaration after binding operator '::'",
+    //        since(name.loc));
 }
 
 UseDecl* Parser::parse_use() {
@@ -476,6 +484,46 @@ FunctionDecl* Parser::parse_function(const Token& name) {
     }
 
     return function;
+}
+
+VariableDecl* Parser::parse_global_variable(const Token& name) {
+    std::vector<Rune*> var_runes = runes;
+    runes.clear();
+    const Type* ty = parse_type();
+    Expr* init = nullptr;
+
+    if (!match(TOKEN_KIND_EQUALS)) {
+        Logger::fatal(
+            "expected '=' after variable declaration name", 
+            lexer.last().loc);
+    }
+
+    next(); // '='
+
+    init = parse_expr();
+    assert(init && "could not parse global variable initializer!");
+
+    if (!match(TOKEN_KIND_SEMICOLON))
+        Logger::fatal("expected ';' after variable declaration", lexer.last().loc);
+    
+    while (match(TOKEN_KIND_SEMICOLON))
+        next(); // ';'
+
+    VariableDecl* decl = new VariableDecl(
+        since(name.loc),
+        name.value,
+        var_runes,
+        ty,
+        init,
+        true);
+
+    if (!pScope->add(decl)) {
+        Logger::fatal(
+            "variable reuses existing name in scope: '" + name.value + "'",
+            since(name.loc));
+    }
+
+    return decl;
 }
 
 VariableDecl* Parser::parse_variable() {
@@ -713,6 +761,79 @@ EnumDecl* Parser::parse_enum(const Token& name) {
     next(); // '}'
 
     return decl;
+}
+
+void Parser::parse_unnamed_enum() {
+    std::vector<Rune*> enum_runes = this->runes;
+    runes.clear();
+    const Type* underlying = parse_type();
+
+    if (!match(TOKEN_KIND_SET_BRACE)) {
+        Logger::fatal(
+            "expected '{' for enum declaration after type identifier",
+            lexer.last().loc);
+    }
+
+    next(); // '{'
+
+    i64 current_value = 0;
+    while (!match(TOKEN_KIND_END_BRACE)) {
+        if (!match(TOKEN_KIND_IDENTIFIER))
+            Logger::fatal("expected enum value identifier", lexer.last().loc);
+
+        const Token vname = lexer.last();
+        i64 value = current_value;
+
+        next(); // identifier
+
+        if (match(TOKEN_KIND_EQUALS)) {
+            next(); // '='
+
+            if (!match(TOKEN_KIND_INTEGER)) {
+                Logger::fatal(
+                    "expected integer enum value after '='",
+                    since(vname.loc));
+            }
+
+            value = std::stol(lexer.last().value);
+            current_value = value + 1;
+            next(); // value
+        } else {
+            current_value++;
+        }
+
+        EnumValueDecl* value_decl = new EnumValueDecl(
+            Span(vname.loc),
+            vname.value,
+            enum_runes,
+            underlying,
+            value);
+
+        if (!pScope->add(value_decl)) {
+            Logger::fatal(
+                "enum value reuses existing name in scope: '" + 
+                    vname.value + "'",
+                since(vname.loc));
+        }
+
+        root->add_decl(value_decl);
+        
+        if (value_decl->has_decorator(Rune::Public))
+            root->imports().push_back(value_decl);
+
+        if (match(TOKEN_KIND_END_BRACE))
+            break;
+
+        if (!match(TOKEN_KIND_COMMA)) {
+            Logger::fatal(
+                "expected ',' or '}' after enum value",
+                since(vname.loc));
+        }
+
+        next(); // ','
+    } 
+
+    next(); // '}'
 }
 
 Stmt* Parser::parse_stmt() {
@@ -1202,7 +1323,7 @@ CharLiteral* Parser::parse_char() {
     CharLiteral* character = new CharLiteral(
         Span(lexer.last().loc),
         root->get_char_type(),
-        lexer.last().value.at(0)
+        lexer.last().value[0]
     );
     next(); // '...'
     return character;

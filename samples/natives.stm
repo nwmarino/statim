@@ -1,0 +1,59 @@
+$public
+test_iadd :: () -> void {
+    let x: s64 = 4;
+    $assert(7 == x + 3);
+}
+
+$public
+test_fadd :: () -> void {
+    let x: f64 = 0.14;
+    $assert(3.14 == 3.0 + x);
+}
+
+$public
+test_isub :: () -> void {
+    let x: s64 = 7;
+    $assert(11 == 18 - x);
+}
+
+$public
+test_fsub :: () -> void {
+    let x: f32 = 0.55;
+    $assert(-1.5 == x - 2.05);
+}
+
+$public
+test_smul :: () -> void {
+    let x: s64 = 6;
+    $assert(-30 == -5 * x);
+}
+
+$public
+test_umul :: () -> void {
+    let x: u64 = -3;
+    $assert(15 == x * -5);
+}
+
+$public
+test_fmul :: () -> void {
+    let x: f32 = 1.5;
+    $assert(cast<f32>(30) == cast<f32>(20) * 1.5);
+}
+
+$public
+test_sdiv :: () -> void {
+    let x: s64 = -4;
+    $assert(-6 == 24 / x);
+}
+
+$public
+test_udiv :: () -> void {
+    let x: u64 = 16;
+    $assert(8 == x / 2);
+}
+
+$public
+test_fdiv :: () -> void {
+    let x: f64 = 2.5;
+    $assert(cast<f64>(20) == cast<f64>(50) / x);
+}

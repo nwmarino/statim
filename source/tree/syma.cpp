@@ -26,7 +26,7 @@ void SymbolAnalysis::visit(FunctionDecl& node) {
 
 void SymbolAnalysis::visit(VariableDecl& node) {
     if (node.has_init()) 
-        node.pInit->accept(*this);
+        node.get_init()->accept(*this);
 
     if (node.get_type() != nullptr)
         return;
@@ -39,7 +39,7 @@ void SymbolAnalysis::visit(VariableDecl& node) {
             node.get_span());
     }
 
-    node.pType = node.get_init()->get_type();
+    node.m_type = node.get_init()->get_type();
 }
 
 void SymbolAnalysis::visit(AsmStmt& node) {
@@ -84,15 +84,19 @@ void SymbolAnalysis::visit(UnaryExpr& node) {
     node.pType = node.get_expr()->get_type();
 
     switch (node.get_operator()) {
-    case UnaryExpr::Operator::Dereference:
-        if (auto ptr = dynamic_cast<const PointerType*>(
-                node.get_expr()->get_type())) {
-            node.pType = ptr->get_pointee();
+    case UnaryExpr::Operator::Dereference: {
+        const Type* expr_type = node.get_expr()->get_type();
+        if (expr_type->is_deferred())
+            expr_type = expr_type->as_deferred()->get_resolved();
+
+        if (expr_type->is_pointer()) {
+            node.pType = expr_type->as_pointer()->get_pointee();
         } else {
             Logger::fatal("cannot apply '*' operator to non-pointer", node.span);
         }
 
         break;
+    }
 
     case UnaryExpr::Operator::Address_Of:
         if (!node.get_expr()->is_lvalue())
@@ -102,7 +106,7 @@ void SymbolAnalysis::visit(UnaryExpr& node) {
         break;
 
     case UnaryExpr::Operator::Logical_Not:
-        node.pExpr->pType = BuiltinType::get(root, BuiltinType::Kind::Bool);
+        node.pType = BuiltinType::get(root, BuiltinType::Kind::Bool);
         break;
 
     default:

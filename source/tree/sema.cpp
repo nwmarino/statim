@@ -5,8 +5,8 @@
 #include "tree/root.hpp"
 #include "tree/rune.hpp"
 #include "tree/stmt.hpp"
-
 #include "tree/visitor.hpp"
+
 #include <string>
 
 using namespace stm;
@@ -24,10 +24,8 @@ enum class TypeCheckResult : u8 {
 /// Perform a type check between a given type and the expected type.
 /// \returns The result of the check, either a match, mismatch, or if an
 /// implicit cast should be injected at the site of the given typed node.
-static TypeCheckResult type_check(
-        const Type* actual, 
-        const Type* expected, 
-        TypeCheckMode mode) {
+static TypeCheckResult type_check(const Type* actual, const Type* expected, 
+                                  TypeCheckMode mode) {
     if (actual->compare(expected))
         return TypeCheckResult::Match;
 
@@ -134,7 +132,7 @@ void SemanticAnalysis::visit(FunctionDecl& node) {
 
 void SemanticAnalysis::visit(VariableDecl& node) {
     if (node.has_init()) {
-        node.pInit->accept(*this);
+        node.get_init()->accept(*this);
 
         // Perform a type check to try and match the type of the initializer
         // to the type presented in the variable declaration.
@@ -144,15 +142,31 @@ void SemanticAnalysis::visit(VariableDecl& node) {
             TypeCheckMode::AllowImplicit);
 
         if (tc == TypeCheckResult::Cast) {
-            node.pInit = new CastExpr(
+            node.m_init = new CastExpr(
                 node.get_init()->get_span(),
                 node.get_type(),
-                node.pInit);
+                node.get_init());
         } else if (tc == TypeCheckResult::Mismatch) {
             Logger::fatal(
                 "variable type mismatch, got '" + 
                     node.get_init()->get_type()->to_string() + 
                     "', but expected '" + node.get_type()->to_string() + "'", 
+                node.get_span());
+        }
+    }
+    
+    if (node.is_global()) {
+        if (!node.has_init()) {
+            Logger::fatal(
+                "global variable '" + node.get_name() + 
+                    "' must have an initializer", 
+                node.get_span());
+        }
+
+        if (!node.get_init()->is_constant()) {
+            Logger::fatal(
+                "global variable '" + node.get_name() +
+                    "' must have a constant initializer",
                 node.get_span());
         }
     }
@@ -190,9 +204,12 @@ void SemanticAnalysis::visit(DeclStmt& node) {
 void SemanticAnalysis::visit(IfStmt& node) {
     node.pCond->accept(*this);
 
-    if (!node.get_cond()->get_type()->is_bool()) {
+    if (!(node.get_cond()->get_type()->is_builtin() || 
+        node.get_cond()->get_type()->is_pointer()) ||
+        node.get_cond()->get_type()->is_void()) {
         Logger::fatal(
-            "'if' condition must be a boolean",
+            "'if' condition must be evaluable to a boolean, got '" + 
+                node.get_cond()->get_type()->to_string() + "'",
             node.get_cond()->get_span());
     }
 
@@ -218,9 +235,12 @@ void SemanticAnalysis::visit(IfStmt& node) {
 void SemanticAnalysis::visit(WhileStmt& node) {
     node.pCond->accept(*this);
 
-    if (!node.get_cond()->get_type()->is_bool()) {
+    if (!(node.get_cond()->get_type()->is_builtin() || 
+        node.get_cond()->get_type()->is_pointer()) ||
+        node.get_cond()->get_type()->is_void()) {
         Logger::fatal(
-            "'while' condition must be a boolean",
+            "'while' condition must be evaluable to a boolean, got '" + 
+                node.get_cond()->get_type()->to_string() + "'",
             node.get_cond()->get_span());
     }
 

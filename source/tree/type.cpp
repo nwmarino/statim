@@ -86,8 +86,8 @@ bool BuiltinType::compare(const Type* other) const {
     if (other->is_deferred())
         other = other->as_deferred()->get_resolved();
 
-    if (is_mut() != other->is_mut())
-        return false;
+    //if (is_mut() != other->is_mut())
+    //    return false;
 
     if (!other->is_builtin())
         return false;

@@ -86,13 +86,13 @@ void ParameterDecl::print(std::ostream& os) const {
 
 void VariableDecl::print(std::ostream& os) const {
     print_piping(os);
-    os << "Variable " << span_string(span) << ' ' << name << " '" << 
-        pType->to_string() << "'\n";
+    os << "Variable " << span_string(span) << ' ' << get_name() << " '" << 
+        get_type()->to_string() << "'\n";
 
     if (has_init()) {
         gIndent++;
         gLastChild = true;
-        pInit->print(os);
+        get_init()->print(os);
         gLastChild = false;
         gIndent--;
     }

@@ -52,7 +52,7 @@ void LLVMTranslatePass::run() {
 
         llvm::GlobalVariable* GV = new llvm::GlobalVariable(
             /// TODO: Change to pointee type, needs testing first.
-            translate(global->get_type()),
+            translate(static_cast<const PointerType*>(global->get_type())->get_pointee()),
             global->is_read_only(), 
             linkage,
             nullptr,
@@ -186,6 +186,8 @@ llvm::Constant* LLVMTranslatePass::translate(Constant* constant) {
             llvm::dyn_cast<llvm::PointerType>(translate(CN->get_type())));
     } else if (auto BA = dynamic_cast<BlockAddress*>(constant)) {
         return llvm::BlockAddress::get(translate(BA->get_block()));
+    } else if (auto G = dynamic_cast<Global*>(constant)) {
+        return translate(G);
     }
 
     assert(false && "no LLVM equivelant for SIIR constant!");
@@ -203,8 +205,6 @@ llvm::Value* LLVMTranslatePass::translate(Value* value) {
         return translate(C);
     } else if (auto F = dynamic_cast<Function*>(value)) {
         return translate(F);
-    } else if (auto G = dynamic_cast<Global*>(value)) {
-        return translate(G);
     } else if (auto I = dynamic_cast<Instruction*>(value)) {
         return translate(I);
     } else if (auto IA = dynamic_cast<InlineAsm*>(value)) {
@@ -341,7 +341,7 @@ void LLVMTranslatePass::convert(Instruction* inst) {
 
     case INST_OP_ACCESS_PTR: {
         llvm::Value* V = m_builder->CreateGEP(
-            translate(inst->get_type()), 
+            translate(static_cast<const siir::PointerType*>(inst->get_type())->get_pointee()), 
             translate(inst->get_operand(0)), 
             { translate(inst->get_operand(1)) });
         m_insts.emplace(inst, V);

@@ -168,24 +168,34 @@ class VariableDecl final : public Decl {
     friend class SemanticAnalysis;
     friend class Codegen;
 
-    const Type* pType;
-    Expr*       pInit;
+    const Type* m_type;
+    Expr* m_init;
+    bool m_global;
 
 public:
-    VariableDecl(
-        const Span& span,
-        const std::string& name,
-        const std::vector<Rune*>& decorators,
-        const Type* pType,
-        Expr* pInit);
+    VariableDecl(const Span& span, const std::string& name,
+                 const std::vector<Rune*>& decorators, const Type* ty,
+                 Expr* init = nullptr, bool global = false);
+
+    VariableDecl(const VariableDecl&) = delete;
+    VariableDecl& operator = (const VariableDecl&) = delete;
 
     ~VariableDecl() override;
 
-    const Type* get_type() const { return pType; }
+    /// Returns the type of this variable declaration.
+    const Type* get_type() const { return m_type; }
 
-    const Expr* get_init() const { return pInit; }
+    /// Returns the initializer expression of this variable declaration, if it
+    /// exists.
+    const Expr* get_init() const { return m_init; }
+    Expr* get_init() { return m_init; }
 
-    bool has_init() const { return pInit != nullptr; }
+    /// Returns true if this variable declaration has an initializing 
+    /// expression
+    bool has_init() const { return m_init != nullptr; }
+
+    /// Returns true if this variable declaration is at the global level.
+    bool is_global() const { return m_global; }
 
     void accept(Visitor& visitor) override {
         visitor.visit(*this);
@@ -299,7 +309,7 @@ class EnumValueDecl final : public Decl {
     friend class SemanticAnalysis;
     friend class Codegen;
 
-    const EnumType* m_type;
+    const Type* m_type;
     i64 m_value;
 
 public:
@@ -307,11 +317,11 @@ public:
         const Span& span,
         const std::string& name,
         const std::vector<Rune*>& runes,
-        const EnumType* type,
+        const Type* type,
         i64 value);
 
     /// \returns The type of this enum variant.
-    const EnumType* get_type() const { return m_type; }
+    const Type* get_type() const { return m_type; }
 
     /// \returns The value of this enum variant.
     i64 get_value() const { return m_value; }

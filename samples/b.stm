@@ -1,57 +1,8 @@
-use "a.stm";
-
-test_iadd :: () -> void {
-    let x: s64 = 4;
-    $assert(7 == x + 3);
-}
-
-test_fadd :: () -> void {
-    let x: f64 = 0.14;
-    $assert(3.14 == 3.0 + x);
-}
-
-test_isub :: () -> void {
-    let x: s64 = 7;
-    $assert(11 == 18 - x);
-}
-
-test_fsub :: () -> void {
-    let x: f32 = 0.55;
-    $assert(-1.5 == x - 2.05);
-}
-
-test_smul :: () -> void {
-    let x: s64 = 6;
-    $assert(-30 == -5 * x);
-}
-
-test_umul :: () -> void {
-    let x: u64 = -3;
-    $assert(15 == x * -5);
-}
-
-test_fmul :: () -> void {
-    let x: f32 = 1.5;
-    $assert(cast<f32>(30) == cast<f32>(20) * 1.5);
-}
-
-test_sdiv :: () -> void {
-    let x: s64 = -4;
-    $assert(-6 == 24 / x);
-}
-
-test_udiv :: () -> void {
-    let x: u64 = 16;
-    $assert(8 == x / 2);
-}
-
-test_fdiv :: () -> void {
-    let x: f64 = 2.5;
-    $assert(cast<f64>(20) == cast<f64>(50) / x);
-}
+use "natives.stm";
+use "mem.stm";
 
 $[public]
-FileFlags :: s64 {
+FileFlags :: enum s64 {
     FILE_FLAGS_READ_ONLY = 0,
     FILE_FLAGS_WRITE_ONLY = 1,
     FILE_FLAGS_READ_WRITE = 2,
@@ -61,14 +12,14 @@ FileFlags :: s64 {
 }
 
 $[public]
-FileSeek :: s64 {
+FileSeek :: enum s64 {
     FILE_SEEK_SET = 0,
     FILE_SEEK_CUR = 1,
     FILE_SEEK_END = 2,
 }
 
 $[public, intrinsic]
-File :: {
+File :: struct {
 private:
     _M_fd: s64,
     _M_buf: *char,
@@ -144,12 +95,19 @@ main :: (argc: s64, argv: **char) -> s64 {
     test_udiv();
     test_fdiv();
 
-    let file: mut File;
-    file_open(&file, "samples/test", FILE_FLAGS_CREATE | FILE_FLAGS_READ_WRITE | FILE_FLAGS_TRUNCATE);
-    $assert(file_is_open(&file));
-    $writeln(file, "hey!");
-    file_close(&file);
+    let a: *s64 = malloc(sizeof(s64));
+    $assert(a != null);
+    *a = 17;
+
+    $println("this should be 17 = {}", *a);
+    free(a);
+
+    //let file: mut File;
+    //file_open(&file, "samples/test", FILE_FLAGS_CREATE | FILE_FLAGS_READ_WRITE | FILE_FLAGS_TRUNCATE);
+    //$assert(file_is_open(&file));
+    //$writeln(file, "hey!");
+    //file_close(&file);
 
     $println("hello world!");
-    ret foo();
+    ret 0;
 }

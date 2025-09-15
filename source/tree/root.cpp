@@ -112,6 +112,10 @@ void stm::Root::validate() {
     for (auto& deferred : m_context.deferred) {
         const DeferredType::Context& ctx = deferred->get_context();
 
+        if (ctx.meta.line == 201 && ctx.base == "u64") {
+            int x = 1;
+        }
+
         // Try to resolve the base of the type.
         const Type* type = m_context.get(ctx.base);
         if (!type)
@@ -120,6 +124,9 @@ void stm::Root::validate() {
         // Add however much indirection is needed for the type.
         for (u32 idx = 0; idx != ctx.indirection; ++idx)
             type = PointerType::get(*this, type);
+
+        if (type->is_mut())
+            type = type->as_mut();
 
         deferred->set_resolved(type);
     }
