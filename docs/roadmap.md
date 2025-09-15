@@ -1,13 +1,21 @@
 ✓ Multi-file support
-✓ GCC Inline Assembly
+✓ GCC-Style Inline Assembly
 ✓ Unnamed enums
 ✓ Global variables
+
 × Operator overloading
+  - Syntax highlighting to accomodate `operator ... ::`
+  - `FunctionDecl` update to accomodate semantic analysis
+
 × Method calls
-× Strings
 × Templates
 × Multiple return values
+
 × Namespaces
+  - The `NamespaceDecl` declaration node
+  - The `ScopeExpr` operator `::`
+  - Name mangling
+
 × The `defer` statement
 × C `for` statement
 × Bounds, null pointer checks
@@ -18,6 +26,8 @@
 × Enum flags
 × Virtual machine
 × Hexadecimal, octal, bitwise integers
+× Debugging symbols
+  - SIIR metadata
 
 Runes
 × abi()
@@ -26,6 +36,7 @@ Runes
 ✓ assert()
 × comptime
 ✓ deprecated
+× destroy
 × if
 × inline
 ✓ intrinsic
