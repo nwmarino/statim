@@ -1,5 +1,5 @@
-#ifndef STATIM_MACHINE_AMD64_HPP_
-#define STATIM_MACHINE_AMD64_HPP_
+#ifndef STATIM_SIIR_X64_H_
+#define STATIM_SIIR_X64_H_
 
 #include "siir/instruction.hpp"
 #include "types/types.hpp"
@@ -9,20 +9,24 @@
 #include <string>
 #include <unordered_map>
 
-namespace stm {
+namespace stm::siir {
 
 class MachineOperand;
 class MachineInst;
 class MachineBasicBlock;
 class MachineFunction;
 
-namespace amd64 {
+namespace x64 {
 
-/// Recognized amd64 opcodes.
+/// Recognized x64 opcodes.
 enum Opcode : u32 {
-    NOP = 0x0,
-    
-    LEA, CALL, RET, JMP, CQO,
+    NO_OP = 0x0,
+
+    NOP,
+    LEA, 
+    CALL, RET, 
+    JMP, 
+    CQO,
 
     PUSH64, POP64,
     MOV8, MOV16, MOV32, MOV64,
@@ -65,9 +69,10 @@ enum Opcode : u32 {
     CVTTSD2SI8, CVTTSD2SI16, CVTTSD2SI32, CVTTSD2SI64,
 };
 
-/// Recognized amd64 physical registers.
+/// Recognized x64 physical registers.
 enum Register : u32 {
-    NONE = 0x0,
+    NO_REG = 0x0,
+
     RAX, RBX, RCX, RDX,
     RDI, RSI,
     R8, R9, R10, R11, 
@@ -80,8 +85,8 @@ enum Register : u32 {
     XMM12, XMM13, XMM14, XMM15,
 };
 
-/// Instruction selection pass for amd64.
-class InstSelection final {
+/// x64 Instruction selection pass over a SIIR function.
+class X64InstSelection final {
     MachineFunction* m_function;
     MachineBasicBlock* m_insert = nullptr;
 
@@ -89,30 +94,22 @@ class InstSelection final {
     /// register ids.
     std::unordered_map<u32, MachineRegister> m_vregs = {};
 
-    /// \returns The operand flipped jcc instruction of \p jcc.
-    amd64::Opcode flip_jcc(amd64::Opcode jcc);
-
-    /// \returns The negated jcc instruction of \p jcc.
-    amd64::Opcode neg_jcc(amd64::Opcode jcc);
-
-    /// \returns The operand flipped setcc instruction of \p setcc.
-    amd64::Opcode flip_setcc(amd64::Opcode setcc);
-
-    /// \returns The negated setcc instruction of \p setcc.
-    amd64::Opcode neg_setcc(amd64::Opcode setcc);
-
-    void select(siir::Instruction* inst);
+    void select(Instruction* inst);
 
 public:
-    InstSelection(MachineFunction* function);
+    X64InstSelection(MachineFunction* function) : m_function(function) {}
 
-    InstSelection(const InstSelection&) = delete;
-    InstSelection& operator = (const InstSelection&) = delete;
+    X64InstSelection(const X64InstSelection&) = delete;
+    X64InstSelection& operator = (const X64InstSelection&) = delete;
 
     void run();
 };
 
-/// Machine code pass to dump amd64, exposing important details.
+/// Machine code pass to pretty-print x64 machine objects.
+///
+/// This pass is not the same as AsmWriter, which emits actually assembly
+/// language fit for assembler calls. This pass should instead be used to
+/// dump machine IR, exposing certain details.
 class Printer final {
     const MachineObject& m_obj;
 
@@ -125,7 +122,7 @@ public:
     void run(std::ostream& os) const;
 };
 
-/// Machine code pass to write final assembly output for amd64.
+/// Machine code pass to emit raw assembly for x64 machine objects.
 class AsmWriter final {
     const MachineObject& m_obj;
 
@@ -138,29 +135,33 @@ public:
     void run(std::ostream& os) const;
 };
 
-/// \returns `true` if the opcode is considered a call instruction.
-bool is_call_opcode(amd64::Opcode opcode);
+/// Returns true if the opcode |op| is considered a call instruction.
+bool is_call_opcode(Opcode op);
 
-/// \returns `true` if the opcode is considered a return instruction.
-bool is_ret_opcode(amd64::Opcode opcode);
+/// Returns true if the opcode |op| is considered a return instruction.
+bool is_ret_opcode(Opcode op);
 
-/// \returns The register class of physical register \p reg.
-RegisterClass get_class(amd64::Register reg);
+/// Returns the register class of the physical register |reg|.
+RegisterClass get_class(Register reg);
 
-/// \returns `true` if the physical register \p reg is considered callee-saved.
-bool is_callee_saved(amd64::Register reg);
+/// Returns true if the physical register |reg| is considered callee-saved.
+bool is_callee_saved(Register reg);
 
-/// \returns `true` if the physical register \p reg is considered caller-saved.
-bool is_caller_saved(amd64::Register reg);
+/// Returns true if the physical register |reg| is considered caller-saved.
+bool is_caller_saved(Register reg);
 
-/// \returns A string representation of \p opcode.
-std::string to_string(amd64::Opcode opcode);
+/// Returns the string representation of the opcode |op|. This is used for
+/// dumping purposes, and does not represent the recognized x64 assembly
+/// equivelant
+std::string to_string(Opcode op);
 
-/// \returns A string representation of \p reg.
-std::string to_string(amd64::Register reg, u16 subreg = 0);
+/// Returns the string representation of the physical register |reg|, with
+/// optional x64 subregister |subreg|. This is used for dumping purposes,
+/// and does not represent the recognized x64 assembly equivelant.
+std::string to_string(Register reg, u16 subreg = 0);
 
-} // namespace amd64
+} // namespace x64
 
-} // namespace stm
+} // namespace stm::siir
 
-#endif // STATIM_MACHINE_AMD64_HPP_
+#endif // STATIM_SIIR_X64_H_

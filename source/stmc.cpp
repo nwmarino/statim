@@ -311,7 +311,7 @@ stm::i32 main(stm::i32 argc, char** argv) {
     dump.flush();
 
     stm::siir::Target target { 
-        stm::siir::Target::amd64, 
+        stm::siir::Target::x64, 
         stm::siir::Target::SystemV, 
         stm::siir::Target::Linux 
     };
@@ -355,7 +355,7 @@ stm::i32 main(stm::i32 argc, char** argv) {
         std::string os_str;
 
         switch (target.arch()) {
-        case stm::siir::Target::amd64:
+        case stm::siir::Target::x64:
             arch_str = "amd64";
             vendor_str = "AMD";
             break;

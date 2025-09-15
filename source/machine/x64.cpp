@@ -1,19 +1,21 @@
-#include "target/amd64.hpp"
+#include "machine/x64.hpp"
 #include "machine/register.hpp"
 
 #include <cassert>
 
 using namespace stm;
+using namespace stm::siir;
+using namespace stm::siir::x64;
 
-bool amd64::is_call_opcode(amd64::Opcode opcode) {
-    return opcode == amd64::CALL;
+bool x64::is_call_opcode(Opcode op) {
+    return op == x64::CALL;
 }
 
-bool amd64::is_ret_opcode(amd64::Opcode opcode) {
-    return opcode == RET;
+bool x64::is_ret_opcode(Opcode op) {
+    return op == x64::RET;
 }
 
-RegisterClass amd64::get_class(amd64::Register reg) {
+RegisterClass x64::get_class(Register reg) {
     switch (reg) {
     case RAX:
     case RBX:
@@ -51,11 +53,11 @@ RegisterClass amd64::get_class(amd64::Register reg) {
     case XMM15:
         return FloatingPoint;
     default:
-        assert(false);
+        assert(false && "unrecognied x64 physical register!");
     }
 }
 
-bool amd64::is_callee_saved(amd64::Register reg) {
+bool x64::is_callee_saved(Register reg) {
     switch (reg) {
     case RBX:
     case R12:
@@ -70,7 +72,7 @@ bool amd64::is_callee_saved(amd64::Register reg) {
     }
 }
 
-bool amd64::is_caller_saved(amd64::Register reg) {
+bool x64::is_caller_saved(Register reg) {
     switch (reg) {
     case RAX:
     case RCX:
@@ -107,8 +109,8 @@ bool amd64::is_caller_saved(amd64::Register reg) {
     }
 }
 
-std::string amd64::to_string(amd64::Opcode opcode) {
-    switch (opcode) {
+std::string x64::to_string(Opcode op) {
+    switch (op) {
     case NOP:
         return "NOP";
     case LEA:
@@ -357,12 +359,12 @@ std::string amd64::to_string(amd64::Opcode opcode) {
         return "CVTTSD2SI32";
     case CVTTSD2SI64:
         return "CVTTSD2SI64";
+    default:
+        assert(false && "unrecognized x64 opcode!");
     }
-
-    assert(false);
 }
 
-std::string amd64::to_string(amd64::Register reg, u16 subreg) {
+std::string x64::to_string(Register reg, u16 subreg) {
     switch (reg) {
     case RAX:  
         return subreg == 0 ? "rax" : (subreg == 1 ? "eax" : 
@@ -447,6 +449,6 @@ std::string amd64::to_string(amd64::Register reg, u16 subreg) {
     case XMM15:
         return "xmm15";
     default:   
-        return "";
+        assert(false && "unrecognized x64 physical register!");
     }
 }

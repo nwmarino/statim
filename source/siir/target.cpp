@@ -10,7 +10,7 @@ static u32 align_to(u32 offset, u32 align) {
 
 Target::Target(Arch arch, ABI abi, OS os) : m_arch(arch), m_abi(abi), m_os(os) {
     switch (arch) {
-    case amd64:
+    case x64:
         m_little_endian = true;
         m_ptr_size = 8;
         m_ptr_align = 8;
