@@ -1,10 +1,11 @@
-#include "machine/operand.hpp"
+#include "machine/machine_operand.hpp"
 #include "machine/register.hpp"
-#include "target/amd64.hpp"
+#include "machine/x64/x64.hpp"
 
 #include <cassert>
 
 using namespace stm;
+using namespace stm::siir;
 
 MachineOperand MachineOperand::create_reg(
         MachineRegister reg, 

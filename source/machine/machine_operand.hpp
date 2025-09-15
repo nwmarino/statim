@@ -1,12 +1,12 @@
-#ifndef STATIM_MACHINE_OPERAND_HPP_
-#define STATIM_MACHINE_OPERAND_HPP_
+#ifndef STATIM_SIIR_MACHINE_OPERAND_H_
+#define STATIM_SIIR_MACHINE_OPERAND_H_
 
-#include "machine/register.hpp"
+#include "machine/machine_register.hpp"
 #include "types/types.hpp"
 
 #include <cassert>
 
-namespace stm {
+namespace stm::siir {
 
 class MachineBasicBlock;
 
@@ -43,22 +43,22 @@ private:
     u16 m_is_implicit : 1;
 
     union {
-        /// For MOK_Register operands.
+        /// For MO_Register operands.
         MachineRegister m_reg;
 
-        /// For MOK_Memory operands.
+        /// For MO_Memory operands.
         struct {
             MachineRegister reg;
             i32 disp;
         } m_mem;
 
-        /// For MOK_Immediate operands.
+        /// For MO_Immediate operands.
         i64 m_imm;
 
-        /// For MOK_BasicBlock operands.
+        /// For MO_BasicBlock operands.
         MachineBasicBlock* m_mbb;
 
-        /// For MOK_Symbol operands.
+        /// For MO_Symbol operands.
         const char* m_symbol;
     };
 
@@ -212,6 +212,6 @@ public:
     }
 };
 
-} // namespace stm
+} // namespace stm::siir
 
-#endif // STATIM_MACHINE_OPERAND_HPP_
+#endif // STATIM_SIIR_MACHINE_OPERAND_H_

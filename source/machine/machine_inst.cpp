@@ -1,14 +1,14 @@
 #include "machine/basicblock.hpp"
-#include "machine/inst.hpp"
-#include "machine/operand.hpp"
+#include "machine/machine_inst.hpp"
+#include "machine/machine_operand.hpp"
 
 using namespace stm;
+using namespace stm::siir;
 
-MachineInst::MachineInst(
-        u32 opcode, 
-        const std::vector<MachineOperand>& operands, 
-        MachineBasicBlock* parent)
-    : m_opcode(opcode), m_operands(operands), m_parent(parent) {
+MachineInst::MachineInst(u32 opcode, const std::vector<MachineOperand>& operands, 
+                         MachineBasicBlock* parent)
+        : m_opcode(opcode), m_operands(operands), m_parent(parent) {
+
     if (m_parent)
         m_parent->push_back(*this);
 }

@@ -3,13 +3,14 @@
 #include "machine/inst.hpp"
 #include "machine/operand.hpp"
 #include "machine/register.hpp"
-#include "machine/amd64.hpp"
+#include "machine/x64/x64.hpp"
 
 #include <iomanip>
 #include <string>
 
 using namespace stm;
-using namespace stm::amd64;
+using namespace stm::siir;
+using namespace stm::siir::x64;
 
 static const FunctionRegisterInfo* g_register_info = nullptr;
 

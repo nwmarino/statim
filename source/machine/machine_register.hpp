@@ -1,9 +1,9 @@
-#ifndef STATIM_MACHINE_REGISTER_HPP_
-#define STATIM_MACHINE_REGISTER_HPP_
+#ifndef STATIM_SIIR_MACHINE_REGISTER_H_
+#define STATIM_SIIR_MACHINE_REGISTER_H_
 
 #include "types/types.hpp"
 
-namespace stm {
+namespace stm::siir {
 
 /// Potential physical register classes.
 ///
@@ -31,47 +31,47 @@ private:
     u32 m_reg;
 
 public:
-    constexpr MachineRegister() = default;
-    constexpr MachineRegister(u32 reg) : m_reg(reg) {}
+    MachineRegister() = default;
+    MachineRegister(u32 reg) : m_reg(reg) {}
 
-    /// \returns `true` if this register is valid.
-    constexpr bool is_valid() const { return m_reg != NoRegister; }
+    /// Returns true if this register is valid.
+    bool is_valid() const { return m_reg != NoRegister; }
 
-    /// \returns `true` if this register is physical.
-    constexpr bool is_physical() const { 
+    /// Returns true if this register is physical.
+    bool is_physical() const { 
         return PhysicalBarrier <= m_reg && m_reg < VirtualBarrier; 
     }
 
-    /// \returns `true` if this register is virtual.
-    constexpr bool is_virtual() const { return m_reg >= VirtualBarrier; }
+    /// Returns true if this register is virtual.
+    bool is_virtual() const { return m_reg >= VirtualBarrier; }
 
-    constexpr u32 id() const { return m_reg; }
+    u32 id() const { return m_reg; }
 
-    constexpr bool operator == (const MachineRegister& other) const {
+    bool operator == (const MachineRegister& other) const {
         return m_reg == other.m_reg;
     }
 
-    constexpr bool operator != (const MachineRegister& other) const {
+    bool operator != (const MachineRegister& other) const {
         return m_reg != other.m_reg;
     }
 
-    constexpr bool operator == (u32 other) const {
+    bool operator == (u32 other) const {
         return m_reg == other;
     }
 
-    constexpr bool operator != (u32 other) const {
+    bool operator != (u32 other) const {
         return m_reg != other;
     }
 
-    static constexpr bool is_valid(u32 reg) { return reg != NoRegister; }
+    static bool is_valid(u32 reg) { return reg != NoRegister; }
 
-    static constexpr bool is_physical(u32 reg) {
+    static bool is_physical(u32 reg) {
         return PhysicalBarrier <= reg && reg < VirtualBarrier;
     }
 
-    static constexpr bool is_virtual(u32 reg) { return reg >= VirtualBarrier; }
+    static bool is_virtual(u32 reg) { return reg >= VirtualBarrier; }
 };
 
-} // namespace stm
+} // namespace stm::siir
 
-#endif // STATIM_MACHINE_REGISTER_HPP_
+#endif // STATIM_SIIR_MACHINE_REGISTER_H_

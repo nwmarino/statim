@@ -3,8 +3,8 @@
 
 #include "siir/instruction.hpp"
 #include "types/types.hpp"
-#include "machine/register.hpp"
-#include "machine/object.hpp"
+#include "machine/machine_register.hpp"
+#include "machine/machine_object.hpp"
 
 #include <string>
 #include <unordered_map>

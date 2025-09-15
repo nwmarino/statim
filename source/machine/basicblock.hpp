@@ -1,11 +1,11 @@
-#ifndef STATIM_MACHINE_BASICBLOCK_HPP_
-#define STATIM_MACHINE_BASICBLOCK_HPP_
+#ifndef STATIM_SIIR_MACHINE_BASICBLOCK_H_
+#define STATIM_SIIR_MACHINE_BASICBLOCK_H_
 
-#include "machine/inst.hpp"
+#include "machine/machine_inst.hpp"
 
 #include <vector>
 
-namespace stm {
+namespace stm::siir {
 
 class BasicBlock;
 
@@ -72,6 +72,6 @@ public:
     }
 };
 
-} // namespace stm
+} // namespace stm::siir
 
-#endif // STATIM_MACHINE_BASICBLOCK_HPP_
+#endif // STATIM_SIIR_MACHINE_BASICBLOCK_H_
