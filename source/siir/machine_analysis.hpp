@@ -1,32 +1,32 @@
-#ifndef STATIM_MACHINE_ANALYSIS_H_
-#define STATIM_MACHINE_ANALYSIS_H_
+#ifndef STATIM_SIIR_MACHINE_ANALYSIS_H_
+#define STATIM_SIIR_MACHINE_ANALYSIS_H_
 
-#include "machine/object.hpp"
 #include "siir/cfg.hpp"
+#include "siir/machine_object.hpp"
 #include "siir/target.hpp"
 
-namespace stm {
+namespace stm::siir {
 
-/// Analysis pass to lower bytecode to a target-dependent representation.
+/// Analysis pass to lower an SIIR graph to a target-dependent representation.
 class CFGMachineAnalysis final {
-    siir::CFG& m_cfg;
-    siir::Target* m_target;
+    CFG& m_cfg;
+    Target* m_target;
 
 public:
-    CFGMachineAnalysis(siir::CFG& cfg, siir::Target* target);
+    CFGMachineAnalysis(CFG& cfg, Target* target);
 
     CFGMachineAnalysis(const CFGMachineAnalysis&) = delete;
     CFGMachineAnalysis& operator = (const CFGMachineAnalysis&) = delete;
 
-    void run();
+    void run(MachineObject& obj);
 };
 
-/// Analysis pass to do liveness analysis, register allocation, etc.
+/// Machine analysis pass to do liveness analysis, register allocation, etc.
 class FunctionRegisterAnalysis final {
     MachineObject& m_obj;
 
 public:
-    FunctionRegisterAnalysis(MachineObject& frame);
+    FunctionRegisterAnalysis(MachineObject& obj);
     
     FunctionRegisterAnalysis(const FunctionRegisterAnalysis&) = delete;
     FunctionRegisterAnalysis& operator = (const FunctionRegisterAnalysis&) = delete;
@@ -34,12 +34,12 @@ public:
     void run();
 };
 
-/// Frame pass to dump machine code with optimizer details.
+/// Machine pass to dump assembly with optimizer details.
 class MachineObjectPrinter final {
     MachineObject& m_obj;
 
 public:
-    MachineObjectPrinter(MachineObject& frame);
+    MachineObjectPrinter(MachineObject& obj);
     
     MachineObjectPrinter(const MachineObjectPrinter&) = delete;
     MachineObjectPrinter& operator = (const MachineObjectPrinter&) = delete;
@@ -47,19 +47,19 @@ public:
     void run(std::ostream& os);
 };
 
-/// Frame pass to emit final machine code.
+/// Machine pass to emit final assembly code.
 class MachineObjectAsmWriter final {
     MachineObject& m_obj;
 
 public:
-    MachineObjectAsmWriter(MachineObject& frame);
+    MachineObjectAsmWriter(MachineObject& obj);
     
     MachineObjectAsmWriter(const MachineObjectAsmWriter&) = delete;
     MachineObjectAsmWriter& operator = (const MachineObjectAsmWriter&) = delete;
 
     void run(std::ostream& os);
-};;
+};
 
-} // namespace stm
+} // namespace stm::siir
 
-#endif // STATIM_MACHINE_ANALYSIS_H_
+#endif // STATIM_SIIR_MACHINE_ANALYSIS_H_

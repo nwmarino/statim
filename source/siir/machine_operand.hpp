@@ -1,7 +1,7 @@
 #ifndef STATIM_SIIR_MACHINE_OPERAND_H_
 #define STATIM_SIIR_MACHINE_OPERAND_H_
 
-#include "machine/machine_register.hpp"
+#include "siir/machine_register.hpp"
 #include "types/types.hpp"
 
 #include <cassert>

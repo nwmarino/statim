@@ -1,7 +1,7 @@
 #ifndef STATIM_SIIR_MACHINE_INST_H_
 #define STATIM_SIIR_MACHINE_INST_H_
 
-#include "machine/machine_operand.hpp"
+#include "siir/machine_operand.hpp"
 #include "types/types.hpp"
 
 #include <cassert>
@@ -22,8 +22,8 @@ class MachineInst final {
     
     /// The operands of this instruction.
     ///
-    /// TODO: Pack this into a MachineOperand* array, and better manage
-    /// allocations.
+    /// TODO: Pack this into a MachineOperand* array, and optimize allocations
+    /// to reduce on instruction size.
     std::vector<MachineOperand> m_operands;
 
 public:
@@ -37,6 +37,13 @@ public:
     /// is a parent.
     const MachineBasicBlock* get_parent() const { return m_parent; }
     MachineBasicBlock* get_parent() { return m_parent; }
+
+    /// Clear the parent link of this machine instruction. Does not detach this
+    /// instruction from any existing parent block.
+    void clear_parent() { m_parent = nullptr; }
+
+    /// Set the parent basic block of this instruction to |mbb|.
+    void set_parent(MachineBasicBlock* mbb) { m_parent = mbb; }
 
     /// Returns the parent function of this machine instruction, if there is
     /// a parent.
@@ -81,20 +88,32 @@ public:
     bool has_implicit_def() const;
 
     /// Returns a list of all explicit def operands.
-    std::vector<MachineOperand> defs() const;
+    auto defs() {
+        return m_operands | std::views::filter([](MachineOperand& mo) { 
+            return mo.is_reg() && mo.is_def() && !mo.is_implicit(); 
+        });
+    }
 
     /// Returns a list of all explicit use operands.
     auto uses() {
-        //return m_operands | std::views::filter([](MachineOperand& mo) { 
-        //    return mo.is_reg() && mo.is_use(); 
-        //});
+        return m_operands | std::views::filter([](MachineOperand& mo) { 
+            return mo.is_reg() && mo.is_use() && !mo.is_implicit(); 
+        });
     }
 
     /// Returns a list of all explicit & implicit def operands.
-    std::vector<MachineOperand> all_defs() const;
+    auto all_defs() {
+        return m_operands | std::views::filter([](MachineOperand& mo) {
+            return mo.is_reg() && mo.is_def();
+        });
+    }
 
     /// Returns a list of all explicit & implicit use operands.
-    std::vector<MachineOperand> all_uses() const;
+    auto all_uses() {
+        return m_operands | std::views::filter([](MachineOperand& mo) {
+            return mo.is_reg() && mo.is_use();
+        });
+    }
 
     /// Add a new operand |op| to this instruction.
     void add_operand(const MachineOperand& op) {

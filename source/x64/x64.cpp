@@ -1,5 +1,5 @@
-#include "machine/x64.hpp"
-#include "machine/register.hpp"
+#include "x64/x64.hpp"
+#include "siir/machine_register.hpp"
 
 #include <cassert>
 

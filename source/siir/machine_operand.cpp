@@ -1,6 +1,6 @@
-#include "machine/machine_operand.hpp"
-#include "machine/register.hpp"
-#include "machine/x64/x64.hpp"
+#include "siir/machine_operand.hpp"
+#include "siir/machine_register.hpp"
+#include "x64/x64.hpp"
 
 #include <cassert>
 

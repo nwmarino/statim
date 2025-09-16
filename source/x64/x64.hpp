@@ -2,9 +2,9 @@
 #define STATIM_SIIR_X64_H_
 
 #include "siir/instruction.hpp"
+#include "siir/machine_register.hpp"
+#include "siir/machine_object.hpp"
 #include "types/types.hpp"
-#include "machine/machine_register.hpp"
-#include "machine/machine_object.hpp"
 
 #include <string>
 #include <unordered_map>
@@ -94,7 +94,7 @@ class X64InstSelection final {
     /// register ids.
     std::unordered_map<u32, MachineRegister> m_vregs = {};
 
-    void select(Instruction* inst);
+    void select(const Instruction* inst);
 
 public:
     X64InstSelection(MachineFunction* function) : m_function(function) {}
@@ -110,27 +110,27 @@ public:
 /// This pass is not the same as AsmWriter, which emits actually assembly
 /// language fit for assembler calls. This pass should instead be used to
 /// dump machine IR, exposing certain details.
-class Printer final {
+class X64Printer final {
     const MachineObject& m_obj;
 
 public:
-    Printer(MachineObject& obj) : m_obj(obj) {}
+    X64Printer(MachineObject& obj) : m_obj(obj) {}
 
-    Printer(const Printer&) = delete;
-    Printer& operator = (const Printer&) = delete;
+    X64Printer(const X64Printer&) = delete;
+    X64Printer& operator = (const X64Printer&) = delete;
 
     void run(std::ostream& os) const;
 };
 
 /// Machine code pass to emit raw assembly for x64 machine objects.
-class AsmWriter final {
+class X64AsmWriter final {
     const MachineObject& m_obj;
 
 public:
-    AsmWriter(MachineObject& obj) : m_obj(obj) {}
+    X64AsmWriter(MachineObject& obj) : m_obj(obj) {}
 
-    AsmWriter(const AsmWriter&) = delete;
-    AsmWriter& operator = (const AsmWriter&) = delete;
+    X64AsmWriter(const X64AsmWriter&) = delete;
+    X64AsmWriter& operator = (const X64AsmWriter&) = delete;
 
     void run(std::ostream& os) const;
 };

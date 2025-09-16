@@ -1,12 +1,12 @@
-#include "machine/basicblock.hpp"
-#include "machine/function.hpp"
+#include "siir/machine_basicblock.hpp"
+#include "siir/machine_function.hpp"
 
 using namespace stm;
+using namespace stm::siir;
 
-MachineBasicBlock::MachineBasicBlock(
-        const BasicBlock* bb, 
-        MachineFunction* parent)
-    : m_bb(bb), m_parent(parent) {
+MachineBasicBlock::MachineBasicBlock(const BasicBlock* bb, 
+                                     MachineFunction* parent)
+        : m_bb(bb), m_parent(parent) {
     if (m_parent)
         m_parent->append(this);
 }

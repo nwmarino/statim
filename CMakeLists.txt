@@ -44,6 +44,11 @@ set(COMPILER_SOURCES
     source/siir/instruction.cpp
     source/siir/llvm_translate_pass.cpp
     source/siir/local.cpp
+    source/siir/machine_analysis.cpp
+    source/siir/machine_basicblock.cpp
+    source/siir/machine_function.cpp
+    source/siir/machine_inst.cpp
+    source/siir/machine_operand.cpp
     source/siir/print.cpp
     source/siir/ssa_rewrite_pass.cpp
     source/siir/target.cpp
@@ -65,6 +70,10 @@ set(COMPILER_SOURCES
     source/tree/type.cpp
     source/types/input_file.cpp
     source/types/token.cpp
+    source/x64/asm_writer.cpp
+    source/x64/inst_selection.cpp
+    source/x64/printer.cpp
+    source/x64/x64.cpp
 )
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
