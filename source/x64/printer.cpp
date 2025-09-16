@@ -1,15 +1,15 @@
-#include "machine/basicblock.hpp"
-#include "machine/function.hpp"
-#include "machine/inst.hpp"
-#include "machine/operand.hpp"
-#include "machine/register.hpp"
-#include "machine/amd64.hpp"
+#include "siir/machine_basicblock.hpp"
+#include "siir/machine_function.hpp"
+#include "siir/machine_inst.hpp"
+#include "siir/machine_operand.hpp"
+#include "siir/machine_register.hpp"
+#include "x64/x64.hpp"
 
 #include <iomanip>
-#include <string>
 
 using namespace stm;
-using namespace stm::amd64;
+using namespace stm::siir;
+using namespace stm::siir::x64;
 
 static const FunctionRegisterInfo* g_register_info = nullptr;
 
@@ -17,10 +17,13 @@ static void print_operand(std::ostream& os, const MachineOperand& MO) {
     switch (MO.get_kind()) {
     case MachineOperand::MO_Register: {
         MachineRegister reg = MO.get_reg();
-        if (reg.is_virtual())
-            os << 'v' << (reg.id() - MachineRegister::VirtualBarrier) << ':' << MO.get_subreg();
-        else
-            os << "%" << to_string(static_cast<amd64::Register>(reg.id()), MO.get_subreg());
+        if (reg.is_virtual()) {
+            os << 'v' << (reg.id() - MachineRegister::VirtualBarrier) << 
+                ':' << MO.get_subreg();
+        } else {
+            os << "%" << x64::to_string(
+                static_cast<x64::Register>(reg.id()), MO.get_subreg());
+        }
 
         break;
     }
@@ -29,11 +32,13 @@ static void print_operand(std::ostream& os, const MachineOperand& MO) {
         os << "[";
 
         MachineRegister reg = MO.get_mem_base();
-        if (reg.is_virtual())
+        if (reg.is_virtual()) {
             os << 'v' << (reg.id() - MachineRegister::VirtualBarrier);
-        else
-            os << "%" << to_string(static_cast<amd64::Register>(reg.id()), 64);
-        
+        } else {
+            os << "%" << x64::to_string(
+                static_cast<x64::Register>(reg.id()), 64);
+        }
+
         if (MO.get_mem_disp() > 0)
             os << '+';
 
@@ -56,7 +61,8 @@ static void print_operand(std::ostream& os, const MachineOperand& MO) {
 }
 
 static void print_inst(std::ostream& os, const MachineInst& MI) {
-    os << std::setw(10) << to_string((amd64::Opcode) MI.opcode()) << "    ";
+    os << std::setw(10) << x64::to_string(
+        static_cast<x64::Opcode>(MI.opcode())) << "    ";
 
     for (u32 idx = 0, e = MI.num_operands(); idx != e; ++idx) {
         print_operand(os, MI.get_operand(idx));
@@ -92,12 +98,8 @@ static void print_function(std::ostream& os, const MachineFunction& MF) {
         print_block(os, *curr);
 }
 
-void amd64::Printer::run(std::ostream& os) const {
+void x64::X64Printer::run(std::ostream& os) const {
     g_register_info = nullptr;
-
-    //os << "MACHINE CODE amd64\n"
-    //   << "   " << std::to_string(m_obj.functions().size()) << " functions\n"
-    //   << "\n";
 
     //for (auto function : m_obj.functions()) {
     //    print_function(os, *function);

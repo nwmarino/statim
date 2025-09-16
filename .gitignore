@@ -67,3 +67,4 @@ vgcore.*
 *.stm.s
 std/*.s
 std/*.ll
+lib/

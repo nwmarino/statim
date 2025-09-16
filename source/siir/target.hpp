@@ -14,7 +14,7 @@ class Target final {
 public:
     /// Recognized CPU architectures.
     enum Arch : u8 {
-        amd64,
+        x64,
     };
 
     /// Recognized application binary interfaces.

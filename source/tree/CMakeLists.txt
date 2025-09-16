@@ -1,0 +1,22 @@
+add_library(tree
+    STATIC
+        codegen.cpp
+        decl.cpp
+        expr.cpp
+        parser.cpp
+        print.cpp
+        root.cpp
+        rune.cpp
+        scope.cpp
+        sema.cpp
+        stmt.cpp
+        syma.cpp
+        type.cpp
+)
+
+target_link_libraries(tree
+    PRIVATE
+        core
+        siir
+        types
+)

@@ -1,11 +1,11 @@
-#ifndef STATIM_MACHINE_BASICBLOCK_HPP_
-#define STATIM_MACHINE_BASICBLOCK_HPP_
+#ifndef STATIM_SIIR_MACHINE_BASICBLOCK_H_
+#define STATIM_SIIR_MACHINE_BASICBLOCK_H_
 
-#include "machine/inst.hpp"
+#include "siir/machine_inst.hpp"
 
 #include <vector>
 
-namespace stm {
+namespace stm::siir {
 
 class BasicBlock;
 
@@ -27,23 +27,31 @@ class MachineBasicBlock final {
     MachineBasicBlock* m_next = nullptr;
 
 public:
-    MachineBasicBlock(
-        const BasicBlock* bb, 
-        MachineFunction* parent = nullptr);
+    MachineBasicBlock(const BasicBlock* bb, MachineFunction* parent = nullptr);
 
-    /// \returns The corresponding bytecode basic block this machine block
-    /// derives from, if it exists.
+    /// Returns the corresponding SIIR basic block this block derives from, 
+    /// if it exists.
     const BasicBlock* get_basic_block() const { return m_bb; }
 
+    /// Returns the parent function to this basic block.
     const MachineFunction* get_parent() const { return m_parent; }
     MachineFunction* get_parent() { return m_parent; }
 
-    /// \returns The position of this block in its parent function.
+    /// Clears the parent link of this basic block. Does not detach it from
+    /// any existing parent function.
+    void clear_parent() { m_parent = nullptr; }
+
+    /// Set the parent function of this basic block to |mf|.
+    void set_parent(MachineFunction* mf) { m_parent = mf; }
+
+    /// Returns the position of this block relative to other blocks in its
+    /// parent function.
     u32 position() const;
 
+    /// Returns true if this basic block has no instructions.
     bool empty() const { return m_insts.empty(); }
 
-    /// \returns The number of instructions in this block.
+    /// Returns the number of instructions in this block.
     u32 size() const { return m_insts.size(); }
 
     const MachineInst& front() const { return m_insts.front(); }
@@ -63,15 +71,19 @@ public:
     void set_prev(MachineBasicBlock* prev) { m_prev = prev; }
     void set_next(MachineBasicBlock* next) { m_next = next; }
 
-    void push_front(const MachineInst& inst) {
+    /// Append |inst| to the back of this basic block.
+    void push_front(MachineInst& inst) {
         m_insts.insert(m_insts.begin(), inst);
+        inst.set_parent(this);
     }
 
-    void push_back(const MachineInst& inst) {
+    /// Prepend |inst| to the front of this basic block.
+    void push_back(MachineInst& inst) {
         m_insts.push_back(inst);
+        inst.set_parent(this);
     }
 };
 
-} // namespace stm
+} // namespace stm::siir
 
-#endif // STATIM_MACHINE_BASICBLOCK_HPP_
+#endif // STATIM_SIIR_MACHINE_BASICBLOCK_H_

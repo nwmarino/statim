@@ -1,24 +1,32 @@
-#ifndef STATIM_MACHINE_FUNCTION_HPP_
-#define STATIM_MACHINE_FUNCTION_HPP_
+#ifndef STATIM_SIIR_MACHINE_FUNCTION_H_
+#define STATIM_SIIR_MACHINE_FUNCTION_H_
 
-#include "machine/basicblock.hpp"
-#include "machine/register.hpp"
 #include "siir/target.hpp"
+#include "siir/machine_basicblock.hpp"
+#include "siir/machine_register.hpp"
 #include "types/types.hpp"
 
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-namespace stm {
+namespace stm::siir {
 
 class Function;
 class MachineInst;
 
-/// An entry in a functions stack frame.
+/// An entry in the stack frame of a function.
+///
+/// This databag effectively reverses space on the stack of a function for a 
+/// local in the SIIR equivelant function.
 struct FunctionStackEntry final {
+    /// The offset of this entry in the stack.
     i32 offset;
+
+    /// The number of bytes this entry reserves.
     u32 size;
+
+    /// The desired alignment of this entry.
     u32 align;
 };
 
@@ -26,6 +34,10 @@ struct FunctionStackEntry final {
 struct FunctionStackInfo final {
     std::vector<FunctionStackEntry> entries;
 
+    /// Returns the number of entries in this stack.
+    u32 num_entries() const { return entries.size(); }
+
+    /// Returns the size of the stack in bytes, without any alignment.
     u32 size() const {
         if (entries.empty())
             return 0;
@@ -72,15 +84,19 @@ class MachineFunction final {
 
 public:
     MachineFunction(const Function* fn, const siir::Target& target);
+
+    MachineFunction(const MachineFunction&) = delete;
+    MachineFunction& operator = (const MachineFunction&) = delete;
+
     ~MachineFunction();
 
-    /// \returns The bytecode function that this function derives from.
+    /// Returns the SIIR function that this function derives from.
     const Function* get_function() const { return m_fn; }
     
-    /// \returns The target this function was compiled for.
+    /// Returns the target that this function was compiled for.
     const siir::Target& get_target() const { return m_target; }
 
-    /// \returns The name of this function, as it was defined in the bytecode.
+    /// Returns the name of this function, as it was defined in the SIIR.
     const std::string& get_name() const;
 
     const FunctionRegisterInfo& get_register_info() const { return m_regi; }
@@ -92,18 +108,23 @@ public:
     const MachineBasicBlock* back() const { return m_back; }
     MachineBasicBlock* back() { return m_back; }
 
+    /// Return the basic block at position |idx| in this function.
     const MachineBasicBlock* at(u32 idx) const;
     MachineBasicBlock* at(u32 idx);
 
-    /// \returns The number of blocks in this function.
+    /// Returns the number of basic blocks in this function.
     u32 size() const;
 
+    /// Returns true if this function has no basic blocks.
     bool empty() const { return !m_front; }
 
+    /// Prepend |mbb| to the front of this function.
     void prepend(MachineBasicBlock* mbb);
+
+    /// Append |mbb| to the back of this function.
     void append(MachineBasicBlock* mbb);
 };
 
-} // namespace stm
+} // namespace stm::siir
 
-#endif // STATIM_MACHINE_FUNCTION_HPP_
+#endif // STATIM_SIIR_MACHINE_FUNCTION_H_
