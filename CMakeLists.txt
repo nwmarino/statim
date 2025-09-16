@@ -32,63 +32,30 @@ include_directories(
     ${GTEST_INCLUDE_DIRS}
 )
 
-set(COMPILER_SOURCES
-    source/core/lexer.cpp
-    source/core/logger.cpp
-    source/siir/basicblock.cpp
-    source/siir/cfg.cpp
-    source/siir/constant.cpp
-    source/siir/function.cpp
-    source/siir/global.cpp
-    source/siir/instbuilder.cpp
-    source/siir/instruction.cpp
-    source/siir/llvm_translate_pass.cpp
-    source/siir/local.cpp
-    source/siir/machine_analysis.cpp
-    source/siir/machine_basicblock.cpp
-    source/siir/machine_function.cpp
-    source/siir/machine_inst.cpp
-    source/siir/machine_operand.cpp
-    source/siir/print.cpp
-    source/siir/ssa_rewrite_pass.cpp
-    source/siir/target.cpp
-    source/siir/trivial_dce_pass.cpp
-    source/siir/type.cpp
-    source/siir/use.cpp
-    source/siir/value.cpp
-    source/tree/codegen.cpp
-    source/tree/decl.cpp
-    source/tree/expr.cpp
-    source/tree/parser.cpp
-    source/tree/print.cpp
-    source/tree/root.cpp
-    source/tree/rune.cpp
-    source/tree/scope.cpp
-    source/tree/sema.cpp
-    source/tree/stmt.cpp
-    source/tree/syma.cpp
-    source/tree/type.cpp
-    source/types/input_file.cpp
-    source/types/token.cpp
-    source/x64/asm_writer.cpp
-    source/x64/inst_selection.cpp
-    source/x64/printer.cpp
-    source/x64/x64.cpp
-)
-
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable(stmc
-    source/stmc.cpp
-    ${COMPILER_SOURCES}
-)
+add_subdirectory(source)
+
+add_executable(stmc source/stmc.cpp)
 
 target_link_libraries(stmc 
     PRIVATE
         ${Boost_LIBRARIES}
+        core
+        siir
+        tree
+        types
+        x64
+)
+
+target_include_directories(stmc
+    PUBLIC
+        ${CMAKE_SOURCE_DIR}/source
 )
 
 llvm_config(stmc USE_SHARED core irreader support clang)
+
+# Testing
 
 enable_testing()
 
@@ -98,7 +65,6 @@ add_executable(stmc_test
     test/test_parser.cpp
     test/test_syma.cpp
     test/test_sema.cpp
-    ${COMPILER_SOURCES}
 )
 
 target_link_libraries(stmc_test 
@@ -106,6 +72,11 @@ target_link_libraries(stmc_test
         ${Boost_LIBRARIES}
         GTest::GTest
         GTest::Main
+        core
+        siir
+        tree
+        types
+        x64
 )
 
 llvm_config(stmc_test USE_SHARED core irreader support clang)
