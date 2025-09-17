@@ -42,7 +42,7 @@ FunctionRegisterAnalysis::FunctionRegisterAnalysis(MachineObject& obj)
 
 void FunctionRegisterAnalysis::run() {
     for (const auto& [name, function] : m_obj.functions()) {
-        /// TODO: Implement this.
+        /// TODO: Implement after register allocation, callsite info, etc.
     }
 }
 

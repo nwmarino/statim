@@ -41,7 +41,7 @@ public:
     /// Returns true if this type is mutable.
     bool is_mut() const { return mut; }
 
-    /// TODO: Implement this.
+    /// TODO: Properly implement this for types once the system is solidifed.
     /// Returns this type as a mutable variant.
     virtual const Type* as_mut() const { return is_mut() ? this : nullptr; }
 
@@ -153,9 +153,6 @@ class DeferredType final : public Type {
 public:
     /// Contextual properties for a type reference, resolved during parsing.
     struct Context final {
-        /// TODO: Add context for array/pointer differentation, i.e. if a
-        /// pointer to an array, add flag to signify.
-
         /// The base of this type, i.e. i8 in *i8, i32 in [4]i32, etc.
         std::string base;
 
@@ -174,6 +171,9 @@ public:
         /// The level of indirection of this type if it is a pointer type, 
         /// i.e. if the type was parsed was **i32, then indirection = 2.
         u32 indirection = 0;
+
+        /// TODO: Add context for array/pointer differentation, i.e. if a
+        /// pointer to an array, add flag to signify.
     };
 
 private:

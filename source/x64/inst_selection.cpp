@@ -537,10 +537,10 @@ MachineOperand X64InstSelection::as_operand(const Value* value) const {
         return MachineOperand::create_symbol(FN->get_name().c_str());
     } else if (auto LCL = dynamic_cast<const Local*>(value)) {
         return MachineOperand::create_stack_index(m_stack_indices.at(LCL));
-    } else if (auto IASM = dynamic_cast<const InlineAsm*>(value)) {
-        /// TODO: Clear out, and implement for calls in call selection.
     } else if (auto IN = dynamic_cast<const Instruction*>(value)) {
-        /// TODO: Remove with isel completion.
+        /// TODO: Remove with instruction selection completion, without this,
+        /// opcodes that are not yet implemented won't ever produce a virtual
+        /// register mapping.
         if (m_vregs.count(IN->result_id()) == 0)
             return MachineOperand::create_imm(0);
 
@@ -805,7 +805,7 @@ void X64InstSelection::select_branch_if(const Instruction* inst) {
         MachineOperand fdst = as_operand(inst->get_operand(2));
         MachineOperand zero = MachineOperand::create_imm(0);
 
-        /// TODO: Adjust for floating point comparisons, using xorpd for zero.
+        /// TODO: Adjust for floating point comparisons, using XORPx for zero.
         emit(x64::CMP8, { zero, cond });
         emit(x64::JNE, { tdst });
         emit(x64::JMP, { fdst });
@@ -949,7 +949,7 @@ void X64InstSelection::select_neg(const Instruction* inst) {
         emit(mov_opc, { src })
             .add_reg(as_machine_reg(inst), get_subreg(inst->get_type()), true);
     } else if (inst->opcode() == INST_OP_FNEG) {
-        /// TODO: Implement FNegInstr selection.
+        /// TODO: Implement FNegInstr selection, also needs mask constants.
     } else {
         assert(false && "expected INegInstr or FNegInstr opcode!");
     }
