@@ -447,7 +447,7 @@ stm::i32 main(stm::i32 argc, char** argv) {
         for (auto& unit : units) {
             stm::siir::CFG& graph = unit->get_graph();
             std::unique_ptr<stm::siir::MachineObject> obj =
-                std::make_unique<stm::siir::MachineObject>(&target); 
+                std::make_unique<stm::siir::MachineObject>(&graph, &target); 
             
             stm::siir::CFGMachineAnalysis CMA { graph };
             CMA.run(*obj);
@@ -458,8 +458,8 @@ stm::i32 main(stm::i32 argc, char** argv) {
             stm::siir::MachineObjectPrinter printer { *obj };
             printer.run(std::cout);
 
-            //stm::siir::MachineObjectAsmWriter writer { *obj };
-            //writer.run(std::cout);
+            stm::siir::MachineObjectAsmWriter writer { *obj };
+            writer.run(std::cout);
 
             //std::string as = "as -o " + graph.get_file().filename() + ".o " + 
             //    graph.get_file().filename() + ".s";

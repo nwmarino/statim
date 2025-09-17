@@ -11,16 +11,22 @@ namespace stm::siir {
 
 class MachineObject final {
     const Target* m_target;
+    const CFG* m_cfg;
     std::unordered_map<std::string, MachineFunction*> m_functions;
 
 public:
     /// Create a new machine object for the given target.
-    MachineObject(const Target* target) : m_target(target) {}
+    MachineObject(const CFG* cfg, const Target* target) 
+        : m_cfg(cfg), m_target(target) {}
 
     MachineObject(const MachineObject&) = delete;
     MachineObject& operator = (const MachineObject&) = delete;
 
     ~MachineObject();
+
+    /// Returns the SIIR control flow graph this machine object was lowered
+    /// from.
+    const CFG* get_graph() const { return m_cfg; }
 
     /// Return the target that this machine object was compiled for.
     const Target* get_target() const { return m_target; }
