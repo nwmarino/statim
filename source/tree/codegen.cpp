@@ -483,10 +483,9 @@ void Codegen::codegen_rune_assert(const RuneStmt& node) {
     std::string msg = loc.file.filename() + ':' + std::to_string(loc.line) + 
         ':' + std::to_string(loc.column) + ": assertion failed\n";
         
+    m_builder.set_insert(fail);
     siir::Instruction* string = m_builder.build_string(
         siir::ConstantString::get(m_cfg, msg));
-    
-    m_builder.set_insert(fail);
     m_builder.build_call(
         panic_fn->get_type(), 
         panic_fn, 

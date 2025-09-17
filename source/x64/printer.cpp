@@ -14,7 +14,7 @@ using namespace stm::siir::x64;
 static const FunctionRegisterInfo* g_register_info = nullptr;
 
 static void print_operand(std::ostream& os, const MachineOperand& MO) {
-    switch (MO.get_kind()) {
+    switch (MO.kind()) {
     case MachineOperand::MO_Register: {
         MachineRegister reg = MO.get_reg();
         if (reg.is_virtual()) {
@@ -46,12 +46,20 @@ static void print_operand(std::ostream& os, const MachineOperand& MO) {
         break;
     }
 
+    case MachineOperand::MO_StackIdx:
+        os << "SFIdx_" << MO.get_stack_index();
+        break;
+
     case MachineOperand::MO_Immediate:
         os << '$' << MO.get_imm();
         break;
 
     case MachineOperand::MO_BasicBlock:
-        os << ".LBB" << MO.get_mmb()->position();
+        os << "bb" << MO.get_mmb()->position();
+        break;
+
+    case MachineOperand::MO_ConstantIdx:
+        os << "CPIdx_" << MO.get_constant_index();
         break;
     
     case MachineOperand::MO_Symbol: 
@@ -81,7 +89,7 @@ static void print_inst(std::ostream& os, const MachineInst& MI) {
 }
 
 static void print_block(std::ostream& os, const MachineBasicBlock& MBB) {
-    os << ".LBB" << MBB.position() << ":\n";
+    os << "bb" << MBB.position() << ":\n";
 
     for (auto inst : MBB.insts()) {
         print_inst(os, inst);
@@ -94,6 +102,25 @@ static void print_function(std::ostream& os, const MachineFunction& MF) {
 
     os << MF.get_name() << ":\n";
 
+    const FunctionStackInfo& stack = MF.get_stack_info();
+    for (u32 idx = 0, e = stack.num_entries(); idx != e; ++idx) {
+        const FunctionStackEntry& entry = stack.entries[idx];
+        os << "    stack" << idx << " offset: " << entry.offset << ", size: " << 
+            entry.size << ", align: " << entry.align << '\n';
+    }
+
+    const FunctionConstantPool& pool = MF.get_constant_pool();
+    for (u32 idx = 0, e = pool.num_entries(); idx != e; ++idx) {
+        const FunctionConstantPoolEntry& entry = pool.entries[idx];
+        os << "    cpool" << idx << ' ' << 
+            entry.constant->get_type()->to_string() << ' ';
+        entry.constant->print(os);
+        os << '\n';
+    }
+
+    if (stack.num_entries() > 0 || pool.num_entries() > 0 )
+        os << '\n';
+
     for (auto curr = MF.front(); curr; curr = curr->next())
         print_block(os, *curr);
 }
@@ -101,8 +128,8 @@ static void print_function(std::ostream& os, const MachineFunction& MF) {
 void x64::X64Printer::run(std::ostream& os) const {
     g_register_info = nullptr;
 
-    //for (auto function : m_obj.functions()) {
-    //    print_function(os, *function);
-    //    os << "\n";
-    //}
+    for (const auto& [name, function] : m_obj.functions()) {
+        print_function(os, *function);
+        os << "\n";
+    }
 }

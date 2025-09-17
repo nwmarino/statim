@@ -285,6 +285,34 @@ bool Instruction::is_comparison() const {
     }
 }
 
+bool Instruction::is_ordered_cmp() const {
+    switch (opcode()) {
+    case INST_OP_CMP_OEQ:
+    case INST_OP_CMP_ONE:
+    case INST_OP_CMP_OLT:
+    case INST_OP_CMP_OLE:
+    case INST_OP_CMP_OGT:
+    case INST_OP_CMP_OGE:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool Instruction::is_unordered_cmp() const {
+    switch (opcode()) {
+    case INST_OP_CMP_UNEQ:
+    case INST_OP_CMP_UNNE:
+    case INST_OP_CMP_UNLT:
+    case INST_OP_CMP_UNLE:
+    case INST_OP_CMP_UNGT:
+    case INST_OP_CMP_UNGE:
+        return true;
+    default:
+        return false;
+    }
+}
+
 bool Instruction::is_cast() const {
     switch (opcode()) {
     case INST_OP_SEXT:

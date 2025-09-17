@@ -271,6 +271,12 @@ public:
     /// operands.
     bool is_comparison() const;
 
+    /// Returns true if this is an ordered floating point comparison.
+    bool is_ordered_cmp() const;
+
+    /// Returns true if this is an unordered floating point comparison.
+    bool is_unordered_cmp() const;
+
     /// Returns true if this instructions performs some form of type cast.
     /// This includes pointer casts like pointer to integer, and reinterprets.
     bool is_cast() const;

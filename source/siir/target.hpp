@@ -41,13 +41,13 @@ private:
     /// address), and if false, this target is big endian.
     bool m_little_endian;
 
-    /// The pointer size and alignment of this target in bytes.
+    /// The pointer size and alignment of this target in bits.
     u32 m_ptr_size;
     u32 m_ptr_align;
 
     /// A layout rule for a type.
     struct LayoutRule final {
-        u32 size;
+        u32 size_in_bits;
         u32 abi_align;
     };
 
@@ -67,17 +67,26 @@ public:
     /// Returns the operating system of this target.
     OS os() const { return m_os; }
 
-    /// Returns the size in bytes for |type|.
-    u32 get_type_size(const Type* type) const;
+    /// Returns the size of |ty| in bytes.
+    u32 get_type_size(const Type* ty) const;
+
+    /// Returns the size of |ty| in bits.
+    u32 get_type_size_in_bits(const Type* ty) const;
 
     /// Returns the natural alignment in bytes for |type|.
     u32 get_type_align(const Type* type) const;
 
-    /// Returns the pointer size in bytes of this target.
-    u32 get_pointer_size() const { return m_ptr_size; }
+    /// Returns the target pointer size in bytes.
+    u32 get_pointer_size() const { return m_ptr_size / 8; }
 
-    /// Returns the natural pointer alignment in bytes of this target.
-    u32 get_pointer_align() const { return m_ptr_align; }
+    /// Returns the target pointer size in bits.
+    u32 get_pointer_size_in_bits() const { return m_ptr_size; }
+
+    /// Returns the target natural pointer alignment in bytes.
+    u32 get_pointer_align() const { return m_ptr_align / 8; }
+
+    /// Returns the target natural pointer alignment in bits.
+    u32 get_pointer_align_in_bits() const { return m_ptr_align; }
 
     /// Returns true if this target is little-endian.
     bool is_little_endian() const { return m_little_endian; }

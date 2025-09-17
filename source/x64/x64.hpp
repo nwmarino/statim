@@ -2,10 +2,12 @@
 #define STATIM_SIIR_X64_H_
 
 #include "siir/instruction.hpp"
+#include "siir/local.hpp"
 #include "siir/machine_register.hpp"
 #include "siir/machine_object.hpp"
 #include "types/types.hpp"
 
+#include <algorithm>
 #include <string>
 #include <unordered_map>
 
@@ -18,14 +20,17 @@ class MachineFunction;
 
 namespace x64 {
 
-/// Recognized x64 opcodes.
+/// Recognized x64 opcodes. These are really mnemonics since they don't signify
+/// any operand information.
 enum Opcode : u32 {
     NO_OP = 0x0,
 
     NOP,
     LEA, 
     CALL, RET, 
-    JMP, 
+    JMP,
+    MOV,
+    UD2, 
     CQO,
 
     PUSH64, POP64,
@@ -46,6 +51,12 @@ enum Opcode : u32 {
     NOT8, NOT16, NOT32, NOT64,
     NEG8, NEG16, NEG32, NEG64,
 
+    MOVABS,
+    MOVSX,
+    MOVSXD,
+    MOVZX,
+    MOVZXD,
+
     JE, JNE, JZ, JNZ,
     JL, JLE, JG, JGE,
     JA, JAE, JB, JBE,
@@ -61,6 +72,8 @@ enum Opcode : u32 {
     SUBSS, SUBSD,
     MULSS, MULSD,
     DIVSS, DIVSD,
+    ANDPS, ANDPD,
+    ORPS, ORPD,
     XORPS, XORPD,
 
     CVTSS2SD, CVTSD2SS,
@@ -89,15 +102,92 @@ enum Register : u32 {
 class X64InstSelection final {
     MachineFunction* m_function;
     MachineBasicBlock* m_insert = nullptr;
+    const Target& m_target;
 
     /// Temporary mapping between bytecode virtual registers and machine 
     /// register ids.
     std::unordered_map<u32, MachineRegister> m_vregs = {};
 
+    /// Mapping between function locals and stack offsets.
+    std::unordered_map<const Local*, u32> m_stack_indices = {};
+
+    /// Comparison instructions which have been "deferred" until later. This
+    /// is mainly used for comparisons whose only user is a conditional branch.
+    std::vector<const Instruction*> m_deferred_cmps = {};
+
+    /// Returns true if the comparison instruction |inst| has been deferred.
+    bool is_deferred(const Instruction* inst) const {
+        assert(inst->is_comparison() &&
+            "cannot defer a non-comparison instruction!");
+        return std::find(m_deferred_cmps.begin(), m_deferred_cmps.end(), inst) 
+            != m_deferred_cmps.end();
+    }
+
+    /// Mark the comparison instruction |inst| as deferred.
+    void defer(const Instruction* inst) {
+        assert(!is_deferred(inst) && 
+            "comparison instruction has already been deferred!");
+        m_deferred_cmps.push_back(inst);
+    }
+
+    /// Returns or creates a virtual machine register equivelant for the 
+    /// defining SIIR instruction |inst|. 
+    MachineRegister as_machine_reg(const Instruction* inst);
+
+    /// Returns the expected x64 general-purpose subregister for a given type. 
+    /// This function will always return 1, 2, 4, or 8.
+    u16 get_subreg(const Type* ty) const;
+
+    x64::Opcode get_move_op(const Type* ty) const;
+    x64::Opcode get_cmp_op(const Type* ty) const;
+    x64::Opcode get_add_op(const Type* ty) const;
+    x64::Opcode get_sub_op(const Type* ty) const;
+    x64::Opcode get_and_op(const Type* ty) const;
+    x64::Opcode get_or_op(const Type* ty) const;
+    x64::Opcode get_xor_op(const Type* ty) const;
+    x64::Opcode get_not_op(const Type* ty) const;
+    x64::Opcode get_neg_op(const Type* ty) const;
+
+    x64::Opcode get_jcc_op(siir::Opcode opc) const;
+    x64::Opcode get_setcc_op(siir::Opcode opc) const;
+    
+    /// Returns a machine operand equivelant of treating |value| as a use.
+    MachineOperand as_operand(const Value* value) const;
+
+    /// Emit a new machine instruction with opcode |op| and operand list |ops|.
+    MachineInst& emit(x64::Opcode op, const std::vector<MachineOperand>& ops = {});
+
+    /// Perform instruction selection on a single SIIR instruction.
     void select(const Instruction* inst);
 
+    void select_constant(const Instruction* inst);
+    void select_string_constant(const Instruction* inst);
+    void select_load_store(const Instruction* inst);
+    void select_access_ptr(const Instruction* inst);
+    void select_select(const Instruction* inst);
+    void select_branch_if(const Instruction* inst);
+    void select_phi(const Instruction* inst);
+    void select_return(const Instruction* inst);
+    void select_call(const Instruction* inst);
+    void select_add(const Instruction* inst);
+    void select_sub(const Instruction* inst);
+    void select_mul_div_rem(const Instruction* inst);
+    void select_bit_op(const Instruction* inst);
+    void select_shift(const Instruction* inst);
+    void select_not(const Instruction* inst);
+    void select_neg(const Instruction* inst);
+    void select_ext(const Instruction* inst);
+    void select_trunc(const Instruction* inst);
+    void select_int_to_fp_cvt(const Instruction* inst);
+    void select_fp_to_int_cvt(const Instruction* inst);
+    void select_ptr_to_int_cvt(const Instruction* inst);
+    void select_int_to_ptr_cvt(const Instruction* inst);
+    void select_type_reinterpret(const Instruction* inst);
+    void select_comparison(const Instruction* inst);
+
 public:
-    X64InstSelection(MachineFunction* function) : m_function(function) {}
+    X64InstSelection(MachineFunction* function) 
+        : m_function(function), m_target(function->get_target()) {}
 
     X64InstSelection(const X64InstSelection&) = delete;
     X64InstSelection& operator = (const X64InstSelection&) = delete;
@@ -136,24 +226,24 @@ public:
 };
 
 /// Returns true if the opcode |op| is considered a call instruction.
-bool is_call_opcode(Opcode op);
+bool is_call_opcode(x64::Opcode op);
 
 /// Returns true if the opcode |op| is considered a return instruction.
-bool is_ret_opcode(Opcode op);
+bool is_ret_opcode(x64::Opcode op);
 
 /// Returns the register class of the physical register |reg|.
-RegisterClass get_class(Register reg);
+RegisterClass get_class(x64::Register reg);
 
 /// Returns true if the physical register |reg| is considered callee-saved.
-bool is_callee_saved(Register reg);
+bool is_callee_saved(x64::Register reg);
 
 /// Returns true if the physical register |reg| is considered caller-saved.
-bool is_caller_saved(Register reg);
+bool is_caller_saved(x64::Register reg);
 
 /// Returns the string representation of the opcode |op|. This is used for
 /// dumping purposes, and does not represent the recognized x64 assembly
 /// equivelant
-std::string to_string(Opcode op);
+std::string to_string(x64::Opcode op);
 
 /// Returns the string representation of the physical register |reg|, with
 /// optional x64 subregister |subreg|. This is used for dumping purposes,

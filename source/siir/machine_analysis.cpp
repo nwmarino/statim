@@ -9,21 +9,30 @@
 using namespace stm;
 using namespace stm::siir;
 
-CFGMachineAnalysis::CFGMachineAnalysis(CFG& cfg, Target* target)
-    : m_cfg(cfg), m_target(target) {}
+CFGMachineAnalysis::CFGMachineAnalysis(CFG& cfg) : m_cfg(cfg) {}
 
 void CFGMachineAnalysis::run(MachineObject& obj) {
-    for (auto function : m_cfg.functions()) {
-        MachineFunction* mf = new MachineFunction(function, *m_target);
-        // obj.functions += [mf.name, mf] 
-        
+    for (const auto& function : m_cfg.functions()) {
+        // Empty functions should not be lowered, they should either be
+        // resolved at link time or with some library.
+        if (function->empty())
+            continue;
+
+        MachineFunction* mf = new MachineFunction(function, *obj.get_target());
+        obj.functions().emplace(mf->get_name(), mf);
+
         for (auto curr = function->front(); curr; curr = curr->next())
             new MachineBasicBlock(curr, mf);
 
-        switch (m_target->arch()) {
-        case Target::x64:
+        switch (obj.get_target()->arch()) {
+        case Target::x64: {
             x64::X64InstSelection isel { mf };
             isel.run();
+            break;
+        }
+
+        default:
+            assert(false && "unsupported architecture!");
         }
     }
 }
@@ -32,19 +41,23 @@ FunctionRegisterAnalysis::FunctionRegisterAnalysis(MachineObject& obj)
     : m_obj(obj) {}
 
 void FunctionRegisterAnalysis::run() {
-    //for (auto function : m_obj.functions()) {
-    //
-    //}
+    for (const auto& [name, function] : m_obj.functions()) {
+        /// TODO: Implement this.
+    }
 }
 
-MachineObjectPrinter::MachineObjectPrinter(MachineObject& obj)
-    : m_obj(obj) {}
+MachineObjectPrinter::MachineObjectPrinter(MachineObject& obj) : m_obj(obj) {}
 
 void MachineObjectPrinter::run(std::ostream& os) {
     switch (m_obj.get_target()->arch()) {
-    case Target::x64:
+    case Target::x64: {
         x64::X64Printer printer { m_obj };
         printer.run(os);
+        break;
+    }
+
+    default:
+        assert(false && "unsupported architecture!");
     }
 }
 
@@ -53,8 +66,13 @@ MachineObjectAsmWriter::MachineObjectAsmWriter(MachineObject& obj)
 
 void MachineObjectAsmWriter::run(std::ostream& os) {
     switch (m_obj.get_target()->arch()) {
-    case Target::x64:
+    case Target::x64: {
         x64::X64AsmWriter writer { m_obj };
         writer.run(os);
+        break;
+    }
+
+    default:
+        assert(false && "unsupported architecture!");
     }
 }

@@ -7,11 +7,11 @@ using namespace stm;
 using namespace stm::siir;
 using namespace stm::siir::x64;
 
-bool x64::is_call_opcode(Opcode op) {
+bool x64::is_call_opcode(x64::Opcode op) {
     return op == x64::CALL;
 }
 
-bool x64::is_ret_opcode(Opcode op) {
+bool x64::is_ret_opcode(x64::Opcode op) {
     return op == x64::RET;
 }
 
@@ -121,6 +121,8 @@ std::string x64::to_string(Opcode op) {
         return "RET";
     case JMP:
         return "JMP";
+    case UD2:
+        return "UD2";
     case CQO:
         return "CQO";
     case PUSH64:

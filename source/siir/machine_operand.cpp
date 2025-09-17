@@ -34,6 +34,13 @@ MachineOperand MachineOperand::create_mem(MachineRegister reg, i32 disp) {
     return operand;
 }
 
+MachineOperand MachineOperand::create_stack_index(u32 idx) {
+    MachineOperand operand;
+    operand.m_kind = MO_StackIdx;
+    operand.m_stack_idx = idx;
+    return operand;
+}
+
 MachineOperand MachineOperand::create_imm(i64 imm) {
     MachineOperand operand;
     operand.m_kind = MO_Immediate;
@@ -45,6 +52,13 @@ MachineOperand MachineOperand::create_block(MachineBasicBlock* mbb) {
     MachineOperand operand;
     operand.m_kind = MO_BasicBlock;
     operand.m_mbb = mbb;
+    return operand;
+}
+
+MachineOperand MachineOperand::create_constant_index(u32 idx) {
+    MachineOperand operand;
+    operand.m_kind = MO_ConstantIdx;
+    operand.m_constant_idx = idx;
     return operand;
 }
 

@@ -3,17 +3,15 @@
 
 #include "siir/cfg.hpp"
 #include "siir/machine_object.hpp"
-#include "siir/target.hpp"
 
 namespace stm::siir {
 
 /// Analysis pass to lower an SIIR graph to a target-dependent representation.
 class CFGMachineAnalysis final {
     CFG& m_cfg;
-    Target* m_target;
 
 public:
-    CFGMachineAnalysis(CFG& cfg, Target* target);
+    CFGMachineAnalysis(CFG& cfg);
 
     CFGMachineAnalysis(const CFGMachineAnalysis&) = delete;
     CFGMachineAnalysis& operator = (const CFGMachineAnalysis&) = delete;

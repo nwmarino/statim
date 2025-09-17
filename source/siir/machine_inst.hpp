@@ -2,6 +2,7 @@
 #define STATIM_SIIR_MACHINE_INST_H_
 
 #include "siir/machine_operand.hpp"
+#include "siir/machine_register.hpp"
 #include "types/types.hpp"
 
 #include <cassert>
@@ -118,6 +119,54 @@ public:
     /// Add a new operand |op| to this instruction.
     void add_operand(const MachineOperand& op) {
         m_operands.push_back(op);
+    }
+
+    MachineInst& add_reg(MachineRegister reg, u16 subreg, bool is_def, 
+                 bool is_implicit = false, bool is_kill = false, 
+                 bool is_dead = false) {
+        m_operands.push_back(MachineOperand::create_reg(
+            reg, subreg, is_def, is_implicit, is_kill, is_dead));
+        return *this;
+    }
+
+    MachineInst& add_mem(MachineRegister reg, i32 disp) {
+        m_operands.push_back(MachineOperand::create_mem(reg, disp));
+        return *this;
+    }
+
+    MachineInst& add_stack_index(u32 idx) {
+        m_operands.push_back(MachineOperand::create_stack_index(idx));
+        return *this;
+    }
+
+    MachineInst& add_imm(i64 imm) {
+        m_operands.push_back(MachineOperand::create_imm(imm));
+        return *this;
+    }
+
+    MachineInst& add_zero() {
+        m_operands.push_back(MachineOperand::create_imm(0));
+        return *this;
+    }
+
+    MachineInst& add_block(MachineBasicBlock* mbb) {
+        m_operands.push_back(MachineOperand::create_block(mbb));
+        return *this;
+    }
+
+    MachineInst& add_constant_index(u32 idx) {
+        m_operands.push_back(MachineOperand::create_constant_index(idx));
+        return *this;
+    }
+
+    MachineInst& add_symbol(const char* symbol) {
+        m_operands.push_back(MachineOperand::create_symbol(symbol));
+        return *this;
+    }
+
+    MachineInst& add_symbol(const std::string& symbol) {
+        m_operands.push_back(MachineOperand::create_symbol(symbol.c_str()));
+        return *this;
     }
 };
 

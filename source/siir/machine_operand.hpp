@@ -13,17 +13,19 @@ class MachineBasicBlock;
 /// Represents a target-dependent operand to a machine instruction.
 class MachineOperand final {
 public:
-    enum MachineOperandKind : u8 {
+    enum MachineOperandKind : u16 {
         MO_Register,    ///< Register, physical or virtual.
         MO_Memory,      ///< Memory references on a base register.
+        MO_StackIdx,    ///< Function stack reference.
         MO_Immediate,   ///< Immediate, less than 64-bits.
         MO_BasicBlock,  ///< Reference to a basic block.
+        MO_ConstantIdx, ///< Index of a function constant. 
         MO_Symbol,      ///< Reference to named symbol.
     };
 
 private:
     /// Defines the kind of operand this is, discriminating the union.
-    u16 m_kind : 4;
+    MachineOperandKind m_kind : 4;
 
     /// subreg - optional subregister for register operands. 0 indicates
     /// no subregister.
@@ -52,11 +54,17 @@ private:
             i32 disp;
         } m_mem;
 
+        /// For MO_StackIdx operands.
+        u32 m_stack_idx;
+
         /// For MO_Immediate operands.
         i64 m_imm;
 
         /// For MO_BasicBlock operands.
         MachineBasicBlock* m_mbb;
+
+        /// For MO_ConstantIdx operands.
+        u32 m_constant_idx;
 
         /// For MO_Symbol operands.
         const char* m_symbol;
@@ -69,25 +77,25 @@ public:
 
     static MachineOperand create_mem(MachineRegister reg, i32 disp);
 
+    static MachineOperand create_stack_index(u32 idx);
+
     static MachineOperand create_imm(i64 imm);
 
     static MachineOperand create_block(MachineBasicBlock* mbb);
 
+    static MachineOperand create_constant_index(u32 idx);
+
     static MachineOperand create_symbol(const char* symbol);
 
-    MachineOperandKind get_kind() const { 
-        return static_cast<MachineOperandKind>(m_kind); 
-    }
+    MachineOperandKind kind() const { return m_kind; }
 
-    bool is_reg() const { return m_kind == MO_Register; }
-
-    bool is_mem() const { return m_kind == MO_Memory; }
-
-    bool is_imm() const { return m_kind == MO_Immediate; }
-
-    bool is_mmb() const { return m_kind == MO_BasicBlock; }
-
-    bool is_symbol() const { return m_kind == MO_Symbol; }
+    bool is_reg() const { return kind() == MO_Register; }
+    bool is_mem() const { return kind() == MO_Memory; }
+    bool is_stack_index() const { return kind() == MO_StackIdx; }
+    bool is_imm() const { return kind() == MO_Immediate; }
+    bool is_mmb() const { return kind() == MO_BasicBlock; }
+    bool is_constant_index() const { return kind() == MO_ConstantIdx; }
+    bool is_symbol() const { return kind() == MO_Symbol; }
 
     MachineRegister get_reg() const {
         assert(is_reg());
@@ -134,6 +142,11 @@ public:
         return m_mem.disp;
     }
 
+    u32 get_stack_index() const {
+        assert(is_stack_index());
+        return m_stack_idx;
+    }
+
     i64 get_imm() const {
         assert(is_imm());
         return m_imm;
@@ -142,6 +155,11 @@ public:
     MachineBasicBlock* get_mmb() const {
         assert(is_mmb());
         return m_mbb;
+    }
+
+    u32 get_constant_index() const {
+        assert(is_constant_index());
+        return m_constant_idx;
     }
     
     const char* get_symbol() const {
@@ -196,6 +214,11 @@ public:
         m_mem.disp = disp;
     }
 
+    void set_stack_index(u32 idx) {
+        assert(is_stack_index());
+        m_stack_idx = idx;
+    }
+
     void set_imm(i64 imm) {
         assert(is_imm());
         m_imm = imm;
@@ -204,6 +227,11 @@ public:
     void set_mbb(MachineBasicBlock* mbb) {
         assert(is_mmb());
         m_mbb = mbb;
+    }
+
+    void set_constant_index(u32 idx) {
+        assert(is_constant_index());
+        m_constant_idx = idx;
     }
 
     void set_symbol(const char* symbol) {

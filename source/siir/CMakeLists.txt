@@ -13,6 +13,7 @@ add_library(siir
         machine_basicblock.cpp
         machine_function.cpp
         machine_inst.cpp
+        machine_object.cpp
         machine_operand.cpp
         print.cpp
         ssa_rewrite_pass.cpp

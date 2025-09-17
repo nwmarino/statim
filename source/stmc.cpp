@@ -1,6 +1,8 @@
 #include "core/logger.hpp"
 #include "siir/cfg.hpp"
 #include "siir/llvm_translate_pass.hpp"
+#include "siir/machine_analysis.hpp"
+#include "siir/machine_object.hpp"
 #include "siir/ssa_rewrite_pass.hpp"
 #include "siir/target.hpp"
 #include "siir/trivial_dce_pass.hpp"
@@ -231,7 +233,7 @@ stm::i32 main(stm::i32 argc, char** argv) {
     options.devel = true;
     options.emit_asm = true;
     options.keep_obj = true;
-    options.llvm = true;
+    options.llvm = false;
     options.time = true;
 
     std::vector<std::unique_ptr<stm::InputFile>> files;
@@ -270,9 +272,9 @@ stm::i32 main(stm::i32 argc, char** argv) {
     }
     
     files.push_back(std::make_unique<stm::InputFile>("samples/natives.stm"));
-    files.push_back(std::make_unique<stm::InputFile>("samples/b.stm"));
-    files.push_back(std::make_unique<stm::InputFile>("samples/mem.stm"));
-    files.push_back(std::make_unique<stm::InputFile>("samples/string.stm"));
+    //files.push_back(std::make_unique<stm::InputFile>("samples/b.stm"));
+    //files.push_back(std::make_unique<stm::InputFile>("samples/mem.stm"));
+    //files.push_back(std::make_unique<stm::InputFile>("samples/string.stm"));
 
     if (files.empty())
         stm::Logger::fatal("no input files");
@@ -340,7 +342,6 @@ stm::i32 main(stm::i32 argc, char** argv) {
         }
     }
 
-    dump.flush();
     dump.close();
 
     if (options.llvm) {
@@ -433,14 +434,43 @@ stm::i32 main(stm::i32 argc, char** argv) {
             modules.push_back(std::move(module));
         }
 
-        std::string ld = "ld -nostdlib -o " + std::string(options.output) + " std/rt.o ";
-        for (const auto& module : modules) {
+        std::string ld = "ld -nostdlib -o " + 
+            std::string(options.output) + " std/rt.o ";
+        for (const auto& module : modules)
             ld += module->getSourceFileName() + ".o ";
-        }
 
         std::system(ld.c_str());
     } else {
-        assert(false && "native machine code generation not implemented!");
+        std::vector<std::unique_ptr<stm::siir::MachineObject>> objs;
+
+        for (auto& unit : units) {
+            stm::siir::CFG& graph = unit->get_graph();
+            std::unique_ptr<stm::siir::MachineObject> obj =
+                std::make_unique<stm::siir::MachineObject>(&target); 
+            
+            stm::siir::CFGMachineAnalysis CMA { graph };
+            CMA.run(*obj);
+
+            stm::siir::FunctionRegisterAnalysis FRA { *obj };
+            FRA.run();
+
+            stm::siir::MachineObjectPrinter printer { *obj };
+            printer.run(std::cout);
+
+            //stm::siir::MachineObjectAsmWriter writer { *obj };
+            //writer.run(std::cout);
+
+            //std::string as = "as -o " + graph.get_file().filename() + ".o " + 
+            //    graph.get_file().filename() + ".s";
+            //std::system(as.c_str());
+        }
+
+        //std::string ld = "ld -nostdlib -o " + 
+        //    std::string(options.output) + "std/rt.o ";
+        //for (const auto& unit : units)
+        //    ld += unit->get_graph().get_file().filename() + ".o ";
+
+        //std::system(ld.c_str());
     }
 
     return 0;
