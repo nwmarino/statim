@@ -271,7 +271,8 @@ stm::i32 main(stm::i32 argc, char** argv) {
         }
     }
     
-    files.push_back(std::make_unique<stm::InputFile>("samples/natives.stm"));
+    files.push_back(std::make_unique<stm::InputFile>("samples/arith.stm"));
+    //files.push_back(std::make_unique<stm::InputFile>("samples/natives.stm"));
     //files.push_back(std::make_unique<stm::InputFile>("samples/b.stm"));
     //files.push_back(std::make_unique<stm::InputFile>("samples/mem.stm"));
     //files.push_back(std::make_unique<stm::InputFile>("samples/string.stm"));

@@ -1,6 +1,7 @@
 #ifndef STATIM_SIIR_X64_H_
 #define STATIM_SIIR_X64_H_
 
+#include "siir/allocator.hpp"
 #include "siir/instruction.hpp"
 #include "siir/local.hpp"
 #include "siir/machine_register.hpp"
@@ -154,6 +155,12 @@ class X64InstSelection final {
     /// Returns a machine operand equivelant of treating |value| as a use.
     MachineOperand as_operand(const Value* value) const;
 
+    /// Returns a machine operand representing the location of a function call
+    /// argument as per the SystemV ABI for x64.
+    ///
+    /// TODO: Split out depending on target ABI.
+    MachineOperand as_call_argument(const Value* value, u32 arg_idx) const;
+
     /// Emit a new machine instruction with opcode |op| and operand list |ops|.
     MachineInst& emit(x64::Opcode op, const std::vector<MachineOperand>& ops = {});
 
@@ -240,6 +247,9 @@ bool is_callee_saved(x64::Register reg);
 /// Returns true if the physical register |reg| is considered caller-saved.
 bool is_caller_saved(x64::Register reg);
 
+/// Return the target registers for x64.
+TargetRegisters get_registers();
+
 /// Returns the string representation of the opcode |op|. This is used for
 /// dumping purposes, and does not represent the recognized x64 assembly
 /// equivelant
@@ -248,7 +258,7 @@ std::string to_string(x64::Opcode op);
 /// Returns the string representation of the physical register |reg|, with
 /// optional x64 subregister |subreg|. This is used for dumping purposes,
 /// and does not represent the recognized x64 assembly equivelant.
-std::string to_string(Register reg, u16 subreg = 0);
+std::string to_string(Register reg, u16 subreg = 8);
 
 } // namespace x64
 

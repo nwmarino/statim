@@ -5,18 +5,38 @@
 #include "siir/machine_register.hpp"
 #include "x64/x64.hpp"
 
-#include <iomanip>
-
 using namespace stm;
 using namespace stm::siir;
 using namespace stm::siir::x64;
 
 static const FunctionRegisterInfo* g_register_info = nullptr;
 
-static void print_operand(std::ostream& os, const MachineOperand& MO) {
+static void print_operand(std::ostream& os, const MachineFunction& MF, 
+                          const MachineOperand& MO) {
     switch (MO.kind()) {
     case MachineOperand::MO_Register: {
+        if (MO.is_def()) {
+            if (MO.is_implicit())
+                os << "implicit-def ";
+
+            if (MO.is_dead())
+                os << "dead ";
+        } else if (MO.is_use()) {
+            if (MO.is_implicit())
+                os << "implicit ";
+
+            if (MO.is_kill())
+                os << "killed ";
+        }
+
+        const FunctionRegisterInfo& regi = MF.get_register_info();
         MachineRegister reg = MO.get_reg();
+        if (reg.is_virtual()) {
+            MachineRegister alloc = regi.vregs.at(reg.id()).alloc;
+            if (alloc != MachineRegister::NoRegister)
+                reg = alloc;
+        }
+
         if (reg.is_virtual()) {
             os << 'v' << (reg.id() - MachineRegister::VirtualBarrier) << 
                 ':' << MO.get_subreg();
@@ -47,7 +67,7 @@ static void print_operand(std::ostream& os, const MachineOperand& MO) {
     }
 
     case MachineOperand::MO_StackIdx:
-        os << "SFIdx_" << MO.get_stack_index();
+        os << "stack." << MO.get_stack_index();
         break;
 
     case MachineOperand::MO_Immediate:
@@ -59,7 +79,7 @@ static void print_operand(std::ostream& os, const MachineOperand& MO) {
         break;
 
     case MachineOperand::MO_ConstantIdx:
-        os << "CPIdx_" << MO.get_constant_index();
+        os << "const." << MO.get_constant_index();
         break;
     
     case MachineOperand::MO_Symbol: 
@@ -68,31 +88,45 @@ static void print_operand(std::ostream& os, const MachineOperand& MO) {
     }
 }
 
-static void print_inst(std::ostream& os, const MachineInst& MI) {
-    os << std::setw(10) << x64::to_string(
-        static_cast<x64::Opcode>(MI.opcode())) << "    ";
+static void print_inst(std::ostream& os, const MachineFunction& MF,
+                      const MachineInst& MI) {
+    os << "    ";
 
-    for (u32 idx = 0, e = MI.num_operands(); idx != e; ++idx) {
-        print_operand(os, MI.get_operand(idx));
-        if (idx + 1 != e)
-            os << ", ";
+    if (MI.num_explicit_defs() == 1) {
+        for (auto& MO : MI.operands()) {
+            if (MO.is_reg() && MO.is_explicit_def()) {
+                print_operand(os, MF, MO);
+                break;
+            }
+        }
+
+        os << " = ";
     }
 
-    if (MI.num_implicit_operands() > 0) {
-        os << "    ... ";
-        for (u32 idx = MI.num_explicit_operands(), e = MI.num_operands(); idx != e; ++idx) {
-            print_operand(os, MI.get_operand(idx));
-            if (idx + 1 != e)
+    os << x64::to_string(static_cast<x64::Opcode>(MI.opcode())) << " ";
+
+    for (u32 idx = 0, e = MI.num_operands(); idx != e; ++idx) {
+        const MachineOperand& mo = MI.get_operand(idx);
+        if (MI.num_explicit_defs() == 1) {
+            if (mo.is_reg() && mo.is_explicit_def())
+                continue;
+        }
+
+        print_operand(os, MF, mo);
+        if (idx + 1 != e) {
+            const MachineOperand& next = MI.get_operand(idx + 1);
+            if (!next.is_reg() || !next.is_explicit_def())
                 os << ", ";
         }
     }
 }
 
-static void print_block(std::ostream& os, const MachineBasicBlock& MBB) {
+static void print_block(std::ostream& os, const MachineFunction& MF,
+                        const MachineBasicBlock& MBB) {
     os << "bb" << MBB.position() << ":\n";
 
     for (auto inst : MBB.insts()) {
-        print_inst(os, inst);
+        print_inst(os, MF, inst);
         os << "\n";
     }
 }
@@ -122,7 +156,7 @@ static void print_function(std::ostream& os, const MachineFunction& MF) {
         os << '\n';
 
     for (auto curr = MF.front(); curr; curr = curr->next())
-        print_block(os, *curr);
+        print_block(os, MF, *curr);
 }
 
 void x64::X64Printer::run(std::ostream& os) const {

@@ -48,9 +48,14 @@ u32 MachineInst::num_implicit_operands() const {
 
 u32 MachineInst::num_explicit_operands() const {
     u32 num = 0;
-    for (auto mo : m_operands)
-        if (mo.is_reg() && !mo.is_implicit())
-            num++;
+    for (auto mo : m_operands) {
+        if (mo.is_reg()) {
+            if (!mo.is_implicit())
+                ++num;
+        } else {
+            ++num;
+        }
+    }
 
     return num;
 }

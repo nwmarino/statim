@@ -89,6 +89,12 @@ public:
     bool has_implicit_def() const;
 
     /// Returns a list of all explicit def operands.
+    const auto defs() const {
+        return m_operands | std::views::filter([](const MachineOperand& mo) { 
+            return mo.is_reg() && mo.is_def() && !mo.is_implicit(); 
+        });
+    }
+
     auto defs() {
         return m_operands | std::views::filter([](MachineOperand& mo) { 
             return mo.is_reg() && mo.is_def() && !mo.is_implicit(); 
@@ -96,6 +102,12 @@ public:
     }
 
     /// Returns a list of all explicit use operands.
+    const auto uses() const {
+        return m_operands | std::views::filter([](const MachineOperand& mo) { 
+            return mo.is_reg() && mo.is_use() && !mo.is_implicit(); 
+        });
+    }
+
     auto uses() {
         return m_operands | std::views::filter([](MachineOperand& mo) { 
             return mo.is_reg() && mo.is_use() && !mo.is_implicit(); 
@@ -103,6 +115,12 @@ public:
     }
 
     /// Returns a list of all explicit & implicit def operands.
+    const auto all_defs() const {
+        return m_operands | std::views::filter([](const MachineOperand& mo) {
+            return mo.is_reg() && mo.is_def();
+        });
+    }
+
     auto all_defs() {
         return m_operands | std::views::filter([](MachineOperand& mo) {
             return mo.is_reg() && mo.is_def();
@@ -110,6 +128,12 @@ public:
     }
 
     /// Returns a list of all explicit & implicit use operands.
+    const auto all_uses() const {
+        return m_operands | std::views::filter([](const MachineOperand& mo) {
+            return mo.is_reg() && mo.is_use();
+        });
+    }
+
     auto all_uses() {
         return m_operands | std::views::filter([](MachineOperand& mo) {
             return mo.is_reg() && mo.is_use();

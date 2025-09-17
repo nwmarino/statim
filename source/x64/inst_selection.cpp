@@ -157,7 +157,7 @@ void X64InstSelection::run() {
         entry.local = local;
 
         frame.entries.push_back(entry);
-        m_stack_indices.emplace(local, stack_index);
+        m_stack_indices.emplace(local, stack_index++);
     }
 
     for (auto* curr = m_function->front(); curr; curr = curr->next()) {
@@ -172,12 +172,9 @@ void X64InstSelection::run() {
 MachineRegister X64InstSelection::as_machine_reg(const Instruction* inst) {
     assert(inst->result_id() != 0 && "instruction does not produce a value!");
 
-    VRegInfo info {
-        .cls = GeneralPurpose,
-        .start = 0,
-        .end = 0,
-        .alloc = Register::NO_REG,
-    };
+    VRegInfo info;
+    info.cls = GeneralPurpose;
+    info.alloc = MachineRegister::NoRegister;
 
     if (inst->get_type()->is_floating_point_type())
         info.cls = FloatingPoint;
@@ -532,7 +529,7 @@ MachineOperand X64InstSelection::as_operand(const Value* value) const {
     } else if (auto CGL = dynamic_cast<const Global*>(value)) {
         return MachineOperand::create_symbol(CGL->get_name().c_str());
     } else if (auto ARG = dynamic_cast<const Argument*>(value)) {
-        return MachineOperand::create_imm(0);
+        return as_call_argument(ARG, ARG->get_number());
     } else if (auto FN = dynamic_cast<const Function*>(value)) {
         return MachineOperand::create_symbol(FN->get_name().c_str());
     } else if (auto LCL = dynamic_cast<const Local*>(value)) {
@@ -551,6 +548,63 @@ MachineOperand X64InstSelection::as_operand(const Value* value) const {
     }
 
     assert(false && "cannot lower value to machine operand!");
+}
+
+MachineOperand X64InstSelection::as_call_argument(
+        const Value* value, u32 arg_idx) const {
+
+    if (arg_idx < 6) {
+        MachineRegister reg;
+
+        if (value->get_type()->is_floating_point_type()) {
+            switch (arg_idx) {
+            case 0:
+                reg = x64::XMM0;
+                break;
+            case 1:
+                reg = x64::XMM1;
+                break;
+            case 2:
+                reg = x64::XMM2;
+                break;
+            case 3:
+                reg = x64::XMM3;
+                break;
+            case 4:
+                reg = x64::XMM4;
+                break;
+            case 5:
+                reg = x64::XMM5;
+                break;
+            }
+        } else {
+            switch (arg_idx) {
+            case 0:
+                reg = x64::RDI;
+                break;
+            case 1:
+                reg = x64::RSI;
+                break;
+            case 2:
+                reg = x64::RDX;
+                break;
+            case 3:
+                reg = x64::RCX;
+                break;
+            case 4:
+                reg = x64::R8;
+                break;
+            case 5:
+                reg = x64::R9;
+                break;
+            }
+        }
+
+        return MachineOperand::create_reg(
+            reg, get_subreg(value->get_type()), true);
+    }
+
+    assert(false && "calls with more than 6 arguments not implemented!");
 }
 
 MachineInst& X64InstSelection::emit(x64::Opcode op, 
@@ -754,15 +808,33 @@ void X64InstSelection::select_load_store(const Instruction* inst) {
         // pointer access, so it must be transformed into a memory reference to
         // dereference the pointer.
         src = MachineOperand::create_mem(src.get_reg(), 0);
+
+        if (src.get_mem_base().is_physical()) {
+            src.set_is_use(true);
+
+            if (dynamic_cast<const Argument*>(inst->get_operand(0)))
+                src.set_is_kill(true);
+        }
     }
 
     if (inst->is_store()) {
+        if (src.is_reg() && src.get_reg().is_physical()) {
+            src.set_is_use(true);
+
+            if (dynamic_cast<const Argument*>(inst->get_operand(0)))
+                src.set_is_kill(true);
+        }
+
         MachineOperand dst = as_operand(inst->get_operand(1));
         if (dst.is_reg()) {
             // The pointer to store to is in a register, e.g. the result 
             // of a pointer access, so it must be transformed into a memory 
             // reference.
             dst = MachineOperand::create_mem(dst.get_reg(), 0);
+            
+            if (dst.get_mem_base().is_physical()) {
+                dst.set_is_use(true);
+            }                
         }
 
         emit(opc, { src, dst });
@@ -773,11 +845,11 @@ void X64InstSelection::select_load_store(const Instruction* inst) {
 }
 
 void X64InstSelection::select_access_ptr(const Instruction* inst) {
-
+    assert(false && "ISEL not implemented!");
 }
 
 void X64InstSelection::select_select(const Instruction* inst) {
-
+    assert(false && "ISEL not implemented!");
 }
 
 void X64InstSelection::select_branch_if(const Instruction* inst) {
@@ -813,14 +885,15 @@ void X64InstSelection::select_branch_if(const Instruction* inst) {
 }
 
 void X64InstSelection::select_phi(const Instruction* inst) {
-
+    assert(false && "ISEL not implemented!");
 }
 
 void X64InstSelection::select_return(const Instruction* inst) {
+    MachineRegister dst_reg = MachineRegister::NoRegister;
+    u32 sub_reg = 0;
+
     if (inst->num_operands() == 1) {
         const Value* return_value = inst->get_operand(0);
-        MachineRegister dst_reg;
-        u32 sub_reg = 0;
         if (return_value->get_type()->is_floating_point_type()) {
             dst_reg = x64::XMM0;
         } else {
@@ -831,10 +904,15 @@ void X64InstSelection::select_return(const Instruction* inst) {
         MachineOperand src = as_operand(return_value);
         x64::Opcode opc = get_move_op(return_value->get_type());
         emit(opc, { src })
-            .add_reg(dst_reg, sub_reg, true, false, false, true);
+            .add_reg(dst_reg, sub_reg, false);
     }
 
-    emit(x64::RET);
+    MachineInst& instr = emit(x64::RET);
+
+    if (dst_reg != MachineRegister::NoRegister) {
+        instr.add_reg(dst_reg, sub_reg, false, true);
+    }
+    
 }
 
 void X64InstSelection::select_call(const Instruction* inst) {
@@ -848,13 +926,29 @@ void X64InstSelection::select_call(const Instruction* inst) {
     }
 
     /// TODO: Add stack spilling for calls with more than 6 arguments.
-    /// TODO: Implement call argument selection.
+
+    std::vector<MachineRegister> regs = {};
+    regs.reserve(inst->num_operands() - 1);
+
+    for (u32 idx = 0, e = inst->num_operands() - 1; idx != e; ++idx) {
+        const Value* arg = inst->get_operand(idx + 1);
+        MachineOperand src = as_operand(arg);
+        MachineOperand dst = as_call_argument(arg, idx);
+        dst.set_is_def(true);
+        regs.push_back(dst.get_reg());
+
+        x64::Opcode mov_opc = get_move_op(arg->get_type());
+        emit(mov_opc, { src, dst });
+    }
 
     const Function* callee = dynamic_cast<const Function*>(first_oper);
     assert(callee && 
         "CallInstr first operand is not a function or inline assembly!");
 
-    emit(x64::CALL).add_symbol(callee->get_name());
+    MachineInst& call = emit(x64::CALL).add_symbol(callee->get_name());
+    for (auto& reg : regs) {
+        call.add_reg(reg, 8, false, true, true);
+    }
 
     if (inst->result_id() != 0) {
         MachineRegister src_reg;
@@ -865,6 +959,8 @@ void X64InstSelection::select_call(const Instruction* inst) {
             src_reg = x64::RAX;
             sub_reg = get_subreg(inst->get_type());
         }
+
+        call.add_reg(src_reg, sub_reg, true, true);
 
         x64::Opcode opc = get_move_op(inst->get_type());
         emit(opc)
@@ -878,7 +974,12 @@ void X64InstSelection::select_add(const Instruction* inst) {
     MachineOperand rhs = as_operand(inst->get_operand(1));
 
     x64::Opcode add_opc = get_add_op(inst->get_type());
-    emit(add_opc, { lhs, rhs });
+    MachineInst& instr = emit(add_opc, { lhs, rhs });
+
+    //if (rhs.is_reg()) {
+    //    instr.get_operand(1).set_is_kill();
+    //    instr.add_reg(rhs.get_reg(), 8, true);
+    //}
 
     x64::Opcode mov_opc = get_move_op(inst->get_type());
     emit(mov_opc, { rhs })
@@ -898,7 +999,7 @@ void X64InstSelection::select_sub(const Instruction* inst) {
 }
 
 void X64InstSelection::select_mul_div_rem(const Instruction* inst) {
-
+    assert(false && "ISEL not implemented!");
 }
 
 void X64InstSelection::select_bit_op(const Instruction* inst) {
@@ -927,7 +1028,7 @@ void X64InstSelection::select_bit_op(const Instruction* inst) {
 }
 
 void X64InstSelection::select_shift(const Instruction* inst) {
-
+    assert(false && "ISEL not implemented!");
 }
 
 void X64InstSelection::select_not(const Instruction* inst) {
@@ -1083,15 +1184,15 @@ void X64InstSelection::select_fp_to_int_cvt(const Instruction* inst) {
 }
 
 void X64InstSelection::select_ptr_to_int_cvt(const Instruction* inst) {
-
+    assert(false && "ISEL not implemented!");
 }
 
 void X64InstSelection::select_int_to_ptr_cvt(const Instruction* inst) {
-
+    assert(false && "ISEL not implemented!");
 }
 
 void X64InstSelection::select_type_reinterpret(const Instruction* inst) {
-
+    assert(false && "ISEL not implemented!");
 }
 
 void X64InstSelection::select_comparison(const Instruction* inst) {

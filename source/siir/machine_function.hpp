@@ -59,14 +59,8 @@ struct VRegInfo final {
     /// The desired class for a virtual register post-allocation.
     RegisterClass cls = GeneralPurpose;
 
-    /// Starting point of a virtual registers' lifespan (definition).
-    u32 start;
-
-    /// End point of a virtual registers' lifespan (last use).
-    u32 end;
-
     /// The resulting allocation of a virtual register.
-    u32 alloc = MachineRegister::NoRegister;
+    MachineRegister alloc = MachineRegister::NoRegister;
 };
 
 /// Information about the registers used by a machine function.

@@ -73,8 +73,11 @@ public:
     /// Returns the size of |ty| in bits.
     u32 get_type_size_in_bits(const Type* ty) const;
 
-    /// Returns the natural alignment in bytes for |type|.
-    u32 get_type_align(const Type* type) const;
+    /// Returns the natural alignment in bytes for |ty|.
+    u32 get_type_align(const Type* ty) const;
+
+    /// Returns the natural alignment in bits for |ty|.
+    u32 get_type_align_in_bits(const Type* ty) const;
 
     /// Returns the target pointer size in bytes.
     u32 get_pointer_size() const { return m_ptr_size / 8; }

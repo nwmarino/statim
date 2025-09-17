@@ -1,3 +1,4 @@
+#include "siir/allocator.hpp"
 #include "siir/cfg.hpp"
 #include "siir/function.hpp"
 #include "siir/machine_analysis.hpp"
@@ -5,9 +6,89 @@
 #include "siir/machine_function.hpp"
 #include "siir/machine_object.hpp"
 #include "x64/x64.hpp"
+#include <iostream>
 
 using namespace stm;
 using namespace stm::siir;
+
+class LinearScan final {
+    const MachineFunction& m_function;
+    std::vector<LiveRange>& m_ranges;
+
+    LiveRange& update_range(MachineRegister reg, RegisterClass cls, u32 pos) {
+        // Attempt to find an existing range for |reg|.
+        for (auto& range : m_ranges) {
+            // The range has been killed, so we never update it.
+            if (range.killed)
+                continue;
+
+            if (range.reg == reg) {
+                range.end = pos;
+                return range;
+            }
+        }
+
+        // No existing range could be found, so we begin a new one.
+        LiveRange range;
+        range.reg = reg;
+        range.start = range.end = pos;
+        range.cls = cls;
+        range.killed = false;
+
+        if (reg.is_physical()) {
+            range.alloc = reg;
+        } else {
+            range.alloc = MachineRegister::NoRegister;
+        }
+
+        m_ranges.push_back(range);
+        return m_ranges.back();
+    }
+
+public:
+    LinearScan(const MachineFunction& function, std::vector<LiveRange>& ranges)
+        : m_function(function), m_ranges(ranges) {}
+
+    LinearScan(const LinearScan&) = delete;
+    LinearScan& operator = (const LinearScan&) = delete;
+
+    ~LinearScan() = default;
+
+    void run() {
+        u32 position = 0;
+
+        for (const auto* mbb = m_function.front(); mbb; mbb = mbb->next()) {
+            for (const auto& mi : mbb->insts()) {
+                for (const auto& mo : mi.operands()) {
+                    if (!mo.is_reg())
+                        continue;
+
+                    MachineRegister reg = mo.get_reg();
+                    RegisterClass cls;
+
+                    if (reg.is_physical()) {
+                        cls = x64::get_class(
+                            static_cast<x64::Register>(reg.id()));
+                    } else {
+                        // reg refers to a virtual register, whose
+                        // information is stored in the parent function.
+                        const auto& regi = m_function.get_register_info();
+                        assert(regi.vregs.count(reg.id()) != 0);
+                        cls = regi.vregs.at(reg.id()).cls;
+                    }
+
+                    LiveRange& range = update_range(reg, cls, position);
+                    if (mo.is_kill()) {
+                        range.end = position;
+                        range.killed = true;
+                    }
+                }
+
+                ++position;
+            }
+        }
+    }
+};
 
 CFGMachineAnalysis::CFGMachineAnalysis(CFG& cfg) : m_cfg(cfg) {}
 
@@ -42,7 +123,46 @@ FunctionRegisterAnalysis::FunctionRegisterAnalysis(MachineObject& obj)
 
 void FunctionRegisterAnalysis::run() {
     for (const auto& [name, function] : m_obj.functions()) {
-        /// TODO: Implement after register allocation, callsite info, etc.
+        std::vector<LiveRange> ranges;
+        
+        LinearScan linscan { *function, ranges };
+        linscan.run();
+
+        TargetRegisters tregs;
+        switch (m_obj.get_target()->arch()) {
+        case Target::x64:
+            tregs = x64::get_registers();
+            break;
+
+        default:
+            assert(false && "unsupported architecture!");
+        }
+
+#if false
+        std::cerr << "Function '" << name << "' ranges:\n";
+        for (auto& range : ranges) {
+            if (range.reg.is_virtual()) {
+                std::cerr << 'v' << range.reg.id() - MachineRegister::VirtualBarrier;
+            } else {
+                std::cerr << '%' << x64::to_string(static_cast<x64::Register>(
+                    range.reg.id()), 8);
+            }
+
+            std::cerr << " [" << range.start << ", " << range.end << "]\n";
+        }
+#endif
+
+        RegisterAllocator allocator { *function, tregs, ranges };
+        allocator.run();
+
+        FunctionRegisterInfo& regi = function->get_register_info();
+        for (auto& range : ranges) {
+            MachineRegister reg = range.reg;
+            if (reg.is_physical())
+                continue;
+
+            regi.vregs[reg.id()].alloc = range.alloc;
+        }
     }
 }
 

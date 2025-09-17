@@ -1,5 +1,6 @@
 add_library(siir
     STATIC
+        allocator.cpp
         basicblock.cpp
         cfg.cpp
         constant.cpp

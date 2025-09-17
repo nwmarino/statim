@@ -72,16 +72,16 @@ u32 Target::get_type_size_in_bits(const Type* ty) const {
     }
 }
 
-u32 Target::get_type_align(const Type* type) const {
-    switch (type->get_kind()) {
+u32 Target::get_type_align(const Type* ty) const {
+    switch (ty->get_kind()) {
         case Type::TK_Pointer:
             return get_pointer_align();
         case Type::TK_Array: {
-            const ArrayType *aty = static_cast<const ArrayType *>(type);
+            const ArrayType *aty = static_cast<const ArrayType *>(ty);
             return get_type_align(aty->get_element_type());
         }
         case Type::TK_Struct: {
-            const StructType* sty = static_cast<const StructType*>(type);
+            const StructType* sty = static_cast<const StructType*>(ty);
             u32 max_align = 1;
             for (auto field : sty->fields())
                 max_align = std::max(max_align, get_type_align(field));
@@ -89,7 +89,28 @@ u32 Target::get_type_align(const Type* type) const {
             return max_align;
         }
         default:
-            return m_rules.at(type->get_kind()).abi_align;
+            return m_rules.at(ty->get_kind()).abi_align / 8;
+    }
+}
+
+u32 Target::get_type_align_in_bits(const Type* ty) const {
+    switch (ty->get_kind()) {
+        case Type::TK_Pointer:
+            return get_pointer_align();
+        case Type::TK_Array: {
+            const ArrayType *aty = static_cast<const ArrayType *>(ty);
+            return get_type_align_in_bits(aty->get_element_type());
+        }
+        case Type::TK_Struct: {
+            const StructType* sty = static_cast<const StructType*>(ty);
+            u32 max_align = 1;
+            for (auto field : sty->fields())
+                max_align = std::max(max_align, get_type_align_in_bits(field));
+
+            return max_align;
+        }
+        default:
+            return m_rules.at(ty->get_kind()).abi_align;
     }
 }
 

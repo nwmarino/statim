@@ -112,9 +112,29 @@ public:
         return m_is_def; 
     }
 
+    bool is_explicit_def() const {
+        assert(is_reg());
+        return m_is_def && !m_is_implicit;
+    }
+
+    bool is_implicit_def() const {
+        assert(is_reg());
+        return m_is_def && m_is_implicit;
+    }
+
     bool is_use() const {
         assert(is_reg());
         return !m_is_def; 
+    }
+
+    bool is_explicit_use() const {
+        assert(is_reg());
+        return !m_is_def && !m_is_implicit;
+    }
+
+    bool is_implicit_use() const {
+        assert(is_reg());
+        return !m_is_def && m_is_implicit;
     }
 
     bool is_kill() const {

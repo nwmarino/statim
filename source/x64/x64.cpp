@@ -109,6 +109,29 @@ bool x64::is_caller_saved(Register reg) {
     }
 }
 
+TargetRegisters x64::get_registers() {
+    RegisterSet gpr;
+    gpr.cls = GeneralPurpose;
+    gpr.regs = {
+        RAX, RCX, RDX, RSI, RDI, R8, R9, 
+        R10, R11, R12, R13, R14, R15
+    };
+
+    RegisterSet fpr;
+    fpr.cls = FloatingPoint;
+    fpr.regs = {
+        XMM0, XMM1, XMM2, XMM3,
+        XMM4, XMM5, XMM6, XMM7,
+        XMM8, XMM9, XMM10, XMM11,
+        XMM12, XMM13, XMM14, XMM15
+    };
+
+    TargetRegisters tregs;
+    tregs.regs[GeneralPurpose] = gpr;
+    tregs.regs[FloatingPoint] = fpr;
+    return tregs;
+}
+
 std::string x64::to_string(Opcode op) {
     switch (op) {
     case NOP:
@@ -369,53 +392,53 @@ std::string x64::to_string(Opcode op) {
 std::string x64::to_string(Register reg, u16 subreg) {
     switch (reg) {
     case RAX:  
-        return subreg == 0 ? "rax" : (subreg == 1 ? "eax" : 
-            (subreg == 2 ? "ax"  : (subreg == 3 ? "al"  : "ah")));
+        return subreg == 8 ? "rax" : (subreg == 4 ? "eax" : 
+            (subreg == 2 ? "ax"  : (subreg == 1 ? "al"  : "ah")));
     case RBX:  
-        return subreg == 0 ? "rbx" : (subreg == 1 ? "ebx" : 
-            (subreg == 2 ? "bx"  : (subreg == 3 ? "bl"  : "bh")));
+        return subreg == 8 ? "rbx" : (subreg == 4 ? "ebx" : 
+            (subreg == 2 ? "bx"  : (subreg == 1 ? "bl"  : "bh")));
     case RCX:  
-        return subreg == 0 ? "rcx" : (subreg == 1 ? "ecx" : 
-            (subreg == 2 ? "cx"  : (subreg == 3 ? "cl"  : "ch")));
+        return subreg == 8 ? "rcx" : (subreg == 4 ? "ecx" : 
+            (subreg == 2 ? "cx"  : (subreg == 1 ? "cl"  : "ch")));
     case RDX:  
-        return subreg == 0 ? "rdx" : (subreg == 1 ? "edx" : 
-            (subreg == 2 ? "dx"  : (subreg == 3 ? "dl"  : "dh")));
+        return subreg == 8 ? "rdx" : (subreg == 4 ? "edx" : 
+            (subreg == 2 ? "dx"  : (subreg == 1 ? "dl"  : "dh")));
     case RDI:  
-        return subreg == 0 ? "rdi" : (subreg == 1 ? "edi" : 
-            (subreg == 2 ? "di"  : (subreg == 3 ? "dil" : "")));
+        return subreg == 8 ? "rdi" : (subreg == 4 ? "edi" : 
+            (subreg == 2 ? "di"  : (subreg == 1 ? "dil" : "")));
     case RSI:  
-        return subreg == 0 ? "rsi" : (subreg == 1 ? "esi" : 
-            (subreg == 2 ? "si"  : (subreg == 3 ? "sil" : "")));
+        return subreg == 8 ? "rsi" : (subreg == 4 ? "esi" : 
+            (subreg == 2 ? "si"  : (subreg == 1 ? "sil" : "")));
     case RBP:  
-        return subreg == 0 ? "rbp" : (subreg == 1 ? "ebp" : 
-            (subreg == 2 ? "bp"  : (subreg == 3 ? "bpl" : "")));
+        return subreg == 8 ? "rbp" : (subreg == 4 ? "ebp" : 
+            (subreg == 2 ? "bp"  : (subreg == 1 ? "bpl" : "")));
     case RSP:  
-        return subreg == 0 ? "rsp" : (subreg == 1 ? "esp" : 
-            (subreg == 2 ? "sp"  : (subreg == 3 ? "spl" : "")));
+        return subreg == 8 ? "rsp" : (subreg == 4 ? "esp" : 
+            (subreg == 2 ? "sp"  : (subreg == 1 ? "spl" : "")));
     case R8:   
-        return subreg == 0 ? "r8" : (subreg == 1 ? "r8d" : 
-            (subreg == 2 ? "r8w" : (subreg == 3 ? "r8b" : "")));
+        return subreg == 8 ? "r8" : (subreg == 4 ? "r8d" : 
+            (subreg == 2 ? "r8w" : (subreg == 1 ? "r8b" : "")));
     case R9:   
-        return subreg == 0 ? "r9" : (subreg == 1 ? "r9d" :
-             (subreg == 2 ? "r9w" : (subreg == 3 ? "r9b" : "")));
+        return subreg == 8 ? "r9" : (subreg == 4 ? "r9d" :
+             (subreg == 2 ? "r9w" : (subreg == 1 ? "r9b" : "")));
     case R10:  
-        return subreg == 0 ? "r10" : (subreg == 1 ? "r10d" : 
-            (subreg == 2 ? "r10w": (subreg == 3 ? "r10b": "")));
+        return subreg == 8 ? "r10" : (subreg == 4 ? "r10d" : 
+            (subreg == 2 ? "r10w": (subreg == 1 ? "r10b": "")));
     case R11:  
-        return subreg == 0 ? "r11" : (subreg == 1 ? "r11d" : 
-            (subreg == 2 ? "r11w": (subreg == 3 ? "r11b": "")));
+        return subreg == 8 ? "r11" : (subreg == 4 ? "r11d" : 
+            (subreg == 2 ? "r11w": (subreg == 31 ? "r11b": "")));
     case R12:  
-        return subreg == 0 ? "r12" : (subreg == 1 ? "r12d" : 
-            (subreg == 2 ? "r12w": (subreg == 3 ? "r12b": "")));
+        return subreg == 8 ? "r12" : (subreg == 4 ? "r12d" : 
+            (subreg == 2 ? "r12w": (subreg == 1 ? "r12b": "")));
     case R13:  
-        return subreg == 0 ? "r13" : (subreg == 1 ? "r13d" : 
-            (subreg == 2 ? "r13w": (subreg == 3 ? "r13b": "")));
+        return subreg == 8 ? "r13" : (subreg == 4 ? "r13d" : 
+            (subreg == 2 ? "r13w": (subreg == 1 ? "r13b": "")));
     case R14:  
-        return subreg == 0 ? "r14" : (subreg == 1 ? "r14d" : 
-            (subreg == 2 ? "r14w": (subreg == 3 ? "r14b": "")));
+        return subreg == 8 ? "r14" : (subreg == 4 ? "r14d" : 
+            (subreg == 2 ? "r14w": (subreg == 1 ? "r14b": "")));
     case R15:  
-        return subreg == 0 ? "r15" : (subreg == 1 ? "r15d" : 
-            (subreg == 2 ? "r15w": (subreg == 3 ? "r15b": "")));
+        return subreg == 8 ? "r15" : (subreg == 4 ? "r15d" : 
+            (subreg == 2 ? "r15w": (subreg == 1 ? "r15b": "")));
     case RIP:  
         return "rip";
     case XMM0: 
