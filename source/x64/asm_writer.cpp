@@ -250,12 +250,12 @@ static void emit_instruction(std::ostream& os, const MachineFunction& MF,
 
 static void emit_basic_block(std::ostream& os, const MachineFunction& MF, 
                               const MachineBasicBlock& MBB) {
-    if (MBB.get_basic_block()->is_entry_block() || 
-      !MBB.get_basic_block()->has_preds()) {
-        os << "#bb" << MBB.position() << ":\n";
-    } else {
-        os << ".LBB" << g_function_id << '_' << MBB.position() << ":\n";
-    }
+    //if (MBB.get_basic_block()->is_entry_block() || 
+    //  !MBB.get_basic_block()->has_preds()) {
+    //    os << "#bb" << MBB.position() << ":\n";
+    //} else {
+    os << ".LBB" << g_function_id << '_' << MBB.position() << ":\n";
+    //}
 
     for (auto& MI : MBB.insts()) {
         emit_instruction(os, MF, MI);

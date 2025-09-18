@@ -6,6 +6,11 @@ fadd :: (x: f64, y: f64) -> f64 {
     ret x + y;
 }
 
+address_of_deref :: (x: s64) -> s64 {
+    let y: *s64 = &x;
+    ret *y;
+}
+
 main :: (argc: s64, argv: **char) -> s64 {
-    ret fadd(1.5, 2.5);
+    ret fadd(1, 5);
 }

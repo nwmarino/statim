@@ -1750,13 +1750,10 @@ void Codegen::visit(CastExpr& node) {
             return;
 
         // Fold possible constants here if possible.
-        if (auto constant = dynamic_cast<siir::ConstantInt*>(m_tmp)) {
+        if (auto constant = dynamic_cast<siir::ConstantInt*>(m_tmp))
             m_tmp = siir::ConstantInt::get(
                 m_cfg, dst_type, constant->get_value());
-            return;
-        }
-
-        if (src_sz > dst_sz)
+        else if (src_sz > dst_sz)
             m_tmp = m_builder.build_itrunc(dst_type, m_tmp);
         else if (node.get_expr()->get_type()->is_signed_int())
             m_tmp = m_builder.build_sext(dst_type, m_tmp);
@@ -1769,27 +1766,30 @@ void Codegen::visit(CastExpr& node) {
             return;
 
         // Fold possible constants here if possible.
-        if (auto constant = dynamic_cast<siir::ConstantFP*>(m_tmp)) {
+        if (auto constant = dynamic_cast<siir::ConstantFP*>(m_tmp))
             m_tmp = siir::ConstantFP::get(
                 m_cfg, dst_type, constant->get_value());
-            return;
-        }
-
-        if (src_sz > dst_sz) // Downcasting.
+        else if (src_sz > dst_sz) // Downcasting.
             m_tmp = m_builder.build_ftrunc(dst_type, m_tmp);
         else // Upcasting.
             m_tmp = m_builder.build_fext(dst_type, m_tmp);
     } else if (src_type->is_integer_type()
       && dst_type->is_floating_point_type()) {
         // Integer -> Floating point conversions.
-        if (node.get_expr()->get_type()->is_signed_int())
+
+        if (auto constant = dynamic_cast<siir::ConstantInt*>(m_tmp))
+            m_tmp = siir::ConstantFP::get(m_cfg, dst_type, constant->get_value());
+        else if (node.get_expr()->get_type()->is_signed_int())
             m_tmp = m_builder.build_si2fp(dst_type, m_tmp);
         else if (node.get_expr()->get_type()->is_unsigned_int())
             m_tmp = m_builder.build_ui2fp(dst_type, m_tmp);
     } else if (src_type->is_floating_point_type()
       && dst_type->is_integer_type()) {
         // Floating point -> Integer conversions.
-        if (node.get_type()->is_signed_int())
+
+        if (auto constant = dynamic_cast<siir::ConstantFP*>(m_tmp))
+            m_tmp = siir::ConstantInt::get(m_cfg, dst_type, constant->get_value());
+        else if (node.get_type()->is_signed_int())
             m_tmp = m_builder.build_fp2si(dst_type, m_tmp);
         else if (node.get_type()->is_unsigned_int())
             m_tmp = m_builder.build_fp2ui(dst_type, m_tmp);

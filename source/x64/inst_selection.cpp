@@ -823,6 +823,23 @@ void X64InstSelection::select_load_store(const Instruction* inst) {
 
             if (dynamic_cast<const Argument*>(inst->get_operand(0)))
                 src.set_is_kill(true);
+        } else if (src.is_mem() || src.is_stack_index() || src.is_constant_index()) {
+            // Both the store source and destination are memory references, so
+            // the source must first be placed into a temporary register, we
+            // choose %rax for simplicity.
+
+            MachineOperand tmp = MachineOperand::create_reg(
+                x64::RAX, 
+                get_subreg(inst->get_operand(0)->get_type()), 
+                true);
+
+            emit(x64::LEA, { src, tmp });
+
+            // Now the source of the store can be considered tmp (in %rax), and
+            // the next use will kill the value in it.
+            src = tmp;
+            src.set_is_use();
+            src.set_is_kill();
         }
 
         MachineOperand dst = as_operand(inst->get_operand(1));
