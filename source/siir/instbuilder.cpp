@@ -845,7 +845,7 @@ Instruction* InstBuilder::build_fp2si(const Type* type, Value* value) {
     assert(value && "value cannot be null");
     assert(value->get_type()->is_floating_point_type() && 
         "value type must be a floating point type");
-    assert(type->is_floating_point_type() &&
+    assert(type->is_integer_type() &&
         "type must be an integer");
 
     return insert(INST_OP_FP2SI, m_cfg.get_def_id(), type, { value });
@@ -855,7 +855,7 @@ Instruction* InstBuilder::build_fp2ui(const Type* type, Value* value) {
     assert(value && "value cannot be null");
     assert(value->get_type()->is_floating_point_type() && 
         "value type must be a floating point type");
-    assert(type->is_floating_point_type() &&
+    assert(type->is_integer_type() &&
         "type must be an integer");
 
     return insert(INST_OP_FP2UI, m_cfg.get_def_id(), type, { value });

@@ -458,20 +458,24 @@ stm::i32 main(stm::i32 argc, char** argv) {
             stm::siir::MachineObjectPrinter printer { *obj };
             printer.run(std::cout);
 
-            stm::siir::MachineObjectAsmWriter writer { *obj };
-            writer.run(std::cout);
+            std::ofstream asmf { graph.get_file().filename() + ".s" };
+            assert(asmf.is_open());
 
-            //std::string as = "as -o " + graph.get_file().filename() + ".o " + 
-            //    graph.get_file().filename() + ".s";
-            //std::system(as.c_str());
+            stm::siir::MachineObjectAsmWriter writer { *obj };
+            writer.run(asmf);
+            asmf.close();
+
+            std::string as = "as -o " + graph.get_file().filename() + ".o " + 
+                graph.get_file().filename() + ".s";
+            std::system(as.c_str());
         }
 
-        //std::string ld = "ld -nostdlib -o " + 
-        //    std::string(options.output) + "std/rt.o ";
-        //for (const auto& unit : units)
-        //    ld += unit->get_graph().get_file().filename() + ".o ";
+        std::string ld = "ld -nostdlib -o " + 
+            std::string(options.output) + " std/rt.o ";
+        for (const auto& unit : units)
+            ld += unit->get_graph().get_file().filename() + ".o ";
 
-        //std::system(ld.c_str());
+        std::system(ld.c_str());
     }
 
     return 0;

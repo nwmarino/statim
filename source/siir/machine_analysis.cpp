@@ -11,6 +11,8 @@
 using namespace stm;
 using namespace stm::siir;
 
+//#define DEBUG_PRINT_RANGES
+
 class LinearScan final {
     const MachineFunction& m_function;
     std::vector<LiveRange>& m_ranges;
@@ -138,7 +140,7 @@ void FunctionRegisterAnalysis::run() {
             assert(false && "unsupported architecture!");
         }
 
-#if false
+#ifdef DEBUG_PRINT_RANGES
         std::cerr << "Function '" << name << "' ranges:\n";
         for (auto& range : ranges) {
             if (range.reg.is_virtual()) {
@@ -150,7 +152,7 @@ void FunctionRegisterAnalysis::run() {
 
             std::cerr << " [" << range.start << ", " << range.end << "]\n";
         }
-#endif
+#endif // DEBUG_PRINT_RANGES
 
         RegisterAllocator allocator { *function, tregs, ranges };
         allocator.run();
@@ -163,6 +165,10 @@ void FunctionRegisterAnalysis::run() {
 
             regi.vregs[reg.id()].alloc = range.alloc;
         }
+
+        /// TODO: Implement callsite analysis at this point, saving caller-
+        /// saved registers that are live around callsites, and managing the
+        /// spills that come with it.
     }
 }
 

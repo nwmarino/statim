@@ -19,19 +19,19 @@ struct InputFile final {
     }
 
 private:
-    std::string m_name = "";
-    std::string m_absolute = "";
-    std::string m_source = "";
+    mutable std::string m_name = "";
+    mutable std::string m_absolute = "";
+    mutable std::string m_source = "";
     
 public:
     /// Get the filename for this input file.
-    const std::string& filename();
+    const std::string& filename() const;
 
     /// Get the absolute path for this input file.
-    const std::string& absolute();
+    const std::string& absolute() const;
 
     /// Get the source code of this input file as a string.
-    const std::string& source();
+    const std::string& source() const;
 
     /// Get the source code of this input file between two locations.
     const std::string& source(const Span& span);

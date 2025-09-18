@@ -52,6 +52,22 @@ struct FunctionStackInfo final {
 
         return entries.back().offset + entries.back().size;
     }
+
+    u32 alignment() const {
+        u32 max_align = 1;
+        for (const auto& entry : entries)
+            if (entry.align > max_align)
+                max_align = entry.align;
+        
+        u32 size = this->size();
+        while (max_align < size)
+            max_align += 16;
+
+        if (max_align % 16 != 0)
+            max_align += 16 - (max_align % 16);
+
+        return max_align;
+    }
 };
 
 /// Information about a virtual register.

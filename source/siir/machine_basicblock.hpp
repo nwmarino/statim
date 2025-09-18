@@ -61,6 +61,7 @@ public:
     MachineInst& back() { return m_insts.back(); }
 
     const std::vector<MachineInst>& insts() const { return m_insts; }
+    std::vector<MachineInst>& insts() { return m_insts; }
 
     const MachineBasicBlock* prev() const { return m_prev; }
     MachineBasicBlock* prev() { return m_prev; }

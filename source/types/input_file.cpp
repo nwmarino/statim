@@ -9,7 +9,7 @@
 
 using namespace stm;
 
-const std::string& InputFile::filename() {
+const std::string& InputFile::filename() const {
     if (!m_name.empty())
         return m_name;
     
@@ -22,14 +22,14 @@ const std::string& InputFile::filename() {
     return (m_name = m_name.substr(pos + 1));
 }
 
-const std::string& InputFile::absolute() {
+const std::string& InputFile::absolute() const {
     if (!m_absolute.empty())
         return m_absolute;
 
     return (m_absolute = boost::filesystem::absolute(path).string());
 }
 
-const std::string& InputFile::source() {
+const std::string& InputFile::source() const {
     if (!m_source.empty())
         return m_source;
 

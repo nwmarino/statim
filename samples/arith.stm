@@ -2,6 +2,10 @@ iadd :: (x: s64, y: s64) -> s64 {
     ret x + y;
 }
 
+fadd :: (x: f64, y: f64) -> f64 {
+    ret x + y;
+}
+
 main :: (argc: s64, argv: **char) -> s64 {
-    ret iadd(1, 2);
+    ret fadd(1.5, 2.5);
 }

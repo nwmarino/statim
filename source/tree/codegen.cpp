@@ -103,7 +103,7 @@ siir::Value* Codegen::inject_bool_cmp(siir::Value* value) {
 
 void Codegen::lower_function(const FunctionDecl& decl) {
     siir::Function::LinkageType linkage = siir::Function::LINKAGE_INTERNAL;
-    if (decl.has_decorator(Rune::Public))
+    if (decl.has_decorator(Rune::Public) || decl.get_name() == "main")
         linkage = siir::Function::LINKAGE_EXTERNAL;
 
     std::vector<const siir::Type*> arg_types;
