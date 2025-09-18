@@ -1745,7 +1745,6 @@ void Codegen::visit(CastExpr& node) {
     if (src_type->is_integer_type() 
       && dst_type->is_integer_type()) {
         // Integer -> Integer casts.
-
         if (src_sz == dst_sz)
             return;
 

@@ -7,12 +7,29 @@ using namespace stm;
 using namespace stm::siir;
 using namespace stm::siir::x64;
 
-bool x64::is_call_opcode(x64::Opcode op) {
-    return op == x64::CALL;
+bool x64::is_call_opcode(x64::Opcode opc) {
+    return opc == x64::CALL64;
 }
 
-bool x64::is_ret_opcode(x64::Opcode op) {
-    return op == x64::RET;
+bool x64::is_ret_opcode(x64::Opcode opc) {
+    return opc == x64::RET64;
+}
+
+bool x64::is_move_opcode(x64::Opcode opc) {
+    switch (opc) {
+    case MOV:
+    case MOV8:
+    case MOV16:
+    case MOV32:
+    case MOV64:
+    case MOVSS:
+    case MOVSD:
+    case MOVAPS:
+    case MOVAPD:
+        return true;
+    default:
+        return false;
+    }
 }
 
 RegisterClass x64::get_class(Register reg) {
@@ -136,18 +153,22 @@ std::string x64::to_string(Opcode op) {
     switch (op) {
     case NOP:
         return "NOP";
-    case LEA:
-        return "LEA";
-    case CALL:
-        return "CALL";
-    case RET:
-        return "RET";
     case JMP:
         return "JMP";
     case UD2:
         return "UD2";
     case CQO:
         return "CQO";
+    case MOV:
+        return "MOV";
+    case CALL64:
+        return "CALL64";
+    case RET64:
+        return "RET64";
+    case LEA32:
+        return "LEA32";
+    case LEA64:
+        return "LEA64";
     case PUSH64:
         return "PUSH64";
     case POP64:
@@ -280,6 +301,14 @@ std::string x64::to_string(Opcode op) {
         return "NEG32";
     case NEG64:
         return "NEG64";
+    case MOVABS:
+        return "MOVABS";
+    case MOVSX:
+        return "MOVSX";
+    case MOVSXD:
+        return "MOVSXD";
+    case MOVZX:
+        return "MOVZX";
     case JE:
         return "JE";
     case JNE:

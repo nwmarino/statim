@@ -790,7 +790,7 @@ void X64InstSelection::select_string_constant(const Instruction* inst) {
     u32 cpool_index = 
         m_function->get_constant_pool().get_or_create_constant(string, 1);
 
-    emit(x64::LEA)
+    emit(x64::LEA64)
         .add_constant_index(cpool_index)
         .add_reg(as_machine_reg(inst), 8, true);
 }
@@ -827,13 +827,12 @@ void X64InstSelection::select_load_store(const Instruction* inst) {
             // Both the store source and destination are memory references, so
             // the source must first be placed into a temporary register, we
             // choose %rax for simplicity.
-
             MachineOperand tmp = MachineOperand::create_reg(
                 x64::RAX, 
                 get_subreg(inst->get_operand(0)->get_type()), 
                 true);
 
-            emit(x64::LEA, { src, tmp });
+            emit(x64::LEA64, { src, tmp });
 
             // Now the source of the store can be considered tmp (in %rax), and
             // the next use will kill the value in it.
@@ -876,16 +875,23 @@ void X64InstSelection::select_branch_if(const Instruction* inst) {
 
     const auto* instr = dynamic_cast<const Instruction*>(condition);
     if (instr && instr->is_comparison() && is_deferred(instr)) {
+        x64::Opcode jcc = get_jcc_op(instr->opcode());
         MachineOperand lhs = as_operand(instr->get_operand(0));
         MachineOperand rhs = as_operand(instr->get_operand(1));
+
+        if (rhs.is_imm()) {
+            MachineOperand tmp = lhs;
+            lhs = rhs;
+            rhs = tmp;
+        } else {
+            jcc = flip_jcc(jcc);
+        }
 
         x64::Opcode cmp_opc = get_cmp_op(instr->get_operand(0)->get_type());
         emit(cmp_opc, { lhs, rhs });
 
-        x64::Opcode jcc = get_jcc_op(instr->opcode());
         MachineOperand tdst = as_operand(inst->get_operand(1));
         MachineOperand fdst = as_operand(inst->get_operand(2));
-
         emit(jcc, { tdst });
         emit(x64::JMP, { fdst });
     } else {
@@ -924,7 +930,7 @@ void X64InstSelection::select_return(const Instruction* inst) {
             .add_reg(dst_reg, sub_reg, false);
     }
 
-    MachineInst& instr = emit(x64::RET);
+    MachineInst& instr = emit(x64::RET64);
 
     if (dst_reg != MachineRegister::NoRegister) {
         instr.add_reg(dst_reg, sub_reg, false, true);
@@ -962,7 +968,7 @@ void X64InstSelection::select_call(const Instruction* inst) {
     assert(callee && 
         "CallInstr first operand is not a function or inline assembly!");
 
-    MachineInst& call = emit(x64::CALL).add_symbol(callee->get_name());
+    MachineInst& call = emit(x64::CALL64).add_symbol(callee->get_name());
     for (auto& reg : regs) {
         call.add_reg(reg, 8, false, true, true);
     }
@@ -990,6 +996,12 @@ void X64InstSelection::select_add(const Instruction* inst) {
     MachineOperand lhs = as_operand(inst->get_operand(0));
     MachineOperand rhs = as_operand(inst->get_operand(1));
 
+    if (rhs.is_imm()) {
+        MachineOperand tmp = lhs;
+        lhs = rhs;
+        rhs = tmp;
+    }
+
     x64::Opcode add_opc = get_add_op(inst->get_type());
     MachineInst& instr = emit(add_opc, { lhs, rhs });
 
@@ -1004,15 +1016,24 @@ void X64InstSelection::select_add(const Instruction* inst) {
 }
 
 void X64InstSelection::select_sub(const Instruction* inst) {
+    x64::Opcode sub_opc = get_sub_op(inst->get_type());
+    x64::Opcode mov_opc = get_move_op(inst->get_type());
     MachineOperand lhs = as_operand(inst->get_operand(0));
     MachineOperand rhs = as_operand(inst->get_operand(1));
 
-    x64::Opcode sub_opc = get_sub_op(inst->get_type());
-    emit(sub_opc, { lhs, rhs });
+    if (lhs.is_imm()) {
+        MachineOperand dst = MachineOperand::create_reg(
+            as_machine_reg(inst), 
+            get_subreg(inst->get_type()), 
+            true);
 
-    x64::Opcode mov_opc = get_move_op(inst->get_type());
-    emit(mov_opc, { rhs })
-        .add_reg(as_machine_reg(inst), get_subreg(inst->get_type()), true);
+        emit(mov_opc, { lhs, dst });
+        emit(sub_opc, { rhs, dst });
+    } else {
+        emit(sub_opc, { rhs, lhs });
+        emit(mov_opc, { lhs })
+            .add_reg(as_machine_reg(inst), get_subreg(inst->get_type()), true);
+    }    
 }
 
 void X64InstSelection::select_mul_div_rem(const Instruction* inst) {
@@ -1091,7 +1112,7 @@ void X64InstSelection::select_ext(const Instruction* inst) {
 
     case INST_OP_ZEXT:
         if (src_sz_in_bits == 32 && dst_sz_in_bits == 64)
-            opc = x64::MOVZXD;
+            opc = x64::MOV;
         else
             opc = x64::MOVZX;
 

@@ -1,6 +1,8 @@
 #include "siir/cfg.hpp"
 #include "siir/constant.hpp"
 #include "siir/machine_function.hpp"
+#include "siir/machine_operand.hpp"
+#include "siir/machine_register.hpp"
 #include "x64/x64.hpp"
 
 #include <cmath>
@@ -11,22 +13,17 @@ using namespace stm::siir::x64;
 
 static u32 g_function_id = 0;
 
-static void emit_register(std::ostream& os, MachineRegister reg, u16 subreg) {
-    assert(reg.is_physical() && "cannot emit virtual register!");
-
-    os << '%' << x64::to_string(static_cast<x64::Register>(reg.id()), subreg);
-}
-
 static const char* opc_as_string(x64::Opcode opc) {
     switch (opc) {
     case NOP:         return "nop";
-    case LEA:         return "leaq";
-    case CALL:        return "callq";
-    case RET:         return "retq";
-    case JMP:         return "j";
-    case MOV:         return "mov";
+    case JMP:         return "jmp";
     case UD2:         return "ud2";
     case CQO:         return "cqo";
+    case MOV:         return "mov";
+    case CALL64:      return "callq";
+    case RET64:       return "retq";
+    case LEA32:       return "leal";
+    case LEA64:       return "leaq";
     case PUSH64:      return "pushq";
     case POP64:       return "popq";
     case MOV8:        return "movb";
@@ -97,7 +94,6 @@ static const char* opc_as_string(x64::Opcode opc) {
     case MOVSX:       return "movsx";
     case MOVSXD:      return "movsxd";
     case MOVZX:       return "movzx";
-    case MOVZXD:      return "movzxd";
     case JE:          return "je";
     case JNE:         return "jne";
     case JZ:          return "jz";
@@ -159,27 +155,57 @@ static const char* opc_as_string(x64::Opcode opc) {
     }
 }
 
+/// Returns the mapped, physical register for |reg|. If |reg| is already a
+/// physical register, this function does nothing.
+static x64::Register map_register(MachineRegister reg, 
+                                  const MachineFunction& MF) {
+    if (reg.is_virtual())
+        reg = MF.get_register_info().vregs.at(reg.id()).alloc;
+
+    return static_cast<x64::Register>(reg.id());
+}
+
+/// Returns true if |MI| is a redundant `movx` instruction.
+///
+/// A move is considered redundant if both operands are identical physical 
+/// registers.
+static bool is_redundant_move(const MachineInst& MI, 
+                              const MachineFunction& MF) {
+    if (!is_move_opcode(static_cast<x64::Opcode>(MI.opcode())))
+        return false;
+
+    if (MI.num_operands() != 2)
+        return false;
+
+    const MachineOperand& oper1 = MI.get_operand(0);
+    const MachineOperand& oper2 = MI.get_operand(1);
+
+    if (!oper1.is_reg() || !oper2.is_reg())
+        return false;
+
+    x64::Register reg1 = map_register(oper1.get_reg(), MF);
+    x64::Register reg2 = map_register(oper2.get_reg(), MF);
+    return reg1 == reg2 && oper1.get_subreg() == oper2.get_subreg();
+}
+
+/// Emits the operand |MO| to output stream |os|.
 static void emit_operand(std::ostream& os, const MachineFunction& MF,
-                          const MachineOperand& MO) {
+                         const MachineOperand& MO) {
     switch (MO.kind()) {
     case MachineOperand::MO_Register: {
         MachineRegister reg = MO.get_reg();
         if (reg.is_virtual())
             reg = MF.get_register_info().vregs.at(reg.id()).alloc;
 
-        emit_register(os, reg, MO.get_subreg());
+        os << '%' << to_string(map_register(MO.get_reg(), MF), MO.get_subreg());
         break;
     }
 
     case MachineOperand::MO_Memory: {
-        os << MO.get_mem_disp() << '(';
+        if (MO.get_mem_disp() != 0)
+            os << MO.get_mem_disp();
 
-        MachineRegister reg = MO.get_mem_base();
-        if (reg.is_virtual())
-            reg = MF.get_register_info().vregs.at(reg.id()).alloc;
-
-        emit_register(os, reg, 8);
-        os << ')';
+        os << "(%" << to_string(map_register(MO.get_mem_base(), MF), 8) << ')';
         break;
     }
 
@@ -191,9 +217,7 @@ static void emit_operand(std::ostream& os, const MachineFunction& MF,
         const FunctionStackInfo& stack = MF.get_stack_info();
         const FunctionStackEntry& slot = stack.entries.at(MO.get_stack_index());
 
-        os << -slot.offset - (i32) slot.size << '(';
-        emit_register(os, x64::RBP, 8);
-        os << ')';
+        os << (-slot.offset - static_cast<i32>(slot.size)) << "(%rbp)";
         break;
     }
 
@@ -224,20 +248,25 @@ static void emit_operand(std::ostream& os, const MachineFunction& MF,
 
 static void emit_instruction(std::ostream& os, const MachineFunction& MF,
                              const MachineInst& MI) {
+    // Skip the emission of redundant moves.
+    if (is_redundant_move(MI, MF))
+        return;
+
+    // If this is a return instruction, inject the necessary epilogue steps.
     if (is_ret_opcode(static_cast<x64::Opcode>(MI.opcode()))) {
         os << "\taddq\t$" << MF.get_stack_info().alignment() << ", %rsp\n"
            << "\tpopq\t%rbp\n"
            << "\t.cfi_def_cfa %rsp, 8\n"
            << "\tretq\n";
-           
         return;
     }
 
     os << '\t' << opc_as_string(static_cast<x64::Opcode>(MI.opcode())) << '\t';
 
-    for (u32 idx = 0, e = MI.num_explicit_operands(); idx != e; ++idx) {
-        const MachineOperand& MO = MI.get_operand(idx);        
-        emit_operand(os, MF, MO);
+    // Emit all explicit operands of the instruction.
+    for (u32 idx = 0, e = MI.num_explicit_operands(); idx != e; ++idx) {    
+        emit_operand(os, MF, MI.get_operand(idx));
+
         if (idx + 1 != e)
             os << ", ";
     }
@@ -250,16 +279,16 @@ static void emit_instruction(std::ostream& os, const MachineFunction& MF,
 
 static void emit_basic_block(std::ostream& os, const MachineFunction& MF, 
                               const MachineBasicBlock& MBB) {
-    //if (MBB.get_basic_block()->is_entry_block() || 
-    //  !MBB.get_basic_block()->has_preds()) {
-    //    os << "#bb" << MBB.position() << ":\n";
-    //} else {
-    os << ".LBB" << g_function_id << '_' << MBB.position() << ":\n";
-    //}
-
-    for (auto& MI : MBB.insts()) {
-        emit_instruction(os, MF, MI);
+    if (!MBB.get_basic_block()->has_preds()) {
+        // For basic blocks without predecessors (usually only the entry block),
+        // only emit a comment instead of the redundant label.
+        os << "#bb" << MBB.position() << ":\n";
+    } else {
+        os << ".LBB" << g_function_id << '_' << MBB.position() << ":\n";
     }
+
+    for (auto& MI : MBB.insts())
+        emit_instruction(os, MF, MI);
 }
 
 static void emit_constant(std::ostream& os, const MachineFunction& MF,
@@ -311,14 +340,50 @@ static void emit_constant(std::ostream& os, const MachineFunction& MF,
     } else if (auto CN = dynamic_cast<const ConstantNull*>(constant)) {
         os << "quad 0x0";
     } else if (auto CS = dynamic_cast<const ConstantString*>(constant)) {
-        os << "string \"" << CS->get_value() << "\"";
+        os << "string \"";
+        
+        for (u32 idx = 0, e = CS->get_value().size(); idx != e; ++idx) {
+            switch (CS->get_value()[idx]) {
+            case '\\':
+                os << "\\\\";
+                break;
+            case '\'':
+                os << "\\'";
+                break;
+            case '\"':
+                os << "\\\"";
+                break;
+            case '\n':
+                os << "\\n";
+                break;
+            case '\t':
+                os << "\\t";
+                break;
+            case '\r':
+                os << "\\r";
+                break;
+            case '\b':
+                os << "\\b";
+                break;
+            case '\0':
+                os << "\\0";
+                break;
+            default:
+                os << CS->get_value()[idx];
+                break;
+            }
+        }
+
+        os << '"';
     }
 
     os << '\n';
 }
 
 static void emit_function(std::ostream& os, const MachineFunction& MF) {
-    os << "# begin function " << MF.get_name() << '\n';
+    const std::string& name = MF.get_name();
+
+    os << "# begin function " << name << '\n';
 
     const FunctionConstantPool& cpool = MF.get_constant_pool();
     i32 last_size = -1;
@@ -341,11 +406,11 @@ static void emit_function(std::ostream& os, const MachineFunction& MF) {
     os << "\t.text\n";
 
     if (MF.get_function()->get_linkage() == Function::LINKAGE_EXTERNAL)
-        os << "\t.global\t" << MF.get_name() << '\n';
+        os << "\t.global\t" << name << '\n';
 
     os << "\t.p2align 4\n"
-       << "\t.type\t" << MF.get_name() << ", @function\n"
-       << MF.get_name() << ":\n"
+       << "\t.type\t" << name << ", @function\n"
+       << name << ":\n"
        << "\t.cfi_startproc\n"
        << "\tpushq\t%rbp\n"
        << "\t.cfi_def_cfa_offset 16\n"
@@ -354,14 +419,13 @@ static void emit_function(std::ostream& os, const MachineFunction& MF) {
        << "\t.cfi_def_cfa_register %rbp\n"
        << "\tsubq\t$" << MF.get_stack_info().alignment() << ", %rsp\n";
 
-    for (const auto* MBB = MF.front(); MBB; MBB = MBB->next()) {
+    for (const auto* MBB = MF.front(); MBB; MBB = MBB->next())
         emit_basic_block(os, MF, *MBB);
-    }
 
     os << ".LFE" << g_function_id << ":\n"
-       << "\t.size\t" << MF.get_name() << ", .LFE" << g_function_id << "-" << MF.get_name() << '\n'
+       << "\t.size\t" << name << ", .LFE" << g_function_id << '-' << name << '\n'
        << "\t.cfi_endproc\n"
-       << "# end function " << MF.get_name() << "\n\n";
+       << "# end function " << name << "\n\n";
 }
 
 void X64AsmWriter::run(std::ostream& os) const {

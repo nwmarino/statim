@@ -49,20 +49,24 @@ static void print_operand(std::ostream& os, const MachineFunction& MF,
     }
 
     case MachineOperand::MO_Memory: {
-        os << "[";
+        os << '[';
 
         MachineRegister reg = MO.get_mem_base();
         if (reg.is_virtual()) {
             os << 'v' << (reg.id() - MachineRegister::VirtualBarrier);
         } else {
-            os << "%" << x64::to_string(
+            os << '%' << x64::to_string(
                 static_cast<x64::Register>(reg.id()), 64);
         }
 
-        if (MO.get_mem_disp() > 0)
-            os << '+';
+        if (MO.get_mem_disp() != 0) {
+            if (MO.get_mem_disp() > 0)
+                os << '+';
 
-        os << MO.get_mem_disp() << ']';
+            os << MO.get_mem_disp();
+        }
+
+        os << ']';
         break;
     }
 
@@ -127,7 +131,7 @@ static void print_block(std::ostream& os, const MachineFunction& MF,
 
     for (auto inst : MBB.insts()) {
         print_inst(os, MF, inst);
-        os << "\n";
+        os << '\n';
     }
 }
 
@@ -139,14 +143,14 @@ static void print_function(std::ostream& os, const MachineFunction& MF) {
     const FunctionStackInfo& stack = MF.get_stack_info();
     for (u32 idx = 0, e = stack.num_entries(); idx != e; ++idx) {
         const FunctionStackEntry& entry = stack.entries[idx];
-        os << "    stack" << idx << " offset: " << entry.offset << ", size: " << 
+        os << "    stack." << idx << " offset: " << entry.offset << ", size: " << 
             entry.size << ", align: " << entry.align << '\n';
     }
 
     const FunctionConstantPool& pool = MF.get_constant_pool();
     for (u32 idx = 0, e = pool.num_entries(); idx != e; ++idx) {
         const FunctionConstantPoolEntry& entry = pool.entries[idx];
-        os << "    cpool" << idx << ' ' << 
+        os << "    const." << idx << ' ' << 
             entry.constant->get_type()->to_string() << ' ';
         entry.constant->print(os);
         os << '\n';
@@ -164,6 +168,6 @@ void x64::X64Printer::run(std::ostream& os) const {
 
     for (const auto& [name, function] : m_obj.functions()) {
         print_function(os, *function);
-        os << "\n";
+        os << '\n';
     }
 }

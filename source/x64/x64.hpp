@@ -24,16 +24,12 @@ namespace x64 {
 /// Recognized x64 opcodes. These are really mnemonics since they don't signify
 /// any operand information.
 enum Opcode : u32 {
-    NO_OP = 0x0,
+    NO_OPC = 0x0,
 
-    NOP,
-    LEA, 
-    CALL, RET, 
-    JMP,
-    MOV,
-    UD2, 
-    CQO,
+    NOP, JMP, UD2, CQO, MOV,
 
+    CALL64, RET64, 
+    LEA32, LEA64, 
     PUSH64, POP64,
     MOV8, MOV16, MOV32, MOV64,
     ADD8, ADD16, ADD32, ADD64,
@@ -56,7 +52,6 @@ enum Opcode : u32 {
     MOVSX,
     MOVSXD,
     MOVZX,
-    MOVZXD,
 
     JE, JNE, JZ, JNZ,
     JL, JLE, JG, JGE,
@@ -232,11 +227,14 @@ public:
     void run(std::ostream& os) const;
 };
 
-/// Returns true if the opcode |op| is considered a call instruction.
-bool is_call_opcode(x64::Opcode op);
+/// Returns true if the opcode |opc| is considered a call instruction.
+bool is_call_opcode(x64::Opcode opc);
 
-/// Returns true if the opcode |op| is considered a return instruction.
-bool is_ret_opcode(x64::Opcode op);
+/// Returns true if the opcode |opc| is considered a return instruction.
+bool is_ret_opcode(x64::Opcode opc);
+
+/// Returns true if the opcode |opc| is considered a move instruction.
+bool is_move_opcode(x64::Opcode opc);
 
 /// Returns the register class of the physical register |reg|.
 RegisterClass get_class(x64::Register reg);
