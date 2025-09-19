@@ -39,6 +39,17 @@ struct LiveRange final {
     /// If true, then this range is considered dead and should no longer be
     /// extended.
     bool killed;
+
+    /// Returns true if this range in any way overlaps with the given position.
+    bool overlaps(u32 pos) const {
+        return this->start < pos && pos < this->end;
+    }
+
+    /// Returns true if this range in any way overlaps with the bounds 
+    /// [start, end].
+    bool overlaps(u32 start, u32 end) const {
+        return this->start < end && this->end > start;
+    }
 };
 
 class RegisterAllocator {

@@ -3,12 +3,6 @@
 using namespace stm;
 using namespace stm::siir;
 
-/// Returns true if |range| in any way overlaps with the bounds 
-/// [start, end].
-static bool range_overlaps(const LiveRange& range, u32 start, u32 end) {
-    return range.start < end && range.end > start;
-}
-
 bool RegisterAllocator::is_available(MachineRegister reg, u32 start, 
                                      u32 end) const {
     /// TODO: This ends up being very slow, since it covers all ranges in a
@@ -18,7 +12,7 @@ bool RegisterAllocator::is_available(MachineRegister reg, u32 start,
         // For each range within the function, if it allocates |reg| and 
         // overlaps with [start, end], then |reg| is considered unavailable.
 
-        if (range.alloc == reg && range_overlaps(range, start, end))
+        if (range.alloc == reg && range.overlaps(start, end))
             return false;
     }
 

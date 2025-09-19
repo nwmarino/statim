@@ -3,6 +3,7 @@
 
 #include "siir/machine_inst.hpp"
 
+#include <cassert>
 #include <vector>
 
 namespace stm::siir {
@@ -74,14 +75,20 @@ public:
 
     /// Append |inst| to the back of this basic block.
     void push_front(MachineInst& inst) {
-        m_insts.insert(m_insts.begin(), inst);
         inst.set_parent(this);
+        m_insts.insert(m_insts.begin(), inst);
     }
 
     /// Prepend |inst| to the front of this basic block.
     void push_back(MachineInst& inst) {
-        m_insts.push_back(inst);
         inst.set_parent(this);
+        m_insts.push_back(inst);
+    }
+
+    void insert(MachineInst& inst, u32 i) {
+        assert(i < size());
+        inst.set_parent(this);
+        m_insts.insert(m_insts.begin() + i, inst);
     }
 };
 

@@ -28,7 +28,7 @@ class MachineInst final {
     std::vector<MachineOperand> m_operands;
 
 public:
-    MachineInst(u32 opcode, const std::vector<MachineOperand>& operands, 
+    MachineInst(u32 opcode, const std::vector<MachineOperand>& operands = {}, 
                 MachineBasicBlock* parent = nullptr);
 
     /// Returns the opcode of this machine instruction.

@@ -1204,16 +1204,16 @@ void X64InstSelection::select_call(const Instruction* inst) {
     
     const Value* first_oper = inst->get_operand(0);
     if (const auto* iasm = dynamic_cast<const InlineAsm*>(first_oper)) {
-        /// TODO: Implement inline assembly selection.
+        // TODO: Implement inline assembly selection.
         return;
     }
 
-    /// TODO: Add stack spilling for calls with more than 6 arguments.
+    // TODO: Add stack spilling for calls with more than 6 arguments.
 
     std::vector<MachineRegister> regs = {};
     regs.reserve(inst->num_operands() - 1);
 
-    for (u32 idx = 0, e = inst->num_operands() - 1; idx != e; ++idx) {
+    for (i32 idx = inst->num_operands() - 2; idx >= 0; --idx) {
         const Value* arg = inst->get_operand(idx + 1);
         MachineOperand src = as_operand(arg);
         MachineOperand dst = as_call_argument(arg, idx);

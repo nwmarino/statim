@@ -92,6 +92,64 @@ public:
     }
 };
 
+class CallsiteAnalysis final {
+    MachineFunction& m_function;
+    const std::vector<LiveRange>& m_ranges;
+
+public:
+    CallsiteAnalysis(MachineFunction& function, 
+                     const std::vector<LiveRange>& ranges)
+        : m_function(function), m_ranges(ranges) {}
+
+    CallsiteAnalysis(const CallsiteAnalysis&) = delete;
+    CallsiteAnalysis& operator = (const CallsiteAnalysis&) = delete;
+
+    ~CallsiteAnalysis() = default;
+    
+    void run() {
+        u32 position = 0;
+        for (auto* mbb = m_function.front(); mbb; mbb = mbb->next()) {
+            std::vector<MachineInst> insts;
+            insts.reserve(mbb->size());
+
+            for (u32 i = 0; i < mbb->size(); ++position, ++i) {
+                // TODO: Generalize for other targets.
+                if (x64::is_call_opcode(static_cast<x64::Opcode>(mbb->insts().at(i).opcode()))) {
+                    std::vector<MachineRegister> save = {};
+
+                    for (auto& range : m_ranges) {
+                        if (range.overlaps(position)) {
+                            MachineRegister range_alloc = range.alloc;
+                            if (x64::is_caller_saved(static_cast<x64::Register>(range.alloc.id())))
+                                save.push_back(range.alloc);
+                        }
+                    }
+
+                    for (auto& reg : save) {
+                        MachineOperand op = MachineOperand::create_reg(
+                            reg, 8, false);
+
+                        insts.push_back({ x64::PUSH64, { op } });   
+                    }
+
+                    insts.push_back(mbb->insts().at(i));
+                    
+                    for (auto& reg : save) {
+                        MachineOperand op = MachineOperand::create_reg(
+                            reg, 8, true);
+
+                        insts.push_back({ x64::POP64, { op } });
+                    }
+                } else {
+                    insts.push_back(mbb->insts().at(i));
+                }
+            }
+
+            mbb->insts() = insts;
+        }
+    }
+};
+
 CFGMachineAnalysis::CFGMachineAnalysis(CFG& cfg) : m_cfg(cfg) {}
 
 void CFGMachineAnalysis::run(MachineObject& obj) {
@@ -169,6 +227,9 @@ void FunctionRegisterAnalysis::run() {
         /// TODO: Implement callsite analysis at this point, saving caller-
         /// saved registers that are live around callsites, and managing the
         /// spills that come with it.
+
+        CallsiteAnalysis CAN { *function, ranges };
+        CAN.run();
     }
 }
 
