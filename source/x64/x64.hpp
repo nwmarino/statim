@@ -130,6 +130,8 @@ class X64InstSelection final {
     /// defining SIIR instruction |inst|. 
     MachineRegister as_machine_reg(const Instruction* inst);
 
+    MachineRegister scratch(RegisterClass cls);
+
     /// Returns the expected x64 general-purpose subregister for a given type. 
     /// This function will always return 1, 2, 4, or 8.
     u16 get_subreg(const Type* ty) const;
@@ -155,7 +157,7 @@ class X64InstSelection final {
     x64::Opcode get_setcc_op(siir::Opcode opc) const;
     
     /// Returns a machine operand equivelant of treating |value| as a use.
-    MachineOperand as_operand(const Value* value) const;
+    MachineOperand as_operand(const Value* value);
 
     /// Returns a machine operand representing the location of a function call
     /// argument as per the SystemV ABI for x64.

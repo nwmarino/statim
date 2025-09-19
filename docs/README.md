@@ -1,1 +1,1 @@
-This directory acts as the root for all source specific documentation.
+This directory contains broader documentation about parts of the project.

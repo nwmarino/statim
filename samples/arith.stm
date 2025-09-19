@@ -1,7 +1,0 @@
-iadd :: (x: s64, y: s64) -> s64 {
-    ret x + y;
-}
-
-main :: (argc: s64, argv: **char) -> s64 {
-    ret argc + iadd(4, 1) * argc;
-}

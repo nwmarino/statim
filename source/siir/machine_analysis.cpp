@@ -62,11 +62,15 @@ public:
         for (const auto* mbb = m_function.front(); mbb; mbb = mbb->next()) {
             for (const auto& mi : mbb->insts()) {
                 for (const auto& mo : mi.operands()) {
-                    if (!mo.is_reg())
+                    if (!mo.is_reg() && !mo.is_mem())
                         continue;
 
-                    MachineRegister reg = mo.get_reg();
+                    MachineRegister reg;
                     RegisterClass cls;
+                    if (mo.is_reg())
+                        reg = mo.get_reg();
+                    else if (mo.is_mem())
+                        reg = mo.get_mem_base();
 
                     if (reg.is_physical()) {
                         cls = x64::get_class(
@@ -80,7 +84,7 @@ public:
                     }
 
                     LiveRange& range = update_range(reg, cls, position);
-                    if (mo.is_kill()) {
+                    if (mo.is_reg() && mo.is_kill()) {
                         range.end = position;
                         range.killed = true;
                     }

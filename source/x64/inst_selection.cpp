@@ -187,6 +187,17 @@ MachineRegister X64InstSelection::as_machine_reg(const Instruction* inst) {
     return next_id;
 }
 
+MachineRegister X64InstSelection::scratch(RegisterClass cls) {
+    VRegInfo info;
+    info.cls = cls;
+    info.alloc = MachineRegister::NoRegister;
+
+    FunctionRegisterInfo& regi = m_function->get_register_info();
+    u32 next_id = regi.vregs.size() + MachineRegister::VirtualBarrier;
+    regi.vregs.emplace(next_id, info);
+    return next_id;
+}
+
 u16 X64InstSelection::get_subreg(const Type* ty) const {
     if (!ty)
         return 0;
@@ -658,18 +669,42 @@ x64::Opcode X64InstSelection::get_setcc_op(siir::Opcode opc) const {
     }
 }
 
-MachineOperand X64InstSelection::as_operand(const Value* value) const {
+MachineOperand X64InstSelection::as_operand(const Value* value) {
     if (auto CI = dynamic_cast<const ConstantInt*>(value)) {
-        return MachineOperand::create_imm(CI->get_value());
+        MachineOperand reg = MachineOperand::create_reg(
+            scratch(GeneralPurpose), get_subreg(value->get_type()), true);
+
+        emit(get_move_op(CI->get_type()))
+            .add_imm(CI->get_value())
+            .add_operand(reg);
+
+        reg.set_is_use();
+        return reg;
     } else if (auto CFP = dynamic_cast<const ConstantFP*>(value)) {
-        return MachineOperand::create_constant_index(
-            m_function->get_constant_pool().get_or_create_constant(
-                CFP, m_target.get_type_align(value->get_type())));
+        MachineOperand reg = MachineOperand::create_reg(
+            scratch(FloatingPoint), 0, true);
+        u32 cidx = m_function->get_constant_pool().get_or_create_constant(
+            CFP, m_target.get_type_align(CFP->get_type()));
+
+        emit(get_move_op(CFP->get_type()))
+            .add_constant_index(cidx)
+            .add_operand(reg);
+
+        reg.set_is_use();
+        return reg;
     } else if (auto CN = dynamic_cast<const ConstantNull*>(value)) {
-        return MachineOperand::create_imm(0);
+        MachineOperand reg = MachineOperand::create_reg(
+            scratch(GeneralPurpose), 8, true);
+
+        emit(x64::MOV64)
+            .add_imm(0)
+            .add_operand(reg);
+
+        reg.set_is_use();
+        return reg;
     } else if (auto CBA = dynamic_cast<const BlockAddress*>(value)) {
-        /// TODO: Rewrite to accomodate for possible positional changes in 
-        /// machine blocks.
+        // TODO: Rewrite to accomodate for possible positional changes in 
+        // machine blocks.
         return MachineOperand::create_block(
             m_function->at(CBA->get_block()->get_number()));
     } else if (auto CGL = dynamic_cast<const Global*>(value)) {
@@ -1415,6 +1450,17 @@ void X64InstSelection::select_fmul_fdiv(const Instruction* inst) {
         assert(false && "unexpected opcode");
     }
 
+    if (lhs.is_constant_index()) {
+        MachineOperand tmp = MachineOperand::create_reg(
+            x64::XMM0, 0, true);
+
+        emit(get_move_op(inst->get_type()), { lhs, tmp });
+
+        lhs = tmp;
+        lhs.set_is_use();
+        lhs.set_is_kill();
+    }
+ 
     emit(opc, { rhs, lhs });
     emit(get_move_op(inst->get_type()), { lhs })
         .add_reg(as_machine_reg(inst), 8, true);

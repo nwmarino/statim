@@ -1,6 +1,6 @@
+#include "core/stmc.hpp"
 #include "core/logger.hpp"
 #include "siir/cfg.hpp"
-#include "siir/llvm_translate_pass.hpp"
 #include "siir/machine_analysis.hpp"
 #include "siir/machine_object.hpp"
 #include "siir/ssa_rewrite_pass.hpp"
@@ -12,6 +12,9 @@
 #include "types/input_file.hpp"
 #include "types/options.hpp"
 #include "types/translation_unit.hpp"
+
+#ifdef STMC_LLVM_SUPPORT
+#include "siir/llvm_translate_pass.hpp"
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -32,7 +35,9 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Scalar/SROA.h"
+#endif // STMC_LIVE_SUPPORT
 
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -157,6 +162,7 @@ link_trees(const std::vector<std::unique_ptr<stm::TranslationUnit>>& units) {
     }
 }
 
+#ifdef STMC_LLVM_SUPPORT
 static void emit_module(const stm::Options& opts, 
                         llvm::CodeGenFileType file_type,
                         llvm::Module& module, llvm::TargetMachine* TM) {
@@ -220,25 +226,31 @@ static void emit_module(const stm::Options& opts,
     LPM.run(module);
     output->keep();
 }
+#endif // STMC_LLVM_SUPPORT
 
 stm::i32 main(stm::i32 argc, char** argv) {
     stm::Logger::init();
 
-    std::ofstream dump("dump");
-
-    stm::Options options;
+    stm::Options options {};
     options.output = "main";
-    options.optlevel = 0;
-    options.debug = true;
-    options.devel = true;
-    options.emit_asm = true;
-    options.keep_obj = true;
+    options.opt_level = 0;
+    options.debug = false;
+    options.devel = false;
+    options.dump_ast = false;
+    options.dump_llvm_ir = false;
+    options.dump_machine_ir = false;
+    options.dump_siir = false;
+    options.keep_asm = false;
+    options.keep_obj = false;
+    options.link = true;
     options.llvm = false;
-    options.time = true;
+    options.nostd = false;
+    options.time = false;
 
-    std::vector<std::unique_ptr<stm::InputFile>> files;
-    std::vector<std::unique_ptr<stm::TranslationUnit>> units;
+    std::vector<std::unique_ptr<stm::InputFile>> files = {};
+    std::vector<std::unique_ptr<stm::TranslationUnit>> units = {};
 
+    // Parse any command-line arguments into compiler options.
     for (stm::u32 i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "-o") {
@@ -247,39 +259,50 @@ stm::i32 main(stm::i32 argc, char** argv) {
             
             options.output = argv[i];
         } else if (arg == "-O0") {
-            options.optlevel = 0;
+            options.opt_level = 0;
         } else if (arg == "-O1") {
-            options.optlevel = 1;
+            options.opt_level = 1;
         } else if (arg == "-O2") {
-            options.optlevel = 2;
+            options.opt_level = 2;
         } else if (arg == "-O3") {
-            options.optlevel = 3;
+            options.opt_level = 3;
         } else if (arg == "-g") {
             options.debug = true;
         } else if (arg == "-d") {
             options.devel = true;
+        } else if (arg == "-dump-ast") {
+            options.dump_ast = true;
+        } else if (arg == "-dump-llvm-ir") {
+            options.dump_llvm_ir = true;
+        } else if (arg == "-dump-machine-ir") {
+            options.dump_machine_ir = true;
+        } else if (arg == "-dump-siir") {
+            options.dump_siir = true;
         } else if (arg == "-S") {
-            options.emit_asm = true;
+            options.keep_asm = true;
         } else if (arg == "-c") {
             options.keep_obj = true;
+            options.link = false;
         } else if (arg == "-ll") {
             options.llvm = true;
+        } else if (arg == "-nostd") {
+            options.nostd = true;
         } else if (arg == "-t") {
             options.time = true;
+        } else if (arg[0] == '-') {
+            stm::Logger::fatal("unrecognized argument: '" + arg + "'");
         } else {
             files.push_back(std::make_unique<stm::InputFile>(argv[i]));
         }
     }
-    
-    files.push_back(std::make_unique<stm::InputFile>("samples/arith.stm"));
-    //files.push_back(std::make_unique<stm::InputFile>("samples/natives.stm"));
-    //files.push_back(std::make_unique<stm::InputFile>("samples/b.stm"));
-    //files.push_back(std::make_unique<stm::InputFile>("samples/mem.stm"));
-    //files.push_back(std::make_unique<stm::InputFile>("samples/string.stm"));
 
     if (files.empty())
         stm::Logger::fatal("no input files");
+
+    units.reserve(files.size());
     
+    // For each input file, create a new translation unit and attempt to
+    // parse a syntax tree from the file contents.
     for (auto& file : files) {
         std::unique_ptr<stm::TranslationUnit> unit =
             std::make_unique<stm::TranslationUnit>(*file);
@@ -292,10 +315,8 @@ stm::i32 main(stm::i32 argc, char** argv) {
 
     link_trees(units);
 
-    for (auto& unit : units) {
-        stm::Root& root = unit->get_root();
-        root.validate();
-    }
+    for (auto& unit : units)
+        unit->get_root().validate();
 
     link_trees(units);
 
@@ -307,11 +328,7 @@ stm::i32 main(stm::i32 argc, char** argv) {
 
         stm::SemanticAnalysis sema { options, root };
         root.accept(sema);
-
-        root.print(dump);
     }
-
-    dump.flush();
 
     stm::siir::Target target { 
         stm::siir::Target::x64, 
@@ -326,26 +343,36 @@ stm::i32 main(stm::i32 argc, char** argv) {
         stm::Codegen cgn { options, unit->get_root(), *graph };
         unit->get_root().accept(cgn);
 
+        // Skip SIIR optimization passes if desired or if the LLVM backend is 
+        // being targetted.
+        if (options.llvm || options.opt_level == 0) {
+            unit->set_graph(std::move(graph));
+            continue;
+        }
+
+        if (options.opt_level >= 1) {
+            // Run O1+ optimizations.
+
+            stm::siir::SSARewritePass SSAR { *graph };
+            SSAR.run();
+
+            stm::siir::TrivialDCEPass TDCE { *graph };
+            TDCE.run();
+        }
+
+        if (options.opt_level >= 2) {
+            // Run O2+ optimizations.
+        }
+
+        if (options.opt_level >= 3) {
+            // Run O3+ optimizations.
+        }
+
         unit->set_graph(std::move(graph));
     }
 
-    for (auto& unit : units) {
-        stm::siir::CFG& graph = unit->get_graph();
-
-        graph.print(dump);
-
-        if (!options.llvm && options.optlevel >= 1) {
-            stm::siir::SSARewrite ssar { graph };
-            ssar.run();
-
-            stm::siir::TrivialDCEPass dce { graph };
-            dce.run();
-        }
-    }
-
-    dump.close();
-
     if (options.llvm) {
+#ifdef STMC_LLVM_SUPPORT
         llvm::InitializeAllTargetInfos();
         llvm::InitializeAllTargets();
         llvm::InitializeAllTargetMCs();
@@ -377,7 +404,7 @@ stm::i32 main(stm::i32 argc, char** argv) {
         assert(llvm_target && "unable to find equivelant LLVM target!");
 
         llvm::CodeGenOptLevel opt = llvm::CodeGenOptLevel::None;
-        switch (options.optlevel) {
+        switch (options.opt_level) {
         case 1:
             opt = llvm::CodeGenOptLevel::Less;
             break;
@@ -441,10 +468,16 @@ stm::i32 main(stm::i32 argc, char** argv) {
             ld += module->getSourceFileName() + ".o ";
 
         std::system(ld.c_str());
+#else
+    assert(false && 
+        "LLVM backend unsupported! recompile with STMC_LLVM_SUPPORT");
+#endif // STMC_LLVM_SUPPORT
     } else {
-        std::vector<std::unique_ptr<stm::siir::MachineObject>> objs;
+        std::vector<std::unique_ptr<stm::siir::MachineObject>> objs = {};
+        objs.reserve(units.size());
 
         for (auto& unit : units) {
+            const std::string& filename = unit->get_file().filename();
             stm::siir::CFG& graph = unit->get_graph();
             std::unique_ptr<stm::siir::MachineObject> obj =
                 std::make_unique<stm::siir::MachineObject>(&graph, &target); 
@@ -455,27 +488,49 @@ stm::i32 main(stm::i32 argc, char** argv) {
             stm::siir::FunctionRegisterAnalysis FRA { *obj };
             FRA.run();
 
-            stm::siir::MachineObjectPrinter printer { *obj };
-            printer.run(std::cout);
+            if (options.dump_machine_ir) {
+                stm::siir::MachineObjectPrinter printer { *obj };
+                printer.run(std::cout);
+            }
 
-            std::ofstream asmf { graph.get_file().filename() + ".s" };
-            assert(asmf.is_open());
+            const std::string assembly_filename = filename + ".s";
+            std::ofstream assembly_file(assembly_filename);
+            assert(assembly_file.is_open() &&
+                "could not open assembly file for writing!");
 
-            stm::siir::MachineObjectAsmWriter writer { *obj };
-            writer.run(asmf);
-            asmf.close();
+            stm::siir::MachineObjectAsmWriter assembly_writer { *obj };
+            assembly_writer.run(assembly_file);
+            assembly_file.close();
 
-            std::string as = "as -o " + graph.get_file().filename() + ".o " + 
-                graph.get_file().filename() + ".s";
-            std::system(as.c_str());
+            std::system(("as -o " + filename + ".o " + assembly_filename).c_str());
         }
 
-        std::string ld = "ld -nostdlib -o " + 
-            std::string(options.output) + " std/rt.o ";
-        for (const auto& unit : units)
-            ld += unit->get_graph().get_file().filename() + ".o ";
+        if (options.link) {
+            // Setup the linker command to create the final executable.
+            std::string ld = "ld -nostdlib -o " + std::string(options.output);
+                
+            // TODO: Adjust depending on expected std installation path.
+            if (!options.nostd)
+                ld += " std/rt.o ";
+            
+            // Add the object of each unit into the linker command.
+            for (const auto& unit : units)
+                ld += unit->get_graph().get_file().filename() + ".o ";
 
-        std::system(ld.c_str());
+            std::system(ld.c_str());
+        }
+
+        // For each translation unit, remove (or don't) the emitted assembly
+        // and object files depending on options.
+        for (const auto& unit : units) {
+            const std::string filename = unit->get_file().filename();
+
+            if (!options.keep_asm)
+                std::remove((filename + ".s").c_str());
+
+            if (!options.keep_obj)
+                std::remove((filename + ".o").c_str());
+        }
     }
 
     return 0;

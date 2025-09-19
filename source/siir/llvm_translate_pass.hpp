@@ -1,6 +1,10 @@
 #ifndef STATIM_SIIR_LLVM_TRANSLATE_PASS_H_
 #define STATIM_SIIR_LLVM_TRANSLATE_PASS_H_
 
+#include "core/stmc.hpp"
+
+#ifdef STMC_LLVM_SUPPORT
+
 #include "siir/basicblock.hpp"
 #include "siir/instruction.hpp"
 #include "siir/inlineasm.hpp"
@@ -66,5 +70,7 @@ public:
 };
 
 } // namespace stm::siir
+
+#endif // STMC_LLVM_SUPPORT
 
 #endif // STATIM_SIIR_LLVM_TRANSLATE_PASS_H_

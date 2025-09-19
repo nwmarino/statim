@@ -1,3 +1,23 @@
+special_number :: mut s64 = 42;
+
+main :: (argc: s64, argv: **char) -> s64 {
+    test_iadd();
+    test_fadd();
+    test_isub();
+    test_fsub();
+    test_smul();
+    test_umul();
+    test_fmul();
+    test_sdiv();
+    test_udiv();
+    test_fdiv();
+
+    let p: *s64 = &special_number;
+    *p = 11;
+
+    ret special_number;
+}
+
 $public
 test_iadd :: () -> void {
     let x: s64 = 4;

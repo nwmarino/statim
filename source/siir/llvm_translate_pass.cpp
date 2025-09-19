@@ -1,3 +1,6 @@
+#include "core/stmc.hpp"
+
+#ifdef STMC_LLVM_SUPPORT
 #include "siir/llvm_translate_pass.hpp"
 #include "siir/constant.hpp"
 #include "siir/function.hpp"
@@ -853,3 +856,5 @@ void LLVMTranslatePass::convert(Instruction* inst) {
         assert(false && "no LLVM equivelant for SIIR instruction!");
     }
 }
+
+#endif // STMC_LLVM_SUPPORT

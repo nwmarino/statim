@@ -21,7 +21,7 @@ class Local;
 ///
 /// This pass implements some of the algorithms outlined by Braun et al.
 /// See: https://link.springer.com/chapter/10.1007/978-3-642-37051-9_6
-class SSARewrite final : public Pass {
+class SSARewritePass final : public Pass {
     using BlockDefs = std::unordered_map<Local*,
         std::unordered_map<BasicBlock*, Value*>>;
 
@@ -67,12 +67,13 @@ class SSARewrite final : public Pass {
     void seal_block(BasicBlock* blk);
 
 public:
-    SSARewrite(CFG& cfg);
+    SSARewritePass(CFG& cfg);
 
     void run() override;
 };
 
 } // namespace siir
+
 } // namespace stm
 
 #endif // STATIM_SIIR_SSA_REWRITE_PASS_HPP_

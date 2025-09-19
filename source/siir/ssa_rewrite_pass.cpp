@@ -36,23 +36,23 @@ static void compute_rpo(Function* fn, std::vector<BasicBlock*>& rpo) {
     rpo.assign(order.rbegin(), order.rend());
 }
 
-SSARewrite::SSARewrite(CFG& cfg) : Pass(cfg), m_builder(cfg) {}
+SSARewritePass::SSARewritePass(CFG& cfg) : Pass(cfg), m_builder(cfg) {}
 
-void SSARewrite::run() {
+void SSARewritePass::run() {
     m_builder.set_insert_mode(InstBuilder::Prepend);
 
     for (auto& fn : m_cfg.functions())
         process(fn);
 }
 
-void SSARewrite::process(Function* fn) {
+void SSARewritePass::process(Function* fn) {
     auto locals_copy = fn->locals();
     for (auto& [name, local] : locals_copy) {
         promote_local(fn, local);
     }
 }
 
-void SSARewrite::promote_local(Function* fn, Local* local) {
+void SSARewritePass::promote_local(Function* fn, Local* local) {
 #ifdef SSAR_DEBUGGING
     std::cerr << "Promoting local: ";
     local->print(std::cerr);
@@ -124,18 +124,18 @@ void SSARewrite::promote_local(Function* fn, Local* local) {
     m_current_def.clear();
 }
 
-void SSARewrite::write_variable(BasicBlock* blk, Value* value) {
+void SSARewritePass::write_variable(BasicBlock* blk, Value* value) {
     m_current_def[blk] = value;
 }
 
-Value* SSARewrite::read_variable(BasicBlock* blk) {
+Value* SSARewritePass::read_variable(BasicBlock* blk) {
     if (m_current_def.count(blk) == 1)
         return m_current_def[blk];
 
     return read_variable_recursive(blk);
 }
 
-Value* SSARewrite::add_phi_operands(Instruction* phi) {
+Value* SSARewritePass::add_phi_operands(Instruction* phi) {
     assert(phi->num_operands() == 0);
 
     // For each predecessor to |blk|, which is the block that |phi| is in, try 
@@ -156,7 +156,7 @@ Value* SSARewrite::add_phi_operands(Instruction* phi) {
     return try_remove_trivial_phi(phi);
 }
 
-Value* SSARewrite::read_variable_recursive(BasicBlock* blk) {
+Value* SSARewritePass::read_variable_recursive(BasicBlock* blk) {
     assert(!blk->is_entry_block() && blk->num_preds() > 0);
 
     if (!is_sealed(blk)) {
@@ -189,7 +189,7 @@ Value* SSARewrite::read_variable_recursive(BasicBlock* blk) {
     return v;
 }
 
-Value* SSARewrite::try_remove_trivial_phi(Instruction* phi) {
+Value* SSARewritePass::try_remove_trivial_phi(Instruction* phi) {
     // For each incoming value to |phi|, see if it is a reference to the phi
     // itself or another operand to determine if it is considered trivial.
     // A phi can also be considered trivial if it merges less than two unique
@@ -238,15 +238,15 @@ Value* SSARewrite::try_remove_trivial_phi(Instruction* phi) {
     return same;
 }
 
-bool SSARewrite::visited(BasicBlock* blk) {
+bool SSARewritePass::visited(BasicBlock* blk) {
     return std::find(m_visited.begin(), m_visited.end(), blk) != m_visited.end();
 }
 
-bool SSARewrite::is_sealed(BasicBlock* blk) {
+bool SSARewritePass::is_sealed(BasicBlock* blk) {
     return std::find(m_sealed.begin(), m_sealed.end(), blk) != m_sealed.end();
 }
 
-void SSARewrite::seal_block(BasicBlock* blk) {
+void SSARewritePass::seal_block(BasicBlock* blk) {
     assert(!is_sealed(blk));
 
     for (auto& [ local, phis ] : m_incomplete_phis[blk]) {
