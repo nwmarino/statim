@@ -1,5 +1,6 @@
 #include "siir/cfg.hpp"
 #include "siir/constant.hpp"
+#include "siir/global.hpp"
 #include "siir/machine_function.hpp"
 #include "siir/machine_operand.hpp"
 #include "siir/machine_register.hpp"
@@ -291,8 +292,10 @@ static void emit_basic_block(std::ostream& os, const MachineFunction& MF,
         emit_instruction(os, MF, MI);
 }
 
-static void emit_constant(std::ostream& os, const MachineFunction& MF,
-                          const Constant* constant, u32 size) {
+static void emit_constant(std::ostream& os, const Target& target,
+                          const Constant* constant) {
+    u32 size = target.get_type_size(constant->get_type());
+
     os << "\t.";
 
     if (auto CI = dynamic_cast<const ConstantInt*>(constant)) {
@@ -400,7 +403,7 @@ static void emit_function(std::ostream& os, const MachineFunction& MF) {
         }
 
         os << ".LCPI" << g_function_id << '_' << idx << ":\n";
-        emit_constant(os, MF, entry.constant, size);
+        emit_constant(os, MF.get_target(), entry.constant);
     }
 
     os << "\t.text\n";
@@ -428,13 +431,32 @@ static void emit_function(std::ostream& os, const MachineFunction& MF) {
        << "# end function " << name << "\n\n";
 }
 
+static void emit_global(std::ostream& os, const Target& target, 
+                        const Global* global) {
+    if (global->is_read_only()) {
+        os << "\t.section\t.rodata\n";
+    } else {
+        os << "\t.data\n";
+    }
+
+    if (global->get_linkage() == Global::LINKAGE_EXTERNAL)
+        os << "\t.global " << global->get_name() << '\n';
+
+    os << "\t.align\t" << target.get_type_align(global->get_initializer()->get_type()) << '\n'
+       << "\t.type\t" << global->get_name() << ", @object\n"
+       << "\t.size\t" << global->get_name() << ", " << target.get_type_size(global->get_initializer()->get_type()) << '\n'
+       << global->get_name() << ":\n";
+
+    emit_constant(os, target, global->get_initializer());
+}
+
 void X64AsmWriter::run(std::ostream& os) const {
     g_function_id = 0;
 
     os << "\t.file\t\"" << m_obj.get_graph()->get_file().filename() << "\"\n";
 
     for (const auto& global : m_obj.get_graph()->globals()) {
-        /// TODO: Implement global emits.
+        emit_global(os, *m_obj.get_target(), global);
     }
 
     for (const auto& [name, function] : m_obj.functions()) {

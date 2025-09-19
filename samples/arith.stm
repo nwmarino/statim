@@ -1,11 +1,9 @@
-land :: (x: bool, y: bool) -> bool {
-    ret x && y;
-}
-
-lor :: (x: bool, y: bool) -> bool {
-    ret x || y;
-}
+special_number :: mut s64 = 42;
 
 main :: (argc: s64, argv: **char) -> s64 {
-    ret lor(false, false);
+    $println("Hello, world!");
+
+    let special_number_p: *s64 = &special_number;
+    *special_number_p = 11;
+    ret special_number;
 }
