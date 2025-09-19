@@ -141,8 +141,9 @@ public:
     }
 
     /// Add a new operand |op| to this instruction.
-    void add_operand(const MachineOperand& op) {
+    MachineInst& add_operand(const MachineOperand& op) {
         m_operands.push_back(op);
+        return *this;
     }
 
     MachineInst& add_reg(MachineRegister reg, u16 subreg, bool is_def, 

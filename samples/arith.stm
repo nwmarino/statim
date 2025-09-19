@@ -1,45 +1,26 @@
-iadd :: (x: s64, y: s64) -> s64 {
+Box :: struct {
+    a: s64,
+    b: s64,
+    c: s64,
+    d: s64,
+    e: s64,
+}
+
+ptr_next :: (x: *s64) -> *s64 {
+    ret x + 1;
+}
+
+ptr_next_arb :: (x: *s64, y: s64) -> *s64 {
     ret x + y;
-}
-
-fadd :: (x: f64, y: f64) -> f64 {
-    ret x + y;
-}
-
-isub :: (x: s32, y: s32) -> s32 {
-    ret x - y;
-}
-
-fsub :: (x: f32, y: f32) -> f32 {
-    ret x - y;
-} 
-
-address_of_deref :: (x: s64) -> s64 {
-    let y: *s64 = &x;
-    ret *y;
-}
-
-if_6 :: (x: s64) -> s64 {
-    if x == 6 {
-        ret 0;
-    } else {
-        ret x;
-    }
-}
-
-until_42 :: (x: s64) -> s64 {
-    while x < 42 {
-        x++;
-    }
-
-    while x > 42 {
-        --x;
-    }
-
-    ret x;
 }
 
 main :: (argc: s64, argv: **char) -> s64 {
-    $println("hello world!");
-    ret fsub(5.1, 4.1);
+    let box: Box;
+    box.a = 67;
+    box.b = 42;
+    box.c = 15;
+    box.d = 121;
+    box.e = 75;
+
+    ret *ptr_next_arb(&box.a, 0);
 }

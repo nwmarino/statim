@@ -57,3 +57,84 @@ test_fdiv :: () -> void {
     let x: f64 = 2.5;
     $assert(cast<f64>(20) == cast<f64>(50) / x);
 }
+
+iadd :: (x: s64, y: s64) -> s64 {
+    ret x + y;
+}
+
+fadd :: (x: f64, y: f64) -> f64 {
+    ret x + y;
+}
+
+isub :: (x: s32, y: s32) -> s32 {
+    ret x - y;
+}
+
+fsub :: (x: f32, y: f32) -> f32 {
+    ret x - y;
+}
+
+and :: (x: s8, y: s8) -> s8 {
+    ret x & y;
+}
+
+or :: (x: s8, y: s8) -> s8 {
+    ret x | y;
+}
+
+xor :: (x: s8, y: s8) -> s8 {
+    ret x ^ y;
+}
+
+sext32 :: (x: s16) -> s32 {
+    ret x;
+}
+
+sext64 :: (x: s32) -> s64 {
+    ret x;
+}
+
+zext32 :: (x: u16) -> u32 {
+    ret x;
+}
+
+zext64 :: (x: u32) -> u64 {
+    ret x;
+}
+
+itrunc :: (x: s64) -> s32 {
+    ret x;
+}
+
+fext :: (x: f32) -> f64 {
+    ret x;
+}
+
+ftrunc :: (x: f64) -> f32 {
+    ret x;
+}
+
+address_of_deref :: (x: s64) -> s64 {
+    let y: *s64 = &x;
+    ret *y;
+}
+
+if_6 :: (x: s64) -> s64 {
+    if x == 6 {
+        ret 0;
+    } else {
+        ret x;
+    }
+}
+
+until_42 :: (x: s64) -> s64 {
+    while x < 42 {
+        x++;
+    }
+
+    while x > 42 {
+        --x;
+    }
+
+    ret x;
+}

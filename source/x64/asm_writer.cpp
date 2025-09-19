@@ -19,7 +19,7 @@ static const char* opc_as_string(x64::Opcode opc) {
     case JMP:         return "jmp";
     case UD2:         return "ud2";
     case CQO:         return "cqo";
-    case MOV:         return "mov";
+    case MOV:         return "mov ";
     case CALL64:      return "callq";
     case RET64:       return "retq";
     case LEA32:       return "leal";

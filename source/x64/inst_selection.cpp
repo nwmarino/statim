@@ -10,6 +10,7 @@
 #include "siir/machine_basicblock.hpp"
 #include "siir/machine_operand.hpp"
 #include "siir/machine_inst.hpp"
+#include "siir/type.hpp"
 #include "x64/x64.hpp"
 
 #include <cassert>
@@ -861,7 +862,77 @@ void X64InstSelection::select_load_store(const Instruction* inst) {
 }
 
 void X64InstSelection::select_access_ptr(const Instruction* inst) {
-    assert(false && "ISEL not implemented!");
+    const Value* src_value = inst->get_operand(0);
+    const Type* src_type = src_value->get_type();
+    MachineOperand src = as_operand(src_value);
+    MachineOperand dst = MachineOperand::create_reg(
+        as_machine_reg(inst), 8, true);
+    
+    assert(src_type->is_pointer_type() &&
+        "APInstr source must be a pointer!");
+    const Type* pointee = static_cast<const PointerType*>(
+        src_type)->get_pointee();
+
+    x64::Opcode opc;
+    if (dynamic_cast<const Local*>(src_value)) {
+        opc = x64::LEA64;
+    } else {
+        opc = get_move_op(src_type);
+    }
+
+    emit(opc, { src, dst });
+
+    i64 offset;
+    if (auto constant = dynamic_cast<const ConstantInt*>(inst->get_operand(1))) {
+        if (pointee->is_struct_type()) {
+            offset = m_target.get_field_offset(
+                static_cast<const StructType*>(pointee), 
+                constant->get_value());
+        } else {
+            offset = m_target.get_type_size(pointee) * constant->get_value();
+        }
+
+        if (offset == 0)
+            return;
+
+        emit(x64::ADD64)
+            .add_imm(offset)
+            .add_operand(dst);
+    } else {
+        /// TODO: This is mangled from an old expirementation, needs work.
+        switch (pointee->get_kind()) {
+        case Type::TK_Array:
+            offset = m_target.get_type_size(
+                static_cast<const ArrayType*>(pointee)->get_element_type());
+            break;
+        case Type::TK_Function:
+            offset = m_target.get_type_size(
+                static_cast<const PointerType*>(pointee)->get_pointee());
+            break;
+        default:
+            offset = m_target.get_type_size(pointee);
+        }
+
+        MachineOperand index = as_operand(inst->get_operand(1));
+        MachineOperand multiplier = MachineOperand::create_imm(offset);
+         
+        if (offset == 1) {
+            emit(x64::ADD64, { index, dst });
+        } else {
+            MachineOperand tmp = MachineOperand::create_reg(
+                x64::RAX, 8, true);
+
+            emit(x64::IMUL64)
+                .add_imm(offset)
+                .add_operand(index)
+                .add_operand(tmp);
+
+            tmp.set_is_use();
+            tmp.set_is_kill();
+
+            emit(x64::ADD64, { tmp, dst });
+        }
+    }
 }
 
 void X64InstSelection::select_select(const Instruction* inst) {
@@ -1099,6 +1170,7 @@ void X64InstSelection::select_ext(const Instruction* inst) {
     MachineOperand src = as_operand(value);
     u32 src_sz_in_bits = m_target.get_type_size_in_bits(value->get_type());
     u32 dst_sz_in_bits = m_target.get_type_size_in_bits(inst->get_type());
+    u32 dst_subreg = get_subreg(inst->get_type());
     x64::Opcode opc;
 
     switch (inst->opcode()) {
@@ -1111,10 +1183,12 @@ void X64InstSelection::select_ext(const Instruction* inst) {
         break;
 
     case INST_OP_ZEXT:
-        if (src_sz_in_bits == 32 && dst_sz_in_bits == 64)
+        if (src_sz_in_bits == 32 && dst_sz_in_bits == 64) {
             opc = x64::MOV;
-        else
+            dst_subreg = 4;
+        } else {
             opc = x64::MOVZX;
+        }
 
         break;
         
@@ -1128,15 +1202,19 @@ void X64InstSelection::select_ext(const Instruction* inst) {
     }
 
     emit(opc, { src })
-        .add_reg(as_machine_reg(inst), get_subreg(inst->get_type()), true);
+        .add_reg(as_machine_reg(inst), dst_subreg, true);
 }
 
 void X64InstSelection::select_trunc(const Instruction* inst) {
     MachineOperand src = as_operand(inst->get_operand(0));
+    u32 dst_subreg = get_subreg(inst->get_type());
     x64::Opcode opc;
 
     switch (inst->opcode()) {
     case INST_OP_ITRUNC:
+        if (src.is_reg())
+            src.set_subreg(dst_subreg);
+        
         opc = x64::MOV;
         break;
 
@@ -1150,7 +1228,7 @@ void X64InstSelection::select_trunc(const Instruction* inst) {
     }
 
     emit(opc, { src })
-        .add_reg(as_machine_reg(inst), get_subreg(inst->get_type()), true);
+        .add_reg(as_machine_reg(inst), dst_subreg, true);
 }
 
 void X64InstSelection::select_int_to_fp_cvt(const Instruction* inst) {
