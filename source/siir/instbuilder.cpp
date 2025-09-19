@@ -646,20 +646,6 @@ Instruction* InstBuilder::build_urem(Value* lhs, Value* rhs) {
     return insert(INST_OP_UREM, m_cfg.get_def_id(), lhs->get_type(), { lhs, rhs });
 }
 
-Instruction* InstBuilder::build_frem(Value* lhs, Value* rhs) {
-    assert(lhs && "lhs cannot be null");
-    assert(rhs && "rhs cannot be null");
-    assert(lhs->get_type()->is_floating_point_type() && 
-        "lhs type must be a floating point type");
-    assert((rhs->get_type()->is_integer_type() ||
-        rhs->get_type()->is_pointer_type()) && 
-        "rhs type must be a floating point type");
-    assert(*lhs->get_type() == *rhs->get_type() && 
-        "lhs and rhs must have the same type");
-
-    return insert(INST_OP_FREM, m_cfg.get_def_id(), lhs->get_type(), { lhs, rhs });
-}
-
 Instruction* InstBuilder::build_and(Value* lhs, Value* rhs) {
     assert(lhs && "lhs cannot be null");
     assert(rhs && "rhs cannot be null");

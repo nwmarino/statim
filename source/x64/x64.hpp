@@ -138,6 +138,10 @@ class X64InstSelection final {
     x64::Opcode get_cmp_op(const Type* ty) const;
     x64::Opcode get_add_op(const Type* ty) const;
     x64::Opcode get_sub_op(const Type* ty) const;
+    x64::Opcode get_imul_op(const Type* ty) const;
+    x64::Opcode get_mul_op(const Type* ty) const;
+    x64::Opcode get_idiv_op(const Type* ty) const;
+    x64::Opcode get_div_op(const Type* ty) const;
     x64::Opcode get_and_op(const Type* ty) const;
     x64::Opcode get_or_op(const Type* ty) const;
     x64::Opcode get_xor_op(const Type* ty) const;
@@ -173,7 +177,9 @@ class X64InstSelection final {
     void select_call(const Instruction* inst);
     void select_add(const Instruction* inst);
     void select_sub(const Instruction* inst);
-    void select_mul_div_rem(const Instruction* inst);
+    void select_imul(const Instruction* inst);
+    void select_idiv_irem(const Instruction* inst);
+    void select_fmul_fdiv(const Instruction* inst);
     void select_bit_op(const Instruction* inst);
     void select_shift(const Instruction* inst);
     void select_not(const Instruction* inst);

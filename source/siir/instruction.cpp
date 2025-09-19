@@ -64,8 +64,6 @@ std::string stm::siir::opcode_to_string(Opcode op) {
         return "SRem";
     case INST_OP_UREM:
         return "URem";
-    case INST_OP_FREM:
-        return "FRem";
     case INST_OP_AND:
         return "And";
     case INST_OP_OR:
@@ -351,7 +349,6 @@ bool Instruction::operates_on_floats() const {
     case INST_OP_FSUB:
     case INST_OP_FMUL:
     case INST_OP_FDIV:
-    case INST_OP_FREM:
     case INST_OP_FNEG:
     case INST_OP_FEXT:
     case INST_OP_FTRUNC:
@@ -393,7 +390,6 @@ bool Instruction::is_trivially_dead() const {
     case INST_OP_FDIV:
     case INST_OP_SREM:
     case INST_OP_UREM:
-    case INST_OP_FREM:
     case INST_OP_AND:
     case INST_OP_OR:
     case INST_OP_XOR:

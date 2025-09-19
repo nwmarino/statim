@@ -221,9 +221,6 @@ public:
     /// Create a new unsigned integer remainder instruction.
     Instruction* build_urem(Value* lhs, Value* rhs);
 
-    /// Create a new floating point remainder instruction.
-    Instruction* build_frem(Value* lhs, Value* rhs);
-
     /// Create a new bitwise and instruction.
     Instruction* build_and(Value* lhs, Value* rhs);
 

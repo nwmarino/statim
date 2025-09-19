@@ -298,6 +298,94 @@ x64::Opcode X64InstSelection::get_sub_op(const Type* ty) const {
     assert(false && "cannot determine sub opcode based on type!");
 }
 
+x64::Opcode X64InstSelection::get_imul_op(const Type* ty) const {
+    assert(ty && "type cannot be null!");
+
+    u32 size = m_target.get_type_size_in_bits(ty);
+    switch (size) {
+    case 1:
+    case 8:
+        return x64::IMUL8;
+    case 16:
+        return x64::IMUL16;
+    case 32:
+        return x64::IMUL32;
+    case 64:
+        return x64::IMUL64;
+    }
+
+    assert(false && "cannot determine imul opcode based on type!");
+}
+
+x64::Opcode X64InstSelection::get_mul_op(const Type* ty) const {
+    assert(ty && "type cannot be null!");
+
+    u32 size = m_target.get_type_size_in_bits(ty);
+    switch (size) {
+    case 1:
+    case 8:
+        return x64::MUL8;
+    case 16:
+        return x64::MUL16;
+    case 32:
+        if (ty->is_floating_point_type())
+            return x64::MULSS;
+        else
+            return x64::MUL32;
+    case 64:
+        if (ty->is_floating_point_type())
+            return x64::MULSD;
+        else
+            return x64::MUL64;
+    }
+
+    assert(false && "cannot determine mul opcode based on type!");
+}
+
+x64::Opcode X64InstSelection::get_idiv_op(const Type* ty) const {
+    assert(ty && "type cannot be null!");
+
+    u32 size = m_target.get_type_size_in_bits(ty);
+    switch (size) {
+    case 1:
+    case 8:
+        return x64::IDIV8;
+    case 16:
+        return x64::IDIV16;
+    case 32:
+        return x64::IDIV32;
+    case 64:
+        return x64::IDIV64;
+    }
+
+    assert(false && "cannot determine idiv opcode based on type!");
+}
+
+x64::Opcode X64InstSelection::get_div_op(const Type* ty) const {
+    assert(ty && "type cannot be null!");
+
+    u32 size = m_target.get_type_size_in_bits(ty);
+    switch (size) {
+    case 1:
+    case 8:
+        return x64::DIV8;
+    case 16:
+        return x64::DIV16;
+    case 32:
+        if (ty->is_floating_point_type())
+            return x64::DIVSS;
+        else
+            return x64::DIV32;
+    case 64:
+        if (ty->is_floating_point_type())
+            return x64::DIVSD;
+        else
+            return x64::DIV64;
+    }
+
+    assert(false && "cannot determine div opcode based on type!");
+}
+
 x64::Opcode X64InstSelection::get_and_op(const Type* ty) const {
     assert(ty && "type cannot be null!");
 
@@ -681,14 +769,19 @@ void X64InstSelection::select(const Instruction* inst) {
 
     case INST_OP_SMUL:
     case INST_OP_UMUL:
-    case INST_OP_FMUL:
+        select_imul(inst);
+        break;
+        
     case INST_OP_SDIV:
     case INST_OP_UDIV:
-    case INST_OP_FDIV:
     case INST_OP_SREM:
     case INST_OP_UREM:
-    case INST_OP_FREM:
-        select_mul_div_rem(inst);
+        select_idiv_irem(inst);
+        break;
+
+    case INST_OP_FMUL:
+    case INST_OP_FDIV:
+        select_fmul_fdiv(inst);
         break;
 
     case INST_OP_AND:
@@ -1081,6 +1174,9 @@ void X64InstSelection::select_add(const Instruction* inst) {
     x64::Opcode add_opc = get_add_op(inst->get_type());
     MachineInst& instr = emit(add_opc, { lhs, rhs });
 
+    // TODO: A lot of x64 arithmetic operations implicitly kill values, but
+    // whether that information is needed is unknown at this point, keeping
+    // for future reference.
     //if (rhs.is_reg()) {
     //    instr.get_operand(1).set_is_kill();
     //    instr.add_reg(rhs.get_reg(), 8, true);
@@ -1098,22 +1194,132 @@ void X64InstSelection::select_sub(const Instruction* inst) {
     MachineOperand rhs = as_operand(inst->get_operand(1));
 
     if (lhs.is_imm()) {
+        // Thanks to the beautiful AT&T syntax, we cannot have an immediate on
+        // the right hand operand, which means for subtraction, where the order
+        // matters, we should move left hand immediates to the destination
+        // first so that they don't end up on the right side.
         MachineOperand dst = MachineOperand::create_reg(
-            as_machine_reg(inst), 
-            get_subreg(inst->get_type()), 
-            true);
+            as_machine_reg(inst), get_subreg(inst->get_type()), true);
 
         emit(mov_opc, { lhs, dst });
         emit(sub_opc, { rhs, dst });
     } else {
+        // No left hand side is an immediate, so move the right operand to the
+        // destination first (so that if it's an immedaite it doesn't matter,
+        // which tends to be the more common case anyways).
         emit(sub_opc, { rhs, lhs });
         emit(mov_opc, { lhs })
             .add_reg(as_machine_reg(inst), get_subreg(inst->get_type()), true);
     }    
 }
 
-void X64InstSelection::select_mul_div_rem(const Instruction* inst) {
-    assert(false && "ISEL not implemented!");
+void X64InstSelection::select_imul(const Instruction* inst) {
+    x64::Opcode move_opc = get_move_op(inst->get_type());
+    x64::Opcode imul_opc = get_imul_op(inst->get_type());
+    MachineOperand lhs = as_operand(inst->get_operand(0));
+    MachineOperand rhs = as_operand(inst->get_operand(1));
+    MachineOperand dst = MachineOperand::create_reg(
+        as_machine_reg(inst), get_subreg(inst->get_type()), true);
+
+    if (rhs.is_imm()) {
+        MachineOperand tmp = lhs;
+        lhs = rhs;
+        rhs = tmp;
+    }
+
+    emit(move_opc, { lhs, dst });
+    emit(imul_opc, { rhs, dst });
+}
+
+void X64InstSelection::select_idiv_irem(const Instruction* inst) {
+    x64::Opcode div_opc, mov_opc = get_move_op(inst->get_type());
+    bool is_idiv, is_rem = false;
+
+    switch (inst->opcode()) {
+    case INST_OP_SREM:
+        is_rem = true;
+        /* Intentional fall-through */
+    case INST_OP_SDIV:
+        is_idiv = true;
+        div_opc = get_idiv_op(inst->get_type());
+        break;
+    case INST_OP_UREM:
+        is_rem = true;
+        /* Intentional fall-through */
+    case INST_OP_UDIV:
+        div_opc = get_div_op(inst->get_type());
+        break;
+    default:
+        assert(false && "unexpected opcode");
+    }
+
+    const Value* lhs_value = inst->get_operand(0);
+    const Value* rhs_value = inst->get_operand(1);
+    MachineOperand lhs = as_operand(lhs_value);
+    MachineOperand rhs = as_operand(rhs_value);
+
+    emit(get_move_op(lhs_value->get_type()), { lhs })
+        .add_reg(x64::RAX, get_subreg(lhs_value->get_type()), true);
+
+    if (is_idiv) {
+        emit(x64::CQO) // cqo
+            .add_reg(x64::RAX, 8, true, true) // impl-def %rax
+            .add_reg(x64::RDX, 8, true, true) // impl-def %rdx
+            .add_reg(x64::RAX, 8, false, true); // impl %rax
+
+        emit(div_opc, { rhs }) // idivx ..rhs..
+            .add_reg(x64::RAX, 8, true, true, false, is_rem) // impl (dead) %rax
+            .add_reg(x64::RDX, 8, true, true, false, !is_rem) // impl (dead) %rdx
+            .add_reg(x64::RAX, 8, false, true) // impl %rax
+            .add_reg(x64::RDX, 8, false, true, true); // impl killed %rdx
+    } else {
+        emit(x64::MOV32) // movl $0, %edx
+            .add_imm(0)
+            .add_reg(x64::RDX, 4, true, false, false, true) // dead %edx
+            .add_reg(x64::RDX, 8, true, true); // impl-def %rdx
+            
+        emit(div_opc, { rhs }) // divx ..rhs..
+            .add_reg(x64::RAX, 8, true, true, false, is_rem) // (dead) %rax
+            .add_reg(x64::RDX, 8, true, true, false, !is_rem) // (dead) %rdx
+            .add_reg(x64::RAX, 8, false, true) // impl %rax
+            .add_reg(x64::RDX, 8, false, true, true); // impl killed %rdx
+    }
+
+    MachineOperand dst = MachineOperand::create_reg(
+        as_machine_reg(inst), get_subreg(inst->get_type()), true);
+
+    if (is_rem) {
+        // Remainders are in %rdx.
+        emit(mov_opc)
+            .add_reg(x64::RDX, get_subreg(inst->get_type()), false, false, true)
+            .add_operand(dst);
+    } else {
+        // Quotients are in %rax.
+        emit(mov_opc)
+            .add_reg(x64::RAX, get_subreg(inst->get_type()), false, false, true)
+            .add_operand(dst);
+    }
+}
+
+void X64InstSelection::select_fmul_fdiv(const Instruction* inst) {
+    MachineOperand lhs = as_operand(inst->get_operand(0));
+    MachineOperand rhs = as_operand(inst->get_operand(1));
+
+    x64::Opcode opc;
+    switch (inst->opcode()) {
+    case INST_OP_FMUL:
+        opc = get_mul_op(inst->get_type());
+        break;
+    case INST_OP_FDIV:
+        opc = get_div_op(inst->get_type());
+        break;
+    default:
+        assert(false && "unexpected opcode");
+    }
+
+    emit(opc, { rhs, lhs });
+    emit(get_move_op(inst->get_type()), { lhs })
+        .add_reg(as_machine_reg(inst), 8, true);
 }
 
 void X64InstSelection::select_bit_op(const Instruction* inst) {

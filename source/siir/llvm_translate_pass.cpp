@@ -551,13 +551,6 @@ void LLVMTranslatePass::convert(Instruction* inst) {
         break;
     }
     
-    case INST_OP_FREM: {
-        llvm::Value* V = m_builder->CreateFRem(
-            translate(inst->get_operand(0)), translate(inst->get_operand(1)));
-        m_insts.emplace(inst, V);
-        break;
-    }
-    
     case INST_OP_AND: {
         llvm::Value* V = m_builder->CreateAnd(
             translate(inst->get_operand(0)), translate(inst->get_operand(1)));

@@ -95,6 +95,23 @@ const Token& Lexer::lex() {
                 move();
             
             return lex();
+        } else if (peek() == '*') {
+            move(2); // /*
+
+            while (curr() != '\0') {
+                if (curr() == '*' && peek() == '/')
+                    break;
+
+                if (curr() == '\n') {
+                    mPos++;
+                    end_line();
+                } else {
+                    move(1);
+                }
+            }
+
+            move(2); // */
+            return lex();
         } else if (peek() == '=') {
             token.kind = TOKEN_KIND_SLASH_EQUALS;
             move(2);

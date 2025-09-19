@@ -1678,9 +1678,20 @@ void Codegen::codegen_unary_negate(const UnaryExpr& node) {
 
     if (m_tmp->get_type()->is_integer_type()
       || m_tmp->get_type()->is_pointer_type()) {
-        m_tmp = m_builder.build_ineg(m_tmp);
+
+        if (auto constant = dynamic_cast<const siir::ConstantInt*>(m_tmp)) {
+            m_tmp = siir::ConstantInt::get(
+                m_cfg, constant->get_type(), -constant->get_value());
+        } else {
+            m_tmp = m_builder.build_ineg(m_tmp);
+        }
     } else if (m_tmp->get_type()->is_floating_point_type()) {
-        m_tmp = m_builder.build_fneg(m_tmp);
+        if (auto constant = dynamic_cast<const siir::ConstantFP*>(m_tmp)) {
+            m_tmp = siir::ConstantFP::get(
+                m_cfg, constant->get_type(), -constant->get_value());
+        } else {
+            m_tmp = m_builder.build_fneg(m_tmp);
+        }
     } else Logger::fatal(
         "unsupported '-' operator between on type '" + 
             node.get_type()->to_string() + "'",
@@ -1717,7 +1728,12 @@ void Codegen::codegen_unary_bitwise_not(const UnaryExpr& node) {
     assert(m_tmp);
 
     if (m_tmp->get_type()->is_integer_type()) {
-        m_tmp = m_builder.build_not(m_tmp);
+        if (auto constant = dynamic_cast<const siir::ConstantInt*>(m_tmp)) {
+            m_tmp = siir::ConstantInt::get(
+                m_cfg, constant->get_type(), ~constant->get_value());
+        } else {
+            m_tmp = m_builder.build_not(m_tmp);
+        }
     } else Logger::fatal(
         "unsupported '~' operator between on type '" + 
             node.get_type()->to_string() + "'",

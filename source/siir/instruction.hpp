@@ -67,7 +67,6 @@ enum Opcode : u16 {
     INST_OP_FDIV,
     INST_OP_SREM,
     INST_OP_UREM,
-    INST_OP_FREM,
     INST_OP_AND,
     INST_OP_OR,
     INST_OP_XOR,

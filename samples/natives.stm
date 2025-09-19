@@ -146,3 +146,14 @@ until_42 :: (x: s64) -> s64 {
 
     ret x;
 }
+
+memcpy :: (dst: *void, src: *void, n: mut u64) -> void {
+    let dstp: *char = dst;
+    let srcp: *char = src;
+    let i: u64 = 0;
+
+    while i < n {
+        dstp[i] = srcp[i];
+        ++i;
+    }
+}
