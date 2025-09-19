@@ -74,6 +74,38 @@ fsub :: (x: f32, y: f32) -> f32 {
     ret x - y;
 }
 
+smul :: (x: s64, y: s64) -> s64 {
+    ret x * y;
+}
+
+sdiv :: (x: s32, y: s32) -> s32 {
+    ret x / y;
+}
+
+srem :: (x: s32, y: s32) -> s32 {
+    ret x % y;
+}
+
+udiv :: (x: s64, y: s64) -> s64 {
+    ret x / y;
+}
+
+umul :: (x: u32, y: u32) -> s32 {
+    ret x * y;
+}
+
+urem :: (x: u64, y: u64) -> u64 {
+    ret x % y;
+}
+
+fmul :: (x: f64, y: f64) -> f64 {
+    ret x * y;
+}
+
+fdiv :: (x: f32, y: f32) -> f32 {
+    ret x / y;
+}
+
 and :: (x: s8, y: s8) -> s8 {
     ret x & y;
 }

@@ -145,6 +145,9 @@ class X64InstSelection final {
     x64::Opcode get_and_op(const Type* ty) const;
     x64::Opcode get_or_op(const Type* ty) const;
     x64::Opcode get_xor_op(const Type* ty) const;
+    x64::Opcode get_shl_op(const Type* ty) const;
+    x64::Opcode get_shr_op(const Type* ty) const;
+    x64::Opcode get_sar_op(const Type* ty) const;
     x64::Opcode get_not_op(const Type* ty) const;
     x64::Opcode get_neg_op(const Type* ty) const;
 

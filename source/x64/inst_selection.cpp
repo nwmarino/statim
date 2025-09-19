@@ -461,6 +461,63 @@ x64::Opcode X64InstSelection::get_xor_op(const Type* ty) const {
     assert(false && "cannot determine xor opcode based on type!");
 }
 
+x64::Opcode X64InstSelection::get_shl_op(const Type* ty) const {
+    assert(ty && "type cannot be null!");
+
+    u32 size = m_target.get_type_size_in_bits(ty);
+    switch (size) {
+    case 1:
+    case 8:
+        return x64::SHL8;
+    case 16:
+        return x64::SHL16;
+    case 32:
+        return x64::SHL32;
+    case 64:
+        return x64::SHL64;
+    }
+
+    assert(false && "cannot determine shl opcode based on type!");
+}
+
+x64::Opcode X64InstSelection::get_shr_op(const Type* ty) const {
+    assert(ty && "type cannot be null!");
+
+    u32 size = m_target.get_type_size_in_bits(ty);
+    switch (size) {
+    case 1:
+    case 8:
+        return x64::SHR8;
+    case 16:
+        return x64::SHR16;
+    case 32:
+        return x64::SHR32;
+    case 64:
+        return x64::SHR64;
+    }
+
+    assert(false && "cannot determine shr opcode based on type!");
+}
+
+x64::Opcode X64InstSelection::get_sar_op(const Type* ty) const {
+        assert(ty && "type cannot be null!");
+
+    u32 size = m_target.get_type_size_in_bits(ty);
+    switch (size) {
+    case 1:
+    case 8:
+        return x64::SAR8;
+    case 16:
+        return x64::SAR16;
+    case 32:
+        return x64::SAR32;
+    case 64:
+        return x64::SAR64;
+    }
+
+    assert(false && "cannot determine sar opcode based on type!");
+}
+
 x64::Opcode X64InstSelection::get_not_op(const Type* ty) const {
     assert(ty && "type cannot be null!");
 
@@ -1348,7 +1405,43 @@ void X64InstSelection::select_bit_op(const Instruction* inst) {
 }
 
 void X64InstSelection::select_shift(const Instruction* inst) {
-    assert(false && "ISEL not implemented!");
+    x64::Opcode opc;
+
+    switch (inst->opcode()) {
+    case INST_OP_SHL:
+        opc = get_shl_op(inst->get_type());
+        break;
+    case INST_OP_SHR:
+        opc = get_shr_op(inst->get_type());
+        break;
+    case INST_OP_SAR:
+        opc = get_sar_op(inst->get_type());
+        break;
+    default:
+        assert(false && "unexpected opcode");
+    }
+
+    MachineOperand lhs = as_operand(inst->get_operand(0));
+    MachineOperand rhs = as_operand(inst->get_operand(1));
+    MachineOperand dst = MachineOperand::create_reg(
+        as_machine_reg(inst), get_subreg(inst->get_type()), true);
+
+    emit(get_move_op(inst->get_operand(0)->get_type()), { lhs, dst });
+
+    dst.set_is_use();
+        
+    if (rhs.is_imm()) {
+        emit(opc, { rhs, dst });
+    } else {
+        MachineOperand cl = MachineOperand::create_reg(
+            x64::RCX, 1, true);
+            
+        if (rhs.is_reg())
+            rhs.set_subreg(1);
+
+        emit(x64::MOV8, { rhs, cl });
+        emit(opc, { cl, dst });
+    }
 }
 
 void X64InstSelection::select_not(const Instruction* inst) {
