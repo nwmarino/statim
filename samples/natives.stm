@@ -118,6 +118,18 @@ xor :: (x: s8, y: s8) -> s8 {
     ret x ^ y;
 }
 
+shl :: (x: s64, y: s64) -> s64 {
+    ret x << y;
+}
+
+shr :: (x: u64, y: s64) -> u64 {
+    ret x >> y;
+}
+
+sar :: (x: s64, y: s64) -> s64 {
+    ret x >> y;
+}
+
 sext32 :: (x: s16) -> s32 {
     ret x;
 }

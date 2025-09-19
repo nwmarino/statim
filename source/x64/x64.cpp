@@ -32,6 +32,28 @@ bool x64::is_move_opcode(x64::Opcode opc) {
     }
 }
 
+bool x64::is_terminating_opcode(x64::Opcode opc) {
+    switch (opc) {
+    case JMP:
+    case RET64:
+    case JE:
+    case JNE:
+    case JZ:
+    case JNZ:
+    case JL:
+    case JLE:
+    case JG:
+    case JGE:
+    case JA:
+    case JAE:
+    case JB:
+    case JBE:
+        return true;
+    default:
+        return false;
+    }
+}
+
 RegisterClass x64::get_class(Register reg) {
     switch (reg) {
     case RAX:

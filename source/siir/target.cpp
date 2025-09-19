@@ -17,7 +17,7 @@ Target::Target(Arch arch, ABI abi, OS os) : m_arch(arch), m_abi(abi), m_os(os) {
         break;
     }
 
-    m_rules[Type::TK_Int1] = { 1, 1 };
+    m_rules[Type::TK_Int1] = { 8, 8 };
     m_rules[Type::TK_Int8] = { 8, 8 };
     m_rules[Type::TK_Int16] = { 16, 16 };
     m_rules[Type::TK_Int32] = { 32, 32 };

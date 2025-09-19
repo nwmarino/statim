@@ -1,15 +1,11 @@
-shl :: (x: s64, y: s64) -> s64 {
-    ret x << y;
+land :: (x: bool, y: bool) -> bool {
+    ret x && y;
 }
 
-shr :: (x: u64, y: s64) -> u64 {
-    ret x >> y;
-}
-
-sar :: (x: s64, y: s64) -> s64 {
-    ret x >> y;
+lor :: (x: bool, y: bool) -> bool {
+    ret x || y;
 }
 
 main :: (argc: s64, argv: **char) -> s64 {
-    ret shr(16, 1);
+    ret lor(false, false);
 }

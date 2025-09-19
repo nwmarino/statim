@@ -164,7 +164,11 @@ class X64InstSelection final {
     MachineOperand as_call_argument(const Value* value, u32 arg_idx) const;
 
     /// Emit a new machine instruction with opcode |op| and operand list |ops|.
-    MachineInst& emit(x64::Opcode op, const std::vector<MachineOperand>& ops = {});
+    MachineInst& emit(x64::Opcode opc, 
+                      const std::vector<MachineOperand>& ops = {});
+
+    MachineInst& emit_before_terms(x64::Opcode opc,
+                                   const std::vector<MachineOperand>& ops = {});
 
     /// Perform instruction selection on a single SIIR instruction.
     void select(const Instruction* inst);
@@ -244,6 +248,11 @@ bool is_ret_opcode(x64::Opcode opc);
 
 /// Returns true if the opcode |opc| is considered a move instruction.
 bool is_move_opcode(x64::Opcode opc);
+
+/// Returns true if the opcode |opc| is considered terminating.
+///
+/// For x64, terminating means any JMP, JCC, or RET64 opcode.
+bool is_terminating_opcode(x64::Opcode opc);
 
 /// Returns the register class of the physical register |reg|.
 RegisterClass get_class(x64::Register reg);

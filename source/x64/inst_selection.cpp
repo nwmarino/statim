@@ -753,11 +753,24 @@ MachineOperand X64InstSelection::as_call_argument(
     assert(false && "calls with more than 6 arguments not implemented!");
 }
 
-MachineInst& X64InstSelection::emit(x64::Opcode op, 
+MachineInst& X64InstSelection::emit(x64::Opcode opc, 
                                     const std::vector<MachineOperand>& ops) {
     assert(m_insert && "insertion block not set!");
-    MachineInst inst { op, ops, m_insert };
+    MachineInst inst { opc, ops, m_insert };
     return m_insert->back();
+}
+
+MachineInst& X64InstSelection::emit_before_terms(
+        x64::Opcode opc, const std::vector<MachineOperand>& ops) {
+    assert(m_insert && "insertion block not set!");
+
+    u32 i = m_insert->insts().size() - 1;
+    while (is_terminating_opcode(static_cast<x64::Opcode>(m_insert->insts().at(i).opcode())))
+        --i;
+
+    MachineInst inst { opc, ops };
+    m_insert->insts().insert(m_insert->insts().end() - i + 1, inst);
+    return m_insert->insts().at(m_insert->insts().size() - i);
 }
 
 void X64InstSelection::select(const Instruction* inst) {
@@ -1129,7 +1142,35 @@ void X64InstSelection::select_branch_if(const Instruction* inst) {
 }
 
 void X64InstSelection::select_phi(const Instruction* inst) {
-    assert(false && "ISEL not implemented!");
+    MachineRegister dst_reg = as_machine_reg(inst);
+    u32 subreg = get_subreg(inst->get_type());
+
+    for (u32 i = 0, e = inst->num_operands(); i != e; ++i) {
+        // TODO: Currently, this implementation works for trivial merges since
+        // it's naively inserting moves at the end of predecessors (before any
+        // terminating instructions). However, when dealing with parallel 
+        // copies, the implementation probably won't hold up.
+
+        const Value* operand = inst->get_operand(i);
+        const PhiOperand* phi_op = dynamic_cast<const PhiOperand*>(operand);
+        assert(phi_op && "unexpected phi operand");
+
+        const Value* incoming = phi_op->get_value();
+        const BasicBlock* pred = phi_op->get_pred();
+
+        MachineBasicBlock* pred_mbb = m_function->at(pred->get_number());
+        assert(pred_mbb && "could not find machine block for phi predecessor!");
+
+        MachineBasicBlock* saved_insert = m_insert;
+        m_insert = pred_mbb;
+
+        MachineOperand src = as_operand(incoming);
+        x64::Opcode opc = get_move_op(incoming->get_type());
+        emit_before_terms(opc, { src })
+            .add_reg(dst_reg, subreg, true);
+
+        m_insert = saved_insert;
+    }
 }
 
 void X64InstSelection::select_return(const Instruction* inst) {
@@ -1650,12 +1691,19 @@ void X64InstSelection::select_comparison(const Instruction* inst) {
         }
     }
 
+    x64::Opcode setcc = get_setcc_op(inst->opcode());
+    x64::Opcode cmp_opc = get_cmp_op(inst->get_operand(0)->get_type());
     MachineOperand lhs = as_operand(inst->get_operand(0));
     MachineOperand rhs = as_operand(inst->get_operand(1));
-    x64::Opcode cmp_opc = get_cmp_op(inst->get_operand(0)->get_type());
-    emit(cmp_opc, { lhs, rhs });
 
-    // Determine the conditional set mnemonic based on the comparison opcode.
-    x64::Opcode setcc = get_setcc_op(inst->opcode());
+    if (rhs.is_imm()) {
+        MachineOperand tmp = lhs;
+        lhs = rhs;
+        rhs = tmp;
+    } else {
+        setcc = flip_setcc(setcc);
+    }
+
+    emit(cmp_opc, { lhs, rhs });
     emit(setcc).add_reg(as_machine_reg(inst), 1, true);
 }
