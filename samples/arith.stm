@@ -1,26 +1,19 @@
-Box :: struct {
-    a: s64,
-    b: s64,
-    c: s64,
-    d: s64,
-    e: s64,
-}
+memcpy :: (dst: *void, src: *void, n: mut u64) -> void {
+    let dstp: *char = dst;
+    let srcp: *char = src;
+    let i: u64 = 0;
 
-ptr_next :: (x: *s64) -> *s64 {
-    ret x + 1;
-}
-
-ptr_next_arb :: (x: *s64, y: s64) -> *s64 {
-    ret x + y;
+    while i < n {
+        dstp[i] = srcp[i];
+        ++i;
+    }
 }
 
 main :: (argc: s64, argv: **char) -> s64 {
-    let box: Box;
-    box.a = 67;
-    box.b = 42;
-    box.c = 15;
-    box.d = 121;
-    box.e = 75;
+    let a: s64 = 42;
+    let b: s64 = 141;
 
-    ret *ptr_next_arb(&box.a, 0);
+    memcpy(&a, &b, sizeof(s64));
+
+    ret a;
 }

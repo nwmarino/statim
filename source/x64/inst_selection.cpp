@@ -1003,10 +1003,8 @@ void X64InstSelection::select_return(const Instruction* inst) {
 
     MachineInst& instr = emit(x64::RET64);
 
-    if (dst_reg != MachineRegister::NoRegister) {
+    if (dst_reg != MachineRegister::NoRegister)
         instr.add_reg(dst_reg, sub_reg, false, true);
-    }
-    
 }
 
 void X64InstSelection::select_call(const Instruction* inst) {
@@ -1031,18 +1029,25 @@ void X64InstSelection::select_call(const Instruction* inst) {
         dst.set_is_def(true);
         regs.push_back(dst.get_reg());
 
-        x64::Opcode mov_opc = get_move_op(arg->get_type());
-        emit(mov_opc, { src, dst });
+        x64::Opcode opc;
+        if (dynamic_cast<const Local*>(arg)) {
+            opc = x64::LEA64;
+        } else {
+            opc = get_move_op(arg->get_type());
+        }
+
+        emit(opc, { src, dst });
     }
 
     const Function* callee = dynamic_cast<const Function*>(first_oper);
     assert(callee && 
         "CallInstr first operand is not a function or inline assembly!");
 
-    MachineInst& call = emit(x64::CALL64).add_symbol(callee->get_name());
-    for (auto& reg : regs) {
+    MachineInst& call = emit(x64::CALL64)
+        .add_symbol(callee->get_name());
+    
+    for (const auto& reg : regs)
         call.add_reg(reg, 8, false, true, true);
-    }
 
     if (inst->result_id() != 0) {
         MachineRegister src_reg;
@@ -1300,15 +1305,37 @@ void X64InstSelection::select_fp_to_int_cvt(const Instruction* inst) {
 }
 
 void X64InstSelection::select_ptr_to_int_cvt(const Instruction* inst) {
-    assert(false && "ISEL not implemented!");
+    const Value* src = inst->get_operand(0);
+    x64::Opcode opc;
+    if (dynamic_cast<const Local*>(src)) {
+        opc = x64::LEA64;
+    } else {
+        opc = get_move_op(src->get_type());
+    }
+
+    emit(opc)
+        .add_operand(as_operand(src))
+        .add_reg(as_machine_reg(inst), get_subreg(inst->get_type()), true);
 }
 
 void X64InstSelection::select_int_to_ptr_cvt(const Instruction* inst) {
-    assert(false && "ISEL not implemented!");
+    emit(get_move_op(inst->get_type()))
+        .add_operand(as_operand(inst->get_operand(0)))
+        .add_reg(as_machine_reg(inst), get_subreg(inst->get_type()), true);
 }
 
 void X64InstSelection::select_type_reinterpret(const Instruction* inst) {
-    assert(false && "ISEL not implemented!");
+    const Value* src = inst->get_operand(0);
+    x64::Opcode opc;
+    if (dynamic_cast<const Local*>(src)) {
+        opc = x64::LEA64;
+    } else {
+        opc = get_move_op(src->get_type());
+    }
+
+    emit(opc)
+        .add_operand(as_operand(src))
+        .add_reg(as_machine_reg(inst), get_subreg(inst->get_type()), true);
 }
 
 void X64InstSelection::select_comparison(const Instruction* inst) {

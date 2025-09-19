@@ -119,6 +119,14 @@ address_of_deref :: (x: s64) -> s64 {
     ret *y;
 }
 
+ptr_next :: (x: *s64) -> *s64 {
+    ret x + 1;
+}
+
+ptr_next_arb :: (x: *s64, y: s64) -> *s64 {
+    ret x + y;
+}
+
 if_6 :: (x: s64) -> s64 {
     if x == 6 {
         ret 0;
