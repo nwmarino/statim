@@ -1,23 +1,23 @@
-- Tree: Arrays & array types
+- Tree: type mutability
 
 - Tree: `defer` statements
 
-- Tree: `for` statements
+- Tree: `loop` statements
 
-- Runes: `alignas()`, `destroy`, `if`, `no_discard`, `no_opt`, `no_return`,
-`packed`
+- Runes: `alignas()` `alloca()`, `destroy`, `if`, `no_discard`, `no_opt`, 
+`no_return`, `packed`
 
-- Lexer: Hexadecimal, octal, binary integers
+- Lexer: hexadecimal, octal, binary integers
 
-- Codegen: Full aggregate support
+- Codegen: full aggregate support
 
-- SIIR: Scalar replacement of aggregates, constant folding
+- SIIR: scalar replacement of aggregates, constant folding
 
 - Native backend: parallel copy phi scheduling
 
 - Native backend: inline assembly
 
-- Native backend: Basic line debugging
+- Native backend: basic line debugging
 
 # Release 0
 
@@ -44,6 +44,8 @@
 - Runtime type reflection
 
 - Templates
+
+- Slices
 
 - IR interpreter
 

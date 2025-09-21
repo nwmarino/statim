@@ -90,14 +90,6 @@ public:
         assert(false && "this type cannot be interpreted as a function type!"); 
     }
 
-    /// Returns true if this type is an array type.
-    constexpr virtual bool is_array() const { return false; }
-    
-    /// Returns this type as an array type, if it can be interpreted as one.
-    virtual const ArrayType* as_array() const {
-        assert(false && "this type cannot be interpreted as an array type!");
-    }
-
     /// Returns true if this type is a pointer type.
     constexpr virtual bool is_pointer() const { return false; }
 
@@ -153,27 +145,21 @@ class DeferredType final : public Type {
 public:
     /// Contextual properties for a type reference, resolved during parsing.
     struct Context final {
-        /// The base of this type, i.e. i8 in *i8, i32 in [4]i32, etc.
+        /// The base of this type, i.e. i8 in *i8.
         std::string base;
 
         /// The location that this type was parsed.
         SourceLocation meta;
 
-        /// If this type was marked as mutable or not.
-        bool mut = false;
-
         /// The scope in which this type was referenced.
         const Scope* pScope;
-
-        /// The size of this type if it was an array type, i.e. 4 in 4[i32].
-        u32 size = 0;
 
         /// The level of indirection of this type if it is a pointer type, 
         /// i.e. if the type was parsed was **i32, then indirection = 2.
         u32 indirection = 0;
 
-        /// TODO: Add context for array/pointer differentation, i.e. if a
-        /// pointer to an array, add flag to signify.
+        /// If this type was marked as mutable or not.
+        bool mut = false;
     };
 
 private:
@@ -402,37 +388,6 @@ public:
 
     std::string to_string() const override;
 };
-
-/// An array type - used for statically sized aggregates whose elements are
-/// the same type.
-/*
-class ArrayType final : public Type {
-    friend class TypeContext;
-
-    const Type* m_element;
-    u32 m_size;
-
-    ArrayType(const Type* element, u32 size) 
-        : m_element(element), m_size(size) {}
-
-public:
-    static const ArrayType* get(Root& root, const Type* element, u32 size);
-
-    /// Returns the element type of this array type.
-    const Type* get_element() const { return m_element; }
-
-    /// Returns the number of elements in this array type.
-    u32 get_size() const { return m_size; }
-
-    bool is_array() const override { return true; }
-
-    const ArrayType* as_array() const override { return this; }
-
-    bool can_cast(const Type* other, bool impl = false) const override;
-
-    std::string to_string() const override;
-};
-*/
 
 /// Represents the encapsulation of a type as a pointer.
 class PointerType final : public Type {

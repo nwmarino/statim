@@ -293,9 +293,8 @@ void Parser::parse_rune_decorators() {
 const Type* Parser::parse_type() {
     DeferredType::Context context {
         .meta = lexer.last().loc,
-        .mut = match("mut"),
         .pScope = pScope,
-        .indirection = 0,
+        .mut = match("mut"),
     };
 
     if (context.mut)
