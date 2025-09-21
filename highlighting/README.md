@@ -1,2 +1,2 @@
-This directory contains a Visual Studio Code extension for syntax highlighting
-of the language using Textmate grammar rules.
+This directory contains a VSCode extension for syntax highlighting using 
+textmate grammar rules.

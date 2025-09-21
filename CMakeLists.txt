@@ -60,11 +60,13 @@ llvm_config(stmc USE_SHARED core irreader support clang)
 enable_testing()
 
 add_executable(stmc_test
+    test/test_codegen.cpp
     test/test_index.cpp
     test/test_lexer.cpp
     test/test_parser.cpp
     test/test_syma.cpp
     test/test_sema.cpp
+    test/test_x64.cpp
 )
 
 target_link_libraries(stmc_test 
