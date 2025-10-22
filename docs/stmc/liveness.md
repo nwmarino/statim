@@ -2,13 +2,16 @@
 
 ## Remarks
 
-This file contains some personal notes about register liveness for instruction selection and register allocation. Specifically, it's just some examples for
+This file contains some personal notes about register liveness for instruction 
+selection and register allocation. Specifically, it's just some examples for
 physical register operands and their flags.
 
 ## Example
 
 Consider, during instruction selection, and regardless of the target 
-architecture, some ABI rules or instructions may require the use of particular registers, i.e. division ops in x86_64 or the clobbering of caller-saved registers around callsites.
+architecture, some ABI rules or instructions may require the use of particular 
+registers, i.e. division ops in x86_64 or the clobbering of caller-saved 
+registers around callsites.
 
 These constraints can be realized during instruction selection, with clear
 flags on the physical registers used to help the allocator recognize where
@@ -39,7 +42,8 @@ movq %rbx, %rax # explicitly defines %rax
 
 ### Implicit Def
 
-An implicit `def` is one not outlined in the final assembly instruction. For example, the instruction
+An implicit `def` is one not outlined in the final assembly instruction. For 
+example, the instruction
 
 ```
 mul rbx  # rdx:rax = rax * rbx
@@ -67,7 +71,8 @@ mul rbx  # rdx:rax = rax * rbx
 
 The `kill` flag marks the death of a value, ending its live range.
 
-If the value in `%rbx` used in `addq %rbx, %rax` is not used after the instruction, it is considered killed at that point.
+If the value in `%rbx` used in `addq %rbx, %rax` is not used after the 
+instruction, it is considered killed at that point.
 
 ## Dead 
 
@@ -76,15 +81,16 @@ The `dead` flag marks the result of a `def` as unused.
 If `%rax` in `movq %rbx, %rax` is not used after the instruction, it is 
 considered dead.
 
-* *It is not considered a kill because its a definition, and a kill implies the existence of a range.*
+* *It is not considered a kill because its a definition, and a kill implies the 
+existence of a range.*
 
 ## Extra
 
-* Every register operand must be atleast a `use` or a `def`. Even if an operand kills a value, it has still technically used it.
+* Every register operand must be atleast a `use` or a `def`. Even if an operand 
+kills a value, it has still technically used it.
 
 * The `implicit` flag acts as both a modifier to the operand visibility as well
 as the explicitness of its `use` or `def` flag. This means we can have
 operands on instructions that don't appear in the final assembly. This is
 important because it means we can describe all the effects an instruction has
 without some extra descriptor info, and nicely dumps during print passes.
-
