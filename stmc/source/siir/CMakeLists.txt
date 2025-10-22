@@ -1,0 +1,34 @@
+add_library(siir
+    STATIC
+        allocator.cpp
+        basicblock.cpp
+        cfg.cpp
+        constant.cpp
+        function.cpp
+        global.cpp
+        instbuilder.cpp
+        instruction.cpp
+        llvm_translate_pass.cpp
+        local.cpp
+        machine_analysis.cpp
+        machine_basicblock.cpp
+        machine_function.cpp
+        machine_inst.cpp
+        machine_object.cpp
+        machine_operand.cpp
+        print.cpp
+        ssa_rewrite_pass.cpp
+        target.cpp
+        trivial_dce_pass.cpp
+        type.cpp
+        use.cpp
+        value.cpp
+)
+
+target_link_libraries(siir
+    PRIVATE
+        core
+        tree
+        types
+        x64
+)
