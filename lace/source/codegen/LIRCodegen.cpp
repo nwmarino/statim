@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
@@ -12,38 +12,55 @@
 
 using namespace lace;
 
-LIRCodegen::LIRCodegen(const Options& options, const AST* ast, lir::CFG& cfg)
-  : m_options(options), m_mach(cfg.get_machine()), m_ast(ast), m_cfg(cfg),
-    m_builder(cfg) {}
-
 void LIRCodegen::run() {
-    for (Defn* defn : m_ast->get_loaded())
-        codegen_initial_definition(defn);
+    // Definitions which were imported by a load should only be partially
+    // defined i.e. lowered, except for types, which should always be fully
+    // defined.
 
-    for (Defn* defn : m_ast->get_defns())
-        codegen_initial_definition(defn);
+    std::vector<Defn*> partials = {};
+    std::vector<Defn*> defns = {};
+    std::vector<TypeDefn*> types = {};
 
-    for (Defn* defn : m_ast->get_loaded()) {
-        // Types need full IR definitions, even if imported.
-        if (TypeDefn* type = dynamic_cast<TypeDefn*>(defn))
-            codegen_lowered_definition(type);
+    for (Defn *D : m_ast->get_loaded()) {
+        auto *TD = dynamic_cast<TypeDefn*>(D);
+        if (TD) {
+            types.push_back(TD);
+        } else {
+            partials.push_back(D);
+        }
     }
 
-    for (Defn* defn : m_ast->get_defns()) {
-        // Fully define all type definitions before others i.e. functions and
-        // globals. Since proper sizes may be needed for types later on, its
-        // necessary to fill out structure fields now.
-        if (TypeDefn* type = dynamic_cast<TypeDefn*>(defn))
-            codegen_lowered_definition(type);
+    for (Defn *D : m_ast->get_defns()) {
+        auto  *TD = dynamic_cast<TypeDefn*>(D);
+        if (TD) {
+            types.push_back(TD);
+        } else {
+            defns.push_back(D);
+        }
     }
 
-    for (Defn* defn : m_ast->get_defns()) {
-        if (!dynamic_cast<TypeDefn*>(defn))
-            codegen_lowered_definition(defn);
-    }
+    // Lower all type definitions, but don't fill them out incase their fields
+    // use a type not defined yet.
+    for (TypeDefn *TD : types)
+        codegen_initial_definition(TD);
+    
+    // Fill out all type definitions, now that all type information is 
+    // available.
+    for (TypeDefn *TD : types)
+        codegen_lowered_definition(TD);
+
+    // Lower all imported definitions. This is the last time we touch them.
+    for (Defn *D : partials)
+        codegen_initial_definition(D);
+
+    for (Defn *D : defns)
+        codegen_initial_definition(D);
+
+    for (Defn *D : defns)
+        codegen_lowered_definition(D);
 }
 
-lir::Type* LIRCodegen::to_lir_type(const QualType& type) {
+lir::Type *LIRCodegen::to_lir_type(const QualType &type) {
     switch (type->get_class()) {
         case Type::Alias:
             return to_lir_type(static_cast<const AliasType*>
@@ -60,25 +77,25 @@ lir::Type* LIRCodegen::to_lir_type(const QualType& type) {
 
             switch (builtin->get_kind()) {
                 case BuiltinType::Void:
-                    return lir::VoidType::get(m_cfg);
+                    return lir::Type::get_void(m_cfg);
                 case BuiltinType::Bool:
                 case BuiltinType::Char:
                 case BuiltinType::Int8:
                 case BuiltinType::UInt8:
-                    return lir::Type::get_i8_type(m_cfg);
+                    return lir::Type::get_i8(m_cfg);
                 case BuiltinType::Int16:
                 case BuiltinType::UInt16:
-                    return lir::Type::get_i16_type(m_cfg);
+                    return lir::Type::get_i16(m_cfg);
                 case BuiltinType::Int32:
                 case BuiltinType::UInt32:
-                    return lir::Type::get_i32_type(m_cfg);
+                    return lir::Type::get_i32(m_cfg);
                 case BuiltinType::Int64:
                 case BuiltinType::UInt64:
-                    return lir::Type::get_i64_type(m_cfg);
+                    return lir::Type::get_i64(m_cfg);
                 case BuiltinType::Float32:
-                    return lir::Type::get_f32_type(m_cfg);
+                    return lir::Type::get_f32(m_cfg);
                 case BuiltinType::Float64:
-                    return lir::Type::get_f64_type(m_cfg);
+                    return lir::Type::get_f64(m_cfg);
             }
 
             __builtin_unreachable();
@@ -98,7 +115,7 @@ lir::Type* LIRCodegen::to_lir_type(const QualType& type) {
                 args[i] = to_lir_type(sig->get_param(i));
 
             return lir::FunctionType::get(
-                m_cfg, args, { to_lir_type(sig->get_return_type()) });
+                m_cfg, args, to_lir_type(sig->get_return_type()));
         }
 
         case Type::Pointer:
@@ -111,13 +128,13 @@ lir::Type* LIRCodegen::to_lir_type(const QualType& type) {
     }
 }
 
-lir::Function *LIRCodegen::get_intrinsic(
-        const std::string &name, const lir::FunctionType::Params &params,
-        const lir::FunctionType::Results &results) { 
-    lir::Function* func = m_cfg.get_function(name);
+lir::Function *LIRCodegen::get_function(
+        const std::string &name, lir::Type *result, 
+        const lir::FunctionType::Params &params) {
+    lir::Function *func = m_cfg.get_function(name);
     if (func)
         return func;
-        
+
     std::vector<lir::Parameter*> parameters(params.size(), nullptr);
 
     for (uint32_t i = 0; i < params.size(); ++i)
@@ -126,21 +143,21 @@ lir::Function *LIRCodegen::get_intrinsic(
     return lir::Function::create(
         m_cfg, 
         lir::Function::LinkageType::Public, 
-        lir::FunctionType::get(m_cfg, params, results),
+        lir::FunctionType::get(m_cfg, params, result),
         name, 
         parameters
     );
 }
 
-lir::Value* LIRCodegen::inject_comparison(lir::Value* value) {
-    lir::Type* type = value->get_type();
+lir::Value *LIRCodegen::inject_comparison(lir::Value *value) {
+    lir::Type *type = value->get_type();
     
     if (type->is_integer_type(1)) {
         return value;
     } else if (type->is_integer_type()) {
         return m_builder.build_cmp_ine(value, lir::Integer::get_zero(m_cfg, type));
     } else if (type->is_float_type()) {
-        return m_builder.build_cmp_one(value,  lir::Float::get_zero(m_cfg, type));
+        return m_builder.build_cmp_fne(value, lir::Float::get_zero(m_cfg, type));
     } else if (type->is_pointer_type()) {
         return m_builder.build_cmp_ine(value, lir::Null::get(m_cfg, type));
     }

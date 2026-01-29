@@ -145,6 +145,12 @@ public:
         return m_preds[i];
     }
 
+    /// Add the given |block| as a predecessor to this one.
+    void add_pred(BasicBlock *block) {
+        // @Todo: Check that the block isn't already a predecessor?
+        m_preds.push_back(block);
+    }
+
     /// Returns the list of blocks that are successors to this one.
     const Preds &get_succs() const { return m_succs; }
     Preds &get_succs() { return m_succs; }
@@ -164,6 +170,12 @@ public:
     BasicBlock *get_succ(uint32_t i) {
         assert(i < num_succs() && "index out of bounds!");
         return m_succs[i];
+    }
+
+    /// Add the given |block| as a successor to this one.
+    void add_succ(BasicBlock *block) {
+        // @Todo: Check that the block isn't already a successor?
+        m_succs.push_back(block);
     }
 
     /// Test if this basic block contains a terminating instruction.

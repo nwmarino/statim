@@ -1,40 +1,39 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
 #include "lace/codegen/LIRCodegen.hpp"
 #include "lace/tree/Defn.hpp"
 #include "lace/tree/Type.hpp"
+
 #include "lir/graph/Constant.hpp"
 #include "lir/graph/Type.hpp"
 
 using namespace lace;
 
-lir::Value* LIRCodegen::codegen_assignment(const BinaryOp* expr) {
-    lir::Value* lval = codegen_addressed_expression(expr->get_lhs());
-    assert(lval);
+lir::Value *LIRCodegen::codegen_assignment(const BinaryOp *expr) {
+    lir::Value *ptr = codegen_addressed_expression(expr->get_lhs());
+    assert(ptr);
 
-    lir::Type* type = to_lir_type(expr->get_rhs()->get_type());
-
-    lir::Value* value = codegen_valued_expression(expr->get_rhs());
+    lir::Value *value = codegen_valued_expression(expr->get_rhs());
     assert(value);
 
-    m_builder.build_store(value, lval);
+    m_builder.build_store(value, ptr);
     return value; // Return rhs as result of the assignment.
 }
 
-lir::Value* LIRCodegen::codegen_addition(const BinaryOp* expr) {
+lir::Value *LIRCodegen::codegen_addition(const BinaryOp *expr) {
     assert(expr->get_operator() == BinaryOp::Add || 
         expr->get_operator() == BinaryOp::Sub);
 
-    lir::Value* lhs = codegen_valued_expression(expr->get_lhs());
-    lir::Value* rhs = codegen_valued_expression(expr->get_rhs());
+    lir::Value *lhs = codegen_valued_expression(expr->get_lhs());
+    lir::Value *rhs = codegen_valued_expression(expr->get_rhs());
     assert(lhs);
     assert(rhs);
 
-    lir::Type* lhs_type = lhs->get_type();
-    lir::Type* rhs_type = rhs->get_type();
+    lir::Type *lhs_type = lhs->get_type();
+    lir::Type *rhs_type = rhs->get_type();
 
     if (lhs_type->is_pointer_type() && rhs_type->is_integer_type()) {
         // Handle pointer arithmetic.
@@ -51,7 +50,7 @@ lir::Value* LIRCodegen::codegen_addition(const BinaryOp* expr) {
             }
         }
 
-        return m_builder.build_pwalk(lhs_type, lhs, { rhs });
+        return m_builder.build_offptr(lhs_type, lhs, rhs);
     } else if (lhs_type->is_integer_type() && rhs_type->is_integer_type()) {
         auto lhs_integer = dynamic_cast<lir::Integer*>(lhs);
         auto rhs_integer = dynamic_cast<lir::Integer*>(rhs);
@@ -107,16 +106,16 @@ lir::Value* LIRCodegen::codegen_addition(const BinaryOp* expr) {
     assert(false && "invalid add/sub operation!");
 }
 
-lir::Value* LIRCodegen::codegen_multiply(const BinaryOp* expr) {
+lir::Value *LIRCodegen::codegen_multiply(const BinaryOp *expr) {
     assert(expr->get_operator() == BinaryOp::Mul);
 
-    lir::Value* lhs = codegen_valued_expression(expr->get_lhs());
-    lir::Value* rhs = codegen_valued_expression(expr->get_rhs());
+    lir::Value *lhs = codegen_valued_expression(expr->get_lhs());
+    lir::Value *rhs = codegen_valued_expression(expr->get_rhs());
     assert(lhs);
     assert(rhs);
 
-    lir::Type* lhs_type = lhs->get_type();
-    lir::Type* rhs_type = rhs->get_type();
+    lir::Type *lhs_type = lhs->get_type();
+    lir::Type *rhs_type = rhs->get_type();
 
     if (lhs_type->is_integer_type() && rhs_type->is_integer_type()) {
         auto lhs_integer = dynamic_cast<lir::Integer*>(lhs);
@@ -149,17 +148,17 @@ lir::Value* LIRCodegen::codegen_multiply(const BinaryOp* expr) {
     assert(false && "invalid mul operation!");
 }
 
-lir::Value* LIRCodegen::codegen_division(const BinaryOp* expr) {
+lir::Value *LIRCodegen::codegen_division(const BinaryOp *expr) {
     assert(expr->get_operator() == BinaryOp::Div ||
         expr->get_operator() == BinaryOp::Mod);
 
-    lir::Value* lhs = codegen_valued_expression(expr->get_lhs());
-    lir::Value* rhs = codegen_valued_expression(expr->get_rhs());
+    lir::Value *lhs = codegen_valued_expression(expr->get_lhs());
+    lir::Value *rhs = codegen_valued_expression(expr->get_rhs());
     assert(lhs);
     assert(rhs);
 
-    lir::Type* lhs_type = lhs->get_type();
-    lir::Type* rhs_type = rhs->get_type();
+    lir::Type *lhs_type = lhs->get_type();
+    lir::Type *rhs_type = rhs->get_type();
 
     if (lhs_type->is_integer_type() && rhs_type->is_integer_type()) {
         auto lhs_integer = dynamic_cast<lir::Integer*>(lhs);
@@ -215,17 +214,15 @@ lir::Value* LIRCodegen::codegen_division(const BinaryOp* expr) {
     assert(false && "invalid div/mod operation!");
 }
 
-lir::Value* LIRCodegen::codegen_bitwise_arithmetic(const BinaryOp* expr) {
+lir::Value *LIRCodegen::codegen_bitwise_arithmetic(const BinaryOp *expr) {
     assert(expr->get_operator() == BinaryOp::And ||
         expr->get_operator() == BinaryOp::Or || 
         expr->get_operator() == BinaryOp::Xor);
 
-    lir::Value* lhs = codegen_valued_expression(expr->get_lhs());
-    lir::Value* rhs = codegen_valued_expression(expr->get_rhs());
+    lir::Value *lhs = codegen_valued_expression(expr->get_lhs());
+    lir::Value *rhs = codegen_valued_expression(expr->get_rhs());
     assert(lhs);
     assert(rhs);
-    assert(lhs->get_type()->is_integer_type() && 
-        rhs->get_type()->is_integer_type());
 
     auto lhs_integer = dynamic_cast<lir::Integer*>(lhs);
     auto rhs_integer = dynamic_cast<lir::Integer*>(rhs);
@@ -265,12 +262,12 @@ lir::Value* LIRCodegen::codegen_bitwise_arithmetic(const BinaryOp* expr) {
     assert(false && "invalid and/or/xor operation!");
 }
 
-lir::Value* LIRCodegen::codegen_bit_shift(const BinaryOp* expr) {
+lir::Value *LIRCodegen::codegen_bit_shift(const BinaryOp *expr) {
     assert(expr->get_operator() == BinaryOp::LShift ||
         expr->get_operator() == BinaryOp::RShift);
 
-    lir::Value* lhs = codegen_valued_expression(expr->get_lhs());
-    lir::Value* rhs = codegen_valued_expression(expr->get_rhs());
+    lir::Value *lhs = codegen_valued_expression(expr->get_lhs());
+    lir::Value *rhs = codegen_valued_expression(expr->get_rhs());
     assert(lhs);
     assert(rhs);
     assert(lhs->get_type()->is_integer_type() && 
@@ -308,26 +305,28 @@ lir::Value* LIRCodegen::codegen_bit_shift(const BinaryOp* expr) {
     assert(false && "invalid ls/rs operation!");
 }
 
-lir::Value* LIRCodegen::codegen_numerical_comparison(const BinaryOp* expr) {
-    lir::Value* lhs = codegen_valued_expression(expr->get_lhs());
-    lir::Value* rhs = codegen_valued_expression(expr->get_rhs());
+lir::Value *LIRCodegen::codegen_numerical_comparison(const BinaryOp *expr) {
+    lir::Value *lhs = codegen_valued_expression(expr->get_lhs());
+    lir::Value *rhs = codegen_valued_expression(expr->get_rhs());
     assert(lhs);
     assert(rhs);
 
-    const QualType& type = expr->get_lhs()->get_type();
+    // @Todo: Implement constant folding here.
+
+    const QualType &type = expr->get_lhs()->get_type();
     switch (expr->get_operator()) {
         case BinaryOp::Eq:
             if (type->is_integer() || type->is_pointer()) {
                 return m_builder.build_cmp_ieq(lhs, rhs);
             } else if (type->is_floating_point()) {
-                return m_builder.build_cmp_oeq(lhs, rhs);
+                return m_builder.build_cmp_feq(lhs, rhs);
             }
 
         case BinaryOp::NEq:
             if (type->is_integer() || type->is_pointer()) {
                 return m_builder.build_cmp_ine(lhs, rhs);
             } else if (type->is_floating_point()) {
-                return m_builder.build_cmp_one(lhs, rhs);
+                return m_builder.build_cmp_fne(lhs, rhs);
             }
 
         case BinaryOp::Lt:
@@ -336,7 +335,7 @@ lir::Value* LIRCodegen::codegen_numerical_comparison(const BinaryOp* expr) {
             } else if (type->is_unsigned_integer()) {
                 return m_builder.build_cmp_ult(lhs, rhs);
             } else if (type->is_floating_point()) {
-                return m_builder.build_cmp_olt(lhs, rhs);
+                return m_builder.build_cmp_flt(lhs, rhs);
             }
 
         case BinaryOp::LtEq:
@@ -345,7 +344,7 @@ lir::Value* LIRCodegen::codegen_numerical_comparison(const BinaryOp* expr) {
             } else if (type->is_unsigned_integer()) {
                 return m_builder.build_cmp_ule(lhs, rhs);
             } else if (type->is_floating_point()) {
-                return m_builder.build_cmp_ole(lhs, rhs);
+                return m_builder.build_cmp_fle(lhs, rhs);
             }
 
         case BinaryOp::Gt:
@@ -354,7 +353,7 @@ lir::Value* LIRCodegen::codegen_numerical_comparison(const BinaryOp* expr) {
             } else if (type->is_unsigned_integer()) {
                 return  m_builder.build_cmp_ugt(lhs, rhs);
             } else if (type->is_floating_point()) {
-                return  m_builder.build_cmp_ogt(lhs, rhs);
+                return  m_builder.build_cmp_fgt(lhs, rhs);
             }
 
         case BinaryOp::GtEq:
@@ -363,7 +362,7 @@ lir::Value* LIRCodegen::codegen_numerical_comparison(const BinaryOp* expr) {
             } else if (type->is_unsigned_integer()) {
                 return m_builder.build_cmp_uge(lhs, rhs);
             } else if (type->is_floating_point()) {
-                return m_builder.build_cmp_oge(lhs, rhs);
+                return m_builder.build_cmp_fge(lhs, rhs);
             }
 
         default:
@@ -373,13 +372,13 @@ lir::Value* LIRCodegen::codegen_numerical_comparison(const BinaryOp* expr) {
     assert(false && "invalid cmp operator!");
 }
 
-lir::Value* LIRCodegen::codegen_logical_and(const BinaryOp* expr) {
-    lir::BasicBlock* right_bb = lir::BasicBlock::create();
-    lir::BasicBlock* merge_bb = lir::BasicBlock::create();
-    lir::BlockArgument* res = lir::BlockArgument::create(
+lir::Value *LIRCodegen::codegen_logical_and(const BinaryOp *expr) {
+    lir::BasicBlock *right_bb = lir::BasicBlock::create();
+    lir::BasicBlock *merge_bb = lir::BasicBlock::create();
+    lir::BlockArgument *res = lir::BlockArgument::create(
         lir::Type::get_i1_type(m_cfg), merge_bb);
 
-    lir::Value* lhs = codegen_valued_expression(expr->get_lhs());
+    lir::Value *lhs = codegen_valued_expression(expr->get_lhs());
     assert(lhs);
 
     m_builder.build_jif(
@@ -393,7 +392,7 @@ lir::Value* LIRCodegen::codegen_logical_and(const BinaryOp* expr) {
     m_func->append(right_bb);
     m_builder.set_insert(right_bb);
 
-    lir::Value* rhs = codegen_valued_expression(expr->get_rhs());
+    lir::Value *rhs = codegen_valued_expression(expr->get_rhs());
     assert(rhs);
 
     m_builder.build_jmp(merge_bb, { inject_comparison(rhs) });
@@ -403,13 +402,13 @@ lir::Value* LIRCodegen::codegen_logical_and(const BinaryOp* expr) {
     return res;
 }
 
-lir::Value* LIRCodegen::codegen_logical_or(const BinaryOp* expr) {
-    lir::BasicBlock* right_bb = lir::BasicBlock::create();
-    lir::BasicBlock* merge_bb = lir::BasicBlock::create();
-    lir::BlockArgument* res = lir::BlockArgument::create(
+lir::Value *LIRCodegen::codegen_logical_or(const BinaryOp *expr) {
+    lir::BasicBlock *right_bb = lir::BasicBlock::create();
+    lir::BasicBlock *merge_bb = lir::BasicBlock::create();
+    lir::BlockArgument *res = lir::BlockArgument::create(
         lir::Type::get_i1_type(m_cfg), merge_bb);
 
-    lir::Value* lhs = codegen_valued_expression(expr->get_lhs());
+    lir::Value *lhs = codegen_valued_expression(expr->get_lhs());
     assert(lhs);
 
     m_builder.build_jif(
@@ -423,7 +422,7 @@ lir::Value* LIRCodegen::codegen_logical_or(const BinaryOp* expr) {
     m_func->append(right_bb);
     m_builder.set_insert(right_bb);
 
-    lir::Value* rhs = codegen_valued_expression(expr->get_rhs());
+    lir::Value *rhs = codegen_valued_expression(expr->get_rhs());
     assert(rhs);
 
     m_builder.build_jmp(merge_bb, { inject_comparison(rhs) });
@@ -433,11 +432,11 @@ lir::Value* LIRCodegen::codegen_logical_or(const BinaryOp* expr) {
     return res;
 }
 
-lir::Value* LIRCodegen::codegen_negation(const UnaryOp* expr) {
+lir::Value *LIRCodegen::codegen_negation(const UnaryOp *expr) {
     lir::Value* value = codegen_valued_expression(expr->get_expr());
     assert(value);
 
-    lir::Type* type = value->get_type();
+    lir::Type *type = value->get_type();
     if (type->is_integer_type()) {
         if (auto integer = dynamic_cast<lir::Integer*>(value)) {
             return lir::Integer::get(m_cfg, type, -integer->get_value());
@@ -455,8 +454,8 @@ lir::Value* LIRCodegen::codegen_negation(const UnaryOp* expr) {
     assert(false && "invalid negate operation!");
 }
 
-lir::Value* LIRCodegen::codegen_bitwise_not(const UnaryOp* expr) {
-    lir::Value* value = codegen_valued_expression(expr->get_expr());
+lir::Value *LIRCodegen::codegen_bitwise_not(const UnaryOp *expr) {
+    lir::Value *value = codegen_valued_expression(expr->get_expr());
     assert(value);
 
     if (value->get_type()->is_integer_type()) {
@@ -470,16 +469,16 @@ lir::Value* LIRCodegen::codegen_bitwise_not(const UnaryOp* expr) {
     assert(false && "invalid bitwise not operation!");
 }
 
-lir::Value* LIRCodegen::codegen_logical_not(const UnaryOp* expr) {
-    lir::Value* value = codegen_valued_expression(expr->get_expr());
+lir::Value *LIRCodegen::codegen_logical_not(const UnaryOp *expr) {
+    lir::Value *value = codegen_valued_expression(expr->get_expr());
     assert(value);
 
-    lir::Type* type = value->get_type();
+    lir::Type *type = value->get_type();
     if (type->is_integer_type()) {
         if (auto integer = dynamic_cast<lir::Integer*>(value)) {
             return lir::Integer::get(
                 m_cfg, 
-                lir::Type::get_i1_type(m_cfg), 
+                lir::Type::get_i1(m_cfg), 
                 !integer->get_value()
             );
         }
@@ -489,12 +488,12 @@ lir::Value* LIRCodegen::codegen_logical_not(const UnaryOp* expr) {
         if (auto fp = dynamic_cast<lir::Float*>(value)) {
             return lir::Integer::get(
                 m_cfg, 
-                lir::Type::get_i1_type(m_cfg), 
+                lir::Type::get_i1(m_cfg), 
                 !fp->get_value()
             );
         }
 
-        return m_builder.build_cmp_oeq(value, lir::Float::get_zero(m_cfg, type));
+        return m_builder.build_cmp_feq(value, lir::Float::get_zero(m_cfg, type));
     } else if (type->is_pointer_type()) {
         if (dynamic_cast<lir::Null*>(value)) {
             return lir::Integer::get_true(m_cfg); 
@@ -506,6 +505,6 @@ lir::Value* LIRCodegen::codegen_logical_not(const UnaryOp* expr) {
     assert(false && "invalid logical not operation!");
 }
 
-lir::Value* LIRCodegen::codegen_address_of(const UnaryOp* expr) {
+lir::Value *LIRCodegen::codegen_address_of(const UnaryOp *expr) {
     return codegen_addressed_expression(expr->get_expr());
 }

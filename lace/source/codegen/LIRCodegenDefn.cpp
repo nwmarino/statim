@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
@@ -7,6 +7,7 @@
 #include "lace/core/Diagnostics.hpp"
 #include "lace/tree/Defn.hpp"
 #include "lace/tree/Type.hpp"
+
 #include "lir/graph/Function.hpp"
 #include "lir/graph/Type.hpp"
 
@@ -17,15 +18,12 @@ void LIRCodegen::codegen_initial_definition(const Defn* defn) {
         case Defn::Function:
             codegen_initial_function(static_cast<const FunctionDefn*>(defn));
             break;
-
         case Defn::Struct:
-            codegen_initial_struct(static_cast<const StructDefn*>(defn));
+            codegen_initial_structure(static_cast<const StructDefn*>(defn));
             break;
-
         case Defn::Variable:
             codegen_initial_global(static_cast<const VariableDefn*>(defn));
             break;
-
         default:
             break;
     }
@@ -36,21 +34,18 @@ void LIRCodegen::codegen_lowered_definition(const Defn* defn) {
         case Defn::Function:
             codegen_lowered_function(static_cast<const FunctionDefn*>(defn));
             break;
-
         case Defn::Struct:
-            codegen_lowered_struct(static_cast<const StructDefn*>(defn));
+            codegen_lowered_structure(static_cast<const StructDefn*>(defn));
             break;
-
         case Defn::Variable:
             codegen_lowered_global(static_cast<const VariableDefn*>(defn));
             break;
-
         default:
             break;
     }
 }
 
-lir::Function* LIRCodegen::codegen_initial_function(const FunctionDefn* defn) {
+lir::Function *LIRCodegen::codegen_initial_function(const FunctionDefn *defn) {
     auto linkage = lir::Function::LinkageType::Private;
     if (defn->has_rune(Rune::Public))
         linkage = lir::Function::LinkageType::Public;
@@ -61,88 +56,59 @@ lir::Function* LIRCodegen::codegen_initial_function(const FunctionDefn* defn) {
     types.reserve(defn->num_params());
     params.reserve(defn->num_params());
 
-    lir::Type* return_type = to_lir_type(defn->get_return_type());
-
-    /*
-    if (!m_mach.is_scalar(return_type)) {
-        // Return type is non-scalar/aggregate, so instead we take in a pointer
-        // as the first argument with the ARET trait, and write changes to it
-        // during returns in this function.
-
-        lir::Type* type = lir::PointerType::get(m_cfg, return_type);
-        
-        types.push_back(type);
-        args.push_back(lir::FunctionArgument::create(
-            type, 
-            ".ret",
-            nullptr, 
-            lir::FunctionArgument::Trait::ARet
-        ));
-
-        // Change the return type to void now.
-        return_type = lir::VoidType::get(m_cfg);
-    }
-    */
-
     for (uint32_t i = 0; i < defn->num_params(); ++i) {
-        const ParameterDefn* param = defn->get_param(i);
-        lir::Type* type = to_lir_type(param->get_type());
+        const ParameterDefn *param = defn->get_param(i);
+        lir::Type *type = to_lir_type(param->get_type());
 
         std::string name = param->get_name();
         if (name == "_")
             name = "";
-        /*
-        if (!m_mach.is_scalar(type)) {
-            trait = lir::FunctionArgument::Trait::Valued;
-            type = lir::PointerType::get(m_cfg, type);
-        }
-        */
 
         types.push_back(type);
         params.push_back(lir::Parameter::create(type, name));
     }
 
+    lir::Type *result_type = to_lir_type(defn->get_return_type());
+
     return lir::Function::create(
         m_cfg, 
         linkage, 
-        lir::FunctionType::get(m_cfg, types, { return_type }), 
+        lir::FunctionType::get(m_cfg, types, result_type),
         defn->get_name(), 
         params
     );
 }
 
-lir::Function* LIRCodegen::codegen_lowered_function(const FunctionDefn* defn) {
-    lir::Function* func = m_cfg.get_function(defn->get_name());
+lir::Function *LIRCodegen::codegen_lowered_function(const FunctionDefn *defn) {
+    lir::Function *func = m_cfg.get_function(defn->get_name());
     assert(func && "function does not exist!");
 
     if (!defn->has_body())
         return func;
 
     m_func = func;
-    lir::BasicBlock* entry = lir::BasicBlock::create({}, m_func);
+    lir::BasicBlock *entry = lir::BasicBlock::create(m_func);
     m_builder.set_insert(entry);
 
     for (uint32_t i = 0, e = func->num_params(); i < e; ++i) {
         lir::Parameter *param = func->get_param(i);
         lir::Type *type = param->get_type();
         
-        lir::Local* local = lir::Local::create(
+        lir::Local *local = lir::Local::create(
             m_cfg, 
             type, 
             param->get_name(), 
-            func
-        );
-
+            func);
         m_builder.build_store(param, local);
     }
 
     codegen_statement(defn->get_body());
 
     if (!m_builder.get_insert()->terminates()) {
-        if (!m_func->get_type()->has_results()) {
+        if (!m_func->get_type()->has_result()) {
             m_builder.build_ret();
         } else {
-            log::warn("function does not always return", 
+            log::warn("non-void function does not always return a value", 
                 log::Span(m_cfg.get_filename(), defn->get_span()));
         }
     }
@@ -152,15 +118,16 @@ lir::Function* LIRCodegen::codegen_lowered_function(const FunctionDefn* defn) {
     return func;
 }
 
-lir::Global* LIRCodegen::codegen_initial_global(const VariableDefn* defn) {
-    lir::Global::LinkageType linkage = lir::Global::Internal;
+lir::Global* LIRCodegen::codegen_initial_global(const VariableDefn *defn) {
+    auto linkage = lir::Global::LinkageType::Private;
     if (defn->has_rune(Rune::Public))
-        linkage = lir::Global::External;
+        linkage = lir::Global::LinkageType::Public;
 
     return lir::Global::create(
         m_cfg, 
         to_lir_type(defn->get_type()), 
         linkage, 
+        defn->get_name(),
         // @Todo: for now, all lowered globals will be mutable. for the case
         // of arrays like [5]mut s64, where the elements are mutable, but the
         // array itself is not, we need some special semantics here.
@@ -168,44 +135,44 @@ lir::Global* LIRCodegen::codegen_initial_global(const VariableDefn* defn) {
         // Cause if we had it as immutable, then the data would be put in 
         // read-only, and thus it wouldn't let us mutate the elements like we
         // should be able to.
-        false, /* !node.get_type().is_mut(), */ 
-        defn->get_name()
+        false /* !node.get_type().is_mut(), */
     );
 }
 
-lir::Global* LIRCodegen::codegen_lowered_global(const VariableDefn* defn) {
-    lir::Global* global = m_cfg.get_global(defn->get_name());
+lir::Global *LIRCodegen::codegen_lowered_global(const VariableDefn *defn) {
+    lir::Global *global = m_cfg.get_global(defn->get_name());
     assert(global && "global does not exist!");
 
     if (!defn->has_init())
         return global;
 
-    lir::Value* value = codegen_valued_expression(defn->get_init());
+    lir::Value *value = codegen_valued_expression(defn->get_init());
     assert(value);
     
-    lir::Constant* init = dynamic_cast<lir::Constant*>(value);
+    lir::Constant *init = dynamic_cast<lir::Constant*>(value);
     assert(init && "global is not initialized with a constant!");
+
     global->set_initializer(init);
     return global;
 }
 
-lir::StructType* LIRCodegen::codegen_initial_struct(const StructDefn* defn) {
+lir::StructType* LIRCodegen::codegen_initial_structure(const StructDefn *defn) {
     return lir::StructType::create(m_cfg, defn->get_name(), {});
 }
 
-lir::StructType* LIRCodegen::codegen_lowered_struct(const StructDefn* defn) {
-    lir::StructType* type = lir::StructType::get(m_cfg, defn->get_name());
+lir::StructType *LIRCodegen::codegen_lowered_structure(const StructDefn *defn) {
+    lir::StructType *type = lir::StructType::get(m_cfg, defn->get_name());
     assert(type && "type does not exist!");
 
-    for (FieldDefn* field : defn->get_fields())
+    for (FieldDefn *field : defn->get_fields())
         type->append_field(to_lir_type(field->get_type()));
 
     return type;
 }
 
-lir::Local* LIRCodegen::codegen_local_variable(const VariableDefn* defn) {
-    lir::Type* type = to_lir_type(defn->get_type());
-    lir::Local* local = lir::Local::create(
+lir::Local *LIRCodegen::codegen_local_variable(const VariableDefn *defn) {
+    lir::Type *type = to_lir_type(defn->get_type());
+    lir::Local *local = lir::Local::create(
         m_cfg, 
         type, 
         defn->get_name(), 
@@ -215,7 +182,7 @@ lir::Local* LIRCodegen::codegen_local_variable(const VariableDefn* defn) {
     if (!defn->has_init())
         return local;
 
-    lir::Value* value = codegen_valued_expression(defn->get_init());
+    lir::Value *value = codegen_valued_expression(defn->get_init());
     assert(value);
 
     m_builder.build_store(value, local);

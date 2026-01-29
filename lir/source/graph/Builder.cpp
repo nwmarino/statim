@@ -24,6 +24,20 @@ void Builder::insert(Instruction *inst) {
     }
 }
 
+Const *Builder::build_const(Constant *value) {
+    assert(value && "value cannot be null!");
+
+    Const *inst = new Const(
+        value->get_type(), 
+        nullptr, 
+        m_cfg.get_def_id(), 
+        value);
+    assert(inst);
+
+    insert(inst);
+    return inst;
+}
+
 Const *Builder::build_string(String *string) {
     assert(string && "string cannot be null!");
 
@@ -141,8 +155,31 @@ Ret *Builder::build_ret(Value *value) {
     return inst;
 }
 
-Jump *Builder::build_jump() {
+Jump *Builder::build_jump(BasicBlock *dest) {
+    assert(dest && "dest cannot be null!");
+
     Jump *inst = new Jump(nullptr);
+    assert(inst);
+
+    m_insert->add_succ(dest);
+    dest->add_pred(m_insert);
+
+    insert(inst);
+    return inst;
+}
+
+Brif *Builder::build_brif(Value *cond, BasicBlock *tdest, BasicBlock *fdest) {
+    assert(cond && "cond cannot be null!");
+    assert(cond->get_type()->is_integer_type(1) && "cond must be a boolean!");
+    assert(tdest && "tdest cannot be null!");
+    assert(fdest && "fdest cannot be null!");
+
+    m_insert->add_succ(tdest);
+    m_insert->add_succ(fdest);
+    tdest->add_pred(m_insert);
+    fdest->add_pred(m_insert);
+
+    Brif *inst = new Brif(nullptr, cond);
     assert(inst);
 
     insert(inst);
@@ -756,6 +793,322 @@ Cast *Builder::build_reint(Type *type, Value *value) {
         m_cfg.get_def_id(), 
         Cast::Kind::Reint, 
         value);
+    assert(inst);
+
+    insert(inst);
+    return inst;
+}
+
+Cmp *Builder::build_cmp_ieq(Value *lhs, Value *rhs) {
+    assert(lhs && "lhs cannot be null!");
+    assert(rhs && "rhs cannot be null!");
+    assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
+
+    Cmp *inst = new Cmp(
+        Type::get_i1(m_cfg), 
+        nullptr, 
+        m_cfg.get_def_id(), 
+        Cmp::Predicate::IEq, 
+        lhs, 
+        rhs);
+    assert(inst);
+
+    insert(inst);
+    return inst;
+}
+
+Cmp *Builder::build_cmp_ine(Value *lhs, Value *rhs) {
+    assert(lhs && "lhs cannot be null!");
+    assert(rhs && "rhs cannot be null!");
+    assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
+
+    Cmp *inst = new Cmp(
+        Type::get_i1(m_cfg), 
+        nullptr, 
+        m_cfg.get_def_id(), 
+        Cmp::Predicate::INe, 
+        lhs, 
+        rhs);
+    assert(inst);
+
+    insert(inst);
+    return inst;
+}
+
+Cmp *Builder::build_cmp_slt(Value *lhs, Value *rhs) {
+    assert(lhs && "lhs cannot be null!");
+    assert(lhs->get_type()->is_integer_type() && "lhs must be an integer!");
+    assert(rhs && "rhs cannot be null!");
+    assert(rhs->get_type()->is_integer_type() && "rhs must be an integer!");
+    assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
+
+    Cmp *inst = new Cmp(
+        Type::get_i1(m_cfg), 
+        nullptr, 
+        m_cfg.get_def_id(), 
+        Cmp::Predicate::Slt, 
+        lhs, 
+        rhs);
+    assert(inst);
+
+    insert(inst);
+    return inst;
+}
+
+Cmp *Builder::build_cmp_sle(Value *lhs, Value *rhs) {
+    assert(lhs && "lhs cannot be null!");
+    assert(lhs->get_type()->is_integer_type() && "lhs must be an integer!");
+    assert(rhs && "rhs cannot be null!");
+    assert(rhs->get_type()->is_integer_type() && "rhs must be an integer!");
+    assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
+
+    Cmp *inst = new Cmp(
+        Type::get_i1(m_cfg), 
+        nullptr, 
+        m_cfg.get_def_id(), 
+        Cmp::Predicate::Sle, 
+        lhs, 
+        rhs);
+    assert(inst);
+
+    insert(inst);
+    return inst;
+}
+
+Cmp *Builder::build_cmp_sgt(Value *lhs, Value *rhs) {
+    assert(lhs && "lhs cannot be null!");
+    assert(lhs->get_type()->is_integer_type() && "lhs must be an integer!");
+    assert(rhs && "rhs cannot be null!");
+    assert(rhs->get_type()->is_integer_type() && "rhs must be an integer!");
+    assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
+
+    Cmp *inst = new Cmp(
+        Type::get_i1(m_cfg), 
+        nullptr, 
+        m_cfg.get_def_id(), 
+        Cmp::Predicate::Sgt, 
+        lhs, 
+        rhs);
+    assert(inst);
+
+    insert(inst);
+    return inst;
+}
+
+Cmp *Builder::build_cmp_sge(Value *lhs, Value *rhs) {
+    assert(lhs && "lhs cannot be null!");
+    assert(lhs->get_type()->is_integer_type() && "lhs must be an integer!");
+    assert(rhs && "rhs cannot be null!");
+    assert(rhs->get_type()->is_integer_type() && "rhs must be an integer!");
+    assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
+
+    Cmp *inst = new Cmp(
+        Type::get_i1(m_cfg), 
+        nullptr, 
+        m_cfg.get_def_id(), 
+        Cmp::Predicate::Sge, 
+        lhs, 
+        rhs);
+    assert(inst);
+
+    insert(inst);
+    return inst;
+}
+
+Cmp *Builder::build_cmp_ult(Value *lhs, Value *rhs) {
+    assert(lhs && "lhs cannot be null!");
+    assert(lhs->get_type()->is_integer_type() && "lhs must be an integer!");
+    assert(rhs && "rhs cannot be null!");
+    assert(rhs->get_type()->is_integer_type() && "rhs must be an integer!");
+    assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
+
+    Cmp *inst = new Cmp(
+        Type::get_i1(m_cfg), 
+        nullptr, 
+        m_cfg.get_def_id(), 
+        Cmp::Predicate::Ult, 
+        lhs, 
+        rhs);
+    assert(inst);
+
+    insert(inst);
+    return inst;
+}
+
+Cmp *Builder::build_cmp_ule(Value *lhs, Value *rhs) {
+    assert(lhs && "lhs cannot be null!");
+    assert(lhs->get_type()->is_integer_type() && "lhs must be an integer!");
+    assert(rhs && "rhs cannot be null!");
+    assert(rhs->get_type()->is_integer_type() && "rhs must be an integer!");
+    assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
+
+    Cmp *inst = new Cmp(
+        Type::get_i1(m_cfg), 
+        nullptr, 
+        m_cfg.get_def_id(), 
+        Cmp::Predicate::Ule, 
+        lhs, 
+        rhs);
+    assert(inst);
+
+    insert(inst);
+    return inst;
+}
+
+Cmp *Builder::build_cmp_ugt(Value *lhs, Value *rhs) {
+    assert(lhs && "lhs cannot be null!");
+    assert(lhs->get_type()->is_integer_type() && "lhs must be an integer!");
+    assert(rhs && "rhs cannot be null!");
+    assert(rhs->get_type()->is_integer_type() && "rhs must be an integer!");
+    assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
+
+    Cmp *inst = new Cmp(
+        Type::get_i1(m_cfg), 
+        nullptr, 
+        m_cfg.get_def_id(), 
+        Cmp::Predicate::Ugt, 
+        lhs, 
+        rhs);
+    assert(inst);
+
+    insert(inst);
+    return inst;
+}
+
+Cmp *Builder::build_cmp_uge(Value *lhs, Value *rhs) {
+    assert(lhs && "lhs cannot be null!");
+    assert(lhs->get_type()->is_integer_type() && "lhs must be an integer!");
+    assert(rhs && "rhs cannot be null!");
+    assert(rhs->get_type()->is_integer_type() && "rhs must be an integer!");
+    assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
+
+    Cmp *inst = new Cmp(
+        Type::get_i1(m_cfg), 
+        nullptr, 
+        m_cfg.get_def_id(), 
+        Cmp::Predicate::Uge, 
+        lhs, 
+        rhs);
+    assert(inst);
+
+    insert(inst);
+    return inst;
+}
+
+Cmp *Builder::build_cmp_feq(Value *lhs, Value *rhs) {
+    assert(lhs && "lhs cannot be null!");
+    assert(lhs->get_type()->is_float_type() && "lhs must be a float!");
+    assert(rhs && "rhs cannot be null!");
+    assert(rhs->get_type()->is_float_type() && "rhs must be a float!");
+    assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
+
+    Cmp *inst = new Cmp(
+        Type::get_i1(m_cfg), 
+        nullptr, 
+        m_cfg.get_def_id(), 
+        Cmp::Predicate::FEq, 
+        lhs, 
+        rhs);
+    assert(inst);
+
+    insert(inst);
+    return inst;
+}
+
+Cmp *Builder::build_cmp_fne(Value *lhs, Value *rhs) {
+    assert(lhs && "lhs cannot be null!");
+    assert(lhs->get_type()->is_float_type() && "lhs must be a float!");
+    assert(rhs && "rhs cannot be null!");
+    assert(rhs->get_type()->is_float_type() && "rhs must be a float!");
+    assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
+
+    Cmp *inst = new Cmp(
+        Type::get_i1(m_cfg), 
+        nullptr, 
+        m_cfg.get_def_id(), 
+        Cmp::Predicate::FNe, 
+        lhs, 
+        rhs);
+    assert(inst);
+
+    insert(inst);
+    return inst;
+}
+
+Cmp *Builder::build_cmp_flt(Value *lhs, Value *rhs) {
+    assert(lhs && "lhs cannot be null!");
+    assert(lhs->get_type()->is_float_type() && "lhs must be a float!");
+    assert(rhs && "rhs cannot be null!");
+    assert(rhs->get_type()->is_float_type() && "rhs must be a float!");
+    assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
+
+    Cmp *inst = new Cmp(
+        Type::get_i1(m_cfg), 
+        nullptr, 
+        m_cfg.get_def_id(), 
+        Cmp::Predicate::Flt, 
+        lhs, 
+        rhs);
+    assert(inst);
+
+    insert(inst);
+    return inst;
+}
+
+Cmp *Builder::build_cmp_fle(Value *lhs, Value *rhs) {
+    assert(lhs && "lhs cannot be null!");
+    assert(lhs->get_type()->is_float_type() && "lhs must be a float!");
+    assert(rhs && "rhs cannot be null!");
+    assert(rhs->get_type()->is_float_type() && "rhs must be a float!");
+    assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
+
+    Cmp *inst = new Cmp(
+        Type::get_i1(m_cfg), 
+        nullptr, 
+        m_cfg.get_def_id(), 
+        Cmp::Predicate::Fle, 
+        lhs, 
+        rhs);
+    assert(inst);
+
+    insert(inst);
+    return inst;
+}
+
+Cmp *Builder::build_cmp_fgt(Value *lhs, Value *rhs) {
+    assert(lhs && "lhs cannot be null!");
+    assert(lhs->get_type()->is_float_type() && "lhs must be a float!");
+    assert(rhs && "rhs cannot be null!");
+    assert(rhs->get_type()->is_float_type() && "rhs must be a float!");
+    assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
+
+    Cmp *inst = new Cmp(
+        Type::get_i1(m_cfg), 
+        nullptr, 
+        m_cfg.get_def_id(), 
+        Cmp::Predicate::Fgt, 
+        lhs, 
+        rhs);
+    assert(inst);
+
+    insert(inst);
+    return inst;
+}
+
+Cmp *Builder::build_cmp_fge(Value *lhs, Value *rhs) {
+    assert(lhs && "lhs cannot be null!");
+    assert(lhs->get_type()->is_float_type() && "lhs must be a float!");
+    assert(rhs && "rhs cannot be null!");
+    assert(rhs->get_type()->is_float_type() && "rhs must be a float!");
+    assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
+
+    Cmp *inst = new Cmp(
+        Type::get_i1(m_cfg), 
+        nullptr, 
+        m_cfg.get_def_id(), 
+        Cmp::Predicate::Fge, 
+        lhs, 
+        rhs);
     assert(inst);
 
     insert(inst);

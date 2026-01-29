@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
@@ -14,22 +14,18 @@
 
 using namespace lace;
 
-lir::Value* LIRCodegen::codegen_addressed_expression(const Expr* expr) {
+lir::Value *LIRCodegen::codegen_addressed_expression(const Expr *expr) {
     switch (expr->get_kind()) {
         case Expr::Unary: {
             auto unary = static_cast<const UnaryOp*>(expr);
             assert(unary->get_operator() == UnaryOp::Dereference &&
                 "cannot generate an address from non-dereference unary op!");
+            
             return codegen_addressed_dereference(unary);
         }
 
         case Expr::Access:
             return codegen_addressed_access(static_cast<const AccessExpr*>(expr));
-
-        case Expr::Call:
-            // Calls have the capability of returning addressed values if they
-            // return non-scalars/aggregates.
-            return codegen_function_call(static_cast<const CallExpr*>(expr));
 
         case Expr::Ref:
             return codegen_addressed_reference(static_cast<const RefExpr*>(expr));
@@ -42,10 +38,10 @@ lir::Value* LIRCodegen::codegen_addressed_expression(const Expr* expr) {
     }
 }
 
-lir::Value* LIRCodegen::codegen_addressed_access(const AccessExpr* expr) {
-    lir::Value* ptr = nullptr;
+lir::Value *LIRCodegen::codegen_addressed_access(const AccessExpr *expr) {
+    lir::Value *ptr = nullptr;
 
-    const Expr* base = expr->get_base();
+    const Expr *base = expr->get_base();
     if (base->get_type()->is_pointer()) {
         // If this access is functionally similar to C-style '->' access, then
         // we need to load the base to get at the underlying structure.
@@ -59,23 +55,21 @@ lir::Value* LIRCodegen::codegen_addressed_access(const AccessExpr* expr) {
 
     assert(ptr);
 
-    lir::Type* type = lir::PointerType::get(m_cfg, to_lir_type(expr->get_type()));
-    lir::Integer* index = lir::Integer::get(
-        m_cfg, lir::Type::get_i32_type(m_cfg), expr->get_field()->get_index());
+    lir::Type *type = lir::PointerType::get(m_cfg, to_lir_type(expr->get_type()));
 
-    return m_builder.build_pwalk(type, ptr, { 
-        lir::Integer::get_zero(m_cfg, lir::Type::get_i32_type(m_cfg)), 
-        index 
-    });
+    return m_builder.build_access(type, ptr, lir::Integer::get(
+        m_cfg, lir::Type::get_i64(m_cfg), expr->get_field()->get_index()
+    ));
 }
 
-lir::Value* LIRCodegen::codegen_addressed_reference(const RefExpr* expr) {
+lir::Value *LIRCodegen::codegen_addressed_reference(const RefExpr *expr) {
     assert(expr->get_defn());
 
     switch (expr->get_defn()->get_kind()) {
         case Defn::Function: {
-            lir::Function* func = m_cfg.get_function(expr->get_name());
+            lir::Function *func = m_cfg.get_function(expr->get_name());
             assert(func && "function does not exist!");
+
             return func;
         }
 
@@ -92,14 +86,16 @@ lir::Value* LIRCodegen::codegen_addressed_reference(const RefExpr* expr) {
             auto var = static_cast<const VariableDefn*>(expr->get_defn());
 
             if (var->is_global()) {
-                lir::Global* global = m_cfg.get_global(expr->get_name());
+                lir::Global *global = m_cfg.get_global(expr->get_name());
                 assert(global && "global variable does not exist!");
+
                 return global;
             } else {
                 assert(m_func && "local reference not within a function!");
 
-                lir::Local* local = m_func->get_local(expr->get_name());
+                lir::Local *local = m_func->get_local(expr->get_name());
                 assert(local && "local variable does not exist!");
+
                 return local;
             }
         }
@@ -109,41 +105,38 @@ lir::Value* LIRCodegen::codegen_addressed_reference(const RefExpr* expr) {
     }
 }
 
-lir::Value* LIRCodegen::codegen_addressed_subscript(const SubscriptExpr* expr) {
-    lir::Value* ptr = nullptr;
-    lir::Value* index = nullptr;
-    lir::Type* type = lir::PointerType::get(
-        m_cfg, to_lir_type(expr->get_type()));
+lir::Value *LIRCodegen::codegen_addressed_subscript(const SubscriptExpr *expr) {
+    lir::Value *ptr = nullptr;
+    const Expr *base = expr->get_base();
 
-    const Expr* base = expr->get_base();
     if (base->get_type()->is_array()) {
         ptr = codegen_addressed_expression(base);
     } else if (base->get_type()->is_pointer()) {
-        // @Todo: this may not work, treating pointer subscripts as needing a 
-        // lesser indirection.
         ptr = codegen_valued_expression(base);
     } else {
-        log::fatal("bad type operand to '[]': " + base->get_type().to_string(), 
+        log::fatal("invalid [] type operand: " + base->get_type().to_string(), 
             log::Span(m_ast->get_file(), expr->get_span()));
     }
 
-    index = codegen_valued_expression(expr->get_index());
-    
+    lir::Value *index = codegen_valued_expression(expr->get_index());
     assert(ptr);
     assert(index);
 
-    if (expr->get_base()->get_type()->is_array()) {
-        return m_builder.build_pwalk(type, ptr, { 
-            lir::Integer::get_zero(m_cfg, lir::Type::get_i32_type(m_cfg)), 
-            index 
-        });
+    lir::Type *type = lir::PointerType::get(
+        m_cfg, to_lir_type(expr->get_type()));
+
+    if (base->get_type()->is_array()) {
+        // If the base is an array, we want to access an element, not 
+        // manipulate the address.
+        return m_builder.build_access(type, ptr, index);
     } else {
-        return m_builder.build_pwalk(type, ptr, { index });
+        return m_builder.build_offptr(type, ptr, index);
     }
 }
 
-lir::Value* LIRCodegen::codegen_addressed_dereference(const UnaryOp* expr) {
-    lir::Value* rvalue = codegen_valued_expression(expr->get_expr());
+lir::Value *LIRCodegen::codegen_addressed_dereference(const UnaryOp *expr) {
+    lir::Value *rvalue = codegen_valued_expression(expr->get_expr());
     assert(rvalue);
+
     return rvalue;
 }

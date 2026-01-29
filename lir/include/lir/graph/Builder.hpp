@@ -42,6 +42,9 @@ public:
     /// Insert the given |inst| at the current insertion point, if it is set.
     void insert(Instruction *inst);
 
+    /// Create a new const instruction defining |value| as an SSA value.
+    Const *build_const(Constant *value);
+
     /// Create a new string const instruction defining |string| as a value.
     Const *build_string(String *string);
 
@@ -70,11 +73,12 @@ public:
     /// Create a new ret instruction that optionally returns a |value|.
     Ret *build_ret(Value *value = nullptr);
 
-    /// Build a new jump instruction that branches to a sole successor.
-    Jump *build_jump();
+    /// Build a new jump instruction that jumps to the given |dest|.
+    Jump *build_jump(BasicBlock *dest);
 
-    /// Build a new conditional branch instruction.
-    Brif *build_brif(Value *cond);
+    /// Build a new conditional branch instruction, that if |cond| is true,
+    /// then branches to |tdest|, otherwise it branches to |fdest|.
+    Brif *build_brif(Value *cond, BasicBlock *tdest, BasicBlock *fdest);
 
     /// Build a phi node for the given |type|.
     Phi *build_phi(Type *type);
@@ -127,6 +131,11 @@ public:
     Cmp *build_cmp_sle(Value *lhs, Value *rhs);
     Cmp *build_cmp_sgt(Value *lhs, Value *rhs);
     Cmp *build_cmp_sge(Value *lhs, Value *rhs);
+
+    Cmp *build_cmp_ult(Value *lhs, Value *rhs);
+    Cmp *build_cmp_ule(Value *lhs, Value *rhs);
+    Cmp *build_cmp_ugt(Value *lhs, Value *rhs);
+    Cmp *build_cmp_uge(Value *lhs, Value *rhs);
 
     Cmp *build_cmp_feq(Value *lhs, Value *rhs);
     Cmp *build_cmp_fne(Value *lhs, Value *rhs);

@@ -1,3 +1,3 @@
-add_subdirectory(analysis)
+#add_subdirectory(analysis)
 add_subdirectory(graph)
-add_subdirectory(machine)
+#add_subdirectory(machine)

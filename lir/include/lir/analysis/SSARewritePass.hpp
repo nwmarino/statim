@@ -1,21 +1,21 @@
 //
-// Copyright (c) 2025 Nick Marino
-// All rights reserved.
+//  Copyright (c) 2025-2026 Nicholas Marino
+//  All rights reserved.
 //
 
-#ifndef SPBE_SSA_REWRITE_PASS_H_
-#define SPBE_SSA_REWRITE_PASS_H_
+#ifndef LOVELACE_IR_SSA_REWRITE_PASS_H_
+#define LOVELACE_IR_SSA_REWRITE_PASS_H_
 
-#include "spbe/analysis/Pass.hpp"
-#include "spbe/graph/BasicBlock.hpp"
-#include "spbe/graph/InstrBuilder.hpp"
-#include "spbe/graph/Instruction.hpp"
-#include "spbe/graph/Local.hpp"
+#include "lir/analysis/Pass.hpp"
+#include "lir/graph/BasicBlock.hpp"
+#include "lir/graph/Builder.hpp"
+#include "lir/graph/Instruction.hpp"
+#include "lir/graph/Local.hpp"
 
 #include <unordered_map>
 #include <vector>
 
-namespace spbe {
+namespace lir {
 
 class Instruction;
 class Local;
@@ -26,17 +26,17 @@ class Local;
 /// This pass implements some of the algorithms outlined by Braun et al.
 /// See: https://link.springer.com/chapter/10.1007/978-3-642-37051-9_6
 class SSARewritePass final : public Pass {
-    using BlockDefs = std::unordered_map<Local*,
+    using BlockDefs = std::unordered_map<Local*, 
         std::unordered_map<BasicBlock*, Value*>>;
 
-    InstrBuilder m_builder;
+    Builder m_builder;
 
-    Local* m_local = nullptr;
+    Local *m_local = nullptr;
 
     std::unordered_map<BasicBlock*, Value*> m_current_def = {};
 
     std::unordered_map<BasicBlock*, std::unordered_map<Local*, 
-        std::vector<Instruction*>>> m_incomplete_phis;
+        std::vector<Instruction*>>> m_incomplete_phis = {};
 
     /// A list of instructions to remove after the current process.
     std::vector<Instruction*> m_to_remove = {};
@@ -45,40 +45,40 @@ class SSARewritePass final : public Pass {
 
     std::vector<BasicBlock*> m_sealed = {};
 
-    /// Process a function in the target graph.
-    void process(Function* fn);
+    /// Perform an SSA rewrite for the given |func|.
+    void process(Function *func);
 
-    void promote_local(Function* fn, Local* local);
+    void promote_local(Function *func, Local *local);
 
-    /// Register a variable write (def).
-    void write_variable(BasicBlock* blk, Value* value);
+    /// Register a variable write (def) for the given |value| in |block|.
+    void write_variable(BasicBlock *block, Value *value);
 
-    // Read the latest definition of |var| based on current block |blk|.
-    Value* read_variable(BasicBlock* blk);
-    Value* read_variable_recursive(BasicBlock* blk);
+    // Read the latest definition of the target local for the given |block|.
+    Value *read_variable(BasicBlock *block);
+    Value *read_variable_recursive(BasicBlock *block);
 
-    Value* add_phi_operands(Instruction* phi);
+    Value *add_phi_operands(Phi *phi);
 
     /// Attempt to remove a phi instruction which could be considered trivial,
     /// i.e. merges less than two unique values. Returns the result of the 
     /// operation; the phi instruction or the distinguishable operand.
-    Value* try_remove_trivial_phi(Instruction* phi);
+    Value *try_remove_trivial_phi(Phi *phi);
 
-    bool visited(BasicBlock* blk);
+    /// Mark the given |block| as having been visited.
+    bool visited(BasicBlock *block);
 
-    bool is_sealed(BasicBlock* blk);
+    /// Test if the given |block| is sealed.
+    bool is_sealed(BasicBlock *block);
 
-    void seal_block(BasicBlock* blk);
+    /// Mark the given |block| as being sealed.
+    void seal_block(BasicBlock *block);
 
 public:
-    SSARewritePass(CFG& cfg) : Pass(cfg), m_builder(cfg) {}
-
-    SSARewritePass(const SSARewritePass&) = delete;
-    SSARewritePass& operator = (const SSARewritePass&) = delete;
+    SSARewritePass(CFG &cfg) : Pass(cfg), m_builder(cfg) {}
 
     void run() override;
 };
 
-} // namespace spbe
+} // namespace lir
 
-#endif // SPBE_SSA_REWRITE_PASS_H_
+#endif // LOVELACE_IR_SSA_REWRITE_PASS_H_
