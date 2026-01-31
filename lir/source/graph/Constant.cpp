@@ -146,7 +146,7 @@ void Float::print(std::ostream &os, PrintPolicy policy) const {
     assert(policy != PrintPolicy::Def && "float cannot be defined!");
 
     if (policy == PrintPolicy::Use)
-        os << std::format("{}: {}", m_value, m_type->to_string());
+        os << std::format("{:.5f}: {}", m_value, m_type->to_string());
 }
 
 //>==---------------------------------------------------------------------------

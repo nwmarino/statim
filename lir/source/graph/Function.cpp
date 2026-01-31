@@ -216,9 +216,9 @@ void Function::print(std::ostream &os, PrintPolicy policy) const {
     if (policy == PrintPolicy::Use) {
         os << m_name;
 
-        const FunctionType *type = get_type();
-        if (type->has_result())
-            os << std::format(": {}", type->get_result()->to_string());
+        //const FunctionType *type = get_type();
+        //if (type->has_result())
+        //    os << std::format(": {}", type->get_result()->to_string());
     } else if (policy == PrintPolicy::Def) {
         os << std::format("{} :: ", m_name);
 
