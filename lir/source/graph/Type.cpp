@@ -18,10 +18,6 @@ VoidType *Type::get_void(CFG &cfg) {
     return cfg.m_types.void_type;
 }
 
-IntegerType *Type::get_i1(CFG &cfg) {
-    return cfg.m_types.ints[1];
-}
-
 IntegerType *Type::get_i8(CFG &cfg) {
     return cfg.m_types.ints[8];
 }
@@ -60,8 +56,6 @@ VoidType *VoidType::get(CFG &cfg) {
 
 static IntegerType *get(CFG &cfg, uint32_t width) {
     switch (width) {
-        case 1:
-            return static_cast<IntegerType*>(Type::get_i1(cfg));
         case 8:
             return static_cast<IntegerType*>(Type::get_i8(cfg));
         case 16:
@@ -77,8 +71,6 @@ static IntegerType *get(CFG &cfg, uint32_t width) {
 
 std::string IntegerType::to_string() const {
     switch (m_width) {
-        case 1:
-            return "i1";
         case 8:
             return "i8";
         case 16:

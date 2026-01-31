@@ -809,7 +809,7 @@ Cmp *Builder::build_cmp_ieq(Value *lhs, Value *rhs) {
     assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
 
     Cmp *inst = new Cmp(
-        Type::get_i1(m_cfg), 
+        Type::get_i8(m_cfg), 
         nullptr, 
         m_cfg.get_def_id(), 
         Cmp::Predicate::IEq, 
@@ -827,7 +827,7 @@ Cmp *Builder::build_cmp_ine(Value *lhs, Value *rhs) {
     assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
 
     Cmp *inst = new Cmp(
-        Type::get_i1(m_cfg), 
+        Type::get_i8(m_cfg), 
         nullptr, 
         m_cfg.get_def_id(), 
         Cmp::Predicate::INe, 
@@ -847,7 +847,7 @@ Cmp *Builder::build_cmp_slt(Value *lhs, Value *rhs) {
     assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
 
     Cmp *inst = new Cmp(
-        Type::get_i1(m_cfg), 
+        Type::get_i8(m_cfg), 
         nullptr, 
         m_cfg.get_def_id(), 
         Cmp::Predicate::Slt, 
@@ -867,7 +867,7 @@ Cmp *Builder::build_cmp_sle(Value *lhs, Value *rhs) {
     assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
 
     Cmp *inst = new Cmp(
-        Type::get_i1(m_cfg), 
+        Type::get_i8(m_cfg), 
         nullptr, 
         m_cfg.get_def_id(), 
         Cmp::Predicate::Sle, 
@@ -887,7 +887,7 @@ Cmp *Builder::build_cmp_sgt(Value *lhs, Value *rhs) {
     assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
 
     Cmp *inst = new Cmp(
-        Type::get_i1(m_cfg), 
+        Type::get_i8(m_cfg), 
         nullptr, 
         m_cfg.get_def_id(), 
         Cmp::Predicate::Sgt, 
@@ -907,7 +907,7 @@ Cmp *Builder::build_cmp_sge(Value *lhs, Value *rhs) {
     assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
 
     Cmp *inst = new Cmp(
-        Type::get_i1(m_cfg), 
+        Type::get_i8(m_cfg), 
         nullptr, 
         m_cfg.get_def_id(), 
         Cmp::Predicate::Sge, 
@@ -927,7 +927,7 @@ Cmp *Builder::build_cmp_ult(Value *lhs, Value *rhs) {
     assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
 
     Cmp *inst = new Cmp(
-        Type::get_i1(m_cfg), 
+        Type::get_i8(m_cfg), 
         nullptr, 
         m_cfg.get_def_id(), 
         Cmp::Predicate::Ult, 
@@ -947,7 +947,7 @@ Cmp *Builder::build_cmp_ule(Value *lhs, Value *rhs) {
     assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
 
     Cmp *inst = new Cmp(
-        Type::get_i1(m_cfg), 
+        Type::get_i8(m_cfg), 
         nullptr, 
         m_cfg.get_def_id(), 
         Cmp::Predicate::Ule, 
@@ -967,7 +967,7 @@ Cmp *Builder::build_cmp_ugt(Value *lhs, Value *rhs) {
     assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
 
     Cmp *inst = new Cmp(
-        Type::get_i1(m_cfg), 
+        Type::get_i8(m_cfg), 
         nullptr, 
         m_cfg.get_def_id(), 
         Cmp::Predicate::Ugt, 
@@ -987,7 +987,7 @@ Cmp *Builder::build_cmp_uge(Value *lhs, Value *rhs) {
     assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
 
     Cmp *inst = new Cmp(
-        Type::get_i1(m_cfg), 
+        Type::get_i8(m_cfg), 
         nullptr, 
         m_cfg.get_def_id(), 
         Cmp::Predicate::Uge, 
@@ -1007,7 +1007,7 @@ Cmp *Builder::build_cmp_feq(Value *lhs, Value *rhs) {
     assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
 
     Cmp *inst = new Cmp(
-        Type::get_i1(m_cfg), 
+        Type::get_i8(m_cfg), 
         nullptr, 
         m_cfg.get_def_id(), 
         Cmp::Predicate::FEq, 
@@ -1027,7 +1027,7 @@ Cmp *Builder::build_cmp_fne(Value *lhs, Value *rhs) {
     assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
 
     Cmp *inst = new Cmp(
-        Type::get_i1(m_cfg), 
+        Type::get_i8(m_cfg), 
         nullptr, 
         m_cfg.get_def_id(), 
         Cmp::Predicate::FNe, 
@@ -1047,7 +1047,7 @@ Cmp *Builder::build_cmp_flt(Value *lhs, Value *rhs) {
     assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
 
     Cmp *inst = new Cmp(
-        Type::get_i1(m_cfg), 
+        Type::get_i8(m_cfg), 
         nullptr, 
         m_cfg.get_def_id(), 
         Cmp::Predicate::Flt, 
@@ -1067,7 +1067,7 @@ Cmp *Builder::build_cmp_fle(Value *lhs, Value *rhs) {
     assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
 
     Cmp *inst = new Cmp(
-        Type::get_i1(m_cfg), 
+        Type::get_i8(m_cfg), 
         nullptr, 
         m_cfg.get_def_id(), 
         Cmp::Predicate::Fle, 
@@ -1087,7 +1087,7 @@ Cmp *Builder::build_cmp_fgt(Value *lhs, Value *rhs) {
     assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
 
     Cmp *inst = new Cmp(
-        Type::get_i1(m_cfg), 
+        Type::get_i8(m_cfg), 
         nullptr, 
         m_cfg.get_def_id(), 
         Cmp::Predicate::Fgt, 
@@ -1107,7 +1107,7 @@ Cmp *Builder::build_cmp_fge(Value *lhs, Value *rhs) {
     assert(*lhs->get_type() == *rhs->get_type() && "operand types must match!");
 
     Cmp *inst = new Cmp(
-        Type::get_i1(m_cfg), 
+        Type::get_i8(m_cfg), 
         nullptr, 
         m_cfg.get_def_id(), 
         Cmp::Predicate::Fge, 

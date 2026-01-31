@@ -14,16 +14,14 @@ using namespace lir;
 CFG::CFG(const Machine &mach, const std::string &filename) 
   : m_mach(mach), m_filename(filename) {
     m_types.void_type = new VoidType();
-    m_types.ints.emplace(1, new IntegerType(1));
+
     m_types.ints.emplace(8, new IntegerType(8));
     m_types.ints.emplace(16, new IntegerType(16));
+
     m_types.ints.emplace(32, new IntegerType(32));
     m_types.ints.emplace(64, new IntegerType(64));
     m_types.floats.emplace(32, new FloatType(32));
     m_types.floats.emplace(64, new FloatType(64));
-
-    m_constants.zero = new Integer(0, m_types.ints[1]);
-    m_constants.one = new Integer(1, m_types.ints[1]);
 }
 
 CFG::~CFG() {
@@ -69,12 +67,6 @@ CFG::~CFG() {
     m_types.pointers.clear();
     m_types.structs.clear();
 
-    if (m_constants.zero)
-        delete m_constants.zero;
-
-    if (m_constants.one)
-        delete m_constants.one;
-
     for (auto &pair : m_constants.bytes)
         delete pair.second;
 
@@ -98,8 +90,6 @@ CFG::~CFG() {
 
     for (auto &pair : m_constants.strings)
         delete pair.second;
-
-    m_constants.zero = nullptr, m_constants.one = nullptr;
 }
 
 std::vector<StructType*> CFG::get_structs() const {

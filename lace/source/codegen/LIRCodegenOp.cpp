@@ -397,7 +397,7 @@ lir::Value *LIRCodegen::codegen_logical_and(const BinaryOp *expr) {
     m_func->append(merge_bb);
     m_builder.set_insert(merge_bb);
 
-    lir::Phi *phi = m_builder.build_phi(lir::Type::get_i1(m_cfg));
+    lir::Phi *phi = m_builder.build_phi(to_lir_type(expr->get_type()));
     phi->add_edge(lir::Integer::get_false(m_cfg), false_bb);
     phi->add_edge(rhs, otherwise_bb);
 
@@ -428,7 +428,7 @@ lir::Value *LIRCodegen::codegen_logical_or(const BinaryOp *expr) {
     m_func->append(merge_bb);
     m_builder.set_insert(merge_bb);
 
-    lir::Phi *phi = m_builder.build_phi(lir::Type::get_i1(m_cfg));
+    lir::Phi *phi = m_builder.build_phi(to_lir_type(expr->get_type()));
     phi->add_edge(lir::Integer::get_true(m_cfg), true_bb);
     phi->add_edge(rhs, otherwise_bb);
     
@@ -481,7 +481,7 @@ lir::Value *LIRCodegen::codegen_logical_not(const UnaryOp *expr) {
         if (auto integer = dynamic_cast<lir::Integer*>(value)) {
             return lir::Integer::get(
                 m_cfg, 
-                lir::Type::get_i1(m_cfg), 
+                lir::Type::get_i8(m_cfg), 
                 !integer->get_value()
             );
         }
@@ -491,7 +491,7 @@ lir::Value *LIRCodegen::codegen_logical_not(const UnaryOp *expr) {
         if (auto fp = dynamic_cast<lir::Float*>(value)) {
             return lir::Integer::get(
                 m_cfg, 
-                lir::Type::get_i1(m_cfg), 
+                lir::Type::get_i8(m_cfg), 
                 !fp->get_value()
             );
         }

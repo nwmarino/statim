@@ -18,11 +18,11 @@ using namespace lir;
 //>==---------------------------------------------------------------------------
 
 Integer *Integer::get_true(CFG &cfg) {
-    return cfg.m_constants.one;
+    return get(cfg, Type::get_i8(cfg), 1);
 }
 
 Integer *Integer::get_false(CFG &cfg) {
-    return cfg.m_constants.zero;
+    return get(cfg, Type::get_i8(cfg), 0);
 }
 
 Integer *Integer::get_zero(CFG &cfg, Type *type) {
@@ -37,9 +37,6 @@ Integer *Integer::get(CFG &cfg, Type *type, int64_t value) {
     assert(type->is_integer_type() && "type must be an integer!");
 
     switch (static_cast<const IntegerType*>(type)->get_width()) {
-        case 1:
-            return value == 0 ? cfg.m_constants.zero : cfg.m_constants.one;
-
         case 8: {
             auto it = cfg.m_constants.bytes.find(value);
             if (it != cfg.m_constants.bytes.end())

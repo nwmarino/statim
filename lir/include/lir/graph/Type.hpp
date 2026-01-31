@@ -63,7 +63,6 @@ public:
     Class get_class() const { return m_cls; }
 
     static VoidType *get_void(CFG &cfg);
-    static IntegerType *get_i1(CFG &cfg);
     static IntegerType *get_i8(CFG &cfg);
     static IntegerType *get_i16(CFG &cfg);
     static IntegerType *get_i32(CFG &cfg);

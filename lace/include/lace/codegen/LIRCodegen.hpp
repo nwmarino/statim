@@ -60,7 +60,7 @@ private:
     /// Attempt to inject a boolean comparison unto the given |value|, such
     /// that the result is some form of comparison of a boolean type.
     ///
-    /// Ultimately, the type of the returned value will be a 1-bit integer 
+    /// Ultimately, the type of the returned value will be a 8-bit integer 
     /// representation a.k.a boolean.
     lir::Value *inject_comparison(lir::Value *value);
 

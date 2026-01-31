@@ -77,8 +77,6 @@ class CFG final {
     } m_types;
 
     struct ConstantPools final {
-        Integer *zero;
-        Integer *one;
         BytePool bytes = {};
         ShortPool shorts = {};
         IntPool ints = {};
