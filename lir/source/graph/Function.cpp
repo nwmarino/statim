@@ -243,7 +243,7 @@ void Function::print(std::ostream &os, PrintPolicy policy) const {
         os << ")";
 
         const FunctionType *type = get_type();
-        if (type->has_result())
+        if (type->has_result() && !type->get_result()->is_void_type())
             os << std::format(" -> {}", type->get_result()->to_string());
 
         if (empty()) {

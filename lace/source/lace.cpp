@@ -171,10 +171,10 @@ void resolve_dependencies(const Options& options, const Asts& asts,
     }
 }
 
-void drive_lir_backend(const Options& options, const Asts& asts) {
+void drive_lir_backend(const Options &options, const Asts &asts) {
     lir::Machine mach(lir::Machine::Linux);
 
-    for (AST* ast : asts) {
+    for (AST *ast : asts) {
         Timestamp time_cgn_start = get_time();
 
         lir::CFG cfg(mach, ast->get_file());        
@@ -189,7 +189,7 @@ void drive_lir_backend(const Options& options, const Asts& asts) {
                 ast->get_file(), dur);
         }
 
-        if (options.print_ir) {
+        if (options.dump_lir) {
             std::ofstream file(ast->get_file() + ".lir");
             if (!file || !file.is_open())
                 log::fatal("failed to open: " + ast->get_file() + ".s");
@@ -198,6 +198,7 @@ void drive_lir_backend(const Options& options, const Asts& asts) {
             file.close();
         }
 
+        /*
         Timestamp time_bend_start = get_time();
 
         lir::Segment seg(cfg);
@@ -205,7 +206,7 @@ void drive_lir_backend(const Options& options, const Asts& asts) {
         lir::LoweringPass lowering(cfg, seg);
         lowering.run();
 
-        if (options.print_mir) {
+        if (options.dump_mir) {
             std::ofstream mir(ast->get_file() + ".mir");
             if (!mir || !mir.is_open())
                 log::fatal("failed to open: " + ast->get_file() + ".mir");
@@ -218,7 +219,7 @@ void drive_lir_backend(const Options& options, const Asts& asts) {
         lir::RegisterAnalysis rega(seg);
         rega.run();
 
-        if (options.print_mir) {
+        if (options.dump_mir) {
             std::ofstream rmir(ast->get_file() + ".rmir");
             if (!rmir || !rmir.is_open())
                 log::fatal("failed to open: " + ast->get_file() + ".rmir");
@@ -245,23 +246,23 @@ void drive_lir_backend(const Options& options, const Asts& asts) {
 
         std::string assembler = "as " + ast->get_file() + ".s -o " + ast->get_file() + ".o";
         std::system(assembler.c_str());
+        */
     }
 }
 
-int32_t main(int32_t argc, char** argv) {
-    Options options;
+int32_t main(int32_t argc, char *argv[]) {
+    Options options = {};
     options.output = "main";
-    options.opt = Options::OptLevel::None;
+    options.opt = Options::OptLevel::Default;
     options.threads = 1;
 
     options.debug = true;
     options.multithread = true;
-    options.time = true;
     options.verbose = true;
     options.version = true;
-    options.print_tree = true;
-    options.print_ir = true;
-    options.print_mir = true;
+    options.dump_ast = true;
+    options.dump_lir = true;
+    options.dump_mir = true;
 
     log::init();
 
@@ -280,29 +281,23 @@ int32_t main(int32_t argc, char** argv) {
             options.verbose = true;
         } else if (arg == "-g") {
             options.debug = true;
-        } else if (arg == "-t") {
-            options.time = true;
         } else if (arg == "-v") {
             log::note("version: " + std::to_string(LACE_VERSION_MAJOR) + "." + 
                 std::to_string(LACE_VERSION_MINOR));
-        } else if (arg == "-O0") {
-            options.opt = Options::OptLevel::None;
-        } else if (arg == "-O1") {
-            options.opt = Options::OptLevel::Few;
-        } else if (arg == "-O2") {
+        } else if (arg == "-Od") {
             options.opt = Options::OptLevel::Default;
-        } else if (arg == "-O3") {
-            options.opt = Options::OptLevel::Many;
+        } else if (arg == "-Oa") {
+            options.opt = Options::OptLevel::Aggressive;
         } else if (arg == "-Os") {
             options.opt = Options::OptLevel::Space;
         } else if (arg == "-st") {
             options.multithread = false;
         } else if (arg == "-dump-ast") {
-            options.print_tree = true;
-        } else if (arg == "-dump-ir") {
-            options.print_ir = true;
+            options.dump_ast = true;
+        } else if (arg == "-dump-lir") {
+            options.dump_lir = true;
         } else if (arg == "-dump-mir") {
-            options.print_mir = true;
+            options.dump_mir = true;
         } else if (arg == "-j") {
             if (i + 1 == argc)
                 log::fatal("expected number after -j");
@@ -351,7 +346,7 @@ int32_t main(int32_t argc, char** argv) {
             static_cast<uint32_t>(files.size()));
     }
 
-    ThreadPool* pool = nullptr;
+    ThreadPool *pool = nullptr;
     if (options.multithread) {
         pool = new ThreadPool(options.threads);
         assert(pool);
@@ -433,7 +428,7 @@ int32_t main(int32_t argc, char** argv) {
     log::flush();
 
     // Perform semantic analysis on each syntax tree.
-    for (AST* ast : asts) {
+    for (AST *ast : asts) {
         const Timestamp sema_start = get_time();
 
         SemanticAnalysis semantic_analysis(options);
@@ -446,7 +441,7 @@ int32_t main(int32_t argc, char** argv) {
         }
 
         // AST is now considered valid, so print it if needbe.
-        if (options.print_tree) {
+        if (options.dump_ast) {
             std::ofstream out(ast->get_file() + ".ast");
             if (!out || !out.is_open())
                 log::fatal("failed to open file: " + ast->get_file() + ".ast");

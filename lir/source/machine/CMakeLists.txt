@@ -1,6 +1,6 @@
 set(MACHINE_SOURCES
-    AsmWriter.cpp
-    InstSelector.cpp
+    #AsmWriter.cpp
+    #InstSelector.cpp
     MachFunction.cpp
     Machine.cpp
     MachInst.cpp

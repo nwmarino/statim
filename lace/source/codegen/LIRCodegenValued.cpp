@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
@@ -102,23 +102,20 @@ lir::Value* LIRCodegen::codegen_valued_expression(const Expr* expr) {
     }
 }
 
-lir::Value* LIRCodegen::codegen_valued_access(const AccessExpr* expr) {
-    lir::Value* ptr = codegen_addressed_access(expr);
-    assert(ptr);
+lir::Value *LIRCodegen::codegen_valued_access(const AccessExpr *expr) {
+    lir::Value *addr = codegen_addressed_access(expr);
+    assert(addr);
 
-    return m_builder.build_load(to_lir_type(expr->get_type()), ptr);
+    return m_builder.build_load(to_lir_type(expr->get_type()), addr);
 }
 
-lir::Value* LIRCodegen::codegen_valued_reference(const RefExpr* expr) {
+lir::Value *LIRCodegen::codegen_valued_reference(const RefExpr *expr) {
     assert(expr->get_defn());
 
     switch (expr->get_defn()->get_kind()) {
-        case Defn::Parameter: {
-            
-        }
-
+        case Defn::Parameter:
         case Defn::Variable: {
-            lir::Value* addr = codegen_addressed_reference(expr);
+            lir::Value *addr = codegen_addressed_reference(expr);
             assert(addr);
 
             return m_builder.build_load(to_lir_type(expr->get_type()), addr);
@@ -138,11 +135,11 @@ lir::Value* LIRCodegen::codegen_valued_reference(const RefExpr* expr) {
     }
 }
 
-lir::Value* LIRCodegen::codegen_valued_subscript(const SubscriptExpr* expr) {
-    lir::Value* ptr = codegen_addressed_subscript(expr);
-    assert(ptr);
+lir::Value *LIRCodegen::codegen_valued_subscript(const SubscriptExpr *expr) {
+    lir::Value *addr = codegen_addressed_subscript(expr);
+    assert(addr);
 
-    return m_builder.build_load(to_lir_type(expr->get_type()), ptr);
+    return m_builder.build_load(to_lir_type(expr->get_type()), addr);
 }
 
 lir::Value* LIRCodegen::codegen_valued_dereference(const UnaryOp* expr) {
@@ -155,7 +152,7 @@ lir::Value* LIRCodegen::codegen_valued_dereference(const UnaryOp* expr) {
 lir::Value* LIRCodegen::codegen_literal_boolean(const BoolLiteral* expr) {
     return lir::Integer::get(
         m_cfg, 
-        lir::Type::get_i8_type(m_cfg), 
+        lir::Type::get_i8(m_cfg),
         static_cast<int64_t>(expr->get_value())
     );
 }
@@ -171,7 +168,7 @@ lir::Value* LIRCodegen::codegen_literal_integer(const IntegerLiteral* expr) {
 lir::Value* LIRCodegen::codegen_literal_character(const CharLiteral* expr) {
     return lir::Integer::get(
         m_cfg,
-        lir::Type::get_i8_type(m_cfg),
+        lir::Type::get_i8(m_cfg),
         static_cast<int64_t>(expr->get_value())
     );
 }
@@ -303,57 +300,17 @@ lir::Value* LIRCodegen::codegen_function_call(const CallExpr* expr) {
     lir::Value *callee = codegen_addressed_expression(expr->get_callee());
     assert(callee);
 
-    lir::Type *result = to_lir_type(expr->get_type());
-    assert(result);
-
     std::vector<lir::Value*> args = {};
     args.reserve(expr->num_args());
 
-    lir::Value *aret = nullptr;
-    if (!m_mach.is_scalar(result)) {
-        // The result of the call is a non-scalar/aggregate, so per our ABI
-        // we assume a void return, and instead pass in a pointer as the first 
-        // argument.
-
-        if (m_place) {
-            // If there was a "place" designated to store the aggregate result,
-            // then we can pass it in as the aret.
-            args.push_back(m_place);
-        } else {
-            // No "place" designated, so instead create temporary local that 
-            // will act as both the aret and result of this call.
-            aret = lir::Local::create(
-                m_cfg, 
-                result, 
-                std::to_string(m_cfg.get_def_id()),
-                m_func
-            );
-
-            // Will be a *T, where T is the type of the aggregate.
-            args.push_back(aret);
-        }
-    }
-
-    for (Expr* arg : expr->get_args()) {
-        lir::Value* value = codegen_valued_expression(arg);
+    for (Expr *arg : expr->get_args()) {
+        lir::Value *value = codegen_valued_expression(arg);
         assert(value);
 
         args.push_back(value);
     }
 
-    lir::Value* call = m_builder.build_call(
-        dynamic_cast<lir::FunctionType*>(callee->get_type()), 
-        callee, 
-        args
-    );
-
-    if (aret) {
-        return aret;
-    } else if (call->get_type()->is_void_type()) {
-        return nullptr;
-    } else {
-        return call;
-    }
+    return m_builder.build_call(dynamic_cast<lir::Function*>(callee), args);
 }
 
 lir::Value* LIRCodegen::codegen_parentheses(const ParenExpr* expr) {

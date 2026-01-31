@@ -14,7 +14,6 @@
 namespace lir {
 
 class InstSelector final {
-    using ArgTable = std::unordered_map<const BlockArgument*, Register>;
     using LocalTable = std::unordered_map<const Local*, uint32_t>;
     using RegisterTable = std::unordered_map<uint32_t, Register>;
     
@@ -22,8 +21,6 @@ class InstSelector final {
     MachFunction& m_func;
 
     MachLabel* m_insert = nullptr;
-
-    ArgTable m_args = {};
 
     /// A table for mappings between locals -> stack frame indices.
     LocalTable m_locals = {};

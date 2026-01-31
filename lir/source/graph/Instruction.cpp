@@ -16,6 +16,9 @@ using namespace lir;
 //                          Instruction Implementation
 //>==---------------------------------------------------------------------------
 
+Instruction::Instruction(Type *type, BasicBlock *parent, const Operands &ops)
+  : User(type, ops), m_parent(parent) {}
+
 void Instruction::detach() {
     assert(m_parent && "instruction does not belong to a basic block!");
 
@@ -209,6 +212,13 @@ void Ret::print(std::ostream &os, PrintPolicy policy) const {
 //                          Jump Implementation
 //>==---------------------------------------------------------------------------
 
+const BasicBlock *Jump::get_dest() const {
+    if (!has_parent())
+        return nullptr;
+
+    return get_parent()->get_pred(0);
+}
+
 void Jump::print(std::ostream &os, PrintPolicy policy) const {
     assert(policy != PrintPolicy::Use && "jump does not define a value!");
 
@@ -389,40 +399,40 @@ void Cast::print(std::ostream &os, PrintPolicy policy) const {
 
         switch (kind()) {
             case Kind::SExt:
-                os << "sext ";
+                os << "sext";
                 break;
             case Kind::ZExt:
-                os << "zext ";
+                os << "zext";
                 break;
             case Kind::FExt:
-                os << "fext ";
+                os << "fext";
                 break;
             case Kind::ITrunc:
-                os << "itrunc ";
+                os << "itrunc";
                 break;
             case Kind::FTrunc:
-                os << "ftrunc ";
+                os << "ftrunc";
                 break;
             case Kind::S2F:
-                os << "s2f ";
+                os << "s2f";
                 break;
             case Kind::U2F:
-                os << "u2f ";
+                os << "u2f";
                 break;
             case Kind::F2S:
-                os << "f2s ";
+                os << "f2s";
                 break;
             case Kind::F2U:
-                os << "f2u ";
+                os << "f2u";
                 break;
             case Kind::P2I:
-                os << "p2i ";
+                os << "p2i";
                 break;
             case Kind::I2P:
-                os << "i2p ";
+                os << "i2p";
                 break;
             case Kind::Reint:
-                os << "reint ";
+                os << "reint";
                 break;
         }
 
@@ -444,55 +454,56 @@ void Cmp::print(std::ostream &os, PrintPolicy policy) const {
 
         switch (pred()) {
             case Predicate::IEq:
-                os << "i== ";
+                os << "ieq";
                 break;
             case Predicate::FEq:
-                os << "f== ";
+                os << "feq";
                 break;
             case Predicate::INe:
-                os << "i!= ";
+                os << "ine";
                 break;
             case Predicate::FNe:
-                os << "f!= ";
+                os << "fne";
                 break;
             case Predicate::Slt:
-                os << "s< ";
+                os << "slt";
                 break;
             case Predicate::Ult:
-                os << "u< ";
+                os << "ult";
                 break;
             case Predicate::Flt:
-                os << "f< ";
+                os << "flt";
                 break;
             case Predicate::Sle:
-                os << "s<= ";
+                os << "sle";
                 break;
             case Predicate::Ule:
-                os << "u<= ";
+                os << "ule";
                 break;
             case Predicate::Fle:
-                os << "f<= ";
+                os << "fle";
                 break;
             case Predicate::Sgt:
-                os << "s> ";
+                os << "sgt";
                 break;
             case Predicate::Ugt:
-                os << "u> ";
+                os << "ugt";
                 break;
             case Predicate::Fgt:
-                os << "f> ";
+                os << "fgt";
                 break;
             case Predicate::Sge:
-                os << "s>= ";
+                os << "sge";
                 break;
             case Predicate::Uge:
-                os << "u>= ";
+                os << "uge";
                 break;
             case Predicate::Fge:
-                os << "f>= ";
+                os << "fge";
                 break;
         }
 
+        os << ' ';
         get_lhs()->print(os, PrintPolicy::Use);
         os << ", ";
         get_rhs()->print(os, PrintPolicy::Use);

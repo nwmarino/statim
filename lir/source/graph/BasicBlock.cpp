@@ -214,11 +214,11 @@ void BasicBlock::print(std::ostream &os, PrintPolicy policy) const {
     if (policy == PrintPolicy::Use) {
         os << std::format("bb{}", position());
     } else if (policy == PrintPolicy::Def) {
-        os << std::format("bb{}:", position());
+        os << std::format("bb{}:\n", position());
 
         const Instruction *curr = m_head;
         while (curr) {
-            os << 't';
+            os << '\t';
             curr->print(os, PrintPolicy::Def);
             curr = curr->get_next();
         }

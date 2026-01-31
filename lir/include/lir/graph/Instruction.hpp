@@ -26,8 +26,7 @@ protected:
     Instruction *m_prev = nullptr;
     Instruction *m_next = nullptr;
 
-    Instruction(Type *type, BasicBlock *parent, const Operands &ops = {})
-      : User(type, ops), m_parent(parent) {}
+    Instruction(Type *type, BasicBlock *parent, const Operands &ops = {});
 
 public:
     virtual ~Instruction() = default;
@@ -103,8 +102,6 @@ public:
     /// Test if this instruction is terminator, i.e. terminates control flow
     /// from a basic block.
     virtual bool is_terminator() const { return false; }
-
-    virtual void print(std::ostream &os, PrintPolicy policy) const override;
 };
 
 /// A const instruction yields a constant value as an SSA value.

@@ -8,17 +8,18 @@
 #include "lace/tree/Type.hpp"
 
 #include "lir/graph/Constant.hpp"
+#include "lir/graph/Instruction.hpp"
 #include "lir/graph/Type.hpp"
 
 using namespace lace;
 
 lir::Value *LIRCodegen::codegen_assignment(const BinaryOp *expr) {
-    lir::Value *ptr = codegen_addressed_expression(expr->get_lhs());
-    assert(ptr);
-
     lir::Value *value = codegen_valued_expression(expr->get_rhs());
     assert(value);
 
+    lir::Value *ptr = codegen_addressed_expression(expr->get_lhs());
+    assert(ptr);
+    
     m_builder.build_store(value, ptr);
     return value; // Return rhs as result of the assignment.
 }
@@ -375,61 +376,63 @@ lir::Value *LIRCodegen::codegen_numerical_comparison(const BinaryOp *expr) {
 lir::Value *LIRCodegen::codegen_logical_and(const BinaryOp *expr) {
     lir::BasicBlock *right_bb = lir::BasicBlock::create();
     lir::BasicBlock *merge_bb = lir::BasicBlock::create();
-    lir::BlockArgument *res = lir::BlockArgument::create(
-        lir::Type::get_i1_type(m_cfg), merge_bb);
 
     lir::Value *lhs = codegen_valued_expression(expr->get_lhs());
     assert(lhs);
+    lhs = inject_comparison(lhs);
 
-    m_builder.build_jif(
-        inject_comparison(lhs), 
-        right_bb, 
-        {}, // true args
-        merge_bb, 
-        { lir::Integer::get_false(m_cfg) } // false args
-    );
+    lir::BasicBlock *false_bb = m_builder.get_insert();
+    m_builder.build_brif(inject_comparison(lhs), right_bb, merge_bb);
 
     m_func->append(right_bb);
     m_builder.set_insert(right_bb);
 
     lir::Value *rhs = codegen_valued_expression(expr->get_rhs());
     assert(rhs);
+    rhs = inject_comparison(rhs);
 
-    m_builder.build_jmp(merge_bb, { inject_comparison(rhs) });
+    m_builder.build_jump(merge_bb);
 
+    lir::BasicBlock *otherwise_bb = m_builder.get_insert();
     m_func->append(merge_bb);
     m_builder.set_insert(merge_bb);
-    return res;
+
+    lir::Phi *phi = m_builder.build_phi(lir::Type::get_i1(m_cfg));
+    phi->add_edge(lir::Integer::get_false(m_cfg), false_bb);
+    phi->add_edge(rhs, otherwise_bb);
+
+    return phi;
 }
 
 lir::Value *LIRCodegen::codegen_logical_or(const BinaryOp *expr) {
     lir::BasicBlock *right_bb = lir::BasicBlock::create();
     lir::BasicBlock *merge_bb = lir::BasicBlock::create();
-    lir::BlockArgument *res = lir::BlockArgument::create(
-        lir::Type::get_i1_type(m_cfg), merge_bb);
 
     lir::Value *lhs = codegen_valued_expression(expr->get_lhs());
     assert(lhs);
+    lhs = inject_comparison(lhs);
 
-    m_builder.build_jif(
-        inject_comparison(lhs), 
-        merge_bb, 
-        { lir::Integer::get_true(m_cfg) }, // true args 
-        right_bb, 
-        {} // false args
-    );
+    lir::BasicBlock *true_bb = m_builder.get_insert();
+    m_builder.build_brif(lhs, merge_bb, right_bb);
 
     m_func->append(right_bb);
     m_builder.set_insert(right_bb);
 
     lir::Value *rhs = codegen_valued_expression(expr->get_rhs());
     assert(rhs);
+    rhs = inject_comparison(rhs);
 
-    m_builder.build_jmp(merge_bb, { inject_comparison(rhs) });
+    m_builder.build_jump(merge_bb);
 
+    lir::BasicBlock *otherwise_bb = m_builder.get_insert();
     m_func->append(merge_bb);
     m_builder.set_insert(merge_bb);
-    return res;
+
+    lir::Phi *phi = m_builder.build_phi(lir::Type::get_i1(m_cfg));
+    phi->add_edge(lir::Integer::get_true(m_cfg), true_bb);
+    phi->add_edge(rhs, otherwise_bb);
+    
+    return phi;
 }
 
 lir::Value *LIRCodegen::codegen_negation(const UnaryOp *expr) {

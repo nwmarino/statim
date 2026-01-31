@@ -6,20 +6,20 @@ add_subdirectory(source)
 
 add_library(LIR source/graph/CFG.cpp)
 
-#target_include_directories(Analysis PUBLIC
-#    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-#    $<INSTALL_INTERFACE:include>
-#)
+target_include_directories(Analysis PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
 
 target_include_directories(Graph PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
 
-#target_include_directories(Machine PUBLIC
-#    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-#    $<INSTALL_INTERFACE:include>
-#)
+target_include_directories(Machine PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
 
 target_include_directories(LIR
     PUBLIC

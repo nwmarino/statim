@@ -136,11 +136,15 @@ Call *Builder::build_call(Function *callee, const std::vector<Value*> &args) {
 
     Type *result = callee->get_type()->get_result();
 
+    std::vector<Value*> ops = { callee };
+    for (Value *arg : args)
+        ops.push_back(arg);
+
     Call *inst = new Call(
         callee->get_type()->get_result(), 
         nullptr, 
         result ? m_cfg.get_def_id() : 0, 
-        args);
+        ops);
     assert(inst);
 
     insert(inst);
