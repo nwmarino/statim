@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
@@ -15,11 +15,7 @@
 #include "lace/tree/SemanticAnalysis.hpp"
 #include "lace/tree/SymbolAnalysis.hpp"
 
-#include "lir/analysis/LoweringPass.hpp"
-#include "lir/machine/AsmWriter.hpp"
 #include "lir/machine/Machine.hpp"
-#include "lir/machine/Printer.hpp"
-#include "lir/machine/RegisterAnalysis.hpp"
 
 #include <chrono>
 #include <cstdint>

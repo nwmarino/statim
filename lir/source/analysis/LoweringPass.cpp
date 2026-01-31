@@ -8,6 +8,7 @@
 
 using namespace lir;
 
+/*
 void LoweringPass::run() {
     for (const Function *func : m_cfg.get_functions()) {
         // Empty functions should not be lowered, they should either be
@@ -30,3 +31,4 @@ void LoweringPass::run() {
         //isel.run();
     }
 }
+*/

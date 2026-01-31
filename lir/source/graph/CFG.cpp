@@ -17,9 +17,9 @@ CFG::CFG(const Machine &mach, const std::string &filename)
 
     m_types.ints.emplace(8, new IntegerType(8));
     m_types.ints.emplace(16, new IntegerType(16));
-
     m_types.ints.emplace(32, new IntegerType(32));
     m_types.ints.emplace(64, new IntegerType(64));
+    
     m_types.floats.emplace(32, new FloatType(32));
     m_types.floats.emplace(64, new FloatType(64));
 }

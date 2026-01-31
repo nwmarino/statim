@@ -14,7 +14,7 @@
 
 using namespace lace;
 
-lir::Value* LIRCodegen::codegen_valued_expression(const Expr* expr) {
+lir::Value *LIRCodegen::codegen_valued_expression(const Expr *expr) {
     switch (expr->get_kind()) {
         case Expr::Bool:
             return codegen_literal_boolean(static_cast<const BoolLiteral*>(expr));
@@ -206,8 +206,8 @@ lir::Value* LIRCodegen::codegen_type_cast(const CastExpr* expr) {
                 return lir::Integer::get(m_cfg, dest, integer->get_value());
             }
 
-            const uint32_t source_size = m_mach.get_size(source);
-            const uint32_t dest_size = m_mach.get_size(dest);
+            const uint32_t source_size = m_mach.get_type_size(source);
+            const uint32_t dest_size = m_mach.get_type_size(dest);
 
             if (source_size == dest_size) {
                 return value;
@@ -258,8 +258,8 @@ lir::Value* LIRCodegen::codegen_type_cast(const CastExpr* expr) {
                 return lir::Float::get(m_cfg, dest, fp->get_value());
             }
 
-            const uint32_t source_size = m_mach.get_size(source);
-            const uint32_t dest_size = m_mach.get_size(dest);
+            const uint32_t source_size = m_mach.get_type_size(source);
+            const uint32_t dest_size = m_mach.get_type_size(dest);
 
             if (source_size == dest_size) {
                 return value;
@@ -321,6 +321,6 @@ lir::Value* LIRCodegen::codegen_sizeof(const SizeofExpr* expr) {
     return lir::Integer::get(
         m_cfg,
         to_lir_type(expr->get_type()),
-        m_mach.get_size(to_lir_type(expr->get_target_type()))
+        (m_mach.get_type_size(to_lir_type(expr->get_target_type())) / 8)
     );
 }

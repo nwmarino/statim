@@ -67,7 +67,7 @@ Load *Builder::build_load(Type *type, Value *ptr) {
     assert(ptr && "ptr cannot be null!");
     assert(ptr->get_type()->is_pointer_type() && "ptr must be a pointer!");
 
-    uint16_t align = m_cfg.get_machine().get_align(type);
+    const uint16_t align = (m_cfg.get_machine().get_type_align(type) / 8);
 
     Load *inst = new Load(type, nullptr, m_cfg.get_def_id(), ptr, align);
     assert(inst);
@@ -81,7 +81,8 @@ Store *Builder::build_store(Value *value, Value *ptr) {
     assert(ptr && "ptr cannot be null!");
     assert(ptr->get_type()->is_pointer_type() && "ptr must be a pointer!");
     
-    uint16_t align = m_cfg.get_machine().get_align(value->get_type());
+    const uint16_t align = 
+        (m_cfg.get_machine().get_type_align(value->get_type()) / 8);
 
     Store *inst = new Store(nullptr, value, ptr, align);
     assert(inst);

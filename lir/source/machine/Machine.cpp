@@ -6,89 +6,86 @@
 #include "lir/machine/Machine.hpp"
 
 #include <algorithm>
-#include <unordered_set>
 
 using namespace lir;
 
-/// Aligns the given |offset| to the specified |align| value.
-static uint32_t align_to(uint32_t offset, uint32_t align) {
-    return (offset + align - 1) & ~(align - 1);
+/// Aligns the given |offset| to the provided |alignment|.
+static uint32_t align_to(uint32_t offset, uint32_t alignment) {
+    return (offset + alignment - 1) & ~(alignment - 1);
 }
 
 Machine::Machine(OS os) : m_os(os) {
+    // x86-64 assumptions.
     m_little_endian = true;
-
     m_pointer.size = 64;
     m_pointer.align = 64;
 }
 
-uint32_t Machine::get_size(const Type* type) const {
+uint32_t Machine::get_type_size(const Type *type) const {
     switch (type->get_class()) {
-        case lir::Type::Array: {
-            const lir::ArrayType* array_type = 
-                static_cast<const lir::ArrayType*>(type);
-            return get_size(array_type->get_element_type()) * array_type->get_size();
-        }
+        case lir::Type::Void:
+            return 0;
 
         case lir::Type::Float:
-            return static_cast<const lir::FloatType*>(type)->get_width() / 8;
+            return static_cast<const lir::FloatType*>(type)->get_width();
 
         case lir::Type::Integer:
-            return std::max(static_cast<uint32_t>(1), 
-                static_cast<const lir::IntegerType*>(type)->get_width() / 8);
+            return static_cast<const lir::IntegerType*>(type)->get_width();
 
         case lir::Type::Function:
         case lir::Type::Pointer:
             return get_pointer_size();
 
-        case lir::Type::Struct: {
-            const lir::StructType* struct_type = 
-                static_cast<const lir::StructType*>(type);
-            uint32_t offset = 0;
-            for (lir::Type* field : struct_type->get_fields()) {
-                offset = align_to(offset, get_align(field));
-                offset += get_size(field);
-            }
-
-            return align_to(offset, get_align(type));
+        case lir::Type::Array: {
+            auto array = static_cast<const lir::ArrayType*>(type);
+            return get_type_size(array->get_element_type()) * array->get_size();
         }
 
-        case lir::Type::Void:
-            return 0;
+        case lir::Type::Struct: {
+            auto structure = static_cast<const lir::StructType*>(type);
+            uint32_t offset = 0;
+            for (const lir::Type *field : structure->get_fields()) {
+                offset = align_to(offset, get_type_align(field));
+                offset += get_type_size(field);
+            }
+
+            return align_to(offset, get_type_align(type));
+        }
     }
 }
 
-uint32_t Machine::get_align(const Type* type) const {
+uint32_t Machine::get_type_align(const Type *type) const {
     switch (type->get_class()) {
-        case lir::Type::Array:
-            return get_align(
-                static_cast<const lir::ArrayType*>(type)->get_element_type());
+        case lir::Type::Void:
+            return 0;
 
         case lir::Type::Float:
-            return static_cast<const lir::FloatType*>(type)->get_width() / 8;
+            return static_cast<const lir::FloatType*>(type)->get_width();
 
         case lir::Type::Integer:
-            return static_cast<const lir::IntegerType*>(type)->get_width() / 8;
+            return static_cast<const lir::IntegerType*>(type)->get_width();
 
         case lir::Type::Function:
         case lir::Type::Pointer:
             return get_pointer_align();
 
+        case lir::Type::Array:
+            return get_type_align(
+                static_cast<const lir::ArrayType*>(type)->get_element_type());
+
         case lir::Type::Struct: {
-            const lir::StructType* struct_type = static_cast<const lir::StructType*>(type);
+            auto structure = static_cast<const lir::StructType*>(type);
             uint32_t max_align = 1;
-            for (lir::Type* field : struct_type->get_fields())
-                max_align = std::max(max_align, get_align(field));
+
+            for (const lir::Type *field : structure->get_fields())
+                max_align = std::max(max_align, get_type_align(field));
 
             return max_align;
         }
-
-        case lir::Type::Void:
-            return 0;
     }
 }
 
-bool Machine::is_scalar(const Type* type) const {
+bool Machine::is_scalar(const Type *type) const {
     switch (type->get_class()) {
         case Type::Void:
         case Type::Integer:
@@ -100,25 +97,28 @@ bool Machine::is_scalar(const Type* type) const {
     }
 }
 
-uint32_t Machine::get_element_offset(const ArrayType* type, uint32_t i) const {
-    return get_size(type->get_element_type()) * i;
+uint32_t Machine::get_element_offset(const ArrayType *type, uint32_t i) const {
+    return (get_type_size(type->get_element_type()) / 8) * i;
 }
 
-uint32_t Machine::get_pointee_offset(const PointerType* type, uint32_t i) const {
-    return get_size(type->get_pointee()) * i;
+uint32_t Machine::get_pointee_offset(const PointerType *type, uint32_t i) const {
+    return (get_type_size(type->get_pointee()) / 8) * i;
 }
 
-uint32_t Machine::get_field_offset(const StructType* type, uint32_t i) const {
+uint32_t Machine::get_field_offset(const StructType *type, uint32_t i) const {
     uint32_t offset = 0;
+
     for (uint32_t j = 0; j < i; ++j) {
-        const Type* field = type->get_field(j);
-        uint32_t align = get_align(field);
-        offset = align_to(offset, align) + get_size(field);
+        const Type *field = type->get_field(j);
+
+        uint32_t align = get_type_align(field);
+        offset = align_to(offset, align) + get_type_size(field);
     }
 
-    return align_to(offset, get_align(type->get_field(i)));
+    return align_to(offset, get_type_align(type->get_field(i)));
 }
 
+/*
 bool Machine::is_callee_saved(X64_Register reg) const {
     switch (m_os) {
     case Linux:
@@ -151,3 +151,4 @@ bool Machine::is_caller_saved(X64_Register reg) const {
         assert(false && "windows ABI not implemented yet!");
     }
 }
+*/

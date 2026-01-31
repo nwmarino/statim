@@ -16,7 +16,7 @@ using namespace lir;
 Local *Local::create(CFG &cfg, Type *type, const std::string &name, 
 					 Function *parent, uint32_t align) {
 	if (align == 0)
-		align = cfg.get_machine().get_align(type);
+		align = (cfg.get_machine().get_type_align(type) / 8);
 
 	Local *local = new Local(PointerType::get(cfg, type), nullptr, name, align);
 	assert(local);

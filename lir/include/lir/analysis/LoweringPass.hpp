@@ -7,9 +7,11 @@
 #define LOVELACE_IR_LOWERING_PASS_H_
 
 #include "lir/analysis/Pass.hpp"
-#include "lir/machine/Segment.hpp"
+//#include "lir/machine/Segment.hpp"
 
 namespace lir {
+
+class Segment;
 
 /// Global pass that generates shallow machine code for a given machine target.
 ///
