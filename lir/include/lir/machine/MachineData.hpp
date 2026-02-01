@@ -17,7 +17,7 @@ namespace lir {
 /// level or within a function pool. 
 class MachineData final {
 public:
-    using Data = std::vector<MachineConstant*>;
+    using Data = std::vector<MachineConstant>;
 
 private:
     std::string m_name;
@@ -29,17 +29,6 @@ public:
     MachineData(const std::string &name, const Data &data, bool pub = false, 
                 bool readonly = true)
       : m_name(name), m_data(data), m_pub(pub), m_readonly(readonly) {}
-
-    ~MachineData() {
-        for (const MachineConstant *constant : m_data)
-            delete constant;
-    }
-
-    MachineData(const MachineData&) = delete;
-    void operator=(const MachineData&) = delete;
-
-    MachineData(MachineData&&) noexcept = delete;
-    void operator=(MachineData&&) noexcept = delete;
 
     /// Returns the name of this data, if it has one.
     const std::string &get_name() const { return m_name; }

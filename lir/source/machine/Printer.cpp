@@ -132,6 +132,9 @@ void Printer::print_function(std::ostream &os, const MachineFunction &func) {
 
 void Printer::print_constant(std::ostream &os, const MachineConstant &constant) {
     switch (constant.kind()) {
+        case MachineConstant::Kind::Zero:
+            os << std::format("<zero> {}", constant.get_zeros());
+            break;
         case MachineConstant::Kind::Int8:
             os << std::format("<int8> {:#02X} ({})", constant.get_int(), constant.get_int());
             break;
@@ -156,9 +159,9 @@ void Printer::print_constant(std::ostream &os, const MachineConstant &constant) 
 void Printer::print_data(std::ostream &os, const MachineData &data) {
     os << std::format("{}:\n", data.get_name());
 
-    for (const MachineConstant *value : data.get_data()) {
+    for (const MachineConstant &constant : data.get_data()) {
         os << '\t';
-        print_constant(os, *value);
+        print_constant(os, constant);
         os << '\n';
     }
 }
