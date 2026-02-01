@@ -24,6 +24,8 @@ void MachineLabel::prepend(MachineOp *op) {
     } else {
         m_head = op, m_tail = op;
     }
+
+    op->set_parent(this);
 }
 
 void MachineLabel::append(MachineOp *op) {
@@ -37,6 +39,8 @@ void MachineLabel::append(MachineOp *op) {
     } else {
         m_head = op, m_tail = op;
     }
+
+    op->set_parent(this);
 }
 
 void MachineLabel::remove(MachineOp *op) {

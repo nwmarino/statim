@@ -1,9 +1,11 @@
 set(MACHINE_SOURCES
+    AMD64.cpp
     Machine.cpp
     MachineFunction.cpp
     MachineLabel.cpp
     MachineObject.cpp
     MachineOp.cpp
+    Printer.cpp
 )
 
 add_library(Machine

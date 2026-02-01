@@ -31,6 +31,8 @@ public:
     MachineConstant(Kind kind, long value) : m_kind(kind), m_int(value) {}
     MachineConstant(Kind kind, double value) : m_kind(kind), m_fp(value) {}
     
+    inline Kind kind() const { return m_kind; }
+
     /// Test if this is an integer constant.
     inline bool is_int() const { 
         return m_kind == Kind::Int8 || m_kind == Kind::Int16 

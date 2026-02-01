@@ -17,6 +17,7 @@
 
 #include "lir/analysis/LoweringPass.hpp"
 #include "lir/machine/Machine.hpp"
+#include "lir/machine/Printer.hpp"
 
 #include <chrono>
 #include <cstdint>
@@ -209,16 +210,17 @@ void drive_lir_backend(const Options &options, const Asts &asts) {
                 ast->get_file(), dur);
         }
 
-        /*
         if (options.dump_mir) {
             std::ofstream mir(ast->get_file() + ".mir");
             if (!mir || !mir.is_open())
                 log::fatal("failed to open: " + ast->get_file() + ".mir");
 
-            lir::Printer printer(seg);
+            lir::Printer printer(obj);
             printer.run(mir);
             mir.close();
         }
+
+        /*
 
         lir::RegisterAnalysis rega(seg);
         rega.run();

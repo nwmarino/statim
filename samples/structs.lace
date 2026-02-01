@@ -37,5 +37,7 @@ main :: () -> s64 {
     let box: mut Box = box_create(1.17, 42, false);
     box = box_expanded(box);
 
+    let x: *char = "hello!\n";
+
     ret box_flip(box);
 }

@@ -37,6 +37,8 @@ public:
     MachineObject(MachineObject&&) noexcept = delete;
     void operator=(MachineObject&&) noexcept = delete;
 
+    const Machine &get_machine() const { return m_mach; }
+
     const Globals &get_globals() const { return m_globals; }
     Globals &get_globals() { return m_globals; }
 

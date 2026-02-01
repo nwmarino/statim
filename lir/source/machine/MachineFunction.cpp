@@ -88,7 +88,7 @@ uint32_t MachineFunction::get_position(const MachineLabel *label) const {
     assert(label->get_parent() == this && 
         "label does not belong to this function!");
 
-    uint32_t pos = 0;
+    uint32_t pos = 1;
     for (const MachineLabel *L : m_labels) {
         if (L == label)
             return pos;
