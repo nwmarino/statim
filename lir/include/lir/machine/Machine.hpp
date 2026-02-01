@@ -31,7 +31,7 @@ private:
     Pointer m_pointer;
 
 public:
-    Machine(OS os);
+    explicit Machine(OS os);
 
     inline bool is_little_endian() const { return m_little_endian; }
     inline bool is_big_endian() const { return !m_little_endian; }
@@ -63,4 +63,4 @@ public:
 
 } // namespace lir
 
-#endif // LOVELACE_IR_MACHINE_H_
+#endif // LIR_MACHINE_H_

@@ -15,6 +15,7 @@
 #include "lace/tree/SemanticAnalysis.hpp"
 #include "lace/tree/SymbolAnalysis.hpp"
 
+#include "lir/analysis/LoweringPass.hpp"
 #include "lir/machine/Machine.hpp"
 
 #include <chrono>
@@ -194,14 +195,21 @@ void drive_lir_backend(const Options &options, const Asts &asts) {
             file.close();
         }
 
-        /*
-        Timestamp time_bend_start = get_time();
+        Timestamp time_lower_start = get_time();
 
-        lir::Segment seg(cfg);
+        lir::MachineObject obj(mach);
 
-        lir::LoweringPass lowering(cfg, seg);
+        lir::LoweringPass lowering(cfg, obj);
         lowering.run();
 
+        Timestamp time_lower_end = get_time();
+        if (options.verbose) {
+            duration<double> dur = time_lower_end - time_lower_start;
+            std::cout << std::format("{}: finished lowering\n-- took {}\n", 
+                ast->get_file(), dur);
+        }
+
+        /*
         if (options.dump_mir) {
             std::ofstream mir(ast->get_file() + ".mir");
             if (!mir || !mir.is_open())

@@ -1,5 +1,9 @@
 set(MACHINE_SOURCES
     Machine.cpp
+    MachineFunction.cpp
+    MachineLabel.cpp
+    MachineObject.cpp
+    MachineOp.cpp
 )
 
 add_library(Machine

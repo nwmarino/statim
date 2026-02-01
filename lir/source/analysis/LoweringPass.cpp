@@ -4,11 +4,11 @@
 //
 
 #include "lir/analysis/LoweringPass.hpp"
-//#include "lir/machine/InstSelector.hpp"
+#include "lir/machine/MachineFunction.hpp"
+#include "lir/machine/MachineOp.hpp"
 
 using namespace lir;
 
-/*
 void LoweringPass::run() {
     for (const Function *func : m_cfg.get_functions()) {
         // Empty functions should not be lowered, they should either be
@@ -16,19 +16,15 @@ void LoweringPass::run() {
         if (func->empty())
             continue;
 
-        MachFunction* mach_function = new MachFunction(
-            func, m_seg.get_machine());
-        
-        m_seg.get_functions().emplace(func->get_name(), mach_function);
+        MachineFunction *MF = new MachineFunction(&m_obj, func->get_name());
+        assert(MF);
 
-        const BasicBlock* curr = func->get_head();
+        const BasicBlock *curr = func->get_head();
         while (curr) {
-            new MachLabel(curr, mach_function);
+            MachineLabel *ML = new MachineLabel(MF);
+            assert(ML);
+            
             curr = curr->get_next();
         }
-
-        //InstSelector isel(*mach_function);
-        //isel.run();
     }
 }
-*/

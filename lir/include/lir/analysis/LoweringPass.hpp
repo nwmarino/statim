@@ -7,21 +7,16 @@
 #define LOVELACE_IR_LOWERING_PASS_H_
 
 #include "lir/analysis/Pass.hpp"
-//#include "lir/machine/Segment.hpp"
+#include "lir/machine/MachineObject.hpp"
 
 namespace lir {
 
-class Segment;
-
-/// Global pass that generates shallow machine code for a given machine target.
-///
-/// This pass specifically handles creation of machine equivelants for 
-/// functions and global data, while considering machine-specific constraints.
+/// Global pass that generates machine-dependent code.
 class LoweringPass final : public Pass {
-    Segment &m_seg;
+    MachineObject &m_obj;
 
 public:
-    LoweringPass(CFG &cfg, Segment &seg) : Pass(cfg), m_seg(seg) {}
+    LoweringPass(CFG &cfg, MachineObject &obj) : Pass(cfg), m_obj(obj) {}
 
     void run() override;
 };

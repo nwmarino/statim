@@ -1,12 +1,11 @@
 # lovelace
 
-lovelace is a recreational systems language that takes major inspiration from
-the philosophies of most of your favorite langs. It is, however, most similar
-in nature to C by way of what is possible out of the box.
+lovelace is an imperative language meant for systems that takes major 
+inspiration from the philosophies of your favorite langs. It is, however, most 
+similar in nature to C by way of what is possible out of the box.
 
-The project is split down the middle, with an x86-64 backend that is 
-theoretically modular enough to be carved out and made to work with other 
-frontends. 
+The project is split down the middle, with an x86-64 backend theoretically 
+modular enough to be carved out and made to work with other frontends. 
 
 ### lace
 
@@ -18,21 +17,11 @@ target agnostic intermediate representation (LIR).
 ### LIR
 
 The lovelace intermediate representation (LIR) handles target-specific jobs 
-like ABI control, register allocation, and SSA-based optimizations. The IR uses
-basic block arguments instead of phi nodes, for the reason that I like being
-different and more importantly, it becomes a little bit easier to write an 
-interpreter down the road. The IR is capable of true SSA form through an
-optional rewrite pass based on algorithms described by 
-[Braun et al.](https://link.springer.com/chapter/10.1007/978-3-642-37051-9_6)
-Barring the use of block arguments, since the IR is based on a control-flow 
-graph, it can cleanly translate into similarly structured representation like 
-LLVM IR.
-
-Without getting too theoretical, the advantages of SSA form mean most 
-operations produce an immutable value by using other mostly immutable values,
-which gives way to a very clean use-def chain of values. This means analysis 
-and optimization passes can easily model dead code, register naming, and 
-propogations. 
+like ABI control, register allocation, and SSA-based optimizations. The IR is 
+capable of true SSA form through an optional rewrite pass based on algorithms 
+described by [Braun et al.](https://link.springer.com/chapter/10.1007/978-3-642-37051-9_6)
+Since the IR is based on a control-flow graph, it can cleanly translate into 
+similarly structured representation like LLVM IR.
 
 ## Building
 
@@ -42,7 +31,10 @@ Both the frontend and backend depend only on Boost and Google Test, which are
 available on most distro package managers via `boost` and `gtest`.
 
 Most of the compiler is written in C++20, with the main features used to 
-justify it being ranges, the jthreads interface, and format strings. 
+justify it being ranges, the jthreads interface, and format strings.
+
+Since the language only supports linux, there is little to no point building
+binaries for windows.
 
 ```sh
 cd lovelace/

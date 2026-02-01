@@ -13,6 +13,8 @@
 
 ## LIR
 - Redesigned instruction API to use separate classes per instruction type.
+- Updated machine-specific API to use clearer operand types with better 
+indireciton.
 - Added back the `Phi` node.
 - Added the `extract` instruction for constant index field access of aggregates.
 - Split the `pwalk` instruction into separate `access` and `index` instructions
