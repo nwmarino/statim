@@ -35,6 +35,21 @@ ConstantPool::~ConstantPool() {
         delete constant;
 }
 
+MachineData *ConstantPool::materialize(const MachineData::Data &data) {
+    const std::string name = std::to_string(m_constants.size());
+
+    MachineData *MD = new MachineData(
+        std::to_string(m_constants.size()),
+        data,
+        false, // private
+        true // read only
+    );
+    assert(MD);
+
+    m_constants.push_back(MD);
+    return MD;
+}
+
 //>==---------------------------------------------------------------------------
 //                          StackFrame Implementation
 //>==---------------------------------------------------------------------------
@@ -73,7 +88,7 @@ void MachineFunction::remove(MachineLabel *label) {
 }
 
 void MachineFunction::update_positions() {
-    uint32_t pos = 0;
+    uint32_t pos = 1;
     for (MachineLabel *label : m_labels) {
         MachineOp *curr = label->get_head();
         while (curr) {
@@ -88,7 +103,7 @@ uint32_t MachineFunction::get_position(const MachineLabel *label) const {
     assert(label->get_parent() == this && 
         "label does not belong to this function!");
 
-    uint32_t pos = 1;
+    uint32_t pos = 0;
     for (const MachineLabel *L : m_labels) {
         if (L == label)
             return pos;

@@ -12,13 +12,25 @@
 namespace lir {
 
 /// Global pass that generates machine-dependent code.
-class LoweringPass final : public Pass {
+class LoweringPass : public Pass {
+protected:
+    const Machine &m_mach;
     MachineObject &m_obj;
 
 public:
-    LoweringPass(CFG &cfg, MachineObject &obj) : Pass(cfg), m_obj(obj) {}
+    LoweringPass(CFG &cfg, MachineObject &obj);
 
-    void run() override;
+    virtual ~LoweringPass() = default;
+
+    LoweringPass(const LoweringPass&) = delete;
+    void operator=(const LoweringPass&) = delete;
+
+    LoweringPass(LoweringPass&&) noexcept = delete;
+    void operator=(LoweringPass&&) noexcept = delete;
+
+protected:
+    /// Lower the given constant |C| into another value entry for |data|.
+    void lower_constant(const Constant *C, MachineData::Data &data) const;
 };
 
 } // namespace lir

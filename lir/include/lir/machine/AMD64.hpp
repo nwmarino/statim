@@ -39,7 +39,8 @@ enum AMD64_Op : uint32_t {
     AMD64_MOV, 
     AMD64_MOVZX, 
     AMD64_MOVSX, 
-    AMD64_MOVSXD,  
+    AMD64_MOVSXD, 
+    AMD64_MOVABS, 
 
     AMD64_CALL32,
     AMD64_CALL64,

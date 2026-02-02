@@ -86,15 +86,8 @@ uint32_t Machine::get_type_align(const Type *type) const {
 }
 
 bool Machine::is_scalar(const Type *type) const {
-    switch (type->get_class()) {
-        case Type::Void:
-        case Type::Integer:
-        case Type::Float:
-        case Type::Pointer:
-            return true;
-        default:
-            return false;
-    }
+    assert(type && "type cannot be null!");
+    return get_type_size(type) <= m_pointer.size;
 }
 
 uint32_t Machine::get_element_offset(const ArrayType *type, uint32_t i) const {

@@ -16,8 +16,8 @@ using namespace lir;
 //                          Instruction Implementation
 //>==---------------------------------------------------------------------------
 
-Instruction::Instruction(Type *type, BasicBlock *parent, const Operands &ops)
-  : User(type, ops), m_parent(parent) {}
+Instruction::Instruction(Type *type, BasicBlock *parent, uint32_t def, const Operands &ops)
+  : User(type, ops), m_parent(parent), m_def(def) {}
 
 void Instruction::detach() {
     assert(m_parent && "instruction does not belong to a basic block!");
@@ -216,7 +216,7 @@ const BasicBlock *Jump::get_dest() const {
     if (!has_parent())
         return nullptr;
 
-    return get_parent()->get_pred(0);
+    return get_parent()->get_succ(0);
 }
 
 void Jump::print(std::ostream &os, PrintPolicy policy) const {
@@ -235,14 +235,14 @@ const BasicBlock* Brif::get_true_dest() const {
     if (!has_parent())
         return nullptr;
 
-    return get_parent()->get_pred(0);
+    return get_parent()->get_succ(0);
 }
 
 const BasicBlock* Brif::get_false_dest() const {
     if (!has_parent())
         return nullptr;
 
-    return get_parent()->get_pred(1);
+    return get_parent()->get_succ(1);
 }
 
 void Brif::print(std::ostream &os, PrintPolicy policy) const {

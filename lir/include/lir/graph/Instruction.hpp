@@ -3,8 +3,8 @@
 //  All rights reserved.
 //
 
-#ifndef LOVELACE_IR_INSTRUCTION_H_
-#define LOVELACE_IR_INSTRUCTION_H_
+#ifndef LIR_INSTRUCTION_H_
+#define LIR_INSTRUCTION_H_
 
 #include "lir/graph/Constant.hpp"
 #include "lir/graph/User.hpp"
@@ -25,8 +25,10 @@ protected:
     BasicBlock *m_parent;
     Instruction *m_prev = nullptr;
     Instruction *m_next = nullptr;
+    uint32_t m_def;
 
-    Instruction(Type *type, BasicBlock *parent, const Operands &ops = {});
+    Instruction(Type *type, BasicBlock *parent, uint32_t def = 0, 
+                const Operands &ops = {});
 
 public:
     virtual ~Instruction() = default;
@@ -36,6 +38,15 @@ public:
 
     Instruction(Instruction&&) noexcept = delete;
     void operator=(Instruction&&) noexcept = delete;
+
+    /// Test if this instruction is a definition, i.e. produces an SSA value.
+    bool is_def() const { return m_def != 0; }
+
+    /// Returns the SSA value that this instruction defines, if it is a def.
+    uint32_t def() const {
+        assert(is_def() && "instruction is not a def!");
+        return m_def;
+    }
 
     /// Returns the |i|-th operand of this instruction.
     const Value *get_operand(uint32_t i) const {
@@ -95,9 +106,6 @@ public:
     /// dead based purely on local context, and without any kind of propogation
     /// or peephole optimizations.
     bool is_trivially_dead() const;
-
-    /// Test if this instruction is a definition, i.e. produces an SSA value.
-    virtual bool is_def() const { return true; }
     
     /// Test if this instruction is terminator, i.e. terminates control flow
     /// from a basic block.
@@ -109,15 +117,10 @@ class Const final : public Instruction {
     friend class Builder;
 
 private:
-    uint32_t m_def;
-
     Const(Type *type, BasicBlock *parent, uint32_t def, Constant *value)
-      : Instruction(type, parent, { value }), m_def(def) {}
+      : Instruction(type, parent, def, { value }) {}
 
 public:
-    /// Returns the SSA value this instruction defines.
-    uint32_t def() const { return m_def; }
-
     /// Returns the constant that this instruction uses.
     const Constant *get_value() const { 
         return static_cast<const Constant*>(get_operand(0));
@@ -134,16 +137,13 @@ public:
 class Load final : public Instruction {
     friend class Builder;
 
-    uint32_t m_def;
     uint32_t m_align;
 
-    Load(Type *type, BasicBlock *parent, uint32_t def, Value *ptr, uint32_t align)
-      : Instruction(type, parent, { ptr }), m_def(def), m_align(align) {}
+    Load(Type *type, BasicBlock *parent, uint32_t def, Value *ptr, 
+         uint32_t align)
+      : Instruction(type, parent, def, { ptr }), m_align(align) {}
 
 public:
-    /// Returns the SSA value this instruction defines.
-    uint32_t def() const { return m_def; }
-
     /// Returns the address that this load uses.
     const Value *get_addr() const { return get_operand(0); }
     Value *get_addr() { return get_operand(0); }
@@ -161,7 +161,7 @@ class Store final : public Instruction {
     uint32_t m_align;
 
     Store(BasicBlock *parent, Value *value, Value *ptr, uint32_t align)
-      : Instruction(nullptr, parent, { value, ptr }), m_align(align) {}
+      : Instruction(nullptr, parent, 0, { value, ptr }), m_align(align) {}
 
 public:
     /// Returns the value that this store uses.
@@ -183,16 +183,11 @@ public:
 class Access final : public Instruction {
     friend class Builder;
 
-    uint32_t m_def;
-
     Access(Type *type, BasicBlock *parent, uint32_t def, Value *ptr, 
            Value *index)
-      : Instruction(type, parent, { ptr, index }), m_def(def) {}
+      : Instruction(type, parent, def, { ptr, index }) {}
 
 public:
-    /// Returns the SSA value this instruction defines.
-    uint32_t def() const { return m_def; }
-
     /// Returns the base structure value of this access.
     const Value *get_base() const { return get_operand(0); }
     Value *get_base() { return get_operand(0); }
@@ -209,17 +204,13 @@ public:
 class Extract final : public Instruction {
     friend class Builder;
 
-    uint32_t m_def;
     int32_t m_index;
 
     Extract(Type *type, BasicBlock *parent, uint32_t def, Value *base, 
             int32_t index)
-      : Instruction(type, parent, { base }), m_def(def), m_index(index) {}
+      : Instruction(type, parent, def, { base }), m_index(index) {}
 
 public:
-    /// Returns the SSA value this instruction defines.
-    uint32_t def() const { return m_def; }
-
     /// Returns the base aggregate value of this extraction.
     const Value *get_base() const { return get_operand(0); }
     Value *get_base() { return get_operand(0); }
@@ -235,16 +226,11 @@ public:
 class Offptr final : public Instruction {
     friend class Builder;
 
-    uint32_t m_def;
-
     Offptr(Type *type, BasicBlock *parent, uint32_t def, Value *ptr, 
           Value *index)
-      : Instruction(type, parent, { ptr, index }), m_def(def) {}
+      : Instruction(type, parent, def, { ptr, index }) {}
 
 public:
-    /// Returns the SSA value this instruction defines.
-    uint32_t def() const { return m_def; }
-
     /// Returns the base structure value of this instruction.
     const Value *get_base() const { return get_operand(0); }
     Value *get_base() { return get_operand(0); }
@@ -260,17 +246,10 @@ public:
 class Call final : public Instruction {
     friend class Builder;
 
-    /// For calls, if the callee does not produce a result, then the SSA def-id
-    /// will instead be a sentinel value of 0.
-    uint32_t m_def;
-
     Call(Type *type, BasicBlock *parent, uint32_t def, const Operands &args)
-      : Instruction(type, parent, args), m_def(def) {}
+      : Instruction(type, parent, def, args) {}
 
 public:
-    /// Returns the SSA value this instruction defines.
-    uint32_t def() const { return m_def; }
-
     /// Returns the callee value of this function call.
     const Value *get_callee() const { return get_operand(0); }
     Value *get_callee() { return get_operand(0); }
@@ -292,8 +271,6 @@ public:
         return get_operand(i + 1);
     }
 
-    bool is_def() const override { return m_def != 0; }
-
     void print(std::ostream &os, PrintPolicy policy) const override;
 };
 
@@ -303,7 +280,7 @@ class Ret final : public Instruction {
     friend class Builder;
 
     Ret(BasicBlock *parent, Value *value)
-      : Instruction(nullptr, parent, { value }) {}
+      : Instruction(nullptr, parent, 0, { value }) {}
 
 public:
     /// Returns the value that this instruction returns, if there is one.
@@ -312,8 +289,6 @@ public:
 
     /// Test if this ret contains a value.
     bool has_value() const { return num_operands() != 0; }
-
-    bool is_def() const override { return false; }
 
     bool is_terminator() const override { return true; }
 
@@ -336,8 +311,6 @@ public:
             static_cast<const Jump*>(this)->get_dest());
     }
 
-    bool is_def() const override { return false; }
-
     bool is_terminator() const override { return true; }
 
     void print(std::ostream &os, PrintPolicy policy) const override;
@@ -349,7 +322,7 @@ class Brif final : public Instruction {
     friend class Builder;
 
     Brif(BasicBlock *parent, Value *cond)
-      : Instruction(nullptr, parent, { cond }) {}
+      : Instruction(nullptr, parent, 0, { cond }) {}
 
 public:
     /// Returns the conditional value of this instruction.
@@ -372,8 +345,6 @@ public:
             static_cast<const Brif*>(this)->get_true_dest());
     }
 
-    bool is_def() const override { return false; }
-
     bool is_terminator() const override { return true; }
 
     void print(std::ostream &os, PrintPolicy policy) const override;
@@ -394,16 +365,12 @@ public:
     };
 
 private:
-    uint32_t m_def;
     Preds m_preds = {};
 
     Phi(Type *type, BasicBlock *parent, uint32_t def)
-      : Instruction(type, parent), m_def(def) {}
+      : Instruction(type, parent, def) {}
 
 public:
-    /// Returns the SSA value this node defines.
-    uint32_t def() const { return m_def; }
-
     /// Returns the predecessor blocks of this node.
     const Preds &get_preds() const { return m_preds; }
     Preds &get_preds() { return m_preds; }
@@ -453,12 +420,9 @@ private:
     Op m_op;
 
     Unop(Type *type, BasicBlock *parent, uint32_t def, Op op, Value *value)
-      : Instruction(type, parent, { value }), m_def(def), m_op(op) {}
+      : Instruction(type, parent, def, { value }), m_op(op) {}
 
 public:
-    /// Returns the SSA value this instruction defines.
-    uint32_t def() const { return m_def; }
-
     /// Returns the operator of this instruction.
     Op op() const { return m_op; }
 
@@ -484,17 +448,13 @@ public:
     };
 
 private:
-    uint32_t m_def;
     Op m_op;
 
     Binop(Type *type, BasicBlock *parent, uint32_t def, Op op, Value *lhs, 
           Value *rhs)
-      : Instruction(type, parent, { lhs, rhs }), m_def(def), m_op(op) {}
+      : Instruction(type, parent, def, { lhs, rhs }), m_op(op) {}
 
 public:
-    /// Returns the SSA value this instruction defines.
-    uint32_t def() const { return m_def; }
-
     /// Returns the operator of this instruction.
     Op op() const { return m_op; }
 
@@ -523,16 +483,12 @@ public:
     };
 
 private:
-    uint32_t m_def;
     Kind m_kind;
 
     Cast(Type *type, BasicBlock* parent, uint32_t def, Kind kind, Value *value)
-      : Instruction(type, parent, { value }), m_def(def), m_kind(kind) {}
+      : Instruction(type, parent, def, { value }), m_kind(kind) {}
 
 public:
-    /// Returns the SSA value this instruction defines.
-    uint32_t def() const { return m_def; }
-
     /// Returns the kind of type cast this instruction performs.
     Kind kind() const { return m_kind; }
 
@@ -560,17 +516,13 @@ public:
     };
 
 private:
-    uint32_t m_def;
     Predicate m_pred;
 
     Cmp(Type *type, BasicBlock *parent, uint32_t def, Predicate pred, 
         Value *lhs, Value *rhs)
-      : Instruction(type, parent, { lhs, rhs }), m_def(def), m_pred(pred) {}
+      : Instruction(type, parent, def, { lhs, rhs }), m_pred(pred) {}
 
 public:
-    /// Returns the SSA value this instruction defines.
-    uint32_t def() const { return m_def; }
-
     /// Returns the predicate of this comparison.
     Predicate pred() const { return m_pred; }
 
@@ -587,4 +539,4 @@ public:
 
 } // namespace lir
 
-#endif // LOVELACE_IR_INSTRUCTION_H_
+#endif // LIR_INSTRUCTION_H_

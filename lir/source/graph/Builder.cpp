@@ -175,13 +175,14 @@ Jump *Builder::build_jump(BasicBlock *dest) {
 
 Brif *Builder::build_brif(Value *cond, BasicBlock *tdest, BasicBlock *fdest) {
     assert(cond && "cond cannot be null!");
-    assert(cond->get_type()->is_integer_type(1) && "cond must be a boolean!");
+    assert(cond->get_type()->is_integer_type(8) && "cond must be a boolean!");
     assert(tdest && "tdest cannot be null!");
     assert(fdest && "fdest cannot be null!");
 
     m_insert->add_succ(tdest);
-    m_insert->add_succ(fdest);
     tdest->add_pred(m_insert);
+
+    m_insert->add_succ(fdest);
     fdest->add_pred(m_insert);
 
     Brif *inst = new Brif(nullptr, cond);

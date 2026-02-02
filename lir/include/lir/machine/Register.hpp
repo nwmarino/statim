@@ -14,7 +14,7 @@ namespace lir {
 ///
 /// Used for the sake of informing register allocation how to allocate for 
 /// virtual registers without high-level type information.
-enum class RegisterClass : uint8_t {
+enum class RegisterClass : uint32_t {
     GeneralPurpose, FloatingPoint,
 };
 
@@ -54,9 +54,13 @@ private:
     /// [2^31, 2^32)    Virtual registers
     uint32_t m_id;
 
+    /// The class of this register.
+    RegisterClass m_cls = RegisterClass::GeneralPurpose;
+
 public:
     Register() = default;
     Register(uint32_t id) : m_id(id) {}
+    Register(uint32_t id, RegisterClass cls) : m_id(id), m_cls(cls) {}
 
     bool operator==(uint32_t other) const { 
         return m_id == other; 
@@ -83,6 +87,9 @@ public:
 
     /// Returns the id of this register.
     uint32_t id() const { return m_id; }
+
+    /// Returns the class of this register.
+    RegisterClass cls() const { return m_cls; }
 };
 
 } // namespace lir

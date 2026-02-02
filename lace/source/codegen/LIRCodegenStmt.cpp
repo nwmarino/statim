@@ -65,11 +65,6 @@ void LIRCodegen::codegen_if(const IfStmt *stmt) {
     lir::BasicBlock *else_bb = nullptr;
     lir::BasicBlock *merge_bb = lir::BasicBlock::create();
 
-    lir::BasicBlock *start = m_builder.get_insert();
-
-    start->add_succ(then_bb);
-    then_bb->add_pred(start);
-
     if (stmt->has_else()) {
         else_bb = lir::BasicBlock::create();
 

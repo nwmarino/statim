@@ -1,4 +1,5 @@
 - Assertions
+- Desugaring IR pass to turn large immediates into separate const instructions
 - Carve out lexing, allowing for better parallelism
 - Print
 - Match statement

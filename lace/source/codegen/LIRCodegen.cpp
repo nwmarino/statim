@@ -152,7 +152,7 @@ lir::Function *LIRCodegen::get_function(
 lir::Value *LIRCodegen::inject_comparison(lir::Value *value) {
     lir::Type *type = value->get_type();
     
-    if (type->is_integer_type(1)) {
+    if (type->is_integer_type(8)) {
         return value;
     } else if (type->is_integer_type()) {
         return m_builder.build_cmp_ine(value, lir::Integer::get_zero(m_cfg, type));

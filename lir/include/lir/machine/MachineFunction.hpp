@@ -93,6 +93,9 @@ public:
 
     /// Test if this constant pool is empty i.e. contains no data.
     bool empty() const { return m_constants.empty(); }
+
+    /// Materialize a new data constant from the given |constant|.
+    MachineData *materialize(const MachineData::Data &data);
 };
 
 /// Representation of a stack frame for a machine function.

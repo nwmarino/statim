@@ -48,7 +48,7 @@ private:
         Memory m_mem;
 
         /// Kind::Immediate operands.
-        int32_t m_imm;
+        int64_t m_imm;
 
         /// Kind::Data operands.
         MachineData *m_data;
@@ -70,7 +70,7 @@ public:
     MachineOperand(const Memory &mem) 
       : m_kind(Kind::Memory), m_mem(mem) {}
 
-    MachineOperand(int32_t imm) 
+    MachineOperand(int64_t imm) 
       : m_kind(Kind::Immediate), m_imm(imm) {}
 
     MachineOperand(MachineData *data) 
@@ -113,12 +113,27 @@ public:
         return m_reg; 
     }
 
+    MachineRegister &reg() { 
+        assert(is_reg() && "this is not a register operand!");
+        return m_reg; 
+    }
+
     const Memory &mem() const {
         assert(is_mem() && "this is not a memory operand!");
         return m_mem;
     }
 
-    const int32_t& imm() const {
+    Memory &mem() {
+        assert(is_mem() && "this is not a memory operand!");
+        return m_mem;
+    }
+
+    const int64_t &imm() const {
+        assert(is_imm() && "this is not an immediate operand!");
+        return m_imm;
+    }
+
+    int64_t &imm() {
         assert(is_imm() && "this is not an immediate operand!");
         return m_imm;
     }
@@ -128,7 +143,17 @@ public:
         return m_data; 
     }
 
+    MachineData *data() {
+        assert(is_data() && "this is not a data operand!");
+        return m_data; 
+    }
+
     const MachineLocal *local() const {
+        assert(is_local() && "this is not a local operand!");
+        return m_local;
+    }
+
+    MachineLocal *local() {
         assert(is_local() && "this is not a local operand!");
         return m_local;
     }
@@ -138,7 +163,17 @@ public:
         return m_func;
     }
 
+    MachineFunction *function() {
+        assert(is_function() && "this is not a function operand!");
+        return m_func;
+    }
+
     const MachineLabel *label() const {
+        assert(is_label() && "this is not a label operand!");
+        return m_label;
+    }
+
+    MachineLabel *label() {
         assert(is_label() && "this is not a label operand!");
         return m_label;
     }

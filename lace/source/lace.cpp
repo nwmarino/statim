@@ -15,7 +15,7 @@
 #include "lace/tree/SemanticAnalysis.hpp"
 #include "lace/tree/SymbolAnalysis.hpp"
 
-#include "lir/analysis/LoweringPass.hpp"
+#include "lir/analysis/AMD64LoweringPass.hpp"
 #include "lir/machine/Machine.hpp"
 #include "lir/machine/Printer.hpp"
 
@@ -200,7 +200,7 @@ void drive_lir_backend(const Options &options, const Asts &asts) {
 
         lir::MachineObject obj(mach);
 
-        lir::LoweringPass lowering(cfg, obj);
+        lir::AMD64LoweringPass lowering(cfg, obj);
         lowering.run();
 
         Timestamp time_lower_end = get_time();
@@ -273,7 +273,8 @@ int32_t main(int32_t argc, char *argv[]) {
     log::init();
 
     std::vector<InputFile> files = {
-        InputFile("/home/lovelace/samples/structs.lace"),
+        InputFile("/home/lovelace/samples/if.lace"),
+        //InputFile("/home/lovelace/samples/structs.lace"),
         //InputFile("/home/lovelace/lace/samples/linux.lace"),
         //InputFile("/home/lovelace/lace/samples/mem.lace"),
         //InputFile("/home/lovelace/lace/samples/string.lace"),

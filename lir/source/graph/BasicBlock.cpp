@@ -176,8 +176,8 @@ uint32_t BasicBlock::position() const {
         
         num++;
     }
-
-    return num;
+    
+    assert(false && "block has a parent, but missing from block list!");
 }
 
 bool BasicBlock::terminates() const {

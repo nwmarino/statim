@@ -32,12 +32,14 @@ void Printer::run(std::ostream &os) {
 }
 
 void Printer::print_register(std::ostream &os, const MachineRegister &reg) {
-    // Assume AMD64 for now.
+    if (reg.get_register().is_virtual()) {
+        os << "%v" << reg.get_register().id() - Register::VIRTUAL_BARRIER;
+    } else {
+        // @Todo: Change cast for other archs.
+        os << '%' << to_string(static_cast<AMD64_Register>(reg.get_register().id()), 0);
+    }
 
-    os << std::format("%{}:{}", 
-        to_string(static_cast<AMD64_Register>(reg.get_register().id()), 0), 
-        reg.get_subreg()
-    );
+    os << std::format(":{}", reg.get_subreg());
 }
 
 void Printer::print_operand(std::ostream &os, const MachineOperand &operand) {
@@ -82,6 +84,9 @@ void Printer::print_operand(std::ostream &os, const MachineOperand &operand) {
 }
 
 void Printer::print_op(std::ostream &os, const MachineOp &op) {
+    if (op.has_comment())
+        os << std::format("\t> {}", op.get_comment());
+
     os << '\t' << std::setfill('0') << std::setw(5) << op.get_pos() << ' ';
 
     if (op.is_intrinsic()) switch (static_cast<Intrinsic>(op.op())) {
@@ -95,7 +100,12 @@ void Printer::print_op(std::ostream &os, const MachineOp &op) {
         os << to_string(static_cast<AMD64_Op>(op.op()));
     }
 
-    os << '\t';
+    if (!op.has_operands()) {
+        os << '\n';
+        return;
+    }
+
+    os << std::setfill(' ') << std::setw(4) << '\t';
 
     for (uint32_t i = 0, e = op.num_operands(); i < e; ++i) {
         print_operand(os, op.get_operand(i));
@@ -121,7 +131,7 @@ void Printer::print_function(std::ostream &os, const MachineFunction &func) {
 
     const StackFrame &frame = func.get_stack_frame();
     for (const MachineLocal *local : frame.get_locals()) {
-        os << std::format("LOCAL <{}> {} [{}]\n", 
+        os << std::format("\t:{} size {} [{}]\n", 
             local->get_offset(), local->get_size(), local->get_align());
     }
 

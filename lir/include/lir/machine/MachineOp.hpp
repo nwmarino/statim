@@ -32,6 +32,7 @@ private:
     uint32_t m_op;
     uint32_t m_pos;
     Operands m_operands;
+    std::string m_comment = "";
     MachineLabel *m_parent;
     MachineOp *m_prev = nullptr;
     MachineOp *m_next = nullptr;
@@ -100,8 +101,9 @@ public:
     }
     
     /// Append the given |operand| to this op.
-    void add_operand(const MachineOperand &operand) {
+    MachineOp &add_operand(const MachineOperand &operand) {
         m_operands.push_back(operand);
+        return *this;
     }
 
     /// Replace the |i|-th operand to this op with |operand|.
@@ -131,6 +133,12 @@ public:
         return res;
     }
 
+    void set_comment(const std::string &comment) { m_comment = comment; }
+    const std::string &get_comment() const { return m_comment; }
+
+    /// Test if this op has a comment.
+    bool has_comment() const { return !m_comment.empty(); }
+
     MachineOp &add_reg(const MachineRegister &reg) {
         add_operand(MachineOperand(reg));
         return *this;
@@ -141,7 +149,7 @@ public:
         return *this;
     }
 
-    MachineOp &add_imm(int32_t imm) {
+    MachineOp &add_imm(int64_t imm) {
         add_operand(MachineOperand(imm));
         return *this;
     }
@@ -168,6 +176,11 @@ public:
 
     MachineOp &add_label(MachineLabel *label) {
         add_operand(MachineOperand(label));
+        return *this;
+    }
+
+    MachineOp &add_comment(const std::string &comment) {
+        m_comment = comment;
         return *this;
     }
 };
