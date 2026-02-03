@@ -54,7 +54,7 @@ void Printer::print_operand(std::ostream &os, const MachineOperand &operand) {
             os << std::format("<mem> ");
             print_register(os, mem.base);
 
-            if (mem.offset > 0)
+            if (mem.offset >= 0)
                 os << '+';
             
             os << mem.offset;
@@ -89,23 +89,39 @@ void Printer::print_op(std::ostream &os, const MachineOp &op) {
 
     os << '\t' << std::setfill('0') << std::setw(5) << op.get_pos() << ' ';
 
+    std::string opstr;
     if (op.is_intrinsic()) switch (static_cast<Intrinsic>(op.op())) {
         case Intrinsic::Husk:
-            os << "HUSK";
+            opstr = "HUSK";
             break;
         case Intrinsic::Param:
-            os << "PARAM";
+            opstr = "PARAM";
+            break;
+        case Intrinsic::Stack_Setup:
+            opstr = "STACK_SETUP";
+            break;
+        case Intrinsic::Stack_Reserve:
+            opstr = "STACK_RESERVE";
+            break;
+        case Intrinsic::Stack_Restore:
+            opstr = "STACK_RESTORE";
+            break;
+        case Intrinsic::Callsite_Set:
+            opstr = "CALLSITE_SET";
+            break;
+        case Intrinsic::Callsite_End:
+            opstr = "CALLSITE_END";
             break;
     } else {
-        os << to_string(static_cast<AMD64_Op>(op.op()));
+        opstr = to_string(static_cast<AMD64_Op>(op.op()));
     }
 
     if (!op.has_operands()) {
-        os << '\n';
+        os << opstr << '\n';
         return;
     }
 
-    os << std::setfill(' ') << std::setw(4) << '\t';
+    os << opstr << std::string(18 - opstr.size(), ' ');
 
     for (uint32_t i = 0, e = op.num_operands(); i < e; ++i) {
         print_operand(os, op.get_operand(i));
@@ -129,10 +145,39 @@ void Printer::print_label(std::ostream &os, const MachineLabel &label) {
 void Printer::print_function(std::ostream &os, const MachineFunction &func) {
     os << std::format("{}:\n", func.get_name());
 
+    const FunctionABI &abi = func.abi();
+    if (abi.has_result() || abi.num_params() > 0) {
+        // Assume stack ABI.
+        os << "<abi>\n";
+
+        if (abi.has_result()) {
+            os << std::format("\t:{} result\n", 
+                abi.get_result_location().offset);
+        }
+
+        for (uint32_t i = 0; i < abi.num_params(); ++i) {
+            os << std::format("\t:{} param {}\n", 
+                abi.get_param_location(i).offset, i + 1);
+        }
+    }
+
+    const ConstantPool &pool = func.get_pool();
+    if (!pool.empty()) {
+        os << "<pool>\n";
+
+        for (const MachineData *constant : pool.get_constants()) {
+            os << std::format(".C{}:\n", constant->get_name());
+        }
+    }
+
     const StackFrame &frame = func.get_stack_frame();
-    for (const MachineLocal *local : frame.get_locals()) {
-        os << std::format("\t:{} size {} [{}]\n", 
-            local->get_offset(), local->get_size(), local->get_align());
+    if (!frame.empty()) {
+        os << "<stack>\n";
+
+        for (const MachineLocal *local : frame.get_locals()) {
+            os << std::format("\t:{} size {} [{}]\n", 
+                local->get_offset(), local->get_size(), local->get_align());
+        }
     }
 
     for (const MachineLabel *label : func.labels()) {

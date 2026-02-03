@@ -6,6 +6,7 @@
 #ifndef LIR_MACHINE_FUNCTION_H_
 #define LIR_MACHINE_FUNCTION_H_
 
+#include "lir/machine/FunctionABI.hpp"
 #include "lir/machine/MachineData.hpp"
 #include "lir/machine/MachineLabel.hpp"
 
@@ -135,6 +136,9 @@ public:
 
     /// Test if this stack frame is empty i.e. contains no locals.
     bool empty() const { return m_locals.empty(); }
+
+    /// Returns the aligned size to reserve for this stack frame, in bytes.
+    uint32_t size() const;
 };
 
 class MachineFunction final {
@@ -143,13 +147,15 @@ public:
 
 private:
     MachineObject *m_parent;
-    std::string m_name;
+    const std::string m_name;
+    const FunctionABI m_abi;
     ConstantPool m_pool = {};
     StackFrame m_frame = {};
     Labels m_labels = {};
 
 public:
-    MachineFunction(MachineObject *parent, const std::string &name);
+    MachineFunction(MachineObject *parent, const FunctionABI &abi, 
+                    const std::string &name);
 
     ~MachineFunction();
 
@@ -165,6 +171,8 @@ public:
 
     /// Test if this function belongs to a parent object.
     bool has_parent() const { return m_parent != nullptr; }
+
+    const FunctionABI &abi() const { return m_abi; }
 
     const std::string &get_name() const { return m_name; }
 

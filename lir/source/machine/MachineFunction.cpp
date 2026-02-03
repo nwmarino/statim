@@ -10,6 +10,11 @@
 
 using namespace lir;
 
+/// Aligns the given |offset| to the provided |alignment|.
+static inline uint32_t align_to(uint32_t offset, uint32_t alignment) {
+    return (offset + alignment - 1) & ~(alignment - 1);
+}
+
 //>==---------------------------------------------------------------------------
 //                          MachineLocal Implementation
 //>==---------------------------------------------------------------------------
@@ -59,12 +64,21 @@ StackFrame::~StackFrame() {
         delete local;
 }
 
+uint32_t StackFrame::size() const {
+    if (empty())
+        return 0;
+
+    const MachineLocal *back = m_locals.back();
+    return align_to(back->get_offset() + back->get_size(), 16);
+}
+
 //>==---------------------------------------------------------------------------
 //                          MachineFunction Implementation
 //>==---------------------------------------------------------------------------
 
-MachineFunction::MachineFunction(MachineObject *parent, const std::string &name)
-  : m_parent(parent), m_name(name) {
+MachineFunction::MachineFunction(MachineObject *parent, const FunctionABI &abi, 
+                                 const std::string &name)
+  : m_parent(parent), m_abi(abi), m_name(name) {
     if (parent)
         parent->get_functions().emplace(name, this);
 }

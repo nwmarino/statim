@@ -20,8 +20,13 @@ static constexpr uint32_t INTRINSIC_BARRIER = 1u << 31;
 
 /// Reserved machine-independent ops to provide special behavior. 
 enum class Intrinsic : uint32_t {
-    Husk = INTRINSIC_BARRIER + 0,
-    Param = INTRINSIC_BARRIER + 1,
+    Husk = INTRINSIC_BARRIER,
+    Param,
+    Stack_Setup,
+    Stack_Reserve,
+    Stack_Restore,
+    Callsite_Set,
+    Callsite_End,
 };
 
 class MachineOp final {

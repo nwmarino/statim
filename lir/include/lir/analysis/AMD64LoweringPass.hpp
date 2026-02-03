@@ -10,6 +10,7 @@
 #include "lir/machine/AMD64.hpp"
 #include "lir/machine/MachineOp.hpp"
 
+#include <array>
 #include <unordered_map>
 
 namespace lir {
@@ -35,6 +36,17 @@ public:
 private:
     /// Returns the AMD64 register byte offset for the given scalar |type|.
     uint8_t get_subreg_byte(const Type *type) const;
+
+    /// Returns the sized AMD64 op for the given scalar |type|, from either
+    /// the general purpose |gp| ops, or floating point |fp| ops.
+    AMD64_Op get_sized_op(const Type *type, const std::array<AMD64_Op, 4> &gp, 
+                          const std::array<AMD64_Op, 2> &fp);
+
+    /// Returns the AMD64 MOVE op for the given scalar |type|.
+    AMD64_Op get_move_op(const Type *type);
+
+    /// Returns the AMD64 CMP op for the given scalar |type|.
+    AMD64_Op get_cmp_op(const Type *type);
 
     /// Create and return a new virtual register of the given |cls|.
     Register create_vreg(RegisterClass cls);

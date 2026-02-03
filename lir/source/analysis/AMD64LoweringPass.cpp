@@ -7,6 +7,7 @@
 #include "lir/graph/Instruction.hpp"
 #include "lir/machine/AMD64.hpp"
 #include "lir/machine/MachineFunction.hpp"
+#include "lir/machine/MachineOp.hpp"
 #include "lir/machine/Register.hpp"
 
 #include <string>
@@ -80,13 +81,13 @@ static AMD64_Op cmp_to_setcc(Cmp::Predicate predicate) {
 }
 
 /// Flip the given conditional jump mnemonic about the predicate.
-static AMD64_Op flip_jcc(AMD64_Op jcc) {
-    switch (jcc) {
+static AMD64_Op flip_jcc(AMD64_Op Jcc) {
+    switch (Jcc) {
         case AMD64_JE:
         case AMD64_JNE:
         case AMD64_JZ:
         case AMD64_JNZ:
-            return jcc;
+            return Jcc;
         case AMD64_JL:
             return AMD64_JG;
         case AMD64_JLE:
@@ -104,18 +105,18 @@ static AMD64_Op flip_jcc(AMD64_Op jcc) {
         case AMD64_JBE:
             return AMD64_JAE;
         default:
-            assert(false && "invalid jcc op!");
+            assert(false && "invalid Jcc op!");
     }
 }
 
 /// Flip the given conditional set mnemonic about the predicate.
-static AMD64_Op flip_setcc(AMD64_Op setcc) {
-    switch (setcc) {
+static AMD64_Op flip_setcc(AMD64_Op SETcc) {
+    switch (SETcc) {
         case AMD64_SETE:
         case AMD64_SETNE:
         case AMD64_SETZ:
         case AMD64_SETNZ:
-            return setcc;
+            return SETcc;
         case AMD64_SETL:
             return AMD64_SETG;
         case AMD64_SETLE:
@@ -133,7 +134,7 @@ static AMD64_Op flip_setcc(AMD64_Op setcc) {
         case AMD64_SETBE:
             return AMD64_SETAE;
         default:
-            assert(false && "invalid setcc op!");
+            assert(false && "invalid SETcc op!");
     }
 }
 
@@ -180,7 +181,9 @@ void AMD64LoweringPass::run() {
         if (func->empty())
             continue;
 
-        MachineFunction *MF = new MachineFunction(&m_obj, func->get_name());
+        FunctionABI abi = FunctionABI(m_mach, func);
+
+        MachineFunction *MF = new MachineFunction(&m_obj, abi, func->get_name());
         assert(MF);
 
         const BasicBlock *curr = func->get_head();
@@ -207,6 +210,11 @@ void AMD64LoweringPass::run() {
             assert(ML);
             
             m_insert = ML;
+
+            if (pos == 0) {
+                emit(static_cast<uint32_t>(Intrinsic::Stack_Setup));
+                emit(static_cast<uint32_t>(Intrinsic::Stack_Reserve));
+            }
 
             const Instruction *curr = block->get_head();
             while (curr) {
@@ -237,6 +245,42 @@ uint8_t AMD64LoweringPass::get_subreg_byte(const Type *type) const {
         default:
             assert(false && "invalid scalar type size!");
     }
+}
+
+AMD64_Op AMD64LoweringPass::get_sized_op(const Type *type, 
+                                         const std::array<AMD64_Op, 4> &gp, 
+                                         const std::array<AMD64_Op, 2> &fp) {
+    if (type->is_integer_type() || type->is_pointer_type()) {
+        static const std::unordered_map<uint32_t, AMD64_Op> table = {
+            { 8, gp[0] }, { 16, gp[1] }, { 32, gp[2] }, { 64, gp[3] }
+        };
+
+        return table.at(m_mach.get_type_size(type));
+    } else if (type->is_float_type()) {
+        static const std::unordered_map<uint32_t, AMD64_Op> table = {
+            { 32, fp[0] }, { 64, fp[1] }
+        };
+
+        return table.at(m_mach.get_type_size(type));
+    } else {
+        assert(false && "(2) non-scalar op!");
+    }
+}
+
+AMD64_Op AMD64LoweringPass::get_move_op(const Type *type) {
+    return get_sized_op(
+        type, 
+        { AMD64_MOV8, AMD64_MOV16, AMD64_MOV32, AMD64_MOV64 }, 
+        { AMD64_MOVSS, AMD64_MOVSD }
+    );
+}
+
+AMD64_Op AMD64LoweringPass::get_cmp_op(const Type *type) {
+    return get_sized_op(
+        type,
+        { AMD64_CMP8, AMD64_CMP16, AMD64_CMP32, AMD64_CMP64 },
+        { AMD64_UCOMISS, AMD64_UCOMISD }
+    );
 }
 
 Register AMD64LoweringPass::create_vreg(RegisterClass cls) {
@@ -274,7 +318,13 @@ MachineOperand AMD64LoweringPass::to_operand(const Value *value) {
 
         return MachineOperand(MachineRegister { vreg, subreg });
     } else if (auto param = dynamic_cast<const Parameter*>(value)) {
-        assert(false);
+        const FunctionABI &abi = m_func->abi();
+        const uint32_t index = param->get_index();
+
+        const FunctionABI::Location &loc = abi.get_param_location(index);
+        MachineRegister SP(RSP, 8);
+        
+        return MachineOperand(Memory { SP, loc.offset });
     } else if (auto func = dynamic_cast<const Function*>(value)) {
         MachineFunction *MF = m_obj.get_function(func->get_name());
         assert(MF && "function not lowered!");
@@ -382,8 +432,7 @@ void AMD64LoweringPass::lower_const(const Const *C) {
         ConstantPool &pool = m_func->get_pool();
         MachineData *MD = pool.materialize(bytes);
 
-        const uint32_t bits = m_mach.get_type_size(fp->get_type());
-        emit(bits == 32 ? AMD64_MOVSS : AMD64_MOVSD)
+        emit(get_move_op(fp->get_type()))
             .add_reg(dest)
             .add_data(MD)
             .add_comment(stringify_inst(C));
@@ -417,7 +466,7 @@ void AMD64LoweringPass::lower_load(const Load *L) {
 
     MachineRegister dest(get_vreg_from_def(L), get_subreg_byte(L->get_type()));
 
-    emit(AMD64_MOV64, { source })
+    emit(get_move_op(L->get_type()), { source })
         .add_reg(dest)
         .add_comment(stringify_inst(L));
 }
@@ -431,9 +480,10 @@ void AMD64LoweringPass::lower_store(const Store *S) {
         dest = MachineOperand(Memory { dest.reg(), 0 });
     }
 
-    const MachineOperand value = to_operand(S->get_value());
+    const Value *value = S->get_value();
+    const MachineOperand source = to_operand(value);
 
-    emit(AMD64_MOV64, { value, dest })
+    emit(get_move_op(value->get_type()), { source, dest })
         .add_comment(stringify_inst(S));
 }
 
@@ -455,15 +505,34 @@ void AMD64LoweringPass::lower_call(const Call *C) {
 
 void AMD64LoweringPass::lower_ret(const Ret *R) {
     if (R->has_value()) {
+        const FunctionABI &abi = m_func->abi();
+        assert(abi.has_result());
 
+        const FunctionABI::Location &loc = abi.get_result_location();
+        const Value *value = R->get_value();
+        const MachineOperand result = to_operand(value);
+
+        emit(get_move_op(value->get_type()), { result })
+            .add_mem(MachineRegister(RBP, 8), loc.offset)
+            .add_comment(stringify_inst(R));
+
+        const StackFrame &frame = m_func->get_stack_frame();
+        const uint32_t bytes = frame.size();
+
+        emit(static_cast<uint32_t>(Intrinsic::Stack_Restore));
+        emit(AMD64_RET64);
+    } else {
+        emit(static_cast<uint32_t>(Intrinsic::Stack_Restore))
+            .add_comment(stringify_inst(R));
+
+        emit(AMD64_RET64);
     }
-
-    emit(AMD64_RET64)
-        .add_comment(stringify_inst(R));
 }
 
 void AMD64LoweringPass::lower_jump(const Jump *J) {
-
+    emit(AMD64_JMP)
+        .add_label(m_func->get_label(J->get_dest()->position()))
+        .add_comment(stringify_inst(J));
 }
 
 void AMD64LoweringPass::lower_brif(const Brif *B) {
@@ -515,32 +584,12 @@ void AMD64LoweringPass::lower_cmp(const Cmp *C) {
         LHS = RHS;
         RHS = temp;
     } else {
+        // Thanks to the lovely AT&T syntax, the operands are technically the
+        // other way around, so the SETcc needs to compensate for that.
         SETcc = flip_setcc(SETcc);
     }
 
-    AMD64_Op cmp;
-    const Type *type = C->get_lhs()->get_type();
-    const uint32_t bits = m_mach.get_type_size(type);
-
-    if (type->is_integer_type() || type->is_pointer_type()) {
-        static std::unordered_map<uint32_t, AMD64_Op> table = {
-            { 8,  AMD64_CMP8  },
-            { 16, AMD64_CMP16 },
-            { 32, AMD64_CMP32 },
-            { 64, AMD64_CMP64 },
-        };
-
-        cmp = table[bits];
-    } else if (type->is_float_type()) {
-        static std::unordered_map<uint32_t, AMD64_Op> table = {
-            { 32, AMD64_UCOMISS },
-            { 64, AMD64_UCOMISD },
-        };
-
-        cmp = table[bits];
-    }
-
-    emit(cmp, { LHS, RHS })
+    emit(get_cmp_op(C->get_lhs()->get_type()), { LHS, RHS })
         .add_comment(stringify_inst(C));
 
     const MachineRegister dest(get_vreg_from_def(C), 1);

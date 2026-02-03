@@ -1,5 +1,6 @@
 set(MACHINE_SOURCES
     AMD64.cpp
+    FunctionABI.cpp
     Machine.cpp
     MachineFunction.cpp
     MachineLabel.cpp
