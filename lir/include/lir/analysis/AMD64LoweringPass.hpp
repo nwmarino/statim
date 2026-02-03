@@ -37,8 +37,17 @@ private:
     /// Returns the AMD64 register byte offset for the given scalar |type|.
     uint8_t get_subreg_byte(const Type *type) const;
 
+    /// Returns the sized AMD64 op for the given scalar integer |type| from
+    /// the general purpose |gp| ops.
+    ///
+    /// The ops should be in the order of { 8, 16, 32, 64 } precisions.
+    AMD64_Op get_sized_op(const Type *type, const std::array<AMD64_Op, 4> &gp);
+
     /// Returns the sized AMD64 op for the given scalar |type|, from either
     /// the general purpose |gp| ops, or floating point |fp| ops.
+    ///
+    /// The general purpose ops should be in the order of { 8, 16, 32, 64 },
+    /// precisions and floating points { single, double } precisions.
     AMD64_Op get_sized_op(const Type *type, const std::array<AMD64_Op, 4> &gp, 
                           const std::array<AMD64_Op, 2> &fp);
 

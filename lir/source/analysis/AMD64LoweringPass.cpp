@@ -248,14 +248,23 @@ uint8_t AMD64LoweringPass::get_subreg_byte(const Type *type) const {
 }
 
 AMD64_Op AMD64LoweringPass::get_sized_op(const Type *type, 
-                                         const std::array<AMD64_Op, 4> &gp, 
-                                         const std::array<AMD64_Op, 2> &fp) {
+                                         const std::array<AMD64_Op, 4> &gp) {
     if (type->is_integer_type() || type->is_pointer_type()) {
         static const std::unordered_map<uint32_t, AMD64_Op> table = {
             { 8, gp[0] }, { 16, gp[1] }, { 32, gp[2] }, { 64, gp[3] }
         };
 
         return table.at(m_mach.get_type_size(type));
+    } else {
+        assert(false && "(1) non-integer op!");
+    }
+}
+
+AMD64_Op AMD64LoweringPass::get_sized_op(const Type *type, 
+                                         const std::array<AMD64_Op, 4> &gp, 
+                                         const std::array<AMD64_Op, 2> &fp) {
+    if (type->is_integer_type() || type->is_pointer_type()) {
+        return get_sized_op(type, gp);
     } else if (type->is_float_type()) {
         static const std::unordered_map<uint32_t, AMD64_Op> table = {
             { 32, fp[0] }, { 64, fp[1] }
@@ -488,11 +497,33 @@ void AMD64LoweringPass::lower_store(const Store *S) {
 }
 
 void AMD64LoweringPass::lower_access(const Access *A) {
+    const MachineOperand source = to_operand(A->get_base());
+    const MachineOperand index = to_operand(A->get_index());
 
+    
 }
 
 void AMD64LoweringPass::lower_extract(const Extract *E) {
+    // @Todo: Assess.
+    const MachineOperand source = to_operand(E->get_base());
 
+    if (source.is_reg()) {
+        // If the structure is in a register, it must be 8 bytes in size or
+        // less.
+        assert(false && "(2) non-scalar op!");
+    }
+
+    const StructType *structure = dynamic_cast<const StructType*>(
+        E->get_base()->get_type());
+    assert(structure);
+
+    uint32_t index = m_mach.get_field_offset(structure, E->get_index());
+
+    MachineRegister MR(get_vreg_from_def(E), get_subreg_byte(E->get_type()));
+
+    emit(get_move_op(E->get_type()), { source })
+        .add_reg(MR)
+        .add_comment(stringify_inst(E));
 }
 
 void AMD64LoweringPass::lower_offptr(const Offptr *O) {
@@ -520,13 +551,12 @@ void AMD64LoweringPass::lower_ret(const Ret *R) {
         const uint32_t bytes = frame.size();
 
         emit(static_cast<uint32_t>(Intrinsic::Stack_Restore));
-        emit(AMD64_RET64);
     } else {
         emit(static_cast<uint32_t>(Intrinsic::Stack_Restore))
             .add_comment(stringify_inst(R));
-
-        emit(AMD64_RET64);
     }
+
+    emit(AMD64_RET64);
 }
 
 void AMD64LoweringPass::lower_jump(const Jump *J) {
