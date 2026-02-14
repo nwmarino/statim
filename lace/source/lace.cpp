@@ -324,7 +324,17 @@ int32_t main(int32_t argc, char *argv[]) {
             if (arg.size() < 4 || arg.substr(arg.size() - 5) != ".lace")
                 log::error("expected source file ending with \".lace\", got " + arg);
 
-            files.push_back(absolute(arg).string());
+            bool dupe = false;
+            std::string path = absolute(arg).string();
+            for (const InputFile& f : files) {
+                if (f.file == path) {
+                    dupe = true;
+                    break;
+                }
+            }
+
+            if (!dupe)
+                files.push_back(path);
         }
     }
 

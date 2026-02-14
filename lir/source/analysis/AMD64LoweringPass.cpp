@@ -500,7 +500,21 @@ void AMD64LoweringPass::lower_access(const Access *A) {
     const MachineOperand source = to_operand(A->get_base());
     const MachineOperand index = to_operand(A->get_index());
 
-    
+    auto structure = dynamic_cast<const StructType*>(A->get_base()->get_type());
+    assert(structure);
+
+    // @Todo: Assumes immediate index.
+    uint32_t offset = m_mach.get_field_offset(structure, index.imm());
+
+    MachineRegister MR(get_vreg_from_def(A), get_subreg_byte(A->get_type()));
+
+    emit(AMD64_MOV64, { source })
+        .add_reg(MR)
+        .add_comment(stringify_inst(A));
+
+    emit(AMD64_ADD64)
+        .add_imm(offset)
+        .add_reg(MR);
 }
 
 void AMD64LoweringPass::lower_extract(const Extract *E) {
@@ -513,11 +527,10 @@ void AMD64LoweringPass::lower_extract(const Extract *E) {
         assert(false && "(2) non-scalar op!");
     }
 
-    const StructType *structure = dynamic_cast<const StructType*>(
-        E->get_base()->get_type());
+    auto structure = dynamic_cast<const StructType*>(E->get_base()->get_type());
     assert(structure);
 
-    uint32_t index = m_mach.get_field_offset(structure, E->get_index());
+    uint32_t offset = m_mach.get_field_offset(structure, E->get_index());
 
     MachineRegister MR(get_vreg_from_def(E), get_subreg_byte(E->get_type()));
 
@@ -527,6 +540,19 @@ void AMD64LoweringPass::lower_extract(const Extract *E) {
 }
 
 void AMD64LoweringPass::lower_offptr(const Offptr *O) {
+    const MachineOperand source = to_operand(O->get_base());
+    const MachineOperand index = to_operand(O->get_index());
+
+    if (index.is_imm()) {
+        auto ptr = dynamic_cast<const PointerType*>(O->get_base()->get_type());
+        assert(ptr);
+
+        uint32_t bytes = m_mach.get_type_size(ptr->get_pointee()) / 8;
+        
+
+    } else {
+
+    }
 
 }
 
