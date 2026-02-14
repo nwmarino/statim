@@ -502,6 +502,7 @@ void AMD64LoweringPass::lower_access(const Access *A) {
 
     auto structure = dynamic_cast<const StructType*>(A->get_base()->get_type());
     assert(structure);
+    assert(index.is_imm() && "access index is not an immediate!");
 
     // @Todo: Assumes immediate index.
     uint32_t offset = m_mach.get_field_offset(structure, index.imm());
@@ -518,66 +519,63 @@ void AMD64LoweringPass::lower_access(const Access *A) {
 }
 
 void AMD64LoweringPass::lower_extract(const Extract *E) {
-    // @Todo: Assess.
-    const MachineOperand source = to_operand(E->get_base());
-
-    if (source.is_reg()) {
-        // If the structure is in a register, it must be 8 bytes in size or
-        // less.
-        assert(false && "(2) non-scalar op!");
-    }
-
-    auto structure = dynamic_cast<const StructType*>(E->get_base()->get_type());
-    assert(structure);
-
-    uint32_t offset = m_mach.get_field_offset(structure, E->get_index());
-
-    MachineRegister MR(get_vreg_from_def(E), get_subreg_byte(E->get_type()));
-
-    emit(get_move_op(E->get_type()), { source })
-        .add_reg(MR)
-        .add_comment(stringify_inst(E));
+    // @Todo: should be lowered into an access by mapping the base aggregate to an address.
+    assert(false && "Extract not implemented!");
 }
 
 void AMD64LoweringPass::lower_offptr(const Offptr *O) {
     const MachineOperand source = to_operand(O->get_base());
     const MachineOperand index = to_operand(O->get_index());
 
+    const MachineRegister DR(get_vreg_from_def(O), 8);
+
+    emit(get_move_op(O->get_type()), { source })
+        .add_reg(DR)
+        .add_comment(stringify_inst(O));
+
+    auto underlying = dynamic_cast<const PointerType*>(O->get_base()->get_type());
+    assert(underlying && "Offptr base is not a pointer!");
+
+    uint32_t bytes = m_mach.get_type_size(underlying->get_pointee()) / 8;
+
     if (index.is_imm()) {
-        auto ptr = dynamic_cast<const PointerType*>(O->get_base()->get_type());
-        assert(ptr);
+        // Index is immediate, so we can multiply it at compile-time by the size of the underlying.
+        int64_t offset = static_cast<int64_t>(bytes) * index.imm();
 
-        uint32_t bytes = m_mach.get_type_size(ptr->get_pointee()) / 8;
-        
-
+        emit(AMD64_ADD64, { offset })
+            .add_reg(DR);
     } else {
-
+        // Index is dynamic, so we have to multiply it at runtime by the size of the underlying.
+        emit(AMD64_IMUL64, { bytes, index });
+        emit(AMD64_ADD64, { index })
+            .add_reg(DR);
     }
+}
+
+void AMD64LoweringPass::lower_call(const Call* C) {
 
 }
 
-void AMD64LoweringPass::lower_call(const Call *C) {
-
-}
-
-void AMD64LoweringPass::lower_ret(const Ret *R) {
+void AMD64LoweringPass::lower_ret(const Ret* R) {
     if (R->has_value()) {
-        const FunctionABI &abi = m_func->abi();
-        assert(abi.has_result());
+        // Resolve the ABI for this function and check that it expects a result.
+        const FunctionABI& abi = m_func->abi();
+        assert(abi.has_result() && "Ret has a value, but ABI does not expect one!");
 
-        const FunctionABI::Location &loc = abi.get_result_location();
-        const Value *value = R->get_value();
+        // Get the location to move the return value to.
+        const FunctionABI::Location& loc = abi.get_result_location();
+        const Value* value = R->get_value();
         const MachineOperand result = to_operand(value);
 
+        // Move the return value to the location specified by the ABI.
         emit(get_move_op(value->get_type()), { result })
             .add_mem(MachineRegister(RBP, 8), loc.offset)
             .add_comment(stringify_inst(R));
 
-        const StackFrame &frame = m_func->get_stack_frame();
-        const uint32_t bytes = frame.size();
-
+        // (1) Restore the function stack frame with this return.
         emit(static_cast<uint32_t>(Intrinsic::Stack_Restore));
     } else {
+        // See (1).
         emit(static_cast<uint32_t>(Intrinsic::Stack_Restore))
             .add_comment(stringify_inst(R));
     }
@@ -585,13 +583,14 @@ void AMD64LoweringPass::lower_ret(const Ret *R) {
     emit(AMD64_RET64);
 }
 
-void AMD64LoweringPass::lower_jump(const Jump *J) {
+void AMD64LoweringPass::lower_jump(const Jump* J) {
+    // Simply jump directly to the sole destination label.
     emit(AMD64_JMP)
         .add_label(m_func->get_label(J->get_dest()->position()))
         .add_comment(stringify_inst(J));
 }
 
-void AMD64LoweringPass::lower_brif(const Brif *B) {
+void AMD64LoweringPass::lower_brif(const Brif* B) {
     MachineOperand cond = to_operand(B->get_cond());
 
     if (cond.is_reg()) {
@@ -600,55 +599,57 @@ void AMD64LoweringPass::lower_brif(const Brif *B) {
         cond.reg().set_subreg(1);
     }
 
+    // Emit a zero comparison on the Brif condition.
     emit(AMD64_CMP8)
         .add_imm(0)
         .add_operand(cond)
         .add_comment(stringify_inst(B));
 
+    // If the condition != 0 i.e. "true", then jump to the true label.
     emit(AMD64_JNE)
         .add_label(m_func->get_label(B->get_true_dest()->position()));
 
+    // Otherwise, jump to the false label.
     emit(AMD64_JMP)
         .add_label(m_func->get_label(B->get_false_dest()->position()));
 }
 
-void AMD64LoweringPass::lower_phi(const Phi *P) {
+void AMD64LoweringPass::lower_phi(const Phi* P) {
 
 }
 
-void AMD64LoweringPass::lower_unop(const Unop *U) {
+void AMD64LoweringPass::lower_unop(const Unop* U) {
 
 }
 
-void AMD64LoweringPass::lower_binop(const Binop *B) {
+void AMD64LoweringPass::lower_binop(const Binop* B) {
 
 }
 
-void AMD64LoweringPass::lower_cast(const Cast *C) {
+void AMD64LoweringPass::lower_cast(const Cast* C) {
 
 }
 
-void AMD64LoweringPass::lower_cmp(const Cmp *C) {
-    MachineOperand LHS = to_operand(C->get_lhs());
-    MachineOperand RHS = to_operand(C->get_rhs());
+void AMD64LoweringPass::lower_cmp(const Cmp* C) {
+    MachineOperand left = to_operand(C->get_lhs());
+    MachineOperand right = to_operand(C->get_rhs());
 
     AMD64_Op SETcc = cmp_to_setcc(C->pred());
 
-    if (RHS.is_imm()) {
-        // RHS cannot be an immediate, so swap the operands.
-        const MachineOperand temp = LHS;
-        LHS = RHS;
-        RHS = temp;
+    if (left.is_imm()) {
+        // Left hand side cannot be an immediate, so swap the operands.
+        const MachineOperand temp = left;
+        left = right;
+        right = temp;
     } else {
         // Thanks to the lovely AT&T syntax, the operands are technically the
         // other way around, so the SETcc needs to compensate for that.
         SETcc = flip_setcc(SETcc);
     }
 
-    emit(get_cmp_op(C->get_lhs()->get_type()), { LHS, RHS })
+    emit(get_cmp_op(C->get_lhs()->get_type()), { left, right })
         .add_comment(stringify_inst(C));
 
-    const MachineRegister dest(get_vreg_from_def(C), 1);
     emit(SETcc)
-        .add_reg(dest);
+        .add_reg(MachineRegister { get_vreg_from_def(C), 1 });
 }

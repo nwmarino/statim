@@ -1,43 +1,25 @@
-Box :: struct {
-    a: mut f32,
-    b: mut s64,
-    c: mut bool,
+vec3 :: struct {
+    x: mut f64,
+    y: mut f64,
+    z: mut f64,
 }
 
-foo :: (x: s64, y: s64) -> void {
-    ret;
+vec3_new :: (x: f64, y: f64, z: f64) -> vec3 {
+    let vec: mut vec3;
+    vec.x = x;
+    vec.y = y;
+    vec.z = z;
+
+    ret vec;
 }
 
-box_create :: (a: f32, b: s64, c: bool) -> Box {
-    foo(1, 2);
-
-    let box: mut Box;
-    box.a = a;
-    box.b = b;
-    box.c = c;
-
-    ret box;
-}
-
-box_flip :: (box: Box) -> bool {
-    ret !box.c;
-}
-
-box_expanded :: (box: Box) -> Box {
-    let new: mut Box;
-    new.a = box.a + 1;
-    new.b = box.b + 1;
-    new.c = true;
-
-    ret new;
+vec3_mag :: (vec: vec3) -> f64 {
+    let res: f64 = vec.x + vec.y + vec.z;
+    ret res * res;
 }
 
 $public
 main :: () -> s64 {
-    let box: mut Box = box_create(1.17, 42, false);
-    box = box_expanded(box);
-
-    let x: *char = "hello!\n";
-
-    ret box_flip(box);
+    let vec: vec3 = vec3_new(1, 2, 5);
+    ret cast<s64>(vec3_mag(vec));
 }

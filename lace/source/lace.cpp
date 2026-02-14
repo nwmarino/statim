@@ -273,7 +273,7 @@ int32_t main(int32_t argc, char *argv[]) {
     log::init();
 
     std::vector<InputFile> files = {
-        InputFile("/home/lovelace/samples/if.lace"),
+        InputFile("/home/lovelace/samples/structs.lace"),
         //InputFile("/home/lovelace/samples/structs.lace"),
         //InputFile("/home/lovelace/lace/samples/linux.lace"),
         //InputFile("/home/lovelace/lace/samples/mem.lace"),

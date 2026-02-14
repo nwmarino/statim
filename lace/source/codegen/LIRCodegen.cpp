@@ -21,46 +21,46 @@ void LIRCodegen::run() {
     std::vector<Defn*> defns = {};
     std::vector<TypeDefn*> types = {};
 
-    for (Defn *D : m_ast->get_loaded()) {
-        auto *TD = dynamic_cast<TypeDefn*>(D);
-        if (TD) {
-            types.push_back(TD);
+    for (Defn* defn : m_ast->get_loaded()) {
+        auto type_defn = dynamic_cast<TypeDefn*>(defn);
+        if (type_defn) {
+            types.push_back(type_defn);
         } else {
-            partials.push_back(D);
+            partials.push_back(defn);
         }
     }
 
-    for (Defn *D : m_ast->get_defns()) {
-        auto  *TD = dynamic_cast<TypeDefn*>(D);
-        if (TD) {
-            types.push_back(TD);
+    for (Defn* defn : m_ast->get_defns()) {
+        auto type_defn = dynamic_cast<TypeDefn*>(defn);
+        if (type_defn) {
+            types.push_back(type_defn);
         } else {
-            defns.push_back(D);
+            defns.push_back(defn);
         }
     }
 
     // Lower all type definitions, but don't fill them out incase their fields
     // use a type not defined yet.
-    for (TypeDefn *TD : types)
-        codegen_initial_definition(TD);
+    for (TypeDefn* type_defn : types)
+        codegen_initial_definition(type_defn);
     
     // Fill out all type definitions, now that all type information is 
     // available.
-    for (TypeDefn *TD : types)
-        codegen_lowered_definition(TD);
+    for (TypeDefn* type_defn : types)
+        codegen_lowered_definition(type_defn);
 
     // Lower all imported definitions. This is the last time we touch them.
-    for (Defn *D : partials)
-        codegen_initial_definition(D);
+    for (Defn* defn : partials)
+        codegen_initial_definition(defn);
 
-    for (Defn *D : defns)
-        codegen_initial_definition(D);
+    for (Defn* defn : defns)
+        codegen_initial_definition(defn);
 
-    for (Defn *D : defns)
-        codegen_lowered_definition(D);
+    for (Defn* defn : defns)
+        codegen_lowered_definition(defn);
 }
 
-lir::Type *LIRCodegen::to_lir_type(const QualType &type) {
+lir::Type* LIRCodegen::to_lir_type(const QualType& type) {
     switch (type->get_class()) {
         case Type::Alias:
             return to_lir_type(static_cast<const AliasType*>
@@ -109,13 +109,29 @@ lir::Type *LIRCodegen::to_lir_type(const QualType &type) {
                 type.get_type())->get_underlying());
 
         case Type::Function: {
-            auto sig = static_cast<const FunctionType*>(type.get_type());
-            std::vector<lir::Type*> args(sig->num_params(), nullptr);
-            for (uint32_t i = 0; i < sig->num_params(); ++i)
-                args[i] = to_lir_type(sig->get_param(i));
+            auto func_type = static_cast<const FunctionType*>(type.get_type());
+            std::vector<lir::Type*> args = {};
+            args.reserve(func_type->num_params());
 
-            return lir::FunctionType::get(
-                m_cfg, args, to_lir_type(sig->get_return_type()));
+            lir::Type* return_type = to_lir_type(func_type->get_return_type());
+            if (!m_mach.is_scalar(return_type)) {
+                // If the return type is an aggregate, then it must be passed as the first argument
+                // via hidden pointer. The return type then becomes void.
+                args.push_back(lir::PointerType::get(m_cfg, return_type));
+                return_type = lir::VoidType::get(m_cfg);
+            }
+
+            for (uint32_t i = 0; i < func_type->num_params(); ++i) {
+                lir::Type* param_type = to_lir_type(func_type->get_param(i));
+                if (m_mach.is_scalar(param_type)) {
+                    args.push_back(param_type);
+                } else {
+                    // If the parameter type is an aggregate, then it is passed via hidden pointer.
+                    args.push_back(lir::PointerType::get(m_cfg, param_type));
+                }
+            }
+
+            return lir::FunctionType::get(m_cfg, args, return_type);
         }
 
         case Type::Pointer:
@@ -128,29 +144,27 @@ lir::Type *LIRCodegen::to_lir_type(const QualType &type) {
     }
 }
 
-lir::Function *LIRCodegen::get_function(
-        const std::string &name, lir::Type *result, 
-        const lir::FunctionType::Params &params) {
-    lir::Function *func = m_cfg.get_function(name);
+lir::Function* LIRCodegen::get_function(const std::string& name, lir::Type* result, 
+                                        const std::vector<lir::Type*>& args) {
+    lir::Function* func = m_cfg.get_function(name);
     if (func)
         return func;
 
-    std::vector<lir::Parameter*> parameters(params.size(), nullptr);
-
-    for (uint32_t i = 0; i < params.size(); ++i)
-        parameters[i] = lir::Parameter::create(params[i]);
+    std::vector<lir::Parameter*> params(args.size(), nullptr);
+    for (uint32_t i = 0; i < args.size(); ++i)
+        params[i] = lir::Parameter::create(args[i]);
 
     return lir::Function::create(
         m_cfg, 
         lir::Function::LinkageType::Public, 
-        lir::FunctionType::get(m_cfg, params, result),
+        lir::FunctionType::get(m_cfg, args, result),
         name, 
-        parameters
+        params
     );
 }
 
-lir::Value *LIRCodegen::inject_comparison(lir::Value *value) {
-    lir::Type *type = value->get_type();
+lir::Value* LIRCodegen::inject_comparison(lir::Value* value) {
+    lir::Type* type = value->get_type();
     
     if (type->is_integer_type(8)) {
         return value;

@@ -10,6 +10,7 @@
 - Fixed some formatting bugs in the diagnostics logger.
 - Add phase timing to verbose outputs.
 - Updated code generation for new LIR definitions.
+- Prevent duplicate input files using absolute path.
 
 ## LIR
 - Redesigned instruction API to use separate classes per instruction type.

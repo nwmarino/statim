@@ -28,21 +28,21 @@
 namespace lace {
 
 class LIRCodegen final {
-    const Options &m_options;
-    const lir::Machine &m_mach;
+    const Options& m_options;
+    const lir::Machine& m_mach;
 
-    const AST *m_ast;
-    lir::CFG &m_cfg;
+    const AST* m_ast;
+    lir::CFG& m_cfg;
     lir::Builder m_builder;
-    lir::Function *m_func = nullptr;
+    lir::Function* m_func = nullptr;
 
     struct State final {
-        lir::BasicBlock *cond;
-        lir::BasicBlock *merge;
+        lir::BasicBlock* cond;
+        lir::BasicBlock* merge;
     } m_state;
 
 public:
-    LIRCodegen(const Options &options, const AST *ast, lir::CFG &cfg)
+    LIRCodegen(const Options& options, const AST* ast, lir::CFG& cfg)
       : m_options(options), m_mach(cfg.get_machine()), m_ast(ast), m_cfg(cfg),
         m_builder(cfg) {}
 
@@ -51,18 +51,17 @@ public:
 
 private:
     /// Lower the given lace |type| to its LIR equivelant, where possible.
-    lir::Type *to_lir_type(const QualType &type);
+    lir::Type* to_lir_type(const QualType& type);
 
-    lir::Function *get_function(const std::string &name, 
-                                lir::Type *result = nullptr,
-                                const lir::FunctionType::Params &params = {});
+    lir::Function* get_function(const std::string& name, lir::Type* result = nullptr,
+                                const std::vector<lir::Type*>& args = {});
 
     /// Attempt to inject a boolean comparison unto the given |value|, such
     /// that the result is some form of comparison of a boolean type.
     ///
     /// Ultimately, the type of the returned value will be a 8-bit integer 
     /// representation a.k.a boolean.
-    lir::Value *inject_comparison(lir::Value *value);
+    lir::Value* inject_comparison(lir::Value *value);
 
     /// Generate an empty lowering for the given |defn|.
     void codegen_initial_definition(const Defn *defn);

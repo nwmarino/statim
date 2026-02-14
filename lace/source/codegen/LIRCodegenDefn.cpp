@@ -45,7 +45,7 @@ void LIRCodegen::codegen_lowered_definition(const Defn* defn) {
     }
 }
 
-lir::Function *LIRCodegen::codegen_initial_function(const FunctionDefn *defn) {
+lir::Function* LIRCodegen::codegen_initial_function(const FunctionDefn* defn) {
     auto linkage = lir::Function::LinkageType::Private;
     if (defn->has_rune(Rune::Public))
         linkage = lir::Function::LinkageType::Public;
