@@ -52,7 +52,7 @@ lir::Value *LIRCodegen::codegen_addressed_access(const AccessExpr *expr) {
     } else if (base->get_type()->isClass(Type::Class::Struct)) {
         ptr = codegen_addressed_expression(base);
     } else {
-        log::fatal("bad type operand to '.': " + base->get_type().to_string(),
+        log::fatal("bad type operand to '.': " + base->get_type().string(),
             log::Span(m_ast->get_file(), expr->get_span()));
     }
 
@@ -117,7 +117,7 @@ lir::Value *LIRCodegen::codegen_addressed_subscript(const SubscriptExpr *expr) {
     } else if (base->get_type()->isClass(Type::Class::Pointer)) {
         ptr = codegen_valued_expression(base);
     } else {
-        log::fatal("invalid [] type operand: " + base->get_type().to_string(), 
+        log::fatal("invalid [] type operand: " + base->get_type().string(), 
             log::Span(m_ast->get_file(), expr->get_span()));
     }
 

@@ -169,7 +169,7 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
         if (match(Token::Identifier)) {
             underlying = parse_type_specifier();
         } else {
-            underlying = BuiltinType::get(*m_context, BuiltinType::Int64);
+            underlying = BuiltinType::get(*m_context, BuiltinType::Kind::Int64);
         }
 
         EnumDefn* defn = EnumDefn::create(
@@ -177,7 +177,8 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
             name.loc, 
             name.value, 
             runes,
-            underlying.get_type());
+            underlying.getType()
+        );
 
         const EnumType* type = EnumType::create(*m_context, underlying, defn);
         defn->set_type(type);

@@ -183,17 +183,17 @@ void VisitorBase::visit(RefExpr& node) {
 Result VisitorBase::resolveType(const QualType& type) const {
     switch (type->getClass()) {
         case Type::Class::Array: {
-            auto array_type = dynamic_cast<const ArrayType*>(type.get_type());
+            auto array_type = dynamic_cast<const ArrayType*>(type.getType());
             assert(array_type);
 
-            return resolveType(array_type->get_element_type());
+            return resolveType(array_type->element());
         }
 
         case Type::Class::Deferred: {
-            auto deferred_type = dynamic_cast<const DeferredType*>(type.get_type());
+            auto deferred_type = dynamic_cast<const DeferredType*>(type.getType());
             assert(deferred_type);
 
-            NamedDefn* named_defn = m_scope->get(deferred_type->get_name()); 
+            NamedDefn* named_defn = m_scope->get(deferred_type->name()); 
             if (!named_defn)
                 return false;
 
@@ -201,25 +201,25 @@ Result VisitorBase::resolveType(const QualType& type) const {
             if (!type_defn)
                 return false;
 
-            type.set_type(type_defn->get_type());
+            type.setType(type_defn->get_type());
             return true;
         }
 
         case Type::Class::Enum: {
-            auto enum_type = dynamic_cast<const EnumType*>(type.get_type());
+            auto enum_type = dynamic_cast<const EnumType*>(type.getType());
             assert(enum_type);
 
-            return resolveType(enum_type->get_underlying());
+            return resolveType(enum_type->underlying());
         }
 
         case Type::Class::Function: {
-            auto func_type = dynamic_cast<const FunctionType*>(type.get_type());
+            auto func_type = dynamic_cast<const FunctionType*>(type.getType());
             assert(func_type);
 
-            if (!resolveType(func_type->get_return_type()))
+            if (!resolveType(func_type->result()))
                 return false;
 
-            for (const QualType& param : func_type->get_params()) {
+            for (const QualType& param : func_type->params()) {
                 if (!resolveType(param))
                     return false;
             }
@@ -228,10 +228,10 @@ Result VisitorBase::resolveType(const QualType& type) const {
         }
 
         case Type::Class::Pointer: {
-            auto ptr_type = dynamic_cast<const PointerType*>(type.get_type());
+            auto ptr_type = dynamic_cast<const PointerType*>(type.getType());
             assert(ptr_type);
             
-            return resolveType(ptr_type->get_pointee());
+            return resolveType(ptr_type->pointee());
         }
 
         default:

@@ -18,8 +18,8 @@ using namespace lace;
 /// Test if |type| can be evaluated to a boolean (either trivially or through 
 /// a comparison).
 static inline bool is_boolean_evaluable(const QualType& type) {
-    const Type* ty = type.get_type();
-    return ty->is_integer() || ty->is_floating_point() || ty->isClass(Type::Class::Pointer);
+    const Type* ty = type.getType();
+    return ty->isInteger() || ty->isFloatingPoint() || ty->isClass(Type::Class::Pointer);
 }
 
 SemanticAnalysis::TypeCheckResult SemanticAnalysis::type_check(
@@ -33,17 +33,17 @@ SemanticAnalysis::TypeCheckResult SemanticAnalysis::type_check(
             return Mismatch;
 
         case AllowImplicit:
-            if (actual.can_cast(expected, true))
+            if (actual.canCast(expected, true))
                 return Cast;
 
             return Mismatch;
 
         case Loose:
-            if (actual.can_cast(expected, true))
+            if (actual.canCast(expected, true))
                 return Cast;
 
-            if ((actual->is_integer() && expected->isClass(Type::Class::Pointer)) 
-            || (actual->isClass(Type::Class::Pointer) && expected->is_integer()))
+            if ((actual->isInteger() && expected->isClass(Type::Class::Pointer)) 
+            || (actual->isClass(Type::Class::Pointer) && expected->isInteger()))
                 return Match;
 
             return Mismatch;
@@ -61,15 +61,15 @@ void SemanticAnalysis::visit(VariableDefn& node) {
         if (node.is_global() && !init->is_constant())
             log::fatal("globals cannot be initialized with non-constants", span);
 
-        init->get_type().with_mut();
+        init->get_type().withMut();
 
         const QualType& actual = init->get_type();
         const QualType& expected = node.get_type();
 
         TypeCheckResult TC = type_check(actual, expected);
         if (TC == TypeCheckResult::Mismatch) {
-            log::fatal("initializer type mismatch; got " + actual.to_string() 
-                + ", but expected " + expected.to_string(), span);
+            log::fatal("initializer type mismatch; got " + actual->string() 
+                + ", but expected " + expected->string(), span);
         } else if (TC == TypeCheckResult::Cast) {
             node.m_init = CastExpr::create(
                 m_ast->get_context(), 
@@ -91,7 +91,7 @@ void SemanticAnalysis::visit(FunctionDefn& node) {
         }
 
         const QualType& ret_type = node.get_return_type();
-        if (!ret_type.compare(BuiltinType::get(m_ast->get_context(), BuiltinType::Int64))) {
+        if (!ret_type.compare(BuiltinType::get(m_ast->get_context(), BuiltinType::Kind::Int64))) {
             log::error("'main' must return 's64'", 
                 log::Span(m_ast->get_file(), node.get_span().start));
         }
@@ -109,7 +109,7 @@ void SemanticAnalysis::visit(IfStmt& node) {
     Expr* cond = node.get_cond();
 
     // Check that the if condition can be evaluated to a boolean.
-    if (!is_boolean_evaluable(cond->get_type().get_type()))
+    if (!is_boolean_evaluable(cond->get_type().getType()))
         log::fatal("'if' condition must be a boolean", 
             log::Span(m_ast->get_file(), cond->get_span()));
 }
@@ -128,7 +128,7 @@ void SemanticAnalysis::visit(RetStmt& node) {
         log::fatal("'ret' outside of function", span);
  
     if (!node.has_expr()) {
-        if (!m_function->is_void_return())
+        if (!m_function->get_return_type()->isVoid())
             log::fatal("function does not return 'void'", span);
 
         return;
@@ -140,7 +140,7 @@ void SemanticAnalysis::visit(RetStmt& node) {
     const QualType& ret_type = m_function->get_return_type();
     TypeCheckResult TC = type_check(val_type, ret_type);
     if (TC == TypeCheckResult::Mismatch) {
-        log::fatal("return type mismatch; got " + val_type.to_string(), span);
+        log::fatal("return type mismatch; got " + val_type.string(), span);
     } else if (TC == TypeCheckResult::Cast) {
         node.m_expr = CastExpr::create(
             m_ast->get_context(), 
@@ -191,7 +191,7 @@ void SemanticAnalysis::visit(BinaryOp& node) {
     TypeCheckMode mode = supports_ptr_arith ? Loose : AllowImplicit;
     TypeCheckResult TC = type_check(rhs_type, lhs_type, mode);
     if (TC == TypeCheckResult::Mismatch) {
-        log::fatal("operand type mismatch; got " + rhs_type.to_string(), span);
+        log::fatal("operand type mismatch; got " + rhs_type->string(), span);
     } else if (TC == TypeCheckResult::Cast) {
         node.m_rhs = CastExpr::create(
             m_ast->get_context(), rhs->get_span(), lhs_type, rhs);
@@ -200,7 +200,7 @@ void SemanticAnalysis::visit(BinaryOp& node) {
     // Set the resulting type of the operator to a 'bool' if the operator is
     // a boolean comparison.
     if (BinaryOp::is_comparison(op)) {
-        node.set_type(BuiltinType::get(m_ast->get_context(), BuiltinType::Bool));
+        node.set_type(BuiltinType::get(m_ast->get_context(), BuiltinType::Kind::Bool));
         return;
     } else {
         // Default the type of the operator to the LHS type.
@@ -213,7 +213,7 @@ void SemanticAnalysis::visit(BinaryOp& node) {
             log::fatal("left hand operand must be an lvalue", span);
     
         // Check that left hand operands of assignments are mutable.
-        if (!lhs_type.is_mut())
+        if (!lhs_type.isMut())
             log::fatal("left hand operand must be mutable", span);
     }
 }
@@ -229,14 +229,14 @@ void SemanticAnalysis::visit(UnaryOp& node) {
         /*
         case UnaryOp::Increment: {
             // Check operator type compatibility (numerics and pointers only).
-            if (!(type->is_integer() || type->is_floating_point() || type->is_pointer()))
+            if (!(type->isInteger() || type->isFloatingPoint() || type->is_pointer()))
                 m_diags.fatal("'++' operator incompatible with '" + 
-                    type.to_string() + "'", span);
+                    type->string() + "'", span);
             
             if (!expr->is_lvalue())
                 m_diags.fatal("'++' base must be an lvalue", span);
 
-            if (!type.is_mut())
+            if (!type.isMut())
                 m_diags.fatal("'++' base must be mutable", span);
 
             node.set_type(type);
@@ -245,14 +245,14 @@ void SemanticAnalysis::visit(UnaryOp& node) {
 
         case UnaryOp::Decrement: {
             // Check operator type compatibility (numerics and pointers only).
-            if (!(type->is_integer() || type->is_floating_point() || type->is_pointer()))
+            if (!(type->isInteger() || type->isFloatingPoint() || type->is_pointer()))
                 m_diags.fatal("'--' operator incompatible with '" + 
-                    type.to_string() + "'", span);
+                    type->string() + "'", span);
             
             if (!expr->is_lvalue())
                 m_diags.fatal("'--' base must be an lvalue", span);
 
-            if (!type.is_mut())
+            if (!type.isMut())
                 m_diags.fatal("'++' base must be mutable", span);
 
             node.set_type(type);
@@ -261,8 +261,8 @@ void SemanticAnalysis::visit(UnaryOp& node) {
         */
         case UnaryOp::Negate: {
             // Check operator type compatibility (numerics only).
-            if (!(type->is_integer() || type->is_floating_point()))
-                log::fatal("'-' operator incompatible with " + type.to_string(), span);
+            if (!(type->isInteger() || type->isFloatingPoint()))
+                log::fatal("'-' operator incompatible with " + type->string(), span);
 
             node.set_type(type);
             break;
@@ -270,8 +270,8 @@ void SemanticAnalysis::visit(UnaryOp& node) {
 
         case UnaryOp::Not: {
             // Check operator type compatibility (integers only).
-            if (!type->is_integer())
-                log::fatal("'~' operator incompatible with " + type.to_string(), span);
+            if (!type->isInteger())
+                log::fatal("'~' operator incompatible with " + type->string(), span);
 
             node.set_type(type);
             break;
@@ -293,10 +293,10 @@ void SemanticAnalysis::visit(UnaryOp& node) {
 
         case UnaryOp::Dereference: {
             if (!type->isClass(Type::Class::Pointer))
-                log::fatal("'*' operator incompatible with " + type.to_string(), span);
+                log::fatal("'*' operator incompatible with " + type->string(), span);
 
             node.set_type(static_cast<const PointerType*>(
-                type.get_type())->get_pointee());
+                type.getType())->pointee());
             break;
         }
 
@@ -308,7 +308,7 @@ void SemanticAnalysis::visit(UnaryOp& node) {
 void SemanticAnalysis::visit(CastExpr& node) {
     VisitorBase::visit(node);
 
-    if (!node.get_expr()->get_type().can_cast(node.get_type()))
+    if (!node.get_expr()->get_type().canCast(node.get_type()))
         log::fatal("unsupported cast", log::Span(m_ast->get_file(), node.get_span()));
 }
 
@@ -333,16 +333,16 @@ void SemanticAnalysis::visit(SubscriptExpr& node) {
     Expr* base = node.get_base();
     Expr* index = node.get_index();
 
-    const Type* base_type = base->get_type().get_type();
+    const Type* base_type = base->get_type().getType();
     if (auto AT = dynamic_cast<const ArrayType*>(base_type)) {
-        node.set_type(AT->get_element_type());
+        node.set_type(AT->element());
     } else if (auto PT = dynamic_cast<const PointerType*>(base_type)) {
-        node.set_type(PT->get_pointee());
+        node.set_type(PT->pointee());
     } else {
         const QualType& qual_type = base->get_type();
 
         log::fatal("invalid argument type to '[]' operator: " 
-            + qual_type.to_string(), log::Span(m_ast->get_file(), node.get_span()));
+            + qual_type->string(), log::Span(m_ast->get_file(), node.get_span()));
     }
 }
 
@@ -359,17 +359,16 @@ void SemanticAnalysis::visit(CallExpr& node) {
 
     const log::Span span = log::Span(m_ast->get_file(), node.get_span());
     const QualType& callee_type = callee->get_type();
-    const FunctionType* FT = dynamic_cast<const FunctionType*>(
-        callee_type.get_type());
+    const FunctionType* FT = dynamic_cast<const FunctionType*>(callee_type.getType());
 
     if (!FT)
         log::fatal("function call target is not a function", span);
 
-    node.set_type(FT->get_return_type());
+    node.set_type(FT->result());
 
-    if (node.num_args() != FT->num_params())
+    if (node.num_args() != FT->numParams())
         log::fatal("argument count mismatch, expected " + 
-            std::to_string(FT->num_params()), span);
+            std::to_string(FT->numParams()), span);
 
     // Pass over each argument and compare its type to the functions expected
     // parameter type.
@@ -378,11 +377,11 @@ void SemanticAnalysis::visit(CallExpr& node) {
         arg->accept(*this);
 
         const QualType& actual = arg->get_type();
-        const QualType& expected = FT->get_param(i);
+        const QualType& expected = FT->getParam(i);
 
         TypeCheckResult TC = type_check(actual, expected);
         if (TC == TypeCheckResult::Mismatch) {
-            log::fatal("argument type mismatch; got " + actual.to_string(), span);
+            log::fatal("argument type mismatch; got " + actual->string(), span);
         } else if (TC == TypeCheckResult::Cast) {
             node.m_args[i] = CastExpr::create(
                 m_ast->get_context(), arg->get_span(), expected, arg);

@@ -326,13 +326,7 @@ public:
     bool is_main() const { return get_name() == "main"; }
 
     const QualType& get_return_type() const {
-        return static_cast<const FunctionType*>(
-            m_type.get_type())->get_return_type();
-    }
-
-    /// Test if this function returns `void`.
-    bool is_void_return() const {
-        return get_return_type()->is_void();
+        return static_cast<const FunctionType*>(m_type.getType())->result();
     }
 
     const Scope* get_scope() const { return m_scope; }

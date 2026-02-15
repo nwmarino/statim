@@ -53,15 +53,15 @@ QualType Parser::parse_type_specifier() {
     QualType type = {};
 
     while (expect("mut")) {
-        if (type.is_mut()) {
+        if (type.isMut()) {
             log::warn("duplicate 'mut' keyword", log::Location(m_file, loc()));
         } else {
-            type.with_mut();
+            type.withMut();
         }
     }
     
     if (expect(Token::Star)) {
-        type.set_type(PointerType::get(*m_context, parse_type_specifier()));
+        type.setType(PointerType::get(*m_context, parse_type_specifier()));
         return type;
     } else if (expect(Token::OpenBrack)) {
         if (!match(Token::Integer))
@@ -76,30 +76,30 @@ QualType Parser::parse_type_specifier() {
         if (!expect(Token::CloseBrack))
             log::fatal("expected ']'", log::Location(m_file, loc()));
 
-        type.set_type(ArrayType::get(*m_context, parse_type_specifier(), size));
+        type.setType(ArrayType::get(*m_context, parse_type_specifier(), size));
         return type;
     } else if (match(Token::Identifier)) {
         std::unordered_map<std::string, const Type*> types = {
-            { "void", BuiltinType::get(*m_context, BuiltinType::Void) },
-            { "bool", BuiltinType::get(*m_context, BuiltinType::Bool) },
-            { "char", BuiltinType::get(*m_context, BuiltinType::Char) },
-            { "s8", BuiltinType::get(*m_context, BuiltinType::Int8) },
-            { "s16", BuiltinType::get(*m_context, BuiltinType::Int16) },
-            { "s32", BuiltinType::get(*m_context, BuiltinType::Int32) },
-            { "s64", BuiltinType::get(*m_context, BuiltinType::Int64) },
-            { "u8", BuiltinType::get(*m_context, BuiltinType::UInt8) },
-            { "u16", BuiltinType::get(*m_context, BuiltinType::UInt16) },
-            { "u32", BuiltinType::get(*m_context, BuiltinType::UInt32) },
-            { "u64", BuiltinType::get(*m_context, BuiltinType::UInt64) },
-            { "f32", BuiltinType::get(*m_context, BuiltinType::Float32) },
-            { "f64", BuiltinType::get(*m_context, BuiltinType::Float64) },
+            { "void", BuiltinType::get(*m_context, BuiltinType::Kind::Void) },
+            { "bool", BuiltinType::get(*m_context, BuiltinType::Kind::Bool) },
+            { "char", BuiltinType::get(*m_context, BuiltinType::Kind::Char) },
+            { "s8", BuiltinType::get(*m_context, BuiltinType::Kind::Int8) },
+            { "s16", BuiltinType::get(*m_context, BuiltinType::Kind::Int16) },
+            { "s32", BuiltinType::get(*m_context, BuiltinType::Kind::Int32) },
+            { "s64", BuiltinType::get(*m_context, BuiltinType::Kind::Int64) },
+            { "u8", BuiltinType::get(*m_context, BuiltinType::Kind::UInt8) },
+            { "u16", BuiltinType::get(*m_context, BuiltinType::Kind::UInt16) },
+            { "u32", BuiltinType::get(*m_context, BuiltinType::Kind::UInt32) },
+            { "u64", BuiltinType::get(*m_context, BuiltinType::Kind::UInt64) },
+            { "f32", BuiltinType::get(*m_context, BuiltinType::Kind::Float32) },
+            { "f64", BuiltinType::get(*m_context, BuiltinType::Kind::Float64) },
         };
 
         auto it = types.find(curr().value);
         if (it != types.end()) {
-            type.set_type(it->second);
+            type.setType(it->second);
         } else {
-            type.set_type(DeferredType::get(*m_context, curr().value));
+            type.setType(DeferredType::get(*m_context, curr().value));
         }
 
         next();

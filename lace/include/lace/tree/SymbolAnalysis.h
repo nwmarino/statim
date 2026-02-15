@@ -23,9 +23,13 @@ public:
     void visit(VariableDefn& node) override;
 
     void visit(AccessExpr& node) override;
+    
     void visit(CallExpr& node) override;
+
     void visit(CastExpr& node) override;
+
     void visit(RefExpr& node) override;
+
     void visit(SizeofExpr& node) override;
 };
 

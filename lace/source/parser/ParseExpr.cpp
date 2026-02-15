@@ -284,23 +284,23 @@ Expr* Parser::parse_integer_literal() {
     const Token lit = curr();
     next();
 
-    BuiltinType::Kind kind = BuiltinType::Int64;
+    BuiltinType::Kind kind = BuiltinType::Kind::Int64;
     if (expect("b")) {
-        kind = BuiltinType::Int8;
+        kind = BuiltinType::Kind::Int8;
     } else if (expect("ub")) {
-        kind = BuiltinType::UInt8;
+        kind = BuiltinType::Kind::UInt8;
     } else if (expect("s")) {
-        kind = BuiltinType::Int16;
+        kind = BuiltinType::Kind::Int16;
     } else if (expect("us")) {
-        kind = BuiltinType::UInt16;
+        kind = BuiltinType::Kind::UInt16;
     } else if (expect("i")) {
-        kind = BuiltinType::Int32;
+        kind = BuiltinType::Kind::Int32;
     } else if (expect("ui")) {
-        kind = BuiltinType::UInt32;
+        kind = BuiltinType::Kind::UInt32;
     } else if (expect("l")) {
-        kind = BuiltinType::Int64;
+        kind = BuiltinType::Kind::Int64;
     } else if (expect("ul")) {
-        kind = BuiltinType::UInt64;
+        kind = BuiltinType::Kind::UInt64;
     }
 
     return IntegerLiteral::create(
@@ -314,11 +314,11 @@ Expr* Parser::parse_floating_point_literal() {
     const Token lit = curr();
     next();
 
-    BuiltinType::Kind kind = BuiltinType::Float64;
+    BuiltinType::Kind kind = BuiltinType::Kind::Float64;
     if (expect("f")) {
-        kind = BuiltinType::Float32;
+        kind = BuiltinType::Kind::Float32;
     } else if (expect("d")) {
-        kind = BuiltinType::Float64;
+        kind = BuiltinType::Kind::Float64;
     }
 
     return FloatLiteral::create(
@@ -340,7 +340,7 @@ Expr* Parser::parse_null_pointer_literal() {
     next();
 
     const Type* p_void = PointerType::get(
-        *m_context, BuiltinType::get(*m_context, BuiltinType::Void));
+        *m_context, BuiltinType::get(*m_context, BuiltinType::Kind::Void));
 
     return NullLiteral::create(*m_context, lit.loc, p_void);
 }

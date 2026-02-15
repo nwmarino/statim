@@ -63,38 +63,36 @@ void LIRCodegen::run() {
 lir::Type* LIRCodegen::to_lir_type(const QualType& type) {
     switch (type->getClass()) {
         case Type::Class::Alias:
-            return to_lir_type(static_cast<const AliasType*>
-                (type.get_type())->get_underlying());
+            return to_lir_type(static_cast<const AliasType*>(type.getType())->underlying());
         
         case Type::Class::Array: {
-            auto array = static_cast<const ArrayType*>(type.get_type());
-            return lir::ArrayType::get(m_cfg, to_lir_type(
-                array->get_element_type()), array->get_size());
+            auto array = static_cast<const ArrayType*>(type.getType());
+            return lir::ArrayType::get(m_cfg, to_lir_type(array->element()), array->size());
         }
 
         case Type::Class::Builtin: {
-            auto builtin = static_cast<const BuiltinType*>(type.get_type());
+            auto builtin = static_cast<const BuiltinType*>(type.getType());
 
-            switch (builtin->get_kind()) {
-                case BuiltinType::Void:
+            switch (builtin->kind()) {
+                case BuiltinType::Kind::Void:
                     return lir::Type::get_void(m_cfg);
-                case BuiltinType::Bool:
-                case BuiltinType::Char:
-                case BuiltinType::Int8:
-                case BuiltinType::UInt8:
+                case BuiltinType::Kind::Bool:
+                case BuiltinType::Kind::Char:
+                case BuiltinType::Kind::Int8:
+                case BuiltinType::Kind::UInt8:
                     return lir::Type::get_i8(m_cfg);
-                case BuiltinType::Int16:
-                case BuiltinType::UInt16:
+                case BuiltinType::Kind::Int16:
+                case BuiltinType::Kind::UInt16:
                     return lir::Type::get_i16(m_cfg);
-                case BuiltinType::Int32:
-                case BuiltinType::UInt32:
+                case BuiltinType::Kind::Int32:
+                case BuiltinType::Kind::UInt32:
                     return lir::Type::get_i32(m_cfg);
-                case BuiltinType::Int64:
-                case BuiltinType::UInt64:
+                case BuiltinType::Kind::Int64:
+                case BuiltinType::Kind::UInt64:
                     return lir::Type::get_i64(m_cfg);
-                case BuiltinType::Float32:
+                case BuiltinType::Kind::Float32:
                     return lir::Type::get_f32(m_cfg);
-                case BuiltinType::Float64:
+                case BuiltinType::Kind::Float64:
                     return lir::Type::get_f64(m_cfg);
             }
 
@@ -106,14 +104,14 @@ lir::Type* LIRCodegen::to_lir_type(const QualType& type) {
 
         case Type::Class::Enum:
             return to_lir_type(static_cast<const EnumType*>(
-                type.get_type())->get_underlying());
+                type.getType())->underlying());
 
         case Type::Class::Function: {
-            auto func_type = static_cast<const FunctionType*>(type.get_type());
+            auto func_type = static_cast<const FunctionType*>(type.getType());
             std::vector<lir::Type*> args = {};
-            args.reserve(func_type->num_params());
+            args.reserve(func_type->numParams());
 
-            lir::Type* return_type = to_lir_type(func_type->get_return_type());
+            lir::Type* return_type = to_lir_type(func_type->result());
             if (!m_mach.is_scalar(return_type)) {
                 // If the return type is an aggregate, then it must be passed as the first argument
                 // via hidden pointer. The return type then becomes void.
@@ -121,8 +119,8 @@ lir::Type* LIRCodegen::to_lir_type(const QualType& type) {
                 return_type = lir::VoidType::get(m_cfg);
             }
 
-            for (uint32_t i = 0; i < func_type->num_params(); ++i) {
-                lir::Type* param_type = to_lir_type(func_type->get_param(i));
+            for (uint32_t i = 0; i < func_type->numParams(); ++i) {
+                lir::Type* param_type = to_lir_type(func_type->getParam(i));
                 if (m_mach.is_scalar(param_type)) {
                     args.push_back(param_type);
                 } else {
@@ -135,12 +133,10 @@ lir::Type* LIRCodegen::to_lir_type(const QualType& type) {
         }
 
         case Type::Class::Pointer:
-            return lir::PointerType::get(m_cfg, to_lir_type(
-                static_cast<const PointerType*>(type.get_type())->get_pointee()));
+            return lir::PointerType::get(m_cfg, to_lir_type(static_cast<const PointerType*>(type.getType())->pointee()));
 
         case Type::Class::Struct:
-            return lir::StructType::get(m_cfg, 
-                static_cast<const StructType*>(type.get_type())->to_string());
+            return lir::StructType::get(m_cfg, static_cast<const StructType*>(type.getType())->string());
     }
 }
 

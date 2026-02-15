@@ -18,7 +18,7 @@ SymbolAnalysis::SymbolAnalysis(Options& options) : VisitorBase(options) {}
 
 void SymbolAnalysis::visit(VariableDefn& node) {
     if (!resolveType(node.get_type())) {
-        log::error("unresolved type: " + node.get_type().to_string(), 
+        log::error("unresolved type: " + node.get_type().string(), 
             log::Span(m_ast->get_file(), node.get_span()));
     }
 
@@ -34,13 +34,13 @@ void SymbolAnalysis::visit(AccessExpr& node) {
     // Check that the base type is a struct.
     QualType base_type = node.get_base()->get_type();
     if (base_type->isPointer())
-        base_type = static_cast<const PointerType*>(base_type.get_type())->get_pointee();
+        base_type = static_cast<const PointerType*>(base_type.getType())->pointee();
 
     if (!base_type->isStruct())
         log::fatal("'.' base must be a struct or a pointer to one", span);
 
     // Resolve the struct definition from the base type.
-    const StructDefn* struct_defn = static_cast<const StructType*>(base_type.get_type())->get_defn();
+    const StructDefn* struct_defn = static_cast<const StructType*>(base_type.getType())->getDefn();
 
     // Resolve the target field from the struct definition.
     const FieldDefn* field = struct_defn->get_field(name);
@@ -61,7 +61,7 @@ void SymbolAnalysis::visit(CastExpr& node) {
     VisitorBase::visit(node);
 
     if (!resolveType(node.get_type()))
-        log::fatal("unresolved type: " + node.get_type().to_string(), 
+        log::fatal("unresolved type: " + node.get_type().string(), 
             log::Span(m_ast->get_file(), node.get_span()));
 }
 
@@ -83,7 +83,7 @@ void SymbolAnalysis::visit(RefExpr& node) {
 
 void SymbolAnalysis::visit(SizeofExpr& node) {
     if (!resolveType(node.get_target_type())) {
-        log::fatal("unresolved type: " + node.get_target_type().to_string(), 
+        log::fatal("unresolved type: " + node.get_target_type().string(), 
             log::Span(m_ast->get_file(), node.get_span()));
     }
 }

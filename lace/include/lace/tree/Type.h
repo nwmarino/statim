@@ -28,21 +28,26 @@ class EnumDefn;
 class StructDefn;
 class Type;
 
-/// Represents the use of a type and possible quantifiers over it.
+/// Represents the use of a type and a list of potential quantifiers acting on it.
 class QualType final {
 public:
     /// The different kinds of quantifiers that can be on a type.
-    enum Qualifier : uint32_t {
+    enum class Qualifier : uint32_t {
         Mut = 1u << 0,
     };
 
 private:
+    /// The underlying type which |m_quals| are applied upon.
+    ///
+    /// This is made mutable to ease the quality of life for AST passes which may have to change
+    /// the underlying types of typed nodes in the tree.
     mutable const Type* m_type;
+
+    /// The active list of qualifiers acting on the underlying |m_type|.
     uint32_t m_quals;
 
 public:
-    QualType(const Type* type = nullptr, uint32_t quals = 0)
-      : m_type(type), m_quals(quals) {}
+    QualType(const Type* type = nullptr, uint32_t quals = 0) : m_type(type), m_quals(quals) {}
 
     bool operator==(const QualType& other) const {
         return m_type == other.m_type && m_quals == other.m_quals;
@@ -52,36 +57,43 @@ public:
     const Type* operator->() const { return m_type; }
 
     /// Compare this type with |other| for type equality.
-    bool compare(const QualType& other) const;
+    Result compare(const QualType& other) const;
 
-    /// Test if this type can be casted to |other|. The |implicitly| flag
-    /// determines if casting should follow implicit or explicit casting rules.
-    bool can_cast(const QualType& other, bool implicitly = false) const;
+    /// Test if this type can be casted to |other|. 
+    /// The |implicitly| flag determines the appropriate casting rules.
+    Result canCast(const QualType& other, bool implicitly = false) const;
 
-    void set_type(const Type* type) const { m_type = type; }
-    const Type* get_type() const { return m_type; }
+    /// Set the underlying type to |type|.
+    void setType(const Type* type) const { m_type = type; }
+    
+    /// Returns the underlying type.
+    const Type* getType() const { return m_type; }
 
-    void set_qualifiers(uint32_t quals) { m_quals = quals; }
-    const uint32_t& get_qualifiers() const { return m_quals; }
-    uint32_t& get_qualifiers() { return m_quals; }
+    /// Set the qualifier list for this type to |quals|.
+    void setQualifiers(uint32_t quals) { m_quals = quals; }
+    
+    /// Returns the qualifier list of this type.
+    uint32_t getQualifiers() { return m_quals; }
 
-    /// Test if this type use has any qualifiers.
-    bool is_qualified() const { return m_quals != 0; }
+    /// Test if this type has any qualifiers.
+    [[nodiscard]] Result isQualified() const { return m_quals != 0; }
 
-    /// Clear any qualifiers on this type.
-    void clear_qualifiers() { m_quals = 0; }
+    /// Clear any qualifiers that are acting on this type.
+    void clearQualifiers() { m_quals = 0; }
 
-    /// Test if this type has the `mut` qualifier.
-    bool is_mut() const { return (m_quals & Mut) != 0; }
+    /// Test if this type has the 'mut' qualifier.
+    [[nodiscard]] Result isMut() const { 
+        return (m_quals & static_cast<uint32_t>(Qualifier::Mut)) != 0; 
+    }
 
-    /// Qualify this type with `mut`.
-    void with_mut() { m_quals |= Mut; }
+    /// Add the 'mut' qualifier to this type.
+    void withMut() { m_quals |= static_cast<uint32_t>(Qualifier::Mut); }
 
     /// Returns the string equivelant of this type.
-    std::string to_string() const;
+    std::string string() const;
 };
 
-/// Base class for all type nodes used in the abstract syntax tree (AST).
+/// Base class for all type nodes used in the abstract syntax tree.
 class Type {
 public:
     /// The different type classes.
@@ -106,28 +118,28 @@ public:
     virtual ~Type() = default;
 
     /// Returns the string equivelant of this type.
-    virtual std::string to_string() const = 0;
+    virtual std::string string() const = 0;
 
     /// Compare this type with |other| for type equality.
-    virtual bool compare(const Type* other) const { return false; }
+    virtual Result compare(const Type* other) const { return false; }
 
-    /// Returns true if this type can be casted to |other|. The |implicitly|
-    /// flag determines if the cast follows implicit or explicit casting rules.
-    virtual bool can_cast(const Type* other, bool implicitly = false) const {
+    /// Test if this type can be casted to |other|. 
+    /// The |implicitly| flag determines the appriopriate casting rules.
+    virtual Result canCast(const Type* other, bool implicitly = false) const {
         return false;
     }
 
     /// Test if this is an integer type of any signedness.
-    virtual bool is_integer() const { return false; }
+    virtual Result isInteger() const { return false; }
 
     /// Test if this is a signed integer type.
-    virtual bool is_signed_integer() const { return false; }
+    virtual Result isSignedInt() const { return false; }
 
     /// Test if this is an unsigned integer type.
-    virtual bool is_unsigned_integer() const { return false; }
+    virtual Result isUnsignedInt() const { return false; }
 
     /// Test if this is a floating point type.
-    virtual bool is_floating_point() const { return false; }
+    virtual Result isFloatingPoint() const { return false; }
 
     /// Returns the class of this type.
     Class getClass() const { return m_class; }
@@ -144,8 +156,8 @@ public:
     /// Test if this is a structure type.
     Result isStruct() const { return m_class == Class::Struct; }
 
-    /// Test if this is the `void` type.
-    bool is_void() const { return to_string() == "void"; }
+    /// Test if this is the 'void' type.
+    [[nodiscard]] Result isVoid() const { return string() == "void"; }
 };
 
 /// Returns named type aliases defined by an alias definiiton.
@@ -153,6 +165,7 @@ class AliasType final : public Type {
     friend class AST::Context;
 
 private:
+    /// The type which is being aliased by this type.
     QualType m_underlying;
 
     /// The definition that defines this type.
@@ -163,23 +176,27 @@ private:
                                                                    m_defn(defn) {}
 
 public:
-    static AliasType* create(AST::Context& ctx, const QualType& underlying,
-                             const AliasDefn* defn);
+    static AliasType* create(AST::Context& ctx, const QualType& underlying, const AliasDefn* defn);
     static AliasType* get(AST::Context& ctx, const std::string& name);
 
-    std::string to_string() const override;
+    std::string string() const override;
 
-    bool compare(const Type* other) const override { 
-        return to_string() == other->to_string();
+    [[nodiscard]] Result compare(const Type* other) const override {
+        // Since scoped names are unique, we can compare by name.
+        return string() == other->string();
     }
 
-    bool can_cast(const Type* other, bool implicitly = false) const override;
+    [[nodiscard]] Result canCast(const Type* other, bool implicitly = false) const override;
 
-    const QualType& get_underlying() const { return m_underlying; }
-    QualType& get_underlying() { return m_underlying; }
+    /// Returns the underlying type of this alias.
+    const QualType& underlying() const { return m_underlying; }
+    QualType& underlying() { return m_underlying; }
 
-    void set_defn(const AliasDefn* defn) const { m_defn = defn; }
-    const AliasDefn* get_defn() const { return m_defn; }
+    /// Set the definition which defines this alias type to |defn|.
+    void setDefn(const AliasDefn* defn) const { m_defn = defn; }
+
+    /// Returns the definition which defines this alias type.
+    const AliasDefn* getDefn() const { return m_defn; }
 };
 
 /// Represents statically sized array types.
@@ -195,18 +212,20 @@ class ArrayType final : public Type {
 public:
     static ArrayType* get(AST::Context& ctx, const QualType& element, uint32_t size);
 
-    std::string to_string() const override {
-        return std::format("[{}]{}", m_size, m_element->to_string());
+    std::string string() const override {
+        return std::format("[{}]{}", m_size, m_element->string());
     }
 
-    bool compare(const Type* other) const override;
+    [[nodiscard]] Result compare(const Type* other) const override;
 
-    bool can_cast(const Type* other, bool implicitly = false) const override;
+    [[nodiscard]] Result canCast(const Type* other, bool implicitly = false) const override;
 
-    const QualType& get_element_type() const { return m_element; }
-    QualType& get_element_type() { return m_element; }
+    /// Returns the element type of this array type.
+    const QualType& element() const { return m_element; }
+    QualType& element() { return m_element; }
 
-    uint32_t get_size() const { return m_size; }
+    /// Returns the numeric size of this array.
+    uint32_t size() const { return m_size; }
 };
 
 /// Represents types built-in to the language.
@@ -215,7 +234,7 @@ class BuiltinType final : public Type {
 
 public:
     /// Possible kinds of built-in types.
-    enum Kind : uint32_t {
+    enum class Kind : uint32_t {
         Void,
         Bool,
         Char,
@@ -240,29 +259,30 @@ private:
 public:
     static BuiltinType* get(AST::Context& ctx, Kind kind);
 
-    std::string to_string() const override;
+    std::string string() const override;
 
-    bool compare(const Type* other) const override;
+    [[nodiscard]] Result compare(const Type* other) const override;
 
-    bool can_cast(const Type* other, bool implicitly = false) const override;
+    [[nodiscard]] Result canCast(const Type* other, bool implicitly = false) const override;
 
-    bool is_integer() const override { 
-        return Bool <= m_kind && m_kind <= UInt64; 
+    Result isInteger() const override { 
+        return Kind::Bool <= m_kind && m_kind <= Kind::UInt64; 
     }
 
-    bool is_signed_integer() const override { 
-        return Bool <= m_kind && m_kind <= Int64; 
+    Result isSignedInt() const override { 
+        return Kind::Bool <= m_kind && m_kind <= Kind::Int64; 
     }
 
-    bool is_unsigned_integer() const override {
-        return UInt8 <= m_kind && m_kind <= UInt64;
+    Result isUnsignedInt() const override {
+        return Kind::UInt8 <= m_kind && m_kind <= Kind::UInt64;
     }
 
-    bool is_floating_point() const override { 
-        return m_kind == Float32 || m_kind == Float64; 
+    Result isFloatingPoint() const override { 
+        return m_kind == Kind::Float32 || m_kind == Kind::Float64; 
     }
 
-    Kind get_kind() const { return m_kind; }
+    /// Returns the kind of this built-in type.
+    Kind kind() const { return m_kind; }
 };
 
 /// Wrapper class for types that were deferred resolution at parse time.
@@ -276,9 +296,10 @@ class DeferredType final : public Type {
 public:
     static DeferredType* get(AST::Context& ctx, const std::string& name);
 
-    std::string to_string() const override { return "'" + m_name + "'"; }
+    std::string string() const override { return std::format("'{}'", m_name); }
 
-    const std::string& get_name() const { return m_name; }
+    /// Returns the name of this type.
+    const std::string& name() const { return m_name; }
 };
 
 /// Represents named types defined by an enum definition.
@@ -295,69 +316,69 @@ class EnumType final : public Type {
                                                                  m_defn(defn) {}
 
 public:
-    static EnumType* create(AST::Context& ctx, const QualType& underlying, 
-                            const EnumDefn* defn);
+    static EnumType* create(AST::Context& ctx, const QualType& underlying, const EnumDefn* defn);
     static EnumType* get(AST::Context& ctx, const std::string& name);
 
-    std::string to_string() const override;
+    std::string string() const override;
 
-    bool compare(const Type* other) const override {
-        return to_string() == other->to_string();
+    [[nodiscard]] Result compare(const Type* other) const override {
+        return string() == other->string();
     }
 
-    bool can_cast(const Type* other, bool implicitly = false) const override;
+    [[nodiscard]] Result canCast(const Type* other, bool implicitly = false) const override;
 
-    const QualType& get_underlying() const { return m_underlying; }
-    QualType& get_underlying() { return m_underlying; }
+    /// Returns the underlying numeric type of this enum.
+    const QualType& underlying() const { return m_underlying; }
+    QualType& underlying() { return m_underlying; }
 
-    void set_defn(const EnumDefn* defn) const { m_defn = defn; }
-    const EnumDefn* get_defn() const { return m_defn; }
+    /// Set the enum definition that defines this type to |defn|.
+    void setDefn(const EnumDefn* defn) const { m_defn = defn; }
+
+    /// Returns the enum definition that defines this type.
+    const EnumDefn* getDefn() const { return m_defn; }
 };
 
-/// Represents the type of a function signature i.e. a return type and a set of 
-/// parameter types.
+/// Represents the type of a function signature i.e. a resulting type and a set of parameter types.
 class FunctionType final : public Type {
     friend class AST::Context;
     
-public:
-    using Params = std::vector<QualType>;
-    
 private:
-    QualType m_ret;
-    Params m_params;
+    QualType m_result;
+    std::vector<QualType> m_params;
 
-    FunctionType(const QualType& ret, const Params& params) : Type(Type::Class::Function), 
-                                                              m_ret(ret), m_params(params) {}
+    FunctionType(const QualType& result, const std::vector<QualType>& params) 
+      : Type(Type::Class::Function), m_result(result), m_params(params) {}
 
 public:
-    static FunctionType* get(AST::Context& ctx, const QualType& ret, 
-                             const Params& params);
+    static FunctionType* get(AST::Context& ctx, const QualType& ret, const std::vector<QualType>& params);
 
-    std::string to_string() const override;
+    std::string string() const override;
 
-    const QualType& get_return_type() const { return m_ret; }
-    QualType& get_return_type() { return m_ret; }
+    /// Returns the resulting type of this function type.
+    const QualType& result() const { return m_result; }
+    QualType& result() { return m_result; }
 
-    /// Test if this function returns the `void` type.
-    bool is_void_return() const { return m_ret->is_void(); }
+    /// Test if this function type results in 'void'.
+    [[nodiscard]] Result hasResult() const { return result()->isVoid(); }
 
-    const Params& get_params() const { return m_params; }
-    Params& get_params() { return m_params; }
+    /// Returns the parameter list of this function type.
+    const std::vector<QualType>& params() const { return m_params; }
+    std::vector<QualType>& params() { return m_params; }
 
-    /// Returns the number of parameter types in this function signature type.
-    uint32_t num_params() const { return m_params.size(); }
+    /// Returns the number of parameter types to this function type.
+    uint32_t numParams() const { return m_params.size(); }
 
-    /// Test if this function signature type has any parameter types.
-    bool has_params() const { return !m_params.empty(); }
+    /// Test if this function type has any parameter types.
+    Result hasParams() const { return !m_params.empty(); }
 
     /// Returns the |i|-th parameter type.
-    const QualType& get_param(uint32_t i) const {
-        assert(i < num_params() && "index out of bounds!");
+    const QualType& getParam(uint32_t i) const {
+        assert(i < numParams() && "index out of bounds!");
         return m_params[i];
     }
 
-    QualType& get_param(uint32_t i) {
-        assert(i < num_params() && "index out of bounds!");
+    QualType& getParam(uint32_t i) {
+        assert(i < numParams() && "index out of bounds!");
         return m_params[i];
     }
 };
@@ -373,16 +394,15 @@ class PointerType final : public Type {
 public:
     static PointerType* get(AST::Context& ctx, const QualType& pointee);
 
-    std::string to_string() const override { 
-        return '*' + m_pointee.to_string(); 
-    }
+    std::string string() const override { return std::format("*{}", m_pointee.string()); }
 
-    bool compare(const Type* other) const override;
+    [[nodiscard]] Result compare(const Type* other) const override;
 
-    bool can_cast(const Type* other, bool implicitly = false) const override;
+    [[nodiscard]] Result canCast(const Type* other, bool implicitly = false) const override;
 
-    const QualType& get_pointee() const { return m_pointee; }
-    QualType& get_pointee() { return m_pointee; }
+    /// Returns the pointee type of this pointer type.
+    const QualType& pointee() const { return m_pointee; }
+    QualType& pointee() { return m_pointee; }
 };
 
 /// Represents named types defined by a struct definition.
@@ -398,14 +418,17 @@ public:
     static StructType* create(AST::Context& ctx, const StructDefn* defn);
     static StructType* get(AST::Context& ctx, const std::string& name);    
 
-    std::string to_string() const override;
+    std::string string() const override;
 
-    bool compare(const Type* other) const override { 
-        return to_string() == other->to_string(); 
+    [[nodiscard]] Result compare(const Type* other) const override { 
+        return string() == other->string(); 
     }
 
-    void set_defn(const StructDefn* defn) const { m_defn = defn; }
-    const StructDefn* get_defn() const { return m_defn; }
+    /// Set the structure definition that defines this type to |defn|.
+    void setDefn(const StructDefn* defn) const { m_defn = defn; }
+    
+    /// Returns the structure definition that defines this type.
+    const StructDefn* getDefn() const { return m_defn; }
 };
 
 } // namespace lace

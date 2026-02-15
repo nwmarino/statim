@@ -200,7 +200,7 @@ lir::Value *LIRCodegen::codegen_division(const BinaryOp *expr) {
             }
         }
  
-        if (expr->get_lhs()->get_type()->is_signed_integer()) {
+        if (expr->get_lhs()->get_type()->isSignedInt()) {
             if (expr->get_operator() == BinaryOp::Div) {
                 return m_builder.build_sdiv(lhs, rhs);
             } else if (expr->get_operator() == BinaryOp::Mod) {
@@ -315,7 +315,7 @@ lir::Value *LIRCodegen::codegen_bit_shift(const BinaryOp *expr) {
             );
         }
         
-        if (expr->get_lhs()->get_type()->is_signed_integer()) {
+        if (expr->get_lhs()->get_type()->isSignedInt()) {
             return m_builder.build_sar(lhs, rhs); 
         } else {
             return m_builder.build_shr(lhs, rhs);
@@ -336,52 +336,52 @@ lir::Value *LIRCodegen::codegen_numerical_comparison(const BinaryOp *expr) {
     const QualType &type = expr->get_lhs()->get_type();
     switch (expr->get_operator()) {
         case BinaryOp::Eq:
-            if (type->is_integer() || type->isClass(Type::Class::Pointer)) {
+            if (type->isInteger() || type->isClass(Type::Class::Pointer)) {
                 return m_builder.build_cmp_ieq(lhs, rhs);
-            } else if (type->is_floating_point()) {
+            } else if (type->isFloatingPoint()) {
                 return m_builder.build_cmp_feq(lhs, rhs);
             }
 
         case BinaryOp::NEq:
-            if (type->is_integer() || type->isClass(Type::Class::Pointer)) {
+            if (type->isInteger() || type->isClass(Type::Class::Pointer)) {
                 return m_builder.build_cmp_ine(lhs, rhs);
-            } else if (type->is_floating_point()) {
+            } else if (type->isFloatingPoint()) {
                 return m_builder.build_cmp_fne(lhs, rhs);
             }
 
         case BinaryOp::Lt:
-            if (type->is_signed_integer() || type->isClass(Type::Class::Pointer)) {
+            if (type->isSignedInt() || type->isClass(Type::Class::Pointer)) {
                 return m_builder.build_cmp_slt(lhs, rhs);
-            } else if (type->is_unsigned_integer()) {
+            } else if (type->isUnsignedInt()) {
                 return m_builder.build_cmp_ult(lhs, rhs);
-            } else if (type->is_floating_point()) {
+            } else if (type->isFloatingPoint()) {
                 return m_builder.build_cmp_flt(lhs, rhs);
             }
 
         case BinaryOp::LtEq:
-            if (type->is_signed_integer() || type->isClass(Type::Class::Pointer)) {
+            if (type->isSignedInt() || type->isClass(Type::Class::Pointer)) {
                 return m_builder.build_cmp_sle(lhs, rhs);
-            } else if (type->is_unsigned_integer()) {
+            } else if (type->isUnsignedInt()) {
                 return m_builder.build_cmp_ule(lhs, rhs);
-            } else if (type->is_floating_point()) {
+            } else if (type->isFloatingPoint()) {
                 return m_builder.build_cmp_fle(lhs, rhs);
             }
 
         case BinaryOp::Gt:
-            if (type->is_signed_integer() || type->isClass(Type::Class::Pointer)) {
+            if (type->isSignedInt() || type->isClass(Type::Class::Pointer)) {
                 return  m_builder.build_cmp_sgt(lhs, rhs);
-            } else if (type->is_unsigned_integer()) {
+            } else if (type->isUnsignedInt()) {
                 return  m_builder.build_cmp_ugt(lhs, rhs);
-            } else if (type->is_floating_point()) {
+            } else if (type->isFloatingPoint()) {
                 return  m_builder.build_cmp_fgt(lhs, rhs);
             }
 
         case BinaryOp::GtEq:
-            if (type->is_signed_integer() || type->isClass(Type::Class::Pointer)) {
+            if (type->isSignedInt() || type->isClass(Type::Class::Pointer)) {
                 return m_builder.build_cmp_sge(lhs, rhs);
-            } else if (type->is_unsigned_integer()) {
+            } else if (type->isUnsignedInt()) {
                 return m_builder.build_cmp_uge(lhs, rhs);
-            } else if (type->is_floating_point()) {
+            } else if (type->isFloatingPoint()) {
                 return m_builder.build_cmp_fge(lhs, rhs);
             }
 

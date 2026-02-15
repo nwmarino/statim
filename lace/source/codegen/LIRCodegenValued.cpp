@@ -215,7 +215,7 @@ lir::Value* LIRCodegen::codegen_type_cast(const CastExpr* expr) {
                 return m_builder.build_itrunc(dest, value);
             }
             
-            if (expr->get_expr()->get_type()->is_signed_integer()) {
+            if (expr->get_expr()->get_type()->isSignedInt()) {
                 return m_builder.build_sext(dest, value);
             } else {
                 return m_builder.build_zext(dest, value);
@@ -225,7 +225,7 @@ lir::Value* LIRCodegen::codegen_type_cast(const CastExpr* expr) {
             if (auto integer = dynamic_cast<lir::Integer*>(value))
                 return lir::Float::get(m_cfg, dest, integer->get_value());
 
-            if (expr->get_expr()->get_type()->is_signed_integer()) {
+            if (expr->get_expr()->get_type()->isSignedInt()) {
                 return m_builder.build_s2f(dest, value);
             } else {
                 return m_builder.build_u2f(dest, value);
@@ -247,7 +247,7 @@ lir::Value* LIRCodegen::codegen_type_cast(const CastExpr* expr) {
                 return lir::Integer::get(m_cfg, dest, fp->get_value());
             }
 
-            if (expr->get_type()->is_signed_integer()) {
+            if (expr->get_type()->isSignedInt()) {
                 return m_builder.build_f2s(dest, value);
             } else {
                 return m_builder.build_f2u(dest, value);

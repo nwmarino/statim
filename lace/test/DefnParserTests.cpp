@@ -83,12 +83,12 @@ TEST_F(DefnParserTests, FunctionParameters) {
     const ParameterDefn* P1 = FD->get_param(0);
     EXPECT_NE(P1, nullptr);
     EXPECT_EQ(P1->get_name(), "a");
-    EXPECT_EQ(P1->get_type().to_string(), "s64");
+    EXPECT_EQ(P1->get_type()->string(), "s64");
 
     const ParameterDefn* P2 = FD->get_param(1);
     EXPECT_NE(P2, nullptr);
     EXPECT_EQ(P2->get_name(), "b");
-    EXPECT_EQ(P2->get_type().to_string(), "char");
+    EXPECT_EQ(P2->get_type().string(), "char");
 }
 
 TEST_F(DefnParserTests, Global) {
@@ -100,7 +100,7 @@ TEST_F(DefnParserTests, Global) {
     const VariableDefn* VD = dynamic_cast<VariableDefn*>(ast->get_defns()[0]);
     EXPECT_NE(VD, nullptr);
     EXPECT_EQ(VD->get_name(), "glob");
-    EXPECT_EQ(VD->get_type().to_string(), "s64");
+    EXPECT_EQ(VD->get_type().string(), "s64");
     EXPECT_FALSE(VD->has_init());
 }
 
@@ -113,7 +113,7 @@ TEST_F(DefnParserTests, GlobalWithInitializer) {
     const VariableDefn* VD = dynamic_cast<VariableDefn*>(ast->get_defns()[0]);
     EXPECT_NE(VD, nullptr);
     EXPECT_EQ(VD->get_name(), "glob");
-    EXPECT_EQ(VD->get_type().to_string(), "s64");
+    EXPECT_EQ(VD->get_type().string(), "s64");
     EXPECT_TRUE(VD->has_init());
 
     const IntegerLiteral* IL = dynamic_cast<const IntegerLiteral*>(VD->get_init());
@@ -134,25 +134,25 @@ TEST_F(DefnParserTests, Struct) {
 
     const StructType* ST = dynamic_cast<const StructType*>(SD->get_type());
     EXPECT_NE(ST, nullptr);
-    EXPECT_EQ(ST->get_defn(), SD);
+    EXPECT_EQ(ST->getDefn(), SD);
 
     const FieldDefn* F1 = SD->get_field("x");
     EXPECT_NE(F1, nullptr);
     EXPECT_EQ(F1, SD->get_field(0));
     EXPECT_EQ(F1->get_name(), "x");
-    EXPECT_EQ(F1->get_type().to_string(), "s32");
+    EXPECT_EQ(F1->get_type()->string(), "s32");
 
     const FieldDefn* F2 = SD->get_field("y");
     EXPECT_NE(F2, nullptr);
     EXPECT_EQ(F2, SD->get_field(1));
     EXPECT_EQ(F2->get_name(), "y");
-    EXPECT_EQ(F2->get_type().to_string(), "f32");
+    EXPECT_EQ(F2->get_type().string(), "f32");
 
     const FieldDefn* F3 = SD->get_field("z");
     EXPECT_NE(F3, nullptr);
     EXPECT_EQ(F3, SD->get_field(2));
     EXPECT_EQ(F3->get_name(), "z");
-    EXPECT_EQ(F3->get_type().to_string(), "bool");
+    EXPECT_EQ(F3->get_type().string(), "bool");
 }
 
 TEST_F(DefnParserTests, EnumDefaultType) {
@@ -168,10 +168,10 @@ TEST_F(DefnParserTests, EnumDefaultType) {
 
     const EnumType* ET = dynamic_cast<const EnumType*>(ED->get_type());
     EXPECT_NE(ET, nullptr);
-    EXPECT_EQ(ET->to_string(), "Colors");
+    EXPECT_EQ(ET->string(), "Colors");
 
-    const QualType& underlying = ET->get_underlying();
-    EXPECT_EQ(underlying.to_string(), "s64");
+    const QualType& underlying = ET->underlying();
+    EXPECT_EQ(underlying.string(), "s64");
 
     const VariantDefn* V1 = ED->get_variant(0);
     EXPECT_NE(V1, nullptr);
@@ -202,10 +202,10 @@ TEST_F(DefnParserTests, EnumCustomType) {
 
     const EnumType* ET = dynamic_cast<const EnumType*>(ED->get_type());
     EXPECT_NE(ET, nullptr);
-    EXPECT_EQ(ET->to_string(), "Colors");
+    EXPECT_EQ(ET->string(), "Colors");
 
-    const QualType& underlying = ET->get_underlying();
-    EXPECT_EQ(underlying.to_string(), "u16");
+    const QualType& underlying = ET->underlying();
+    EXPECT_EQ(underlying.string(), "u16");
 }
 
 } // namespace lace::test
