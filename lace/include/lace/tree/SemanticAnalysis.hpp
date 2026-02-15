@@ -40,34 +40,23 @@ class SemanticAnalysis final : public VisitorBase {
         Cast,
     };
     
-    const Options& m_options;
-    
     Loop m_loop = None;
-
-    AST* m_ast = nullptr;
-    AST::Context* m_context = nullptr;
     FunctionDefn* m_function = nullptr;
-    const Scope* m_scope = nullptr;
 
     TypeCheckResult type_check(const QualType& actual, const QualType& expected, 
                                TypeCheckMode mode = AllowImplicit) const;
 
 public:
-    SemanticAnalysis(const Options& options);
-
-    void visit(AST& ast) override;
+    SemanticAnalysis(Options& options);
 
     void visit(VariableDefn& node) override;
     void visit(FunctionDefn& node) override;
     
-    void visit(AdapterStmt& node) override;
-    void visit(BlockStmt& node) override;
     void visit(IfStmt& node) override;
     void visit(RestartStmt& node) override;
     void visit(RetStmt& node) override;
     void visit(StopStmt& node) override;
     void visit(UntilStmt& node) override;
-    void visit(RuneStmt& node) override;
 
     void visit(BinaryOp& node) override;
     void visit(UnaryOp& node) override;

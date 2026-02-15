@@ -9,6 +9,7 @@
 #include "lace/tree/SemanticAnalysis.hpp"
 #include "lace/tree/Stmt.hpp"
 #include "lace/tree/Type.hpp"
+#include "lace/tree/VisitorBase.hpp"
 
 #include <cassert>
 
@@ -18,7 +19,7 @@ using namespace lace;
 /// a comparison).
 static inline bool is_boolean_evaluable(const QualType& type) {
     const Type* ty = type.get_type();
-    return ty->is_integer() || ty->is_floating_point() || ty->is_pointer();
+    return ty->is_integer() || ty->is_floating_point() || ty->isClass(Type::Class::Pointer);
 }
 
 SemanticAnalysis::TypeCheckResult SemanticAnalysis::type_check(
@@ -41,29 +42,19 @@ SemanticAnalysis::TypeCheckResult SemanticAnalysis::type_check(
             if (actual.can_cast(expected, true))
                 return Cast;
 
-            if ((actual->is_integer() && expected->is_pointer()) 
-            || (actual->is_pointer() && expected->is_integer()))
+            if ((actual->is_integer() && expected->isClass(Type::Class::Pointer)) 
+            || (actual->isClass(Type::Class::Pointer) && expected->is_integer()))
                 return Match;
 
             return Mismatch;
     }
 }
 
-SemanticAnalysis::SemanticAnalysis(const Options& options) 
-  : m_options(options) {}
-
-void SemanticAnalysis::visit(AST& ast) {
-    m_ast = &ast;
-    m_context = &ast.get_context();
-    m_scope = ast.get_scope();
-
-    for (Defn* defn : ast.get_defns())
-        defn->accept(*this);
-}
+SemanticAnalysis::SemanticAnalysis(Options& options) : VisitorBase(options) {}
 
 void SemanticAnalysis::visit(VariableDefn& node) {
     if (node.has_init()) {
-        Expr* init = node.get_init();;
+        Expr* init = node.get_init();
         init->accept(*this);
 
         const log::Span span = log::Span(m_ast->get_file(), node.get_span());
@@ -81,7 +72,11 @@ void SemanticAnalysis::visit(VariableDefn& node) {
                 + ", but expected " + expected.to_string(), span);
         } else if (TC == TypeCheckResult::Cast) {
             node.m_init = CastExpr::create(
-                *m_context, init->get_span(), expected, init);
+                m_ast->get_context(), 
+                init->get_span(), 
+                expected, 
+                init
+            );
         }
     }
 }
@@ -90,14 +85,16 @@ void SemanticAnalysis::visit(FunctionDefn& node) {
     m_function = &node;
 
     if (node.is_main()) {
-        if (!node.has_rune(Rune::Public))
+        if (!node.has_rune(Rune::Public)) {
             log::error("'main' must be marked with $public", 
                 log::Span(m_ast->get_file(), node.get_span().start));
+        }
 
         const QualType& ret_type = node.get_return_type();
-        if (!ret_type.compare(BuiltinType::get(*m_context, BuiltinType::Int64)))
+        if (!ret_type.compare(BuiltinType::get(m_ast->get_context(), BuiltinType::Int64))) {
             log::error("'main' must return 's64'", 
                 log::Span(m_ast->get_file(), node.get_span().start));
+        }
     }
     
     if (node.has_body())
@@ -106,91 +103,15 @@ void SemanticAnalysis::visit(FunctionDefn& node) {
     m_function = nullptr;
 }
 
-/*
-void SemanticAnalysis::visit(AsmStmt& node) {
-    const SourceSpan span = node.get_span();
-
-    for (uint32_t i = 0, e = node.num_args(); i < e; ++i) {
-        Expr* arg = node.get_arg(i);
-        arg->accept(*this);
-
-        if (i < node.num_output_constraints()) {
-            if (!arg->get_type().is_mut())
-                m_diags.fatal("immutable value cannot be used as 'asm' output", span);
-        }
-    }
-
-    uint32_t arg_refs = 0;
-    for (char c : node.get_assembly_string())
-        if (c == '#')
-            ++arg_refs;
-
-    if (arg_refs > node.num_args())
-        m_diags.fatal("'asm' references more arguments than provided", span);
-
-    // Output constraints can be:
-    //
-    // (|r) write to register
-    // (|m) write to memory
-    // (&r) read-write to/from register
-    // (&m) read-write to/from memory
-    auto is_valid_output_constraint = [](const string& constraint) {
-        return constraint == "|r" || constraint == "|m" 
-            || constraint == "&r" || constraint == "&m";
-    };
-
-    // Input constraints can be:
-    //
-    // (r) read from register
-    // (m) read from memory
-    auto is_valid_input_constraint = [](const string& constraint) {
-        return constraint == "r" || constraint == "m" || constraint == "...";
-    };
-
-    for (uint32_t i = 0, e = node.num_output_constraints(); i < e; ++i) {
-        const string& constraint = node.get_output_constraint(i);
-        if (!is_valid_output_constraint(constraint))
-            m_diags.fatal("invalid output constraint: '" + constraint + "'", span);
-    }
-
-    for (uint32_t i = 0, e = node.num_input_constraints(); i < e; ++i) {
-        const string& constraint = node.get_input_constraint(i);
-        if (!is_valid_input_constraint(constraint))
-            m_diags.fatal("invalid input constraint: '" + constraint + "'", span);
-    }
-}
-*/
-
-void SemanticAnalysis::visit(AdapterStmt& node) {
-    switch (node.get_flavor()) {
-    case AdapterStmt::Definitive:
-        node.get_defn()->accept(*this);
-        break;
-
-    case AdapterStmt::Expressive:
-        node.get_expr()->accept(*this);
-        break;
-    }
-}
-
-void SemanticAnalysis::visit(BlockStmt& node) {
-    for (Stmt* stmt : node.get_stmts())
-        stmt->accept(*this);
-}
-
 void SemanticAnalysis::visit(IfStmt& node) {
+    VisitorBase::visit(node);
+
     Expr* cond = node.get_cond();
-    cond->accept(*this);
 
     // Check that the if condition can be evaluated to a boolean.
     if (!is_boolean_evaluable(cond->get_type().get_type()))
         log::fatal("'if' condition must be a boolean", 
             log::Span(m_ast->get_file(), cond->get_span()));
-
-    node.get_then()->accept(*this);
-
-    if (node.has_else())
-        node.get_else()->accept(*this);
 }
 
 void SemanticAnalysis::visit(RestartStmt& node) {
@@ -221,15 +142,18 @@ void SemanticAnalysis::visit(RetStmt& node) {
         log::fatal("return type mismatch; got " + val_type.to_string(), span);
     } else if (TC == TypeCheckResult::Cast) {
         node.m_expr = CastExpr::create(
-            *m_context, expr->get_span(), ret_type, expr);
+            m_ast->get_context(), 
+            expr->get_span(), 
+            ret_type, 
+            expr
+        );
     }
 }
 
 void SemanticAnalysis::visit(StopStmt& node) {
     // Check that stop statements are inside loop bodies.
     if (m_loop == None)
-        log::fatal("'stop' outside of loop", 
-            log::Span(m_ast->get_file(), node.get_span()));
+        log::fatal("'stop' outside of loop", log::Span(m_ast->get_file(), node.get_span()));
 }
 
 void SemanticAnalysis::visit(UntilStmt& node) {
@@ -250,16 +174,11 @@ void SemanticAnalysis::visit(UntilStmt& node) {
     }
 }
 
-void SemanticAnalysis::visit(RuneStmt& node) {
-    return; // Nothing to do (yet).
-}
-
 void SemanticAnalysis::visit(BinaryOp& node) {
+    VisitorBase::visit(node);
+
     Expr* lhs = node.get_lhs();
     Expr* rhs = node.get_rhs();
-
-    lhs->accept(*this);
-    rhs->accept(*this);
 
     const log::Span span = log::Span(m_ast->get_file(), node.get_span());
     const QualType& lhs_type = lhs->get_type();
@@ -274,13 +193,13 @@ void SemanticAnalysis::visit(BinaryOp& node) {
         log::fatal("operand type mismatch; got " + rhs_type.to_string(), span);
     } else if (TC == TypeCheckResult::Cast) {
         node.m_rhs = CastExpr::create(
-            *m_context, rhs->get_span(), lhs_type, rhs);
+            m_ast->get_context(), rhs->get_span(), lhs_type, rhs);
     }
 
     // Set the resulting type of the operator to a 'bool' if the operator is
     // a boolean comparison.
     if (BinaryOp::is_comparison(op)) {
-        node.set_type(BuiltinType::get(*m_context, BuiltinType::Bool));
+        node.set_type(BuiltinType::get(m_ast->get_context(), BuiltinType::Bool));
         return;
     } else {
         // Default the type of the operator to the LHS type.
@@ -367,12 +286,12 @@ void SemanticAnalysis::visit(UnaryOp& node) {
             if (!expr->is_lvalue())
                 log::fatal("'&' base must be an lvalue", span);
 
-            node.set_type(PointerType::get(*m_context, type));
+            node.set_type(PointerType::get(m_ast->get_context(), type));
             break;
         }
 
         case UnaryOp::Dereference: {
-            if (!type->is_pointer())
+            if (!type->isClass(Type::Class::Pointer))
                 log::fatal("'*' operator incompatible with " + type.to_string(), span);
 
             node.set_type(static_cast<const PointerType*>(
@@ -386,22 +305,21 @@ void SemanticAnalysis::visit(UnaryOp& node) {
 }
 
 void SemanticAnalysis::visit(CastExpr& node) {
-    Expr* expr = node.get_expr();
-    expr->accept(*this);
+    VisitorBase::visit(node);
 
-    if (!expr->get_type().can_cast(node.get_type()))
-        log::fatal("unsupported cast", 
-            log::Span(m_ast->get_file(), node.get_span()));
+    if (!node.get_expr()->get_type().can_cast(node.get_type()))
+        log::fatal("unsupported cast", log::Span(m_ast->get_file(), node.get_span()));
 }
 
 void SemanticAnalysis::visit(ParenExpr& node) {
-    Expr* expr = node.get_expr();
-    expr->accept(*this);
-    
-    node.set_type(expr->get_type());
+    VisitorBase::visit(node);
+
+    node.set_type(node.get_expr()->get_type());
 }
 
 void SemanticAnalysis::visit(AccessExpr& node) {
+    VisitorBase::visit(node);
+
     const FieldDefn* field = node.get_field();
     assert(field && "field access left unresolved!");
 
@@ -409,11 +327,10 @@ void SemanticAnalysis::visit(AccessExpr& node) {
 }
 
 void SemanticAnalysis::visit(SubscriptExpr& node) {
-    Expr* base = node.get_base();
-    base->accept(*this);
+    VisitorBase::visit(node);
 
+    Expr* base = node.get_base();
     Expr* index = node.get_index();
-    index->accept(*this);
 
     const Type* base_type = base->get_type().get_type();
     if (auto AT = dynamic_cast<const ArrayType*>(base_type)) {
@@ -467,7 +384,7 @@ void SemanticAnalysis::visit(CallExpr& node) {
             log::fatal("argument type mismatch; got " + actual.to_string(), span);
         } else if (TC == TypeCheckResult::Cast) {
             node.m_args[i] = CastExpr::create(
-                *m_context, arg->get_span(), expected, arg);
+                m_ast->get_context(), arg->get_span(), expected, arg);
         }
     }
 }

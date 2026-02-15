@@ -6,6 +6,10 @@
 #ifndef LACE_VISITOR_BASE_H_
 #define LACE_VISITOR_BASE_H_
 
+#include "lace/core/Common.h"
+#include "lace/core/Options.hpp"
+#include "lace/tree/Scope.hpp"
+
 namespace lace {
 
 class AST;
@@ -47,9 +51,15 @@ class RefExpr;
 class SizeofExpr;
 class SubscriptExpr;
 
+class QualType;
+
 class VisitorBase {
 protected:
-    VisitorBase() = default;
+    Options& m_options;
+    AST* m_ast = nullptr;
+    Scope* m_scope = nullptr;
+
+    VisitorBase(Options& options) : m_options(options) {}
 
 public:
     virtual ~VisitorBase() = default;
@@ -60,44 +70,50 @@ public:
     VisitorBase(VisitorBase&&) noexcept = delete;
     void operator=(VisitorBase&&) noexcept = delete;
     
-    virtual void visit(AST& node) {}
+    virtual void visit(AST& node);
 
-    virtual void visit(AliasDefn& node) {}
-    virtual void visit(EnumDefn& node) {}
-    virtual void visit(FieldDefn& node) {}
-    virtual void visit(FunctionDefn& node) {}
-    virtual void visit(LoadDefn& node) {}
-    virtual void visit(ParameterDefn& node) {}
-    virtual void visit(StructDefn& node) {}
-    virtual void visit(VariableDefn& node) {}
-    virtual void visit(VariantDefn& node) {}
+    virtual void visit(AliasDefn& node);
+    virtual void visit(EnumDefn& node);
+    virtual void visit(FieldDefn& node);
+    virtual void visit(FunctionDefn& node);
+    virtual void visit(LoadDefn& node);
+    virtual void visit(ParameterDefn& node);
+    virtual void visit(StructDefn& node);
+    virtual void visit(VariableDefn& node);
+    virtual void visit(VariantDefn& node);
 
-    virtual void visit(AdapterStmt& node) {}
-    virtual void visit(BlockStmt& node) {}
-    virtual void visit(IfStmt& node) {}
-    virtual void visit(RestartStmt& node) {}
-    virtual void visit(RetStmt& node) {}
-    virtual void visit(StopStmt& node) {}
-    virtual void visit(UntilStmt& node) {}
-    virtual void visit(RuneStmt& node) {}
+    virtual void visit(AdapterStmt& node);
+    virtual void visit(BlockStmt& node);
+    virtual void visit(IfStmt& node);
+    virtual void visit(RestartStmt& node);
+    virtual void visit(RetStmt& node);
+    virtual void visit(StopStmt& node);
+    virtual void visit(UntilStmt& node);
+    virtual void visit(RuneStmt& node);
 
-    virtual void visit(BoolLiteral& node) {}
-    virtual void visit(CharLiteral& node) {}
-    virtual void visit(IntegerLiteral& node) {}
-    virtual void visit(FloatLiteral& node) {}
-    virtual void visit(NullLiteral& node) {}
-    virtual void visit(StringLiteral& node) {}
+    virtual void visit(BoolLiteral& node);
+    virtual void visit(CharLiteral& node);
+    virtual void visit(IntegerLiteral& node);
+    virtual void visit(FloatLiteral& node);
+    virtual void visit(NullLiteral& node);
+    virtual void visit(StringLiteral& node);
     
-    virtual void visit(BinaryOp& node) {}
-    virtual void visit(UnaryOp& node) {}
+    virtual void visit(BinaryOp& node);
+    virtual void visit(UnaryOp& node);
 
-    virtual void visit(AccessExpr& node) {}
-    virtual void visit(CallExpr& node) {}
-    virtual void visit(CastExpr& node) {}
-    virtual void visit(SizeofExpr& node) {}
-    virtual void visit(SubscriptExpr& node) {}
-    virtual void visit(ParenExpr& node) {}
-    virtual void visit(RefExpr& node) {}
+    virtual void visit(AccessExpr& node);
+    virtual void visit(CallExpr& node);
+    virtual void visit(CastExpr& node);
+    virtual void visit(SizeofExpr& node);
+    virtual void visit(SubscriptExpr& node);
+    virtual void visit(ParenExpr& node);
+    virtual void visit(RefExpr& node);
+
+protected:
+    /// Replace all deferred types composed in given |type| with fully resolved types.
+    /// If a component of |type| could not be resolved, then false is returned.
+    [[nodiscard]]
+    Result resolveType(const QualType& type) const;
 };
 
 } // namespace lace

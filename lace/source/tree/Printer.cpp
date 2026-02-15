@@ -7,22 +7,21 @@
 #include "lace/tree/Expr.hpp"
 #include "lace/tree/Printer.hpp"
 #include "lace/tree/Stmt.hpp"
+#include "lace/tree/VisitorBase.hpp"
 
 #include <format>
 #include <ostream>
 
 using namespace lace;
 
-Printer::Printer(const Options& options, std::ostream& out)
-  : m_options(options), m_out(out) {}
+Printer::Printer(Options& options, std::ostream& out) : VisitorBase(options), m_out(out) {}
 
-void Printer::visit(AST& ast) {
-    m_out << std::format("AST \"{}\"\n", ast.get_file());
+void Printer::visit(AST& node) {
+    m_out << std::format("AST \"{}\"\n", node.get_file());
 
     ++m_indent;
 
-    for (Defn* defn : ast.get_defns())
-        defn->accept(*this);
+    VisitorBase::visit(node);
     
     --m_indent;
 }

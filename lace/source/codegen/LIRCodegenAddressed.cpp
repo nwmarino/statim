@@ -45,11 +45,11 @@ lir::Value *LIRCodegen::codegen_addressed_access(const AccessExpr *expr) {
     lir::Value *ptr = nullptr;
 
     const Expr *base = expr->get_base();
-    if (base->get_type()->is_pointer()) {
+    if (base->get_type()->isClass(Type::Class::Pointer)) {
         // If this access is functionally similar to C-style '->' access, then
         // we need to load the base to get at the underlying structure.
         ptr = codegen_valued_expression(base);
-    } else if (base->get_type()->is_struct()) {
+    } else if (base->get_type()->isClass(Type::Class::Struct)) {
         ptr = codegen_addressed_expression(base);
     } else {
         log::fatal("bad type operand to '.': " + base->get_type().to_string(),
@@ -112,9 +112,9 @@ lir::Value *LIRCodegen::codegen_addressed_subscript(const SubscriptExpr *expr) {
     lir::Value *ptr = nullptr;
     const Expr *base = expr->get_base();
 
-    if (base->get_type()->is_array()) {
+    if (base->get_type()->isClass(Type::Class::Array)) {
         ptr = codegen_addressed_expression(base);
-    } else if (base->get_type()->is_pointer()) {
+    } else if (base->get_type()->isClass(Type::Class::Pointer)) {
         ptr = codegen_valued_expression(base);
     } else {
         log::fatal("invalid [] type operand: " + base->get_type().to_string(), 
@@ -128,7 +128,7 @@ lir::Value *LIRCodegen::codegen_addressed_subscript(const SubscriptExpr *expr) {
     lir::Type *type = lir::PointerType::get(
         m_cfg, to_lir_type(expr->get_type()));
 
-    if (base->get_type()->is_array()) {
+    if (base->get_type()->isClass(Type::Class::Array)) {
         // If the base is an array, we want to access an element, not 
         // manipulate the address.
         return m_builder.build_access(type, ptr, index);

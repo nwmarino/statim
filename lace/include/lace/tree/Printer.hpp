@@ -13,21 +13,17 @@
 namespace lace {
 
 class Printer final : public VisitorBase {
-    const Options& m_options;
-
     uint32_t m_indent = 0;
     std::ostream& m_out;
-
-    AST* m_ast = nullptr;
 
     inline void print_indent() const {
         m_out << std::string(m_indent * 2, ' ');
     }
 
 public:
-    Printer(const Options& options, std::ostream& out);
+    Printer(Options& options, std::ostream& out);
 
-    void visit(AST& ast) override;
+    void visit(AST& node) override;
 
     void visit(LoadDefn& node) override;
     void visit(VariableDefn& node) override;

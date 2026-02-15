@@ -1,20 +1,22 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
-#ifndef LOVELACE_TYPE_H_
-#define LOVELACE_TYPE_H_
+#ifndef LACE_TYPE_H_
+#define LACE_TYPE_H_
 
 //
-//  This header file contains definitions that make up the representation of
-//  types in the language type system.
+//  This header file contains definitions that make up the representation of types in the language 
+//  type system.
 //
 
+#include "lace/core/Common.h"
 #include "lace/tree/AST.hpp"
 
 #include <cassert>
 #include <cstdint>
+#include <format>
 #include <string>
 #include <vector>
 
@@ -83,7 +85,7 @@ public:
 class Type {
 public:
     /// The different type classes.
-    enum Class : uint32_t {
+    enum class Class : uint32_t {
         Alias,
         Array,
         Builtin,
@@ -127,31 +129,20 @@ public:
     /// Test if this is a floating point type.
     virtual bool is_floating_point() const { return false; }
 
-    Class get_class() const { return m_class; }
- 
-    /// Test if this is an alias type.
-    bool is_alias() const { return m_class == Alias; }
+    /// Returns the class of this type.
+    Class getClass() const { return m_class; }
+
+    /// Test if this type is of the given |cls|.
+    Result isClass(Class cls) const { return m_class == cls; }
 
     /// Test if this is an array type.
-    bool is_array() const { return m_class == Array; }
-
-    /// Test if this is a builtin type.
-    bool is_builtin() const { return m_class == Builtin; }
-
-    /// Test if this is a deferred type.
-    bool is_deferred() const { return m_class == Deferred; }
-
-    /// Test if this is an enum type.
-    bool is_enum() const { return m_class == Enum; }
- 
-    /// Test if this is a function type.
-    bool is_function() const { return m_class == Function; }
+    Result isArray() const { return m_class == Class::Array; }
 
     /// Test if this is a pointer type.
-    bool is_pointer() const { return m_class == Pointer; }
+    Result isPointer() const { return m_class == Class::Pointer; }
 
-    /// Test if this is a struct type.
-    bool is_struct() const { return m_class == Struct; }
+    /// Test if this is a structure type.
+    Result isStruct() const { return m_class == Class::Struct; }
 
     /// Test if this is the `void` type.
     bool is_void() const { return to_string() == "void"; }
@@ -167,8 +158,9 @@ private:
     /// The definition that defines this type.
     mutable const AliasDefn* m_defn;
 
-    AliasType(const QualType& underlying, const AliasDefn* defn) 
-      : Type(Type::Alias), m_underlying(underlying), m_defn(defn) {}
+    AliasType(const QualType& underlying, const AliasDefn* defn) : Type(Type::Class::Alias), 
+                                                                   m_underlying(underlying), 
+                                                                   m_defn(defn) {}
 
 public:
     static AliasType* create(AST::Context& ctx, const QualType& underlying,
@@ -197,15 +189,14 @@ class ArrayType final : public Type {
     QualType m_element;
     const uint32_t m_size;
 
-    ArrayType(const QualType& element, uint32_t size)
-      : Type(Type::Array), m_element(element), m_size(size) {}
+    ArrayType(const QualType& element, uint32_t size) : Type(Type::Class::Array), 
+                                                        m_element(element), m_size(size) {}
 
 public:
-    static ArrayType* get(AST::Context& ctx, const QualType& element, 
-                          uint32_t size);
+    static ArrayType* get(AST::Context& ctx, const QualType& element, uint32_t size);
 
     std::string to_string() const override {
-        return '[' + std::to_string(m_size) + ']' + m_element.to_string();
+        return std::format("[{}]{}", m_size, m_element->to_string());
     }
 
     bool compare(const Type* other) const override;
@@ -244,7 +235,7 @@ private:
     // The kind of built-in type this is.
     const Kind m_kind;
 
-    BuiltinType(Kind kind) : Type(Type::Builtin), m_kind(kind) {}
+    BuiltinType(Kind kind) : Type(Type::Class::Builtin), m_kind(kind) {}
 
 public:
     static BuiltinType* get(AST::Context& ctx, Kind kind);
@@ -280,8 +271,7 @@ class DeferredType final : public Type {
 
     const std::string m_name;
 
-    DeferredType(const std::string& name) 
-      : Type(Type::Deferred), m_name(name) {}
+    DeferredType(const std::string& name) : Type(Type::Class::Deferred), m_name(name) {}
 
 public:
     static DeferredType* get(AST::Context& ctx, const std::string& name);
@@ -300,8 +290,9 @@ class EnumType final : public Type {
     /// The definition that defines this type.
     mutable const EnumDefn* m_defn;
 
-    EnumType(const QualType& underlying, const EnumDefn* defn) 
-      : Type(Type::Enum), m_underlying(underlying), m_defn(defn) {}
+    EnumType(const QualType& underlying, const EnumDefn* defn) : Type(Type::Class::Enum), 
+                                                                 m_underlying(underlying), 
+                                                                 m_defn(defn) {}
 
 public:
     static EnumType* create(AST::Context& ctx, const QualType& underlying, 
@@ -335,8 +326,8 @@ private:
     QualType m_ret;
     Params m_params;
 
-    FunctionType(const QualType& ret, const Params& params)
-      : Type(Type::Function), m_ret(ret), m_params(params) {}
+    FunctionType(const QualType& ret, const Params& params) : Type(Type::Class::Function), 
+                                                              m_ret(ret), m_params(params) {}
 
 public:
     static FunctionType* get(AST::Context& ctx, const QualType& ret, 
@@ -377,8 +368,7 @@ class PointerType final : public Type {
 
     QualType m_pointee;
 
-    PointerType(const QualType& pointee) 
-      : Type(Type::Pointer), m_pointee(pointee) {}
+    PointerType(const QualType& pointee) : Type(Type::Class::Pointer), m_pointee(pointee) {}
 
 public:
     static PointerType* get(AST::Context& ctx, const QualType& pointee);
@@ -402,7 +392,7 @@ class StructType final : public Type {
     /// The definition that defines this type.
     mutable const StructDefn* m_defn;
 
-    StructType(const StructDefn* defn) : Type(Type::Struct), m_defn(defn) {}
+    StructType(const StructDefn* defn) : Type(Type::Class::Struct), m_defn(defn) {}
 
 public:
     static StructType* create(AST::Context& ctx, const StructDefn* defn);
@@ -420,4 +410,4 @@ public:
 
 } // namespace lace
 
-#endif // LOVELACE_TYPE_H_
+#endif // LACE_TYPE_H_

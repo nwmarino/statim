@@ -336,21 +336,21 @@ lir::Value *LIRCodegen::codegen_numerical_comparison(const BinaryOp *expr) {
     const QualType &type = expr->get_lhs()->get_type();
     switch (expr->get_operator()) {
         case BinaryOp::Eq:
-            if (type->is_integer() || type->is_pointer()) {
+            if (type->is_integer() || type->isClass(Type::Class::Pointer)) {
                 return m_builder.build_cmp_ieq(lhs, rhs);
             } else if (type->is_floating_point()) {
                 return m_builder.build_cmp_feq(lhs, rhs);
             }
 
         case BinaryOp::NEq:
-            if (type->is_integer() || type->is_pointer()) {
+            if (type->is_integer() || type->isClass(Type::Class::Pointer)) {
                 return m_builder.build_cmp_ine(lhs, rhs);
             } else if (type->is_floating_point()) {
                 return m_builder.build_cmp_fne(lhs, rhs);
             }
 
         case BinaryOp::Lt:
-            if (type->is_signed_integer() || type->is_pointer()) {
+            if (type->is_signed_integer() || type->isClass(Type::Class::Pointer)) {
                 return m_builder.build_cmp_slt(lhs, rhs);
             } else if (type->is_unsigned_integer()) {
                 return m_builder.build_cmp_ult(lhs, rhs);
@@ -359,7 +359,7 @@ lir::Value *LIRCodegen::codegen_numerical_comparison(const BinaryOp *expr) {
             }
 
         case BinaryOp::LtEq:
-            if (type->is_signed_integer() || type->is_pointer()) {
+            if (type->is_signed_integer() || type->isClass(Type::Class::Pointer)) {
                 return m_builder.build_cmp_sle(lhs, rhs);
             } else if (type->is_unsigned_integer()) {
                 return m_builder.build_cmp_ule(lhs, rhs);
@@ -368,7 +368,7 @@ lir::Value *LIRCodegen::codegen_numerical_comparison(const BinaryOp *expr) {
             }
 
         case BinaryOp::Gt:
-            if (type->is_signed_integer() || type->is_pointer()) {
+            if (type->is_signed_integer() || type->isClass(Type::Class::Pointer)) {
                 return  m_builder.build_cmp_sgt(lhs, rhs);
             } else if (type->is_unsigned_integer()) {
                 return  m_builder.build_cmp_ugt(lhs, rhs);
@@ -377,7 +377,7 @@ lir::Value *LIRCodegen::codegen_numerical_comparison(const BinaryOp *expr) {
             }
 
         case BinaryOp::GtEq:
-            if (type->is_signed_integer() || type->is_pointer()) {
+            if (type->is_signed_integer() || type->isClass(Type::Class::Pointer)) {
                 return m_builder.build_cmp_sge(lhs, rhs);
             } else if (type->is_unsigned_integer()) {
                 return m_builder.build_cmp_uge(lhs, rhs);

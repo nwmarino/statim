@@ -72,7 +72,7 @@ ArrayType* ArrayType::get(AST::Context& ctx, const QualType& element,
 bool ArrayType::compare(const Type* other) const {
     assert(other && "other type cannot be null!");
 
-    if (!other->is_array())
+    if (!other->isClass(Class::Array))
         return false;
 
     auto AT = static_cast<const ArrayType*>(other);
@@ -84,7 +84,7 @@ bool ArrayType::can_cast(const Type* other, bool implicitly) const {
     assert(other && "other type cannot be null!");
 
     // Can only cast [...]T -> *T.
-    if (!other->is_pointer())
+    if (!other->isClass(Class::Pointer))
         return false;
 
     return get_element_type().can_cast(
@@ -115,7 +115,7 @@ std::string BuiltinType::to_string() const {
 
 bool BuiltinType::compare(const Type* other) const {
     assert(other && "other type cannot be null!");
-    return other->is_builtin() 
+    return other->isClass(Class::Builtin) 
         && get_kind() == static_cast<const BuiltinType*>(other)->get_kind();
 }
 
@@ -123,7 +123,7 @@ bool BuiltinType::can_cast(const Type* other, bool implicitly) const {
     assert(other && "other type cannot be null!");
 
     if (implicitly) {
-        if (!other->is_builtin())
+        if (!other->isClass(Class::Builtin))
             return false;
 
         if (is_floating_point() && other->is_integer())
@@ -131,10 +131,10 @@ bool BuiltinType::can_cast(const Type* other, bool implicitly) const {
 
         return is_void() == other->is_void();
     } else {
-        if (other->is_builtin())
+        if (other->isClass(Class::Builtin))
             return is_void() == other->is_void();
 
-        if (other->is_pointer())
+        if (other->isClass(Class::Pointer))
             return is_integer();
 
         return false;
@@ -205,7 +205,7 @@ PointerType* PointerType::get(AST::Context& ctx, const QualType& pointee) {
 bool PointerType::compare(const Type* other) const {
     assert(other && "other type cannot be null!");
 
-    if (!other->is_pointer())
+    if (!other->isClass(Class::Pointer))
         return false;
 
     return get_pointee().compare(
@@ -221,14 +221,14 @@ bool PointerType::can_cast(const Type* other, bool implicitly) const {
             return true;
 
         // Cannot implicitly cast away pointer indirection.
-        if (!other->is_pointer())
+        if (!other->isClass(Class::Pointer))
             return false;
 
         // Can implicitly cast *T -> *void.
         return static_cast<const PointerType*>(other)->get_pointee()->is_void();
     } else {
         // Can explicitly cast to other pointer types or integers.
-        return other->is_pointer() || other->is_integer();
+        return other->isClass(Class::Pointer) || other->is_integer();
     }
 }
 

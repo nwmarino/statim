@@ -10,6 +10,7 @@ set(TREE_SOURCES
     SymbolAnalysis.cpp
     Type.cpp
     TypeResolution.cpp
+    VisitorBase.cpp
 )
 
 add_library(Tree

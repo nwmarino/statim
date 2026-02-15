@@ -6,29 +6,28 @@
 #ifndef LACE_TYPE_RESOLUTION_H_
 #define LACE_TYPE_RESOLUTION_H_
 
-#include "lace/core/Common.h"
+//
+//  This header file declares the TypeResolution class, which implements an invasive syntax tree 
+//  pass whose goal is to fully resolve the types of any top-level definition in a compilation 
+//  unit.
+//
+//  The nuance here is that it only performs the resolution on top-level definitions, and does not
+//  traverse deeper into the tree. This is so that during dependency resolution, imported symbols
+//  will have full type information.
+// 
+//  The pass works by visiting typed definitions at the top-level, and recursing into composed 
+//  types e.g. pointers, structures, etc., and replacing any instances of the DeferredType with
+//  a concrete type available in the current scope.
+//
+
 #include "lace/core/Options.hpp"
-#include "lace/tree/Scope.hpp"
-#include "lace/tree/Type.hpp"
 #include "lace/tree/VisitorBase.hpp"
 
 namespace lace {
 
 class TypeResolution final : public VisitorBase {
-    Options& m_options;
-    
-    AST* m_ast = nullptr;
-    AST::Context* m_context = nullptr;
-    const Scope* m_scope = nullptr;
-
-    /// Replace all deferred types composed in |type| with fully resolved types, and returns true.
-    /// If a part of the type could not be resolved, then false is returned.
-    Result resolveType(const QualType& type) const;
-
 public:
     TypeResolution(Options& options);
-
-    void visit(AST& ast) override;
 
     void visit(VariableDefn& node) override;
 
@@ -37,10 +36,6 @@ public:
     void visit(FieldDefn& node) override;
 
     void visit(VariantDefn& node) override;
-
-    void visit(StructDefn& node) override;
-    
-    void visit(EnumDefn& node) override;
 };
 
 } // namespace lace

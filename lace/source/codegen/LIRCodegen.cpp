@@ -61,18 +61,18 @@ void LIRCodegen::run() {
 }
 
 lir::Type* LIRCodegen::to_lir_type(const QualType& type) {
-    switch (type->get_class()) {
-        case Type::Alias:
+    switch (type->getClass()) {
+        case Type::Class::Alias:
             return to_lir_type(static_cast<const AliasType*>
                 (type.get_type())->get_underlying());
         
-        case Type::Array: {
+        case Type::Class::Array: {
             auto array = static_cast<const ArrayType*>(type.get_type());
             return lir::ArrayType::get(m_cfg, to_lir_type(
                 array->get_element_type()), array->get_size());
         }
 
-        case Type::Builtin: {
+        case Type::Class::Builtin: {
             auto builtin = static_cast<const BuiltinType*>(type.get_type());
 
             switch (builtin->get_kind()) {
@@ -101,14 +101,14 @@ lir::Type* LIRCodegen::to_lir_type(const QualType& type) {
             __builtin_unreachable();
         }
 
-        case Type::Deferred:
+        case Type::Class::Deferred:
             assert(false && "cannot lower deferred type!");
 
-        case Type::Enum:
+        case Type::Class::Enum:
             return to_lir_type(static_cast<const EnumType*>(
                 type.get_type())->get_underlying());
 
-        case Type::Function: {
+        case Type::Class::Function: {
             auto func_type = static_cast<const FunctionType*>(type.get_type());
             std::vector<lir::Type*> args = {};
             args.reserve(func_type->num_params());
@@ -134,11 +134,11 @@ lir::Type* LIRCodegen::to_lir_type(const QualType& type) {
             return lir::FunctionType::get(m_cfg, args, return_type);
         }
 
-        case Type::Pointer:
+        case Type::Class::Pointer:
             return lir::PointerType::get(m_cfg, to_lir_type(
                 static_cast<const PointerType*>(type.get_type())->get_pointee()));
 
-        case Type::Struct:
+        case Type::Class::Struct:
             return lir::StructType::get(m_cfg, 
                 static_cast<const StructType*>(type.get_type())->to_string());
     }
