@@ -3,11 +3,10 @@
 //  All rights reserved.
 //
 
-#include "lace/core/Diagnostics.hpp"
-#include "lace/parser/Parser.hpp"
-#include "lace/tree/Expr.hpp"
-#include "lace/tree/Type.hpp"
-#include "lace/types/SourceLocation.hpp"
+#include "lace/core/Diagnostics.h"
+#include "lace/parser/Parser.h"
+#include "lace/tree/Expr.h"
+#include "lace/tree/Type.h"
 
 #include <cassert>
 #include <string>

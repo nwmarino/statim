@@ -12,7 +12,7 @@
 //
 
 #include "lace/core/Common.h"
-#include "lace/tree/AST.hpp"
+#include "lace/tree/AST.h"
 
 #include <cassert>
 #include <cstdint>

@@ -1,22 +1,21 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
-#ifndef LOVELACE_PARSER_H_
-#define LOVELACE_PARSER_H_
+#ifndef LACE_PARSER_H_
+#define LACE_PARSER_H_
 
 //
-//  This header file declares the Parser class, which is used in tandem with
-//  the lexer to turn source code into an abstract syntax tree.
+//  This header file declares the Parser class, which is used in tandem with the lexer to turn 
+//  source code into an abstract syntax tree.
 //
 
-#include "lace/lexer/Lexer.hpp"
-#include "lace/tree/AST.hpp"
-#include "lace/tree/Defn.hpp"
-#include "lace/tree/Expr.hpp"
-#include "lace/tree/Scope.hpp"
-#include "lace/types/SourceLocation.hpp"
+#include "lace/lexer/Lexer.h"
+#include "lace/tree/AST.h"
+#include "lace/tree/Defn.h"
+#include "lace/tree/Expr.h"
+#include "lace/types/SourceLocation.h"
 
 namespace lace {
 
@@ -103,7 +102,7 @@ class Parser final {
     /// Exit the current scope, and move up to the parent node.
     ///
     /// If there is no parent scope, then the current scope just becomes null.
-    inline void exit_scope() { m_scope = m_scope->get_parent(); }
+    inline void exit_scope() { m_scope = m_scope->getParent(); }
 
     /// Returns the equivelant unary operator for the given token |kind|.
     UnaryOp::Operator get_unary_op(Token::Kind kind) const;
@@ -115,12 +114,12 @@ class Parser final {
     int8_t get_op_precedence(BinaryOp::Operator op) const;
 
     /// Parse a set of rune decorators and append them to |runes|. 
-    void parse_rune_decorators(Runes& runes);
+    void parse_rune_decorators(std::vector<Rune*>& runes);
 
     QualType parse_type_specifier();
 
     Defn* parse_initial_definition();
-    Defn* parse_binding_definition(Runes runes, const Token name);
+    Defn* parse_binding_definition(std::vector<Rune*> runes, const Token name);
     Defn* parse_load_definition();
     
     Stmt* parse_initial_statement();
@@ -156,9 +155,10 @@ public:
 
     /// Attempt to parse and return an abstract syntax tree from the source
     /// this parser was constructed with.
-    [[nodiscard]] AST* parse();
+    [[nodiscard]] 
+    AST* parse();
 };
 
 } // namespace lace
 
-#endif // LOVELACE_PARSER_H_
+#endif // LACE_PARSER_H_

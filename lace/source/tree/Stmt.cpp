@@ -3,12 +3,11 @@
 //  All rights reserved.
 //
 
-#include "lace/tree/AST.hpp"
-#include "lace/tree/Defn.hpp"
-#include "lace/tree/Expr.hpp"
-#include "lace/tree/Scope.hpp"
-#include "lace/tree/VisitorBase.hpp"
-#include "lace/tree/Stmt.hpp"
+#include "lace/tree/AST.h"
+#include "lace/tree/Defn.h"
+#include "lace/tree/Expr.h"
+#include "lace/tree/VisitorBase.h"
+#include "lace/tree/Stmt.h"
 
 using namespace lace;
 

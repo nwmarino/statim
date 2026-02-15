@@ -11,10 +11,10 @@
 //  statements in the abstract syntax tree.
 //
 
-#include "lace/tree/AST.hpp"
-#include "lace/tree/Rune.hpp"
-#include "lace/tree/VisitorBase.hpp"
-#include "lace/types/SourceSpan.hpp"
+#include "lace/tree/AST.h"
+#include "lace/tree/Rune.h"
+#include "lace/tree/VisitorBase.h"
+#include "lace/types/SourceSpan.h"
 
 #include <cassert>
 

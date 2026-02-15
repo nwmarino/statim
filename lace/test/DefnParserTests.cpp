@@ -3,12 +3,12 @@
 //  All rights reserved.
 //
 
-#include "lace/parser/Parser.hpp"
-#include "lace/tree/AST.hpp"
-#include "lace/tree/Defn.hpp"
-#include "lace/tree/Expr.hpp"
-#include "lace/tree/Stmt.hpp"
-#include "lace/tree/Type.hpp"
+#include "lace/parser/Parser.h"
+#include "lace/tree/AST.h"
+#include "lace/tree/Defn.h"
+#include "lace/tree/Expr.h"
+#include "lace/tree/Stmt.h"
+#include "lace/tree/Type.h"
 
 #include "gtest/gtest.h"
 

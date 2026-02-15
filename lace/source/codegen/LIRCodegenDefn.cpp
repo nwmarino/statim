@@ -3,10 +3,10 @@
 //  All rights reserved.
 //
 
-#include "lace/codegen/LIRCodegen.hpp"
-#include "lace/core/Diagnostics.hpp"
-#include "lace/tree/Defn.hpp"
-#include "lace/tree/Type.hpp"
+#include "lace/codegen/LIRCodegen.h"
+#include "lace/core/Diagnostics.h"
+#include "lace/tree/Defn.h"
+#include "lace/tree/Type.h"
 
 #include "lir/graph/Constant.hpp"
 #include "lir/graph/Function.hpp"
@@ -49,7 +49,7 @@ void LIRCodegen::codegen_lowered_definition(const Defn* defn) {
 
 lir::Function* LIRCodegen::codegenInitialFunction(const FunctionDefn* defn) {
     auto linkage = lir::Function::LinkageType::Private;
-    if (defn->has_rune(Rune::Public))
+    if (defn->hasRune(Rune::Public))
         linkage = lir::Function::LinkageType::Public;
 
     std::vector<lir::Parameter*> params = {};
@@ -167,7 +167,7 @@ lir::Function* LIRCodegen::codegen_lowered_function(const FunctionDefn* defn) {
 
 lir::Global* LIRCodegen::codegen_initial_global(const VariableDefn* defn) {
     auto linkage = lir::Global::LinkageType::Private;
-    if (defn->has_rune(Rune::Public))
+    if (defn->hasRune(Rune::Public))
         linkage = lir::Global::LinkageType::Public;
 
     return lir::Global::create(

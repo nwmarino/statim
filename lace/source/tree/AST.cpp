@@ -3,10 +3,9 @@
 //  All rights reserved.
 //
 
-#include "lace/tree/AST.hpp"
-#include "lace/tree/Defn.hpp"
-#include "lace/tree/Scope.hpp"
-#include "lace/tree/Type.hpp"
+#include "lace/tree/AST.h"
+#include "lace/tree/Defn.h"
+#include "lace/tree/Type.h"
 
 using namespace lace;
 

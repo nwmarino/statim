@@ -3,14 +3,14 @@
 //  All rights reserved.
 //
 
-#include "lace/core/Diagnostics.hpp"
-#include "lace/tree/AST.hpp"
-#include "lace/tree/Defn.hpp"
-#include "lace/tree/Expr.hpp"
-#include "lace/tree/Stmt.hpp"
-#include "lace/tree/SymbolAnalysis.hpp"
-#include "lace/tree/Type.hpp"
-#include "lace/tree/VisitorBase.hpp"
+#include "lace/core/Diagnostics.h"
+#include "lace/tree/AST.h"
+#include "lace/tree/Defn.h"
+#include "lace/tree/Expr.h"
+#include "lace/tree/Stmt.h"
+#include "lace/tree/SymbolAnalysis.h"
+#include "lace/tree/Type.h"
+#include "lace/tree/VisitorBase.h"
 
 using namespace lace;
 

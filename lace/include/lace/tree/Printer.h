@@ -6,9 +6,8 @@
 #ifndef LOVELACE_PRINTER_H_
 #define LOVELACE_PRINTER_H_
 
-#include "lace/core/Options.hpp"
-#include "lace/tree/Type.hpp"
-#include "lace/tree/VisitorBase.hpp"
+#include "lace/tree/Type.h"
+#include "lace/tree/VisitorBase.h"
 
 namespace lace {
 

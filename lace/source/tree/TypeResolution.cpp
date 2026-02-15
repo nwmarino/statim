@@ -3,10 +3,10 @@
 //  All rights reserved.
 //
 
-#include "lace/core/Diagnostics.hpp"
-#include "lace/tree/AST.hpp"
-#include "lace/tree/Defn.hpp"
-#include "lace/tree/TypeResolution.hpp"
+#include "lace/core/Diagnostics.h"
+#include "lace/tree/AST.h"
+#include "lace/tree/Defn.h"
+#include "lace/tree/TypeResolution.h"
 
 using namespace lace;
 

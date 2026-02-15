@@ -3,11 +3,11 @@
 //  All rights reserved.
 //
 
-#include "lace/codegen/LIRCodegen.hpp"
-#include "lace/core/Diagnostics.hpp"
-#include "lace/tree/AST.hpp"
-#include "lace/tree/Defn.hpp"
-#include "lace/tree/Type.hpp"
+#include "lace/codegen/LIRCodegen.h"
+#include "lace/core/Diagnostics.h"
+#include "lace/tree/AST.h"
+#include "lace/tree/Defn.h"
+#include "lace/tree/Type.h"
 
 #include "lir/graph/Function.hpp"
 #include "lir/graph/Type.hpp"

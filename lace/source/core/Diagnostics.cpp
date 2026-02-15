@@ -3,8 +3,8 @@
 //  All rights reserved.
 //
 
-#include "lace/core/Diagnostics.hpp"
-#include "lace/tools/Files.hpp"
+#include "lace/core/Diagnostics.h"
+#include "lace/tools/Files.h"
 
 #include <cassert>
 #include <mutex>
@@ -26,10 +26,14 @@ static void adjust_color_compatibility() {
 
 /// Read in the lines of source code that |span| covers from the source file
 /// at |path|.
-static std::vector<std::string> read_source(const Span& span) {
+static std::vector<std::string> readSource(const Span& span) {
     assert(span.end.line >= span.start.line && "span ends before it starts!");
     
-    const std::string contents = read_file(span.path);
+    std::string contents;
+    Result res = readFile(span.path, contents);
+    if (!res)
+        return {};
+
     std::size_t line = 1, start = 0;
     std::vector<std::string> lines = {};
     lines.reserve(std::min(1, span.end.line - span.start.line + 1));
@@ -49,9 +53,9 @@ static std::vector<std::string> read_source(const Span& span) {
 
 /// Print the lines of source code that |span| covers from the source file at
 /// |path|.
-static void print_source(const Span& span) {
+static void printSource(const Span& span) {
     const uint32_t line_len = std::to_string(span.start.line).size();
-    const std::vector<std::string> lines = read_source(span);
+    const std::vector<std::string> lines = readSource(span);
     uint32_t line_n = span.start.line;
 
     *g_out << std::string(line_len + 2, ' ') << "┌─[" << span.path << ':'
@@ -127,7 +131,7 @@ void log::note(const std::string& msg, const Span& span) {
         return;
 
     *g_out << (g_color ? "\033[1;35m ! \033[0m" : "note: ") << msg << '\n';
-    print_source(span);
+    printSource(span);
 }
 
 void log::warn(const std::string& msg) {
@@ -158,7 +162,7 @@ void log::warn(const std::string& msg, const Span& span) {
         return;
 
     *g_out << (g_color ? "\033[33m*\033[0m" : "warning: ") << msg << '\n';
-    print_source(span);
+    printSource(span);
 }
 
 void log::error(const std::string& msg) {
@@ -189,7 +193,7 @@ void log::error(const std::string& msg, const Span& span) {
 
     if (g_out) {
         *g_out << (g_color ? "\033[1;31mx\033[0m " : "error: ") << msg << '\n';
-        print_source(span);
+        printSource(span);
     }
 
     g_errors = true;

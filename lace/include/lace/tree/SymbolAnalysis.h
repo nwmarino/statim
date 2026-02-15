@@ -12,8 +12,7 @@
 //  type propogation in some cases.
 //
 
-#include "lace/core/Options.hpp"
-#include "lace/tree/VisitorBase.hpp"
+#include "lace/tree/VisitorBase.h"
 
 namespace lace {
 

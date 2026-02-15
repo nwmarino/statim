@@ -7,8 +7,8 @@
 #define LACE_VISITOR_BASE_H_
 
 #include "lace/core/Common.h"
-#include "lace/core/Options.hpp"
-#include "lace/tree/Scope.hpp"
+#include "lace/core/Options.h"
+#include "lace/tree/Scope.h"
 
 namespace lace {
 

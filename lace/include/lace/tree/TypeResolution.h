@@ -20,8 +20,7 @@
 //  a concrete type available in the current scope.
 //
 
-#include "lace/core/Options.hpp"
-#include "lace/tree/VisitorBase.hpp"
+#include "lace/tree/VisitorBase.h"
 
 namespace lace {
 

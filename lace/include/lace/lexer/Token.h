@@ -1,18 +1,17 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
-#ifndef LOVELACE_TOKEN_H_
-#define LOVELACE_TOKEN_H_
+#ifndef LACE_TOKEN_H_
+#define LACE_TOKEN_H_
 
 //
-//  This header file defines the important token structure, which is a 
-//  representation of the smallest piece of source code recognizable to the 
-//  compiler.
+//  This header file defines the important token structure, which is a representation of the 
+//  smallest piece of source code recognizable to the compiler.
 //
 
-#include "lace/types/SourceLocation.hpp"
+#include "lace/types/SourceLocation.h"
 
 #include <string>
 

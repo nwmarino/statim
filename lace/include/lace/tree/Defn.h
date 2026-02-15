@@ -11,11 +11,12 @@
 //  language definitions in the abstract syntax tree.
 //
 
-#include "lace/tree/AST.hpp"
-#include "lace/tree/Rune.hpp"
-#include "lace/tree/Type.hpp"
-#include "lace/tree/VisitorBase.hpp"
-#include "lace/types/SourceSpan.hpp"
+#include "lace/core/Common.h"
+#include "lace/tree/AST.h"
+#include "lace/tree/Rune.h"
+#include "lace/tree/Type.h"
+#include "lace/tree/VisitorBase.h"
+#include "lace/types/SourceSpan.h"
 
 #include <cassert>
 #include <string>
@@ -129,10 +130,10 @@ public:
 class NamedDefn : public Defn {
 protected:
     std::string m_name;
-    Runes m_runes;
+    std::vector<Rune*> m_runes;
 
     NamedDefn(Defn::Kind kind, SourceSpan span, const std::string& name, 
-              const Runes& runes)
+              const std::vector<Rune*>& runes)
       : Defn(kind, span), m_name(name), m_runes(runes) {}
 
 public:
@@ -148,27 +149,26 @@ public:
     const std::string& get_name() const { return m_name; }
     std::string& get_name() { return m_name; }
 
-    const Runes& get_runes() const { return m_runes; }
-    Runes& get_runes() { return m_runes; }
+    const std::vector<Rune*>& get_runes() const { return m_runes; }
+    std::vector<Rune*>& get_runes() { return m_runes; }
 
-    void add_rune(Rune* rune) {
-        if (!has_rune(rune->get_kind()))
+    void addRune(Rune* rune) {
+        if (!hasRune(rune->getType()))
             m_runes.push_back(rune);
     }
 
-    /// Returns the rune with the given |kind| if this definition has one, and
-    /// null otherwise.
-    const Rune* get_rune(Rune::Kind kind) const {
-        for (Rune* rune : m_runes)
-            if (rune->get_kind() == kind)
+    /// Returns the rune with the given |type| if this definition has one, and null otherwise.
+    const Rune* getRune(Rune::Type type) const {
+        for (Rune* rune : m_runes) {
+            if (rune->getType() == type)
                 return rune;
+        }
 
         return nullptr;
     }
 
-    Rune* get_rune(Rune::Kind kind) {
-        return const_cast<Rune*>(
-            static_cast<const NamedDefn*>(this)->get_rune(kind));
+    Rune* get_rune(Rune::Type type) {
+        return const_cast<Rune*>(static_cast<const NamedDefn*>(this)->get_rune(type));
     }
 
     const Rune* get_rune(uint32_t i) const {
@@ -181,11 +181,12 @@ public:
         return m_runes[i];
     }
     
-    /// Test if this definition has a rune of the given |kind|.
-    bool has_rune(Rune::Kind kind) const {
-        for (Rune* rune : m_runes)
-            if (rune->get_kind() == kind)
+    /// Test if this definition has a rune of the given |type|.
+    Result hasRune(Rune::Type type) const {
+        for (Rune* rune : m_runes) {
+            if (rune->hasType(type))
                 return true;
+        }
             
         return false;
     }
@@ -200,7 +201,7 @@ protected:
     QualType m_type;
 
     ValueDefn(Defn::Kind kind, SourceSpan span, const std::string& name, 
-              const Runes& runes, const QualType& type)
+              const std::vector<Rune*>& runes, const QualType& type)
       : NamedDefn(kind, span, name, runes), m_type(type) {}
 
 public:
@@ -227,7 +228,7 @@ class VariableDefn final : public ValueDefn {
     // If this is a global variable.
     bool m_global;
 
-    VariableDefn(SourceSpan span, const std::string& name, const Runes& runes, 
+    VariableDefn(SourceSpan span, const std::string& name, const std::vector<Rune*>& runes, 
                  const QualType& type, Expr* init, bool global)
       : ValueDefn(Defn::Variable, span, name, runes, type), m_init(init), 
         m_global(global) {}
@@ -235,7 +236,7 @@ class VariableDefn final : public ValueDefn {
 public:
     [[nodiscard]]
     static VariableDefn* create(AST::Context& ctx, SourceSpan span, 
-                                const std::string& name, const Runes& runes, 
+                                const std::string& name, const std::vector<Rune*>& runes, 
                                 const QualType& type, Expr* init, bool global);
 
     ~VariableDefn() override;
@@ -258,14 +259,14 @@ public:
 
 /// Represents a function parameter definition.
 class ParameterDefn final : public ValueDefn {
-    ParameterDefn(SourceSpan span, const std::string& name, const Runes& runes,
+    ParameterDefn(SourceSpan span, const std::string& name, const std::vector<Rune*>& runes,
                   const QualType& type)
       : ValueDefn(Defn::Parameter, span, name, runes, type) {}
       
 public:
     [[nodiscard]]
     static ParameterDefn* create(AST::Context& ctx, SourceSpan span, 
-                                 const std::string& name, const Runes& runes,
+                                 const std::string& name, const std::vector<Rune*>& runes,
                                  const QualType& type);
 
     ~ParameterDefn() = default;
@@ -298,7 +299,7 @@ private:
     /// The body of the function, if it has one.
     BlockStmt* m_body;
 
-    FunctionDefn(SourceSpan span, const std::string& name, const Runes& runes, 
+    FunctionDefn(SourceSpan span, const std::string& name, const std::vector<Rune*>& runes, 
                  const QualType& type, Scope* scope, const Params& params, 
                  BlockStmt* body)
       : ValueDefn(Defn::Function, span, name, runes, type), m_scope(scope), 
@@ -307,7 +308,7 @@ private:
 public:
     [[nodiscard]]
     static FunctionDefn* create(AST::Context& ctx, SourceSpan span, 
-                                const std::string& name, const Runes& runes, 
+                                const std::string& name, const std::vector<Rune*>& runes, 
                                 const QualType& type, Scope* scope, 
                                 const Params& params, BlockStmt* body = nullptr);
 
@@ -365,14 +366,14 @@ public:
 class FieldDefn final : public ValueDefn {
     uint32_t m_index;
 
-    FieldDefn(SourceSpan span, const std::string& name, const Runes& runes, 
+    FieldDefn(SourceSpan span, const std::string& name, const std::vector<Rune*>& runes, 
               const QualType& type, uint32_t index)
       : ValueDefn(Defn::Field, span, name, runes, type), m_index(index) {}
 
 public:
     [[nodiscard]]
     static FieldDefn* create(AST::Context& ctx, SourceSpan span, 
-                             const std::string& name, const Runes& runes, 
+                             const std::string& name, const std::vector<Rune*>& runes, 
                              const QualType& type, uint32_t index);
 
     ~FieldDefn() = default;
@@ -392,14 +393,14 @@ public:
 class VariantDefn final : public ValueDefn {
     const int64_t m_value;
 
-    VariantDefn(SourceSpan span, const std::string& name, const Runes& runes, 
+    VariantDefn(SourceSpan span, const std::string& name, const std::vector<Rune*>& runes, 
                 const QualType& type, int64_t value)
       : ValueDefn(Defn::Variant, span, name, runes, type), m_value(value) {}
 
 public:
     [[nodiscard]]
     static VariantDefn* create(AST::Context& ctx, SourceSpan span, 
-                               const std::string& name, const Runes& runes, 
+                               const std::string& name, const std::vector<Rune*>& runes, 
                                const QualType& type, int64_t value);
 
     ~VariantDefn() = default;
@@ -422,7 +423,7 @@ protected:
     const Type* m_type;
 
     TypeDefn(Defn::Kind kind, SourceSpan span, const std::string& name, 
-             const Runes& runes, const Type* type)
+             const std::vector<Rune*>& runes, const Type* type)
       : NamedDefn(kind, span, name, runes), m_type(type) {}
 
 public:
@@ -440,14 +441,14 @@ public:
 
 /// Represents a type alias definition.
 class AliasDefn final : public TypeDefn {
-    AliasDefn(SourceSpan span, const std::string& name, const Runes& runes, 
+    AliasDefn(SourceSpan span, const std::string& name, const std::vector<Rune*>& runes, 
               const Type* type)
       : TypeDefn(Defn::Alias, span, name, runes, type) {}
 
 public:
     [[nodiscard]]
     static AliasDefn* create(AST::Context& ctx, SourceSpan span, 
-                             const std::string& name, const Runes& runes, 
+                             const std::string& name, const std::vector<Rune*>& runes, 
                              const Type* type);
 
     ~AliasDefn() = default;
@@ -469,14 +470,14 @@ public:
 private:
     Fields m_fields = {};
 
-    StructDefn(SourceSpan span, const std::string& name, const Runes& runes, 
+    StructDefn(SourceSpan span, const std::string& name, const std::vector<Rune*>& runes, 
                const Type* type)
       : TypeDefn(Defn::Struct, span, name, runes, type) {}
       
 public:
     [[nodiscard]]
     static StructDefn* create(AST::Context& ctx, SourceSpan span, 
-                              const std::string& name, const Runes& runes, 
+                              const std::string& name, const std::vector<Rune*>& runes, 
                               const Type* type);
 
     ~StructDefn() override;
@@ -528,14 +529,14 @@ public:
 private:
     Variants m_variants = {};
 
-    EnumDefn(SourceSpan span, const std::string& name, const Runes& runes, 
+    EnumDefn(SourceSpan span, const std::string& name, const std::vector<Rune*>& runes, 
              const Type* type)
       : TypeDefn(Kind::Enum, span, name, runes, type) {}
 
 public:
     [[nodiscard]]
     static EnumDefn* create(AST::Context& ctx, SourceSpan span, 
-                            const std::string& name, const Runes& runes, 
+                            const std::string& name, const std::vector<Rune*>& runes, 
                             const Type* type);
 
     ~EnumDefn() override;

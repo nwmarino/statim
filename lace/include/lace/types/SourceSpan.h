@@ -1,18 +1,17 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
-#ifndef LOVELACE_SOURCE_SPAN_H_
-#define LOVELACE_SOURCE_SPAN_H_
+#ifndef LACE_SOURCE_SPAN_H_
+#define LACE_SOURCE_SPAN_H_
 
 //
-//  This header file defines the SourceSpan type, used to represent a span of
-//  source code for diagnostic purposes. Each node in the abstract syntax tree
-//  receives an instance of this type incase it becomes invalid later.
+//  This header file defines the SourceSpan type, used to represent a span of source code between
+//  two locations. Each node in the abstract syntax tree receives an instance of this type.
 //
 
-#include "lace/types/SourceLocation.hpp"
+#include "lace/types/SourceLocation.h"
 
 namespace lace {
 
@@ -22,11 +21,9 @@ struct SourceSpan final {
 
     SourceSpan() = default;
 
-    SourceSpan(SourceLocation loc)
-      : start(loc), end(loc) {}
+    SourceSpan(SourceLocation loc) : start(loc), end(loc) {}
 
-    SourceSpan(SourceLocation start, SourceLocation end) 
-      : start(start), end(end) {}
+    SourceSpan(SourceLocation start, SourceLocation end) : start(start), end(end) {}
 
     SourceSpan(const SourceSpan& other) {
         start = other.start;
@@ -53,4 +50,4 @@ struct SourceSpan final {
 
 } // namespace lace
 
-#endif // LOVELACE_SOURCE_SPAN_H_
+#endif // LACE_SOURCE_SPAN_H_

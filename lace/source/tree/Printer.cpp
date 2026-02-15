@@ -3,11 +3,11 @@
 //  All rights reserved.
 //
 
-#include "lace/tree/Defn.hpp"
-#include "lace/tree/Expr.hpp"
-#include "lace/tree/Printer.hpp"
-#include "lace/tree/Stmt.hpp"
-#include "lace/tree/VisitorBase.hpp"
+#include "lace/tree/Defn.h"
+#include "lace/tree/Expr.h"
+#include "lace/tree/Printer.h"
+#include "lace/tree/Stmt.h"
+#include "lace/tree/VisitorBase.h"
 
 #include <format>
 #include <ostream>

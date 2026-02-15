@@ -12,10 +12,9 @@
 //  flow constructs, and more.
 //
 
-#include "lace/core/Options.hpp"
-#include "lace/tree/Defn.hpp"
-#include "lace/tree/Expr.hpp"
-#include "lace/tree/VisitorBase.hpp"
+#include "lace/tree/Defn.h"
+#include "lace/tree/Expr.h"
+#include "lace/tree/VisitorBase.h"
 
 namespace lace {
 

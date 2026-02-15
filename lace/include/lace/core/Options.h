@@ -3,8 +3,8 @@
 //  All rights reserved.
 //
 
-#ifndef LOVELACE_OPTIONS_H_
-#define LOVELACE_OPTIONS_H_
+#ifndef LACE_OPTIONS_H_
+#define LACE_OPTIONS_H_
 
 //
 //  This header file defines the Options structure, which contains various
@@ -41,4 +41,4 @@ struct Options final {
 
 } // namespace lace
 
-#endif // LOVELACE_OPTIONS_H_
+#endif // LACE_OPTIONS_H_

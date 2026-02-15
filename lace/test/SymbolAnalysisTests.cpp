@@ -3,9 +3,9 @@
 //  All rights reserved.
 //
 
-#include "lace/parser/Parser.hpp"
-#include "lace/tree/AST.hpp"
-#include "lace/tree/SymbolAnalysis.hpp"
+#include "lace/parser/Parser.h"
+#include "lace/tree/AST.h"
+#include "lace/tree/SymbolAnalysis.h"
 
 #include "gtest/gtest.h"
 

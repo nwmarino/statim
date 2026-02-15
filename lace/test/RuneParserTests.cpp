@@ -3,7 +3,7 @@
 //  All rights reserved.
 //
 
-#include "lace/tree/AST.hpp"
+#include "lace/tree/AST.h"
 
 #include "gtest/gtest.h"
 

@@ -11,12 +11,11 @@
 //  generate LIR code from a valid abstract syntax tree.
 //
 
-#include "lace/core/Options.hpp"
-#include "lace/tree/Defn.hpp"
-#include "lace/tree/Expr.hpp"
-#include "lace/tree/Stmt.hpp"
-#include "lace/tree/Type.hpp"
-#include "lace/tree/VisitorBase.hpp"
+#include "lace/tree/Defn.h"
+#include "lace/tree/Expr.h"
+#include "lace/tree/Stmt.h"
+#include "lace/tree/Type.h"
+#include "lace/tree/VisitorBase.h"
 
 #include "lir/graph/BasicBlock.hpp"
 #include "lir/graph/Builder.hpp"

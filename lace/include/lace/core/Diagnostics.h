@@ -1,25 +1,27 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
-#ifndef LOVELACE_DIAGNOSTICS_H_
-#define LOVELACE_DIAGNOSTICS_H_
+#ifndef LACE_DIAGNOSTICS_H_
+#define LACE_DIAGNOSTICS_H_
 
 //
-//  This header file declares diagnostics tools for the compiler, namely a set
-//  of logging functions for the sake of informing the user about the behavior
-//  of their source code as it is processed.
+//  This header file declares diagnostics tools for the compiler, namely a set of logging 
+//  functions for the sake of informing the user about the behavior of their source code as it 
+//  gets processed.
 //
 
-#include "lace/types/SourceLocation.hpp"
-#include "lace/types/SourceSpan.hpp"
+#include "lace/types/SourceLocation.h"
+#include "lace/types/SourceSpan.h"
 
 #include <iostream>
 #include <ostream>
 #include <string>
 
-namespace lace::log {
+namespace lace {
+
+namespace log {
 
 /// A location in source suitable for the logger.
 struct Location final {
@@ -28,8 +30,7 @@ struct Location final {
 
     Location() = default;
 
-    Location(const std::string& path, SourceLocation loc)
-      : path(path), line(loc.line), col(loc.col) {}
+    Location(const std::string& path, SourceLocation loc) : path(path), line(loc.line), col(loc.col) {}
 };
 
 /// A span of source suitable for the logger.
@@ -40,8 +41,7 @@ struct Span final {
 
     Span() = default;
 
-    Span(const std::string& path, SourceSpan span)
-      : path(path), start(span.start), end(span.end) {}
+    Span(const std::string& path, SourceSpan span) : path(path), start(span.start), end(span.end) {}
 };
 
 /// Initialize the logger with the given output stream |os|.
@@ -109,6 +109,8 @@ void error(const std::string& msg, const Span& span);
 /// the given source |span|.
 [[noreturn]] void fatal(const std::string& msg, const Span& span);
 
-} // namespace lace::log
+} // namespace log
 
-#endif // LOVELACE_DIAGNOSTICS_H_
+} // namespace lace
+
+#endif // LACE_DIAGNOSTICS_H_

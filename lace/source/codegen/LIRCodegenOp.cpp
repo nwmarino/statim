@@ -3,9 +3,9 @@
 //  All rights reserved.
 //
 
-#include "lace/codegen/LIRCodegen.hpp"
-#include "lace/tree/Defn.hpp"
-#include "lace/tree/Type.hpp"
+#include "lace/codegen/LIRCodegen.h"
+#include "lace/tree/Defn.h"
+#include "lace/tree/Type.h"
 
 #include "lir/graph/Constant.hpp"
 #include "lir/graph/Instruction.hpp"

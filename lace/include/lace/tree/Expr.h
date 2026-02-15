@@ -11,10 +11,9 @@
 //  expressions in the abstract syntax tree.
 //
 
-#include "lace/tree/Stmt.hpp"
-#include "lace/tree/Type.hpp"
-#include "lace/tree/VisitorBase.hpp"
-#include "lace/types/SourceSpan.hpp"
+#include "lace/tree/Stmt.h"
+#include "lace/tree/Type.h"
+#include "lace/tree/VisitorBase.h"
 
 #include <cassert>
 #include <string>

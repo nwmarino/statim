@@ -3,13 +3,13 @@
 //  All rights reserved.
 //
 
-#include "lace/core/Diagnostics.hpp"
-#include "lace/tree/Defn.hpp"
-#include "lace/tree/Expr.hpp"
-#include "lace/tree/SemanticAnalysis.hpp"
-#include "lace/tree/Stmt.hpp"
-#include "lace/tree/Type.hpp"
-#include "lace/tree/VisitorBase.hpp"
+#include "lace/core/Diagnostics.h"
+#include "lace/tree/Defn.h"
+#include "lace/tree/Expr.h"
+#include "lace/tree/SemanticAnalysis.h"
+#include "lace/tree/Stmt.h"
+#include "lace/tree/Type.h"
+#include "lace/tree/VisitorBase.h"
 
 #include <cassert>
 
@@ -85,7 +85,7 @@ void SemanticAnalysis::visit(FunctionDefn& node) {
     m_function = &node;
 
     if (node.is_main()) {
-        if (!node.has_rune(Rune::Public)) {
+        if (!node.hasRune(Rune::Public)) {
             log::error("'main' must be marked with $public", 
                 log::Span(m_ast->get_file(), node.get_span().start));
         }
@@ -121,6 +121,8 @@ void SemanticAnalysis::visit(RestartStmt& node) {
 }
 
 void SemanticAnalysis::visit(RetStmt& node) {
+    VisitorBase::visit(node);
+
     const log::Span span = log::Span(m_ast->get_file(), node.get_span());
     if (!m_function)
         log::fatal("'ret' outside of function", span);
@@ -133,7 +135,6 @@ void SemanticAnalysis::visit(RetStmt& node) {
     }
 
     Expr* expr = node.get_expr();
-    expr->accept(*this);
 
     const QualType& val_type = expr->get_type();
     const QualType& ret_type = m_function->get_return_type();

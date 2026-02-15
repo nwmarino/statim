@@ -1,10 +1,10 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
-#include "lace/tree/Defn.hpp"
-#include "lace/tree/Scope.hpp"
+#include "lace/tree/Defn.h"
+#include "lace/tree/Scope.h"
 
 using namespace lace;
 
@@ -21,7 +21,7 @@ NamedDefn* Scope::get(const std::string& name) const {
     if (it != m_defns.end())
         return it->second;
 
-    if (has_parent())
+    if (m_parent)
         return m_parent->get(name);
 
     return nullptr;

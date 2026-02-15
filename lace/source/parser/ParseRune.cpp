@@ -3,16 +3,16 @@
 //  All rights reserved.
 //
 
-#include "lace/core/Diagnostics.hpp"
-#include "lace/parser/Parser.hpp"
+#include "lace/core/Diagnostics.h"
+#include "lace/parser/Parser.h"
 
 using namespace lace;
 
-void Parser::parse_rune_decorators(Runes& runes) {
+void Parser::parse_rune_decorators(std::vector<Rune*>& runes) {
     if (!expect(Token::Sign))
         return;
 
-    static std::unordered_map<std::string, Rune::Kind> table = {
+    static std::unordered_map<std::string, Rune::Type> table = {
         { "intrinsic", Rune::Intrinsic },
         { "public", Rune::Public },
         { "private", Rune::Private },

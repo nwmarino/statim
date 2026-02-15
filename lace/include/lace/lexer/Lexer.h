@@ -1,18 +1,18 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
-#ifndef LOVELACE_LEXER_H_
-#define LOVELACE_LEXER_H_
+#ifndef LACE_LEXER_H_
+#define LACE_LEXER_H_
 
 //
-//  This header file declares the Lexer class, whom instances thereof interpret
-//  strings of source code into tokens usable by the parser for syntax 
-//  analysis.
+//  This header file declares the Lexer class, whom instances thereof interpret strings of source 
+//  code into tokens usable by the parser for syntax analysis.
 //
 
-#include "lace/lexer/Token.hpp"
+#include "lace/core/Common.h"
+#include "lace/lexer/Token.h"
 
 #include <cassert>
 #include <string>
@@ -29,16 +29,14 @@ class Lexer final {
     /// 
     /// If the end of the source buffer has been reached i.e. there is no
     /// character to look at, then the null terminator is returned instead.
-    inline char curr() const { return is_eof() ? '\0' : m_source[m_cursor]; }
+    inline char curr() const { return isEof() ? '\0' : m_source[m_cursor]; }
 
     /// Returns the character |n| positions ahead in the source code buffer.
     /// 
     /// If |n| exceeds the size of the source buffer, then the null terminator
     /// is returned instead.
     inline char peek(uint32_t n = 1) const {
-        return (m_cursor + n < m_source.size()) 
-            ? m_source[m_cursor + n] 
-            : '\0';
+        return (m_cursor + n < m_source.size()) ? m_source[m_cursor + n] : '\0';
     }
 
     /// Move the lexer cursor |n| positions forward, and update the location in
@@ -49,7 +47,7 @@ class Lexer final {
     }
 
     /// Update the location of the lexer per a new line.
-    inline void end_line() {
+    inline void endLine() {
         m_loc.line++;
         m_loc.col = 1;
     }
@@ -57,14 +55,13 @@ class Lexer final {
 public:
     /// Create a new lexer using the given |source| buffer.
     ///
-    /// Optionally, the |path| argument designates the source file which 
-    /// |source| is from, and allows for more accurate diagnostics should there
-    /// be unrecognized tokens. 
-    Lexer(const std::string& source, const std::string& filename = "")
-      : m_source(source), m_filename(filename) {}
+    /// Optionally, the |filename| argument designates the source file which |source| is from, and 
+    /// allows for more accurate diagnostics should there be unrecognized tokens. 
+    Lexer(const std::string& source, const std::string& filename = "") : m_source(source), 
+                                                                         m_filename(filename) {}
 
     /// Test if the end of the source code buffer has been reached.
-    bool is_eof() const { return m_cursor >= m_source.size(); }
+    Result isEof() const { return m_cursor >= m_source.size(); }
 
     /// Lex a new token and save its state to |token|.
     void lex(Token& token);
@@ -72,4 +69,4 @@ public:
 
 } // namespace lace
 
-#endif // LOVELACE_LEXER_H_
+#endif // LACE_LEXER_H_

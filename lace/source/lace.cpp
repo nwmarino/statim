@@ -3,17 +3,17 @@
 //  All rights reserved.
 //
 
-#include "lace/codegen/LIRCodegen.hpp"
-#include "lace/core/Diagnostics.hpp"
-#include "lace/core/ThreadPool.hpp"
-#include "lace/core/Options.hpp"
-#include "lace/parser/Parser.hpp"
-#include "lace/tools/Files.hpp"
-#include "lace/tree/AST.hpp"
-#include "lace/tree/TypeResolution.hpp"
-#include "lace/tree/Printer.hpp"
-#include "lace/tree/SemanticAnalysis.hpp"
-#include "lace/tree/SymbolAnalysis.hpp"
+#include "lace/codegen/LIRCodegen.h"
+#include "lace/core/Diagnostics.h"
+#include "lace/core/ThreadPool.h"
+#include "lace/core/Options.h"
+#include "lace/parser/Parser.h"
+#include "lace/tools/Files.h"
+#include "lace/tree/AST.h"
+#include "lace/tree/TypeResolution.h"
+#include "lace/tree/Printer.h"
+#include "lace/tree/SemanticAnalysis.h"
+#include "lace/tree/SymbolAnalysis.h"
 
 #include "lir/analysis/AMD64LoweringPass.hpp"
 #include "lir/machine/Machine.hpp"
@@ -139,7 +139,7 @@ void resolveDependencies(Options& options, const Asts& asts, const DepTable& dep
         for (AST* dep : dep_list) {
             for (Defn* defn : dep->get_defns()) {
                 NamedDefn* symbol = dynamic_cast<NamedDefn*>(defn);
-                if (symbol && symbol->has_rune(Rune::Public))
+                if (symbol && symbol->hasRune(Rune::Public))
                     symbols.push_back(symbol);
             }
         }
@@ -375,7 +375,11 @@ int32_t main(int32_t argc, char *argv[]) {
             pool->push([&f, options] {
                 Timestamp parse_start = get_time();
 
-                Parser parser(read_file(f.file), f.file);
+                std::string contents;
+                if (!readFile(f.file, contents))
+                    log::flush();
+
+                Parser parser(contents, f.file);
                 f.ast = parser.parse();
 
                 if (options.verbose) {
@@ -394,7 +398,11 @@ int32_t main(int32_t argc, char *argv[]) {
     } else for (InputFile &f : files) {
         Timestamp parse_start = get_time();
 
-        Parser parser(read_file(f.file), f.file);
+        std::string contents;
+        if (!readFile(f.file, contents))
+            log::flush();
+
+        Parser parser(contents, f.file);
         f.ast = parser.parse();
         
         if (options.verbose) {

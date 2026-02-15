@@ -3,12 +3,11 @@
 //  All rights reserved.
 //
 
-#include "lace/core/Diagnostics.hpp"
-#include "lace/parser/Parser.hpp"
-#include "lace/tree/Defn.hpp"
-#include "lace/tree/Scope.hpp"
-#include "lace/tree/Stmt.hpp"
-#include "lace/types/SourceLocation.hpp"
+#include "lace/core/Diagnostics.h"
+#include "lace/parser/Parser.h"
+#include "lace/tree/Defn.h"
+#include "lace/tree/Scope.h"
+#include "lace/tree/Stmt.h"
 
 #include <cassert>
 
@@ -255,7 +254,7 @@ Stmt* Parser::parse_rune_statement() {
     const SourceLocation start = loc();
     next(); // '$'
 
-    static std::unordered_map<std::string, Rune::Kind> runes = {
+    static std::unordered_map<std::string, Rune::Type> runes = {
         { "abort", Rune::Abort},
         { "unreachable", Rune::Unreachable },
     };
@@ -267,8 +266,8 @@ Stmt* Parser::parse_rune_statement() {
         log::fatal("unknown rune: " + curr().value, log::Span(m_file, loc()));
     
     const SourceLocation end = loc();
-    Rune::Kind kind = runes[curr().value];
+    Rune::Type type = runes[curr().value];
     next();
 
-    return RuneStmt::create(*m_context, SourceSpan(start, end), new Rune(kind));
+    return RuneStmt::create(*m_context, SourceSpan(start, end), new Rune(type));
 }

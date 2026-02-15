@@ -14,7 +14,7 @@
 //  frontend type ownership.
 //
 
-#include "lace/tree/VisitorBase.hpp"
+#include "lace/tree/VisitorBase.h"
 
 #include <cassert>
 #include <cstdint>

@@ -3,9 +3,9 @@
 //  All rights reserved.
 //
 
-#include "lace/codegen/LIRCodegen.hpp"
-#include "lace/tree/Defn.hpp"
-#include "lace/tree/Stmt.hpp"
+#include "lace/codegen/LIRCodegen.h"
+#include "lace/tree/Defn.h"
+#include "lace/tree/Stmt.h"
 
 #include "lir/graph/Function.hpp"
 #include "lir/graph/Parameter.hpp"
@@ -189,7 +189,7 @@ void LIRCodegen::codegen_return(const RetStmt *stmt) {
 }
 
 void LIRCodegen::codegen_rune_statement(const RuneStmt *stmt) {
-    switch (stmt->get_rune()->get_kind()) {
+    switch (stmt->get_rune()->getType()) {
         case Rune::Abort: {
             lir::Function *func = get_function("__abort");
             assert(func);
