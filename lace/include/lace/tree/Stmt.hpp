@@ -13,7 +13,7 @@
 
 #include "lace/tree/AST.hpp"
 #include "lace/tree/Rune.hpp"
-#include "lace/tree/Visitor.hpp"
+#include "lace/tree/VisitorBase.hpp"
 #include "lace/types/SourceSpan.hpp"
 
 #include <cassert>
@@ -57,116 +57,12 @@ public:
     Stmt(Stmt&&) noexcept = delete;
     void operator=(Stmt&&) noexcept = delete;
 
-    virtual void accept(Visitor& visitor) = 0;
+    virtual void accept(VisitorBase& visitor) = 0;
 
     Kind get_kind() const { return m_kind; }
     
     SourceSpan get_span() const { return m_span; }
 };
-
-/*
-
-/// Represents an inline assembly 'asm' statement.
-///
-/// Inline assembly appears in the form of:
-///
-/// asm (
-///     template
-///     : output constraints
-///     : input constraints
-///     : clobbers
-/// )
-class AsmStmt final : public Stmt {
-    // The inline assembly string.
-    string m_iasm;
-
-    // The list of output constraints.
-    vector<string> m_outs;
-
-    // The list of input constraints.
-    vector<string> m_ins;
-
-    // The list of read/write expression arguments.
-    vector<Expr*> m_args;
-
-    // The list of register/memory clobbers.
-    vector<string> m_clobbers;
-
-    AsmStmt(SourceSpan span, const string& iasm, const vector<string>& outs, 
-            const vector<string>& ins, const vector<Expr*>& args, 
-            const vector<string>& clobbers)
-      : Stmt(span), m_iasm(iasm), m_outs(outs), m_ins(ins), m_args(args), 
-        m_clobbers(clobbers) {}
-
-public:
-    static AsmStmt* create(Context& ctx, SourceSpan span, const string& iasm,
-                           const vector<string>& outs, const vector<string>& ins,
-                           const vector<Expr*>& args, const vector<string>& clobbers);
-
-    ~AsmStmt() override;
-
-    AsmStmt(const AsmStmt&) = delete;
-    void operator=(const AsmStmt&) = delete;
-
-    AsmStmt(AsmStmt&&) noexcept = delete;
-    void operator=(AsmStmt&&) noexcept = delete;
-
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
-
-    const string& get_assembly_string() const { return m_iasm; }
-    string& get_assembly_string() { return m_iasm; }
-
-    uint32_t num_output_constraints() const { return m_outs.size(); }
-    bool has_output_constraints() const { return !m_outs.empty(); }
-
-    const vector<string>& get_output_constraints() const { return m_outs; }
-    vector<string>& get_output_constraints() { return m_outs; }
-
-    const string& get_output_constraint(uint32_t i) const {
-        assert(i < num_output_constraints() && "index out of bounds!");
-        return m_outs[i];
-    }
-
-    uint32_t num_input_constraints() const { return m_ins.size(); }
-    bool has_input_constraints() const { return !m_ins.empty(); }
-
-    const vector<string>& get_input_constraints() const { return m_ins; }
-    vector<string>& get_input_constraints() { return m_ins; }
-
-    const string& get_input_constraint(uint32_t i) const {
-        assert(i < num_input_constraints() && "index out of bounds!");
-        return m_ins[i];
-    }
-
-    uint32_t num_args() const { return m_args.size(); }
-    bool has_args() const { return !m_args.empty(); }
-
-    const vector<Expr*>& get_args() const { return m_args; }
-    vector<Expr*>& get_args() { return m_args; }
-
-    const Expr* get_arg(uint32_t i) const {
-        assert(i < num_args() && "index out of bounds!");
-        return m_args[i];
-    }
-
-    Expr* get_arg(uint32_t i) {
-        assert(i < num_args() && "index out of bounds!");
-        return m_args[i];
-    }
-
-    uint32_t num_clobbers() const { return m_clobbers.size(); }
-    bool has_clobbers() const { return !m_clobbers.empty(); }
-
-    const vector<string>& get_clobbers() const { return m_clobbers; }
-    vector<string>& get_clobbers() { return m_clobbers; }
-
-    const string& get_clobber(uint32_t i) const {
-        assert(i < num_clobbers() && "index out of bounds!");
-        return m_clobbers[i];
-    }
-};
-
-*/
 
 /// Represents a statement that adapts either a nested definition or expression.
 class AdapterStmt final : public Stmt {
@@ -205,7 +101,9 @@ public:
     AdapterStmt(AdapterStmt&&) noexcept = delete;
     void operator=(AdapterStmt&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { 
+        visitor.visit(*this); 
+    }
 
     Flavor get_flavor() const { return m_flavor; }
 
@@ -249,7 +147,7 @@ public:
     BlockStmt(BlockStmt&&) noexcept = delete;
     void operator=(BlockStmt&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     const Scope* get_scope() const { return m_scope; }
     Scope* get_scope() { return m_scope; }
@@ -294,7 +192,7 @@ public:
     IfStmt(IfStmt&&) noexcept = delete;
     void operator=(IfStmt&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     const Expr* get_cond() const { return m_cond; }
     Expr* get_cond() { return m_cond; }
@@ -324,7 +222,7 @@ public:
     RestartStmt(RestartStmt&&) noexcept = delete;
     void operator=(RestartStmt&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 };
 
 /// Represents a `ret` statement.
@@ -349,7 +247,7 @@ public:
     RetStmt(RetStmt&&) noexcept = delete;
     void operator=(RetStmt&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     const Expr* get_expr() const { return m_expr; }
     Expr* get_expr() { return m_expr; }
@@ -373,7 +271,7 @@ public:
     StopStmt(StopStmt&&) noexcept = delete;
     void operator=(StopStmt&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 };
 
 /// Represents a `until` statement.
@@ -397,7 +295,7 @@ public:
     UntilStmt(UntilStmt&&) noexcept = delete;
     void operator=(UntilStmt&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     const Expr* get_cond() const { return m_cond; }
     Expr* get_cond() { return m_cond; }
@@ -427,7 +325,7 @@ public:
     RuneStmt(RuneStmt&&) noexcept = delete;
     void operator=(RuneStmt&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     const Rune* get_rune() const { return m_rune; }
     Rune* get_rune() { return m_rune; }

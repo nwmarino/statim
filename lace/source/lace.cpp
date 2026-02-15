@@ -10,7 +10,7 @@
 #include "lace/parser/Parser.hpp"
 #include "lace/tools/Files.hpp"
 #include "lace/tree/AST.hpp"
-#include "lace/tree/NameAnalysis.hpp"
+#include "lace/tree/TypeResolution.hpp"
 #include "lace/tree/Printer.hpp"
 #include "lace/tree/SemanticAnalysis.hpp"
 #include "lace/tree/SymbolAnalysis.hpp"
@@ -78,7 +78,7 @@ void setup_file_table(const Asts& asts) {
 /// sequentially perform name analysis on each syntax tree.
 ///
 /// Moreover, as it computes dependencies, it saves them to |deps|.
-void compute_dependencies(const Asts& asts, Asts& ordering, DepTable& deps) {
+void computeDependencies(const Asts& asts, Asts& ordering, DepTable& deps) {
     for (AST* ast : asts) {
         path parent = absolute(ast->get_file()).parent_path();
     
@@ -130,8 +130,7 @@ void compute_dependencies(const Asts& asts, Asts& ordering, DepTable& deps) {
 /// Resolve the dependent symbols for each tree in |asts|, based on their
 /// dependencies defined in |deps|. Assumes that |asts| contains syntax 
 /// trees in their dependency order.
-void resolve_dependencies(const Options& options, const Asts& asts, 
-                          const DepTable& deps) {
+void resolveDependencies(Options& options, const Asts& asts, const DepTable& deps) {
     for (AST* ast : asts) {
         Asts dep_list = deps.at(ast);
         std::vector<NamedDefn*> symbols = {};
@@ -158,8 +157,8 @@ void resolve_dependencies(const Options& options, const Asts& asts,
 
         const Timestamp time_namea_start = get_time();
 
-        NameAnalysis namea(options);
-        ast->accept(namea);
+        TypeResolution type_res(options);
+        ast->accept(type_res);
 
         if (options.verbose) {
             duration<double> dur = get_time() - time_namea_start;
@@ -423,8 +422,8 @@ int32_t main(int32_t argc, char *argv[]) {
     ordering.reserve(asts.size());
     deps.reserve(asts.size());
 
-    compute_dependencies(asts, ordering, deps);
-    resolve_dependencies(options, ordering, deps);
+    computeDependencies(asts, ordering, deps);
+    resolveDependencies(options, ordering, deps);
 
     // Perform symbol analysis on each syntax tree.
     //

@@ -1,10 +1,10 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
-#ifndef LOVELACE_VISITOR_H_
-#define LOVELACE_VISITOR_H_
+#ifndef LACE_VISITOR_BASE_H_
+#define LACE_VISITOR_BASE_H_
 
 namespace lace {
 
@@ -47,21 +47,20 @@ class RefExpr;
 class SizeofExpr;
 class SubscriptExpr;
 
-/// Abstract definition for a visitor pattern over the abstract syntax tree.
-class Visitor {
+class VisitorBase {
 protected:
-    Visitor() = default;
+    VisitorBase() = default;
 
 public:
-    virtual ~Visitor() = default;
+    virtual ~VisitorBase() = default;
 
-    Visitor(const Visitor&) = delete;
-    void operator=(const Visitor&) = delete;
+    VisitorBase(const VisitorBase&) = delete;
+    void operator=(const VisitorBase&) = delete;
 
-    Visitor(Visitor&&) noexcept = delete;
-    void operator=(Visitor&&) noexcept = delete;
+    VisitorBase(VisitorBase&&) noexcept = delete;
+    void operator=(VisitorBase&&) noexcept = delete;
     
-    virtual void visit(AST& ast) {}
+    virtual void visit(AST& node) {}
 
     virtual void visit(AliasDefn& node) {}
     virtual void visit(EnumDefn& node) {}
@@ -103,4 +102,4 @@ public:
 
 } // namespace lace
 
-#endif // LOVELACE_VISITOR_H_
+#endif // LACE_VISITOR_BASE_H_

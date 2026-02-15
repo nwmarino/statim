@@ -15,11 +15,11 @@
 #include "lace/core/Options.hpp"
 #include "lace/tree/Defn.hpp"
 #include "lace/tree/Expr.hpp"
-#include "lace/tree/Visitor.hpp"
+#include "lace/tree/VisitorBase.hpp"
 
 namespace lace {
 
-class SemanticAnalysis final : public Visitor {
+class SemanticAnalysis final : public VisitorBase {
     /// The different kinds of loops.
     enum Loop : uint32_t {
         None = 0,

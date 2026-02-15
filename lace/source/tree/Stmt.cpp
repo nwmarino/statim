@@ -7,7 +7,7 @@
 #include "lace/tree/Defn.hpp"
 #include "lace/tree/Expr.hpp"
 #include "lace/tree/Scope.hpp"
-#include "lace/tree/Visitor.hpp"
+#include "lace/tree/VisitorBase.hpp"
 #include "lace/tree/Stmt.hpp"
 
 using namespace lace;

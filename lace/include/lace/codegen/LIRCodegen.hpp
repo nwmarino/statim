@@ -16,7 +16,7 @@
 #include "lace/tree/Expr.hpp"
 #include "lace/tree/Stmt.hpp"
 #include "lace/tree/Type.hpp"
-#include "lace/tree/Visitor.hpp"
+#include "lace/tree/VisitorBase.hpp"
 
 #include "lir/graph/BasicBlock.hpp"
 #include "lir/graph/Builder.hpp"

@@ -8,11 +8,11 @@
 
 #include "lace/core/Options.hpp"
 #include "lace/tree/Type.hpp"
-#include "lace/tree/Visitor.hpp"
+#include "lace/tree/VisitorBase.hpp"
 
 namespace lace {
 
-class Printer final : public Visitor {
+class Printer final : public VisitorBase {
     const Options& m_options;
 
     uint32_t m_indent = 0;

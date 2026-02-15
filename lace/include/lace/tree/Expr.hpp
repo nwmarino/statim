@@ -13,7 +13,7 @@
 
 #include "lace/tree/Stmt.hpp"
 #include "lace/tree/Type.hpp"
-#include "lace/tree/Visitor.hpp"
+#include "lace/tree/VisitorBase.hpp"
 #include "lace/types/SourceSpan.hpp"
 
 #include <cassert>
@@ -72,7 +72,7 @@ public:
     Expr(Expr&&) noexcept = delete;
     void operator=(Expr&&) noexcept = delete;
 
-    virtual void accept(Visitor& visitor) = 0;
+    virtual void accept(VisitorBase& visitor) = 0;
 
     /// Test if this expression is constant i.e. is known at compile-time.
     ///
@@ -163,7 +163,7 @@ public:
     BoolLiteral(BoolLiteral&&) noexcept = delete;
     void operator=(BoolLiteral&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     bool is_constant() const override { return true; }
 
@@ -189,7 +189,7 @@ public:
     CharLiteral(CharLiteral&&) noexcept = delete;
     void operator=(CharLiteral&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     bool is_constant() const override { return true; }
 
@@ -216,7 +216,7 @@ public:
     IntegerLiteral(IntegerLiteral&&) noexcept = delete;
     void operator=(IntegerLiteral&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     bool is_constant() const override { return true; }
 
@@ -243,7 +243,7 @@ public:
     FloatLiteral(FloatLiteral&&) noexcept = delete;
     void operator=(FloatLiteral&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     bool is_constant() const override { return true; }
 
@@ -268,7 +268,7 @@ public:
     NullLiteral(NullLiteral&&) noexcept = delete;
     void operator=(NullLiteral&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     bool is_constant() const override { return true; }
 };
@@ -294,7 +294,7 @@ public:
     StringLiteral(StringLiteral&&) noexcept = delete;
     void operator=(StringLiteral&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     bool is_constant() const override { return true; }
 
@@ -376,7 +376,7 @@ public:
     BinaryOp(BinaryOp&&) noexcept = delete;
     void operator=(BinaryOp&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     bool is_constant() const override { 
         return m_lhs->is_constant() && m_rhs->is_constant(); 
@@ -443,7 +443,7 @@ public:
     UnaryOp(UnaryOp&&) noexcept = delete;
     void operator=(UnaryOp&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     bool is_constant() const override { 
         return m_expr->is_constant() || m_op == AddressOf; 
@@ -493,7 +493,7 @@ public:
     AccessExpr(AccessExpr&&) = delete;
     void operator=(AccessExpr&&) = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     bool is_lvalue() const override { return true; }
 
@@ -534,7 +534,7 @@ public:
     CallExpr(CallExpr&&) noexcept = delete;
     void operator=(CallExpr&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     const Expr* get_callee() const { return m_callee; }
     Expr* get_callee() { return m_callee; }
@@ -576,7 +576,7 @@ public:
     CastExpr(CastExpr&&) noexcept = delete;
     void operator=(CastExpr&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     bool is_constant() const override { return m_expr->is_constant(); }
 
@@ -603,7 +603,7 @@ public:
     ParenExpr(ParenExpr&&) noexcept = delete;
     void operator=(ParenExpr&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     bool is_constant() const override { return m_expr->is_constant(); }
 
@@ -634,7 +634,7 @@ public:
     RefExpr(RefExpr&&) noexcept = delete;
     void operator=(RefExpr&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     bool is_lvalue() const override;
 
@@ -665,7 +665,7 @@ public:
     SizeofExpr(SizeofExpr&&) noexcept = delete;
     void operator=(SizeofExpr&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     bool is_constant() const override { return true; }
 
@@ -695,7 +695,7 @@ public:
     SubscriptExpr(SubscriptExpr&&) noexcept = delete;
     void operator=(SubscriptExpr&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     bool is_lvalue() const override { return true; }
 

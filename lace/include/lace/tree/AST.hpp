@@ -14,7 +14,7 @@
 //  frontend type ownership.
 //
 
-#include "lace/tree/Visitor.hpp"
+#include "lace/tree/VisitorBase.hpp"
 
 #include <cassert>
 #include <cstdint>
@@ -76,8 +76,8 @@ public:
         Context(const Context&) = delete;
         void operator=(const Context&) = delete;
 
-        Context(Context&& other) noexcept = delete;
-        void operator=(Context&& other) noexcept = delete;
+        Context(Context&&) noexcept = delete;
+        void operator=(Context&&) noexcept = delete;
     };
 
 private:
@@ -90,7 +90,9 @@ private:
     AST(const std::string& file);
 
 public:
-    [[nodiscard]] static AST* create(const std::string& file);
+    /// Create a new abstract syntax tree representing the given |file|.
+    [[nodiscard]] 
+    static AST* create(const std::string& file);
 
     ~AST();
 
@@ -100,7 +102,9 @@ public:
     AST(AST&&) noexcept = delete;
     void operator=(AST&&) noexcept = delete;
 
-    void accept(Visitor& visitor) { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) { 
+        visitor.visit(*this); 
+    }
 
     const std::string& get_file() const { return m_file; }
 

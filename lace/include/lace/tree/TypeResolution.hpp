@@ -1,43 +1,48 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
-#ifndef LOVELACE_NAME_ANALYSIS_H_
-#define LOVELACE_NAME_ANALYSIS_H_
+#ifndef LACE_TYPE_RESOLUTION_H_
+#define LACE_TYPE_RESOLUTION_H_
 
+#include "lace/core/Common.h"
 #include "lace/core/Options.hpp"
 #include "lace/tree/Scope.hpp"
 #include "lace/tree/Type.hpp"
-#include "lace/tree/Visitor.hpp"
+#include "lace/tree/VisitorBase.hpp"
 
 namespace lace {
 
-class NameAnalysis final : public Visitor {
-    const Options& m_options;
+class TypeResolution final : public VisitorBase {
+    Options& m_options;
     
     AST* m_ast = nullptr;
     AST::Context* m_context = nullptr;
     const Scope* m_scope = nullptr;
 
-    /// Replace all deferred types composed in |type| and return the new,
-    /// fully resolved type. If a part could not be resolved, then null is
-    /// returned.
-    bool resolve_type(const QualType& type) const;
+    /// Replace all deferred types composed in |type| with fully resolved types, and returns true.
+    /// If a part of the type could not be resolved, then false is returned.
+    Result resolveType(const QualType& type) const;
 
 public:
-    NameAnalysis(const Options& options);
+    TypeResolution(Options& options);
 
     void visit(AST& ast) override;
 
     void visit(VariableDefn& node) override;
+
     void visit(FunctionDefn& node) override;
+
     void visit(FieldDefn& node) override;
+
     void visit(VariantDefn& node) override;
+
     void visit(StructDefn& node) override;
+    
     void visit(EnumDefn& node) override;
 };
 
 } // namespace lace
 
-#endif // LOVELACE_NAME_ANALYSIS_H_
+#endif // LACE_TYPE_RESOLUTION_H_

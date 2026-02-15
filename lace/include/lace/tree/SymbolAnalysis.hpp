@@ -15,11 +15,11 @@
 #include "lace/core/Options.hpp"
 #include "lace/tree/Scope.hpp"
 #include "lace/tree/Type.hpp"
-#include "lace/tree/Visitor.hpp"
+#include "lace/tree/VisitorBase.hpp"
 
 namespace lace {
 
-class SymbolAnalysis final : public Visitor {
+class SymbolAnalysis final : public VisitorBase {
     const Options& m_options;
     
     AST* m_ast = nullptr;

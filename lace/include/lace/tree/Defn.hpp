@@ -14,7 +14,7 @@
 #include "lace/tree/AST.hpp"
 #include "lace/tree/Rune.hpp"
 #include "lace/tree/Type.hpp"
-#include "lace/tree/Visitor.hpp"
+#include "lace/tree/VisitorBase.hpp"
 #include "lace/types/SourceSpan.hpp"
 
 #include <cassert>
@@ -64,7 +64,7 @@ public:
     Defn(Defn&&) noexcept = delete;
     void operator=(Defn&&) noexcept = delete;
 
-    virtual void accept(Visitor& visitor) = 0;
+    virtual void accept(VisitorBase& visitor) = 0;
 
     Kind get_kind() const { return m_kind; }
 
@@ -118,7 +118,7 @@ public:
     LoadDefn(LoadDefn&&) noexcept = delete;
     void operator=(LoadDefn&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     void set_path(const std::string& path) { m_path = path; }
     const std::string& get_path() const { return m_path; }
@@ -246,7 +246,7 @@ public:
     VariableDefn(VariableDefn&&) noexcept = delete;
     void operator=(VariableDefn&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     const Expr* get_init() const { return m_init; }
     Expr* get_init() { return m_init; }
@@ -276,7 +276,7 @@ public:
     ParameterDefn(ParameterDefn&&) noexcept = delete;
     void operator=(ParameterDefn&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 };
 
 /// Represents a function definiiton.
@@ -319,7 +319,7 @@ public:
     FunctionDefn(FunctionDefn&&) noexcept = delete;
     void operator=(FunctionDefn&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     /// Test if this is the main function, i.e. a function named `main`.
     bool is_main() const { return get_name() == "main"; }
@@ -383,7 +383,7 @@ public:
     FieldDefn(FieldDefn&&) noexcept = delete;
     void operator=(FieldDefn&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     uint32_t get_index() const { return m_index; }
 };
@@ -410,7 +410,7 @@ public:
     VariantDefn(VariantDefn&&) noexcept = delete;
     void operator=(VariantDefn&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
     
     int64_t get_value() const { return m_value; }
 };
@@ -458,7 +458,7 @@ public:
     AliasDefn(AliasDefn&&) noexcept = delete;
     void operator=(AliasDefn&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 };
 
 /// Represents a structure type definition.
@@ -487,7 +487,7 @@ public:
     StructDefn(StructDefn&&) noexcept = delete;
     void operator=(StructDefn&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     void set_fields(const Fields& fields) { m_fields = fields; }
     const Fields& get_fields() const { return m_fields; }
@@ -546,7 +546,7 @@ public:
     EnumDefn(EnumDefn&&) noexcept = delete;
     void operator=(EnumDefn&&) noexcept = delete;
 
-    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
     void set_variants(const Variants& variants) { m_variants = variants; }
     const Variants& get_variants() const { return m_variants; }
