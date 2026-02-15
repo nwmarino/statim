@@ -138,6 +138,14 @@ public:
     /// this function, then the call fails silently.
     void remove_param(Parameter *param);
 
+    /// Test if this function contains an aggregate return parameter.
+    Result hasAggregateReturn() const {
+        if (m_params.size() < 1)
+            return false;
+
+        return m_params[0]->hasTrait(Parameter::Trait::ARet);
+    }
+
     const Locals &get_locals() const { return m_locals; }
     Locals &get_locals() { return m_locals; }
 

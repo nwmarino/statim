@@ -28,6 +28,12 @@
 namespace lace {
 
 class LIRCodegen final {
+    struct State final {
+        lir::BasicBlock* cond = nullptr;
+        lir::BasicBlock* merge = nullptr;
+        lir::Value* place = nullptr;
+    };
+
     const Options& m_options;
     const lir::Machine& m_mach;
 
@@ -35,11 +41,7 @@ class LIRCodegen final {
     lir::CFG& m_cfg;
     lir::Builder m_builder;
     lir::Function* m_func = nullptr;
-
-    struct State final {
-        lir::BasicBlock* cond;
-        lir::BasicBlock* merge;
-    } m_state;
+    State m_state = {};
 
 public:
     LIRCodegen(const Options& options, const AST* ast, lir::CFG& cfg)
@@ -56,6 +58,8 @@ private:
     lir::Function* get_function(const std::string& name, lir::Type* result = nullptr,
                                 const std::vector<lir::Type*>& args = {});
 
+    lir::Function* getIntrinsicCopy();
+
     /// Attempt to inject a boolean comparison unto the given |value|, such
     /// that the result is some form of comparison of a boolean type.
     ///
@@ -71,7 +75,7 @@ private:
     /// name in the graph.
     void codegen_lowered_definition(const Defn *defn);
 
-    lir::Function *codegen_initial_function(const FunctionDefn *defn);
+    lir::Function* codegenInitialFunction(const FunctionDefn* defn);
     lir::Function *codegen_lowered_function(const FunctionDefn *defn);
 
     lir::Global *codegen_initial_global(const VariableDefn *defn);

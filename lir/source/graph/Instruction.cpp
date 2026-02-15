@@ -78,7 +78,7 @@ bool Instruction::is_trivially_dead() const {
 
 void Const::print(std::ostream &os, PrintPolicy policy) const {
     if (policy == PrintPolicy::Use) {
-        os << std::format("%{}", m_def);
+        os << std::format("%{}: {}", m_def, m_type->to_string());
     } else if (policy == PrintPolicy::Def) {
         os << std::format("%{} := const <{}> ", m_def, get_type()->to_string());
         get_value()->print(os, PrintPolicy::Use);
@@ -92,7 +92,7 @@ void Const::print(std::ostream &os, PrintPolicy policy) const {
 
 void Load::print(std::ostream &os, PrintPolicy policy) const {
     if (policy == PrintPolicy::Use) {
-        os << std::format("%{}", m_def);
+        os << std::format("%{}: {}", m_def, m_type->to_string());
     } else if (policy == PrintPolicy::Def) {
         os << std::format("%{} := load <{}> ", m_def, get_type()->to_string());
         get_addr()->print(os, PrintPolicy::Use);
@@ -122,7 +122,7 @@ void Store::print(std::ostream &os, PrintPolicy policy) const {
 
 void Access::print(std::ostream &os, PrintPolicy policy) const {
     if (policy == PrintPolicy::Use) {
-        os << std::format("%{}", m_def);
+        os << std::format("%{}: {}", m_def, m_type->to_string());
     } else if (policy == PrintPolicy::Def) {
         os << std::format("%{} := access <{}> ", m_def, get_type()->to_string());
         get_base()->print(os, PrintPolicy::Use);
@@ -138,7 +138,7 @@ void Access::print(std::ostream &os, PrintPolicy policy) const {
 
 void Extract::print(std::ostream &os, PrintPolicy policy) const {
     if (policy == PrintPolicy::Use) {
-        os << std::format("%{}", m_def);
+        os << std::format("%{}: {}", m_def, m_type->to_string());
     } else if (policy == PrintPolicy::Def) {
         os << std::format("%{} := extract <{}> ", m_def, get_type()->to_string());
         get_base()->print(os, PrintPolicy::Use);
@@ -152,7 +152,7 @@ void Extract::print(std::ostream &os, PrintPolicy policy) const {
 
 void Offptr::print(std::ostream &os, PrintPolicy policy) const {
     if (policy == PrintPolicy::Use) {
-        os << std::format("%{}", m_def);
+        os << std::format("%{}: {}", m_def, m_type->to_string());
     } else if (policy == PrintPolicy::Def) {
         os << std::format("%{} := offptr <{}> ", m_def, get_type()->to_string());
         get_base()->print(os, PrintPolicy::Use);
@@ -170,7 +170,7 @@ void Call::print(std::ostream &os, PrintPolicy policy) const {
     if (policy == PrintPolicy::Use) {
         assert(is_def() && "call does not define a value!");
 
-        os << std::format("%{}", m_def);
+        os << std::format("%{}: {}", m_def, m_type->to_string());
     } else if (policy == PrintPolicy::Def) {
         if (is_def())
             os << std::format("%{} := ", m_def);
@@ -270,7 +270,7 @@ void Phi::add_edge(Value *value, BasicBlock *pred) {
 
 void Phi::print(std::ostream &os, PrintPolicy policy) const {
     if (policy == PrintPolicy::Use) {
-        os << std::format("%{}", m_def);
+        os << std::format("%{}: {}", def(), get_type()->to_string());
     } else if (policy == PrintPolicy::Def) {
         os << std::format("%{} := phi <{}> ", m_def, get_type()->to_string());
 
@@ -295,9 +295,9 @@ void Phi::print(std::ostream &os, PrintPolicy policy) const {
 
 void Unop::print(std::ostream &os, PrintPolicy policy) const {
     if (policy == PrintPolicy::Use) {
-        os << std::format("%{}", m_def);
+        os << std::format("%{}: {}", def(), get_type()->to_string());
     } else if (policy == PrintPolicy::Def) {
-        os << std::format("%{} := ", m_def);
+        os << std::format("%{} := ", def());
 
         switch (op()) {
             case Op::Not:
@@ -323,9 +323,9 @@ void Unop::print(std::ostream &os, PrintPolicy policy) const {
 
 void Binop::print(std::ostream &os, PrintPolicy policy) const {
     if (policy == PrintPolicy::Use) {
-        os << std::format("%{}", m_def);
+        os << std::format("%{}: {}", def(), get_type()->to_string());
     } else if (policy == PrintPolicy::Def) {
-        os << std::format("%{} := ", m_def);
+        os << std::format("%{} := ", def());
 
         switch (op()) {
             case Op::IAdd:
@@ -381,7 +381,7 @@ void Binop::print(std::ostream &os, PrintPolicy policy) const {
                 break;
         }
 
-        os << std::format(" <{}> ", get_type()->to_string());
+        os << std::format(" <{}> ", m_type->to_string());
         get_lhs()->print(os, PrintPolicy::Use);
         os << ", ";
         get_rhs()->print(os, PrintPolicy::Use);
@@ -395,7 +395,7 @@ void Binop::print(std::ostream &os, PrintPolicy policy) const {
 
 void Cast::print(std::ostream &os, PrintPolicy policy) const {
     if (policy == PrintPolicy::Use) {
-        os << std::format("%{}", m_def);
+        os << std::format("%{}: {}", m_def, m_type->to_string());
     } else if (policy == PrintPolicy::Def) {
         os << std::format("%{} := ", m_def);
 
@@ -450,7 +450,7 @@ void Cast::print(std::ostream &os, PrintPolicy policy) const {
 
 void Cmp::print(std::ostream &os, PrintPolicy policy) const {
     if (policy == PrintPolicy::Use) {
-        os << std::format("%{}", m_def);
+        os << std::format("%{}: {}", m_def, m_type->to_string());
     } else if (policy == PrintPolicy::Def) {
         os << std::format("%{} := ", m_def);
 

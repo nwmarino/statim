@@ -33,6 +33,9 @@ lir::Value *LIRCodegen::codegen_addressed_expression(const Expr *expr) {
         case Expr::Subscript:
             return codegen_addressed_subscript(static_cast<const SubscriptExpr*>(expr));
 
+        case Expr::Call:
+            return codegen_function_call(static_cast<const CallExpr*>(expr));
+
         default:
             return nullptr;
     }

@@ -54,7 +54,7 @@ VoidType *VoidType::get(CFG &cfg) {
 //                          IntegerType Implementation
 //>==---------------------------------------------------------------------------
 
-static IntegerType *get(CFG &cfg, uint32_t width) {
+IntegerType *IntegerType::get(CFG &cfg, uint32_t width) {
     switch (width) {
         case 8:
             return static_cast<IntegerType*>(Type::get_i8(cfg));

@@ -8,6 +8,8 @@
 #include "lace/tree/Stmt.hpp"
 
 #include "lir/graph/Function.hpp"
+#include "lir/graph/Parameter.hpp"
+#include "lir/graph/Type.hpp"
 
 using namespace lace;
 
@@ -154,11 +156,36 @@ void LIRCodegen::codegen_return(const RetStmt *stmt) {
         m_builder.build_ret();
         return;
     }
-    
-    lir::Value *value = codegen_valued_expression(stmt->get_expr());
-    assert(value);
 
-    m_builder.build_ret(value);
+    lir::Type* type = to_lir_type(stmt->get_expr()->get_type());
+    if (m_mach.is_scalar(type)) {
+        lir::Value *value = codegen_valued_expression(stmt->get_expr());
+        assert(value);
+
+        m_builder.build_ret(value);
+    } else {
+        assert(m_func->hasAggregateReturn());
+
+        lir::Parameter* aret = m_func->get_param(0);
+        assert(aret->hasTrait(lir::Parameter::Trait::ARet));
+
+        lir::Value* value = codegen_addressed_expression(stmt->get_expr());
+        assert(value);
+
+        lir::Function* copy = get_function("__copy", lir::Type::get_void(m_cfg), {
+            lir::PointerType::get(m_cfg, lir::Type::get_void(m_cfg)),
+            lir::PointerType::get(m_cfg, lir::Type::get_void(m_cfg)),
+            lir::IntegerType::get(m_cfg, 64),
+        });
+
+        m_builder.build_call(copy, { 
+            aret, 
+            value, 
+            lir::Integer::get(m_cfg, lir::IntegerType::get(m_cfg, 64), m_mach.get_type_size(type) / 8) 
+        });
+
+        m_builder.build_ret();
+    }
 }
 
 void LIRCodegen::codegen_rune_statement(const RuneStmt *stmt) {

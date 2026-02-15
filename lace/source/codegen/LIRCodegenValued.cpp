@@ -297,20 +297,51 @@ lir::Value* LIRCodegen::codegen_type_cast(const CastExpr* expr) {
 }
 
 lir::Value* LIRCodegen::codegen_function_call(const CallExpr* expr) {
-    lir::Value *callee = codegen_addressed_expression(expr->get_callee());
+    lir::Value* callee = codegen_addressed_expression(expr->get_callee());
     assert(callee);
 
     std::vector<lir::Value*> args = {};
     args.reserve(expr->num_args());
 
-    for (Expr *arg : expr->get_args()) {
-        lir::Value *value = codegen_valued_expression(arg);
+    lir::Value* aret = nullptr;
+    lir::Type* result_type = to_lir_type(expr->get_type());
+    if (!m_mach.is_scalar(result_type)) {
+        if (m_state.place) {
+            aret = m_state.place;
+        } else {
+            aret = lir::Local::create(
+                m_cfg, 
+                result_type, 
+                std::to_string(m_cfg.get_def_id()),
+                m_func
+            );
+        }
+        
+        args.push_back(aret);
+    }
+
+    for (Expr* arg : expr->get_args()) {
+        lir::Value* value = nullptr;
+        lir::Type* type = to_lir_type(arg->get_type());
+
+        if (!m_mach.is_scalar(type)) {
+            value = codegen_addressed_expression(arg);
+        } else {
+            value = codegen_valued_expression(arg);
+        }
+        
         assert(value);
 
         args.push_back(value);
     }
 
-    return m_builder.build_call(dynamic_cast<lir::Function*>(callee), args);
+    lir::Call* call = m_builder.build_call(dynamic_cast<lir::Function*>(callee), args);
+    
+    if (aret) {
+        return aret;
+    } else {
+        return call;
+    }
 }
 
 lir::Value* LIRCodegen::codegen_parentheses(const ParenExpr* expr) {

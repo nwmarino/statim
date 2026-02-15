@@ -10,19 +10,30 @@
 
 namespace lir {
 
+using Result = bool;
+
 class Function;
 
 /// A parameter to a function in the IR.
 class Parameter final : public Value {
+public:
+    enum class Trait : uint32_t {
+        None = 0,
+        ARet,
+        Byval,  
+    };
+
+private:
     Function *m_parent;
     std::string m_name;
+    Trait m_trait;
 
-    Parameter(Type *type, Function *parent, const std::string &name)
-      : Value(type), m_parent(parent), m_name(name) {}
+    Parameter(Type *type, Function *parent, const std::string &name, Trait trait)
+      : Value(type), m_parent(parent), m_name(name), m_trait(trait) {}
 
 public:
     [[nodiscard]] static 
-    Parameter *create(Type *type, const std::string &name = "", 
+    Parameter *create(Type *type, const std::string &name = "", Trait trait = Trait::None,
                       Function *parent = nullptr);
 
     ~Parameter() = default;
@@ -46,6 +57,18 @@ public:
 
     /// Test if this argument is named.
     bool is_named() const { return !m_name.empty(); }
+
+    /// Set the trait of this parameter to |trait|.
+    void setTrait(Trait trait) { m_trait = trait; }
+
+    /// Returns the trait of this parameter, if it has one.
+    Trait getTrait() const { return m_trait; }
+
+    /// Test if this parameter has a trait.
+    Result hasTrait() const { return m_trait != Trait::None; }
+
+    /// Test if this parameter has the given |trait|.
+    Result hasTrait(Trait trait) const { return m_trait == trait; }
 
     /// Returns the index of this argument in its parent function.
     ///

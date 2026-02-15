@@ -35,9 +35,9 @@ void Local::detach() {
 
 void Local::print(std::ostream &os, PrintPolicy policy) const {
 	if (policy == PrintPolicy::Use) {
-		os << std::format("%{}", get_name(), get_type()->to_string());
+		os << std::format("%{}: {}", m_name, m_type->to_string());
 	} else if (policy == PrintPolicy::Def) {
 		os << std::format("%{} := local <{}> [{}]\n", 
-			get_name(), get_allocated_type()->to_string(), get_align());
+			m_name, get_allocated_type()->to_string(), m_align);
 	}
 }

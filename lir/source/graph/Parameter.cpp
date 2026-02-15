@@ -11,9 +11,8 @@
 
 using namespace lir;
 
-Parameter *Parameter::create(Type *type, const std::string &name, 
-                             Function *parent) {
-    Parameter *param = new Parameter(type, parent, name);
+Parameter *Parameter::create(Type *type, const std::string &name, Trait trait, Function *parent) {
+    Parameter *param = new Parameter(type, parent, name, trait);
     assert(param);
     
     if (parent)
@@ -39,12 +38,23 @@ uint32_t Parameter::get_index() const {
 void Parameter::print(std::ostream &os, PrintPolicy policy) const {
     if (policy == PrintPolicy::Use) {
         assert(is_named() && "cannot use unnamed argument!");
-            
+
         os << std::format("{}: {}", get_name(), get_type()->to_string());
     } else if (policy == PrintPolicy::Def) {
         if (is_named())
             os << std::format("{}: ", get_name());
-    
+
+        switch (getTrait()) {
+            case Trait::None:
+                break;
+            case Trait::ARet:
+                os << "aret ";
+                break;
+            case Trait::Byval:
+                os << "byval ";
+                break;
+        }
+
         os << get_type()->to_string();
     }
 }

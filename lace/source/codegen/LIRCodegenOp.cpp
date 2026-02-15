@@ -13,15 +13,34 @@
 
 using namespace lace;
 
-lir::Value *LIRCodegen::codegen_assignment(const BinaryOp *expr) {
-    lir::Value *value = codegen_valued_expression(expr->get_rhs());
-    assert(value);
-
+lir::Value* LIRCodegen::codegen_assignment(const BinaryOp* expr) {
     lir::Value *ptr = codegen_addressed_expression(expr->get_lhs());
     assert(ptr);
+
+    lir::Type* type = to_lir_type(expr->get_type());
+    if (m_mach.is_scalar(type)) {
+        lir::Value* value = codegen_valued_expression(expr->get_rhs());
+        assert(value);
     
-    m_builder.build_store(value, ptr);
-    return value; // Return rhs as result of the assignment.
+        m_builder.build_store(value, ptr);
+        return value; // Return rhs as result of the assignment.
+    } else {
+        m_state.place = ptr;
+
+        lir::Value* value = codegen_addressed_expression(expr->get_rhs());
+        assert(value);
+
+        if (value != ptr) {
+            m_builder.build_call(getIntrinsicCopy(), {
+                ptr,
+                value,
+                lir::Integer::get(m_cfg, lir::IntegerType::get(m_cfg, 64), m_mach.get_type_size(type) / 8),
+            });
+        }
+
+        m_state.place = nullptr;
+        return value;
+    }
 }
 
 lir::Value *LIRCodegen::codegen_addition(const BinaryOp *expr) {

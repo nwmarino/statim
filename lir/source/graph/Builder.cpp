@@ -144,7 +144,7 @@ Call *Builder::build_call(Function *callee, const std::vector<Value*> &args) {
     Call *inst = new Call(
         callee->get_type()->get_result(), 
         nullptr, 
-        result ? m_cfg.get_def_id() : 0, 
+        result->is_void_type() ? 0 : m_cfg.get_def_id(), 
         ops);
     assert(inst);
 

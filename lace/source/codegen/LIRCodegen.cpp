@@ -163,6 +163,14 @@ lir::Function* LIRCodegen::get_function(const std::string& name, lir::Type* resu
     );
 }
 
+lir::Function* LIRCodegen::getIntrinsicCopy() {
+    return get_function("__copy", lir::VoidType::get(m_cfg), {
+        lir::PointerType::get(m_cfg, lir::VoidType::get(m_cfg)),
+        lir::PointerType::get(m_cfg, lir::VoidType::get(m_cfg)),
+        lir::IntegerType::get(m_cfg, 64),
+    });
+}
+
 lir::Value* LIRCodegen::inject_comparison(lir::Value* value) {
     lir::Type* type = value->get_type();
     
