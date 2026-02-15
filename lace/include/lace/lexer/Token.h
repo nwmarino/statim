@@ -109,8 +109,7 @@ struct Token final {
     /// The attached value of this token for literals and identifiers. 
     std::string value;
 
-    Token(Kind kind = Token::EndOfFile, SourceLocation loc = {}, 
-		  const std::string& value = "")
+    Token(Kind kind = Token::EndOfFile, SourceLocation loc = {}, const std::string& value = "")
       : kind(kind), loc(loc), value(value) {}
 
     bool operator==(const Token& other) const {
@@ -118,7 +117,7 @@ struct Token final {
     }
 
 	/// Test if this token marks the end of an input file.
-    inline bool is_eof() const { return kind == Token::EndOfFile; }
+    inline bool isEof() const { return kind == Token::EndOfFile; }
 };
 
 } // namespace lace
