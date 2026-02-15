@@ -3,8 +3,8 @@
 //  All rights reserved.
 //
 
-#include "lace/codegen/LIRCodegen.h"
 #include "lace/tree/Defn.h"
+#include "lace/tree/LIRCodegen.h"
 #include "lace/tree/Stmt.h"
 
 #include "lir/graph/Function.hpp"

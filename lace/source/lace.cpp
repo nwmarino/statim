@@ -3,17 +3,17 @@
 //  All rights reserved.
 //
 
-#include "lace/codegen/LIRCodegen.h"
 #include "lace/core/Diagnostics.h"
 #include "lace/core/ThreadPool.h"
 #include "lace/core/Options.h"
 #include "lace/parser/Parser.h"
 #include "lace/tools/Files.h"
 #include "lace/tree/AST.h"
-#include "lace/tree/TypeResolution.h"
+#include "lace/tree/LIRCodegen.h"
 #include "lace/tree/Printer.h"
 #include "lace/tree/SemanticAnalysis.h"
 #include "lace/tree/SymbolAnalysis.h"
+#include "lace/tree/TypeResolution.h"
 
 #include "lir/analysis/AMD64LoweringPass.hpp"
 #include "lir/machine/Machine.hpp"
