@@ -3,33 +3,37 @@
 //  All rights reserved.
 //
 
+#include "lir/machine/AMD64.hpp"
 #include "lir/machine/FunctionABI.hpp"
 
 using namespace lir;
 
-/// Aligns the given |offset| to the provided |alignment|.
-static inline uint32_t align_to(uint32_t offset, uint32_t alignment) {
-    return (offset + alignment - 1) & ~(alignment - 1);
-}
-
-FunctionABI::FunctionABI(const Machine &mach, const Function *func) {
-    const FunctionType *type = func->get_type();
-    int32_t offset = 16;
+FunctionABI::FunctionABI(const Machine& mach, const Function* func) {
+    const FunctionType* type = func->get_type();
+    int32_t offset = 16; // @Todo: changes with architecture and system ABI.
 
     if (type->has_result()) {
-        const Type *result = type->get_result();
-        m_result = Location { .kind = Location::Kind::Stack, .offset = offset };
-        offset += mach.get_type_size(result) / 8;
-        //offset = align_to(offset + mach.get_type_size(result) / 8, 16);
+        const Type* result = type->get_result();
+        assert(mach.is_scalar(result));
+
+        Register rReg;
+
+        // @Todo: change with architecture.
+        if (result->is_float_type()) {
+            rReg = AMD64_Register::XMM0;
+        } else {
+            rReg = AMD64_Register::RAX;
+        }
+
+        m_result = Location { Location::Kind::Register, rReg };
     }
 
-    for (const Type *param : type->get_params()) {
+    for (const Type* param : type->get_params()) {
         m_params.push_back(Location {
             .kind = Location::Kind::Stack,
             .offset = offset
         });
 
         offset += (mach.get_type_size(param) / 8);
-        //offset = align_to(offset, 16);
     }
 }

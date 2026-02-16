@@ -19,14 +19,13 @@
 #include <ostream>
 #include <string>
 
-namespace lace {
-
-namespace log {
+namespace lace::log {
 
 /// A location in source suitable for the logger.
 struct Location final {
     std::string path;
-	uint32_t line, col;
+	uint32_t line;
+    uint32_t col;
 
     Location() = default;
 
@@ -44,19 +43,13 @@ struct Span final {
     Span(const std::string& path, SourceSpan span) : path(path), start(span.start), end(span.end) {}
 };
 
-/// Initialize the logger with the given output stream |os|.
-///
-/// If a custom stream is given, then it is to be borrowed and not owned.
-void init(std::ostream& os = std::cerr);
+/// Direct the output stream of the logger to |os|.
+void direct(std::ostream& os);
 
-/// Change the output stream of the logger to |os|.
-void set_output_stream(std::ostream& os);
-
-/// Clear the logger output stream, if there is one.
+/// Reset the logger output stream, if there is one.
 ///
-/// This effectively disables the logger until a new output stream is provided
-/// via set_output_stream.
-void clear_output_stream();
+/// This effectively disables the logger until a new output stream is provided via |direct|.
+void reset();
 
 /// Flush the output stream and the compiler state if there have been any 
 /// errors declared.
@@ -109,8 +102,6 @@ void error(const std::string& msg, const Span& span);
 /// the given source |span|.
 [[noreturn]] void fatal(const std::string& msg, const Span& span);
 
-} // namespace log
-
-} // namespace lace
+} // namespace lace::log
 
 #endif // LACE_DIAGNOSTICS_H_

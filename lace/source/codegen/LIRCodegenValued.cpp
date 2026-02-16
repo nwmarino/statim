@@ -174,11 +174,11 @@ lir::Value* LIRCodegen::codegen_literal_character(const CharLiteral* expr) {
 }
 
 lir::Value* LIRCodegen::codegen_literal_float(const FloatLiteral* expr) {
-    return lir::Float::get(
+    return m_builder.build_const(lir::Float::get(
         m_cfg,
         to_lir_type(expr->get_type()),
         static_cast<double>(expr->get_value())
-    );
+    ));
 }
 
 lir::Value* LIRCodegen::codegen_literal_null(const NullLiteral* expr) {
@@ -222,8 +222,9 @@ lir::Value* LIRCodegen::codegen_type_cast(const CastExpr* expr) {
             }
         } else if (dest->is_float_type()) {
             // Handle integer -> floating point type casts.
-            if (auto integer = dynamic_cast<lir::Integer*>(value))
-                return lir::Float::get(m_cfg, dest, integer->get_value());
+            if (auto integer = dynamic_cast<lir::Integer*>(value)) {
+                return m_builder.build_const(lir::Float::get(m_cfg, dest, integer->get_value()));
+            }
 
             if (expr->get_expr()->get_type()->isSignedInt()) {
                 return m_builder.build_s2f(dest, value);

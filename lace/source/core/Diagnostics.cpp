@@ -20,12 +20,11 @@ static bool g_color = false;
 static bool g_errors = false;
 
 /// Reassess whether colors should be used for the current output stream.
-static void adjust_color_compatibility() {
+static void adjustColorCompatibility() {
     g_color = (g_out == &std::cout || g_out == &std::cerr);
 }
 
-/// Read in the lines of source code that |span| covers from the source file
-/// at |path|.
+/// Read in the lines of source code that |span| covers from the source file at |path|.
 static std::vector<std::string> readSource(const Span& span) {
     assert(span.end.line >= span.start.line && "span ends before it starts!");
     
@@ -51,8 +50,7 @@ static std::vector<std::string> readSource(const Span& span) {
     return lines;
 }
 
-/// Print the lines of source code that |span| covers from the source file at
-/// |path|.
+/// Print the lines of source code that |span| covers from the source file at |path|.
 static void printSource(const Span& span) {
     const uint32_t line_len = std::to_string(span.start.line).size();
     const std::vector<std::string> lines = readSource(span);
@@ -78,17 +76,13 @@ static void printSource(const Span& span) {
     *g_out << std::string(line_len + 2, ' ') << "╰──\n";
 }
 
-void log::init(std::ostream& os) {
-    set_output_stream(os);
-}
-
-void log::set_output_stream(std::ostream& os) {
+void log::direct(std::ostream& os) {
     std::lock_guard<std::mutex> lock(g_mutex);
     g_out = &os;
-    adjust_color_compatibility();
+    adjustColorCompatibility();
 }
 
-void log::clear_output_stream() {
+void log::reset() {
     std::lock_guard<std::mutex> lock(g_mutex);
     g_out = nullptr;
 }

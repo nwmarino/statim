@@ -162,7 +162,7 @@ void resolveDependencies(Options& options, const Asts& asts, const DepTable& dep
 
         if (options.verbose) {
             duration<double> dur = get_time() - time_namea_start;
-            std::cout << std::format("{}: finished name analysis\n-- took {}\n",
+            std::cout << std::format("{}: Finished type resolution\n-- took {}\n",
                 ast->get_file(), dur);
         }
     }
@@ -182,7 +182,7 @@ void drive_lir_backend(const Options &options, const Asts &asts) {
         Timestamp time_cgn_end = get_time();
         if (options.verbose) {
             duration<double> dur = time_cgn_end - time_cgn_start;
-            std::cout << std::format("{}: finished code generation\n-- took {}\n", 
+            std::cout << std::format("{}: Finished code generation\n-- took {}\n", 
                 ast->get_file(), dur);
         }
 
@@ -205,7 +205,7 @@ void drive_lir_backend(const Options &options, const Asts &asts) {
         Timestamp time_lower_end = get_time();
         if (options.verbose) {
             duration<double> dur = time_lower_end - time_lower_start;
-            std::cout << std::format("{}: finished lowering\n-- took {}\n", 
+            std::cout << std::format("{}: Finished lowering\n-- took {}\n", 
                 ast->get_file(), dur);
         }
 
@@ -269,7 +269,7 @@ int32_t main(int32_t argc, char *argv[]) {
     options.dump_lir = true;
     options.dump_mir = true;
 
-    log::init();
+    log::direct(std::cout);
 
     std::vector<InputFile> files = {
         InputFile("/home/lovelace/samples/structs.lace"),
@@ -386,7 +386,7 @@ int32_t main(int32_t argc, char *argv[]) {
                     duration<double> dur = get_time() - parse_start;
 
                     std::stringstream ss;
-                    ss << std::format("{}: finished parsing\n-- took {}\n", 
+                    ss << std::format("{}: Finished parsing\n-- took {}\n", 
                         f.file, dur);
                     
                     std::cout << ss.str();
@@ -409,8 +409,7 @@ int32_t main(int32_t argc, char *argv[]) {
             duration<double> dur = get_time() - parse_start;
 
             std::stringstream ss;
-            ss << std::format("{}: finished parsing\n-- took {}\n", 
-                f.file, dur);
+            ss << std::format("{}: Finished parsing\n-- took {}\n", f.file, dur);
             
             std::cout << ss.str();
         }
@@ -444,7 +443,7 @@ int32_t main(int32_t argc, char *argv[]) {
 
         if (options.verbose) {
             duration<double> dur = get_time() - syma_start;
-            std::cout << std::format("{}: finished symbol analysis\n-- took {}\n", 
+            std::cout << std::format("{}: Finished symbol analysis\n-- took {}\n", 
                 ast->get_file(), dur);
         }
     }
@@ -460,7 +459,7 @@ int32_t main(int32_t argc, char *argv[]) {
 
         if (options.verbose) {
             duration<double> dur = get_time() - sema_start;
-            std::cout << std::format("{}: finished semantic analysis\n-- took {}\n", 
+            std::cout << std::format("{}: Finished semantic analysis\n-- took {}\n", 
                 ast->get_file(), dur);
         }
 

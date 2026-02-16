@@ -77,8 +77,8 @@ uint32_t StackFrame::size() const {
 //>==---------------------------------------------------------------------------
 
 MachineFunction::MachineFunction(MachineObject *parent, const FunctionABI &abi, 
-                                 const std::string &name)
-  : m_parent(parent), m_abi(abi), m_name(name) {
+                                 const std::string &name) : m_parent(parent), m_abi(abi), 
+                                                            m_name(name) {
     if (parent)
         parent->get_functions().emplace(name, this);
 }

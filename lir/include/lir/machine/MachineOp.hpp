@@ -120,7 +120,7 @@ public:
     /// Test if there are any implicit register operands to this op.
     bool has_implicit_operands() const {
         for (const MachineOperand &op : m_operands) {
-            if (op.is_reg() && op.reg().is_implicit())
+            if (op.is_reg() && op.reg().isImplicit())
                 return true;
         }
 
@@ -131,7 +131,7 @@ public:
     uint32_t num_implicit_operands() const {
         uint32_t res = 0;
         for (const MachineOperand &op : m_operands) {
-            if (op.is_reg() && op.reg().is_implicit())
+            if (op.is_reg() && op.reg().isImplicit())
                 res++;
         }
 

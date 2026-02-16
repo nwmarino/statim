@@ -199,6 +199,9 @@ enum AMD64_Op : uint32_t {
     AMD64_CVTSI2SS,
     AMD64_CVTSI2SD,
 
+    AMD64_VCVTUSI2SS,
+    AMD64_VCVTUSI2SD,
+
     AMD64_CVTTSS2SI8,
     AMD64_CVTTSS2SI16,
     AMD64_CVTTSS2SI32,
@@ -213,10 +216,15 @@ enum AMD64_Op : uint32_t {
     AMD64_VCVCTSS2USI16,
     AMD64_VCVCTSS2USI32,
     AMD64_VCVCTSS2USI64,
+
+    AMD64_VCVCTSD2USI8,
+    AMD64_VCVCTSD2USI16,
+    AMD64_VCVCTSD2USI32,
+    AMD64_VCVCTSD2USI64,
 };
 
-const char *to_string(AMD64_Op op);
-const char *to_string(AMD64_Register reg, uint16_t subreg = 0);
+const char* to_string(AMD64_Op op);
+const char* to_string(AMD64_Register reg, uint16_t subreg = 0);
 
 } // namespace lir
 

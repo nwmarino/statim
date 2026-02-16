@@ -9,8 +9,9 @@
 
 using namespace lir;
 
-const char *lir::to_string(AMD64_Op op) {
-    switch (op) {
+const char* lir::to_string(AMD64_Op op) {
+    switch (op)
+    {
         case AMD64_NOP:
             return "AMD64NOP";
         case AMD64_JMP:
@@ -275,6 +276,10 @@ const char *lir::to_string(AMD64_Op op) {
             return "AMD64CVTSI2SS";
         case AMD64_CVTSI2SD:
             return "AMD64CVTSI2SD";
+        case AMD64_VCVTUSI2SS:
+            return "AMD64VCVTUSI2SS";
+        case AMD64_VCVTUSI2SD:
+            return "AMD64VCVTUSI2SD";
         case AMD64_CVTTSS2SI8:
             return "AMD64CVTTSS2SI8";
         case AMD64_CVTTSS2SI16:
@@ -299,11 +304,20 @@ const char *lir::to_string(AMD64_Op op) {
             return "AMD64VCVTSS2USI32";
         case AMD64_VCVCTSS2USI64:
             return "AMD64VCVTSS2USI64";
+        case AMD64_VCVCTSD2USI8:
+            return "AMD64VCVCTSD2USI8";
+        case AMD64_VCVCTSD2USI16:
+            return "AMD64VCVCTSD2USI16";
+        case AMD64_VCVCTSD2USI32:
+            return "AMD64VCVCTSD2USI32";
+        case AMD64_VCVCTSD2USI64:
+            return "AMD64VCVCTSD2USI64";
     }
 }
 
-const char *lir::to_string(AMD64_Register reg, uint16_t subreg) {
-    switch (reg) {
+const char* lir::to_string(AMD64_Register reg, uint16_t subreg) {
+    switch (reg) 
+    {
         case RAX:
             switch (subreg) {
                 case 8: return "rax";

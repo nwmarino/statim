@@ -4,6 +4,7 @@
 //
 
 #include "lir/machine/AMD64.hpp"
+#include "lir/machine/FunctionABI.hpp"
 #include "lir/machine/MachineFunction.hpp"
 #include "lir/machine/MachineLabel.hpp"
 #include "lir/machine/MachineOp.hpp"
@@ -32,14 +33,27 @@ void Printer::run(std::ostream &os) {
 }
 
 void Printer::print_register(std::ostream &os, const MachineRegister &reg) {
-    if (reg.get_register().is_virtual()) {
-        os << "%v" << reg.get_register().id() - Register::VIRTUAL_BARRIER;
-    } else {
-        // @Todo: Change cast for other archs.
-        os << '%' << to_string(static_cast<AMD64_Register>(reg.get_register().id()), 0);
+    if (reg.isImplicit()) {
+        os << "<impl-";
+
+        if (reg.isUse()) {
+            os << "use> ";
+        } else if (reg.isDef()) {
+            os << "def> ";
+        }
     }
 
-    os << std::format(":{}", reg.get_subreg());
+    if (reg.isExpired())
+        os << "expired ";
+
+    if (reg.reg().is_virtual()) {
+        os << "%v" << reg.reg().id() - Register::VIRTUAL_BARRIER;
+    } else {
+        // @Todo: Change cast for other archs.
+        os << '%' << to_string(static_cast<AMD64_Register>(reg.reg().id()), 0);
+    }
+
+    os << std::format(":{}", reg.subreg());
 }
 
 void Printer::print_operand(std::ostream &os, const MachineOperand &operand) {
@@ -146,18 +160,28 @@ void Printer::print_function(std::ostream &os, const MachineFunction &func) {
     os << std::format("{}:\n", func.get_name());
 
     const FunctionABI &abi = func.abi();
-    if (abi.has_result() || abi.num_params() > 0) {
+    if (abi.hasResult() || abi.numParams() > 0) {
         // Assume stack ABI.
         os << "<abi>\n";
 
-        if (abi.has_result()) {
-            os << std::format("\t:{} result\n", 
-                abi.get_result_location().offset);
+        auto printABILocation = [&os](const FunctionABI::Location& loc) -> void {
+            if (loc.kind == FunctionABI::Location::Kind::Register) {
+                os << std::format("%{}", to_string(static_cast<AMD64_Register>(loc.reg.id())));
+            } else if (loc.kind == FunctionABI::Location::Kind::Stack) {
+                os << std::format("stack+{}", loc.offset);
+            }
+        };
+
+        if (abi.hasResult()) {
+            os << "\t.rs ";
+            printABILocation(abi.getResultLocation());
+            os << '\n';
         }
 
-        for (uint32_t i = 0; i < abi.num_params(); ++i) {
-            os << std::format("\t:{} param {}\n", 
-                abi.get_param_location(i).offset, i + 1);
+        for (uint32_t i = 0; i < abi.numParams(); ++i) {
+            os << std::format("\t.p{} ", i + 1);
+            printABILocation(abi.getParamLocation(i));
+            os << '\n';
         }
     }
 
@@ -165,8 +189,14 @@ void Printer::print_function(std::ostream &os, const MachineFunction &func) {
     if (!pool.empty()) {
         os << "<pool>\n";
 
-        for (const MachineData *constant : pool.get_constants()) {
-            os << std::format(".C{}:\n", constant->get_name());
+        for (const MachineData *data : pool.get_constants()) {
+            os << std::format("\t.C{}:\n", data->get_name());
+            
+            for (const MachineConstant& constant : data->get_data()) {
+                os << "\t\t";
+                print_constant(os, constant);
+                os << '\n';
+            }
         }
     }
 
@@ -191,22 +221,22 @@ void Printer::print_constant(std::ostream &os, const MachineConstant &constant) 
             os << std::format("<zero> {}", constant.get_zeros());
             break;
         case MachineConstant::Kind::Int8:
-            os << std::format("<int8> {:#02X} ({})", constant.get_int(), constant.get_int());
+            os << std::format("<int8> {:#02x} ({})", constant.get_int(), constant.get_int());
             break;
         case MachineConstant::Kind::Int16:
-            os << std::format("<int8> {:#04X} ({})", constant.get_int(), constant.get_int());
+            os << std::format("<int8> {:#04x} ({})", constant.get_int(), constant.get_int());
             break;
         case MachineConstant::Kind::Int32:
-            os << std::format("<int8> {:#06X} ({})", constant.get_int(), constant.get_int());
+            os << std::format("<int8> {:#06x} ({})", constant.get_int(), constant.get_int());
             break;
         case MachineConstant::Kind::Int64:
-            os << std::format("<int8> {:#08X} ({})", constant.get_int(), constant.get_int());
+            os << std::format("<int8> {:#08x} ({})", constant.get_int(), constant.get_int());
             break;
         case MachineConstant::Kind::Float32:
-            os << std::format("<float32> {:#04X} ({})", constant.get_int(), constant.get_fp());
+            os << std::format("<float32> {:#04x} ({:.5f})", static_cast<int64_t>(constant.get_fp()), constant.get_fp());
             break;
         case MachineConstant::Kind::Float64:
-            os << std::format("<float64> {:#08X} ({})", constant.get_int(), constant.get_fp());
+            os << std::format("<float64> {:#08x} ({:.5f})", static_cast<int64_t>(constant.get_fp()), constant.get_fp());
             break;
     }
 }

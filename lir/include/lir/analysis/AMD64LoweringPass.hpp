@@ -43,6 +43,8 @@ private:
     /// The ops should be in the order of { 8, 16, 32, 64 } precisions.
     AMD64_Op get_sized_op(const Type *type, const std::array<AMD64_Op, 4> &gp);
 
+    AMD64_Op getSizedOp(const Type* type, const std::array<AMD64_Op, 2>& fp);
+
     /// Returns the sized AMD64 op for the given scalar |type|, from either
     /// the general purpose |gp| ops, or floating point |fp| ops.
     ///
@@ -56,6 +58,33 @@ private:
 
     /// Returns the AMD64 CMP op for the given scalar |type|.
     AMD64_Op get_cmp_op(const Type *type);
+
+    AMD64_Op getOpIAdd(const Type* type);
+    AMD64_Op getOpISub(const Type* type);
+    AMD64_Op getOpIMul(const Type* type);
+    AMD64_Op getOpSDiv(const Type* type);
+    AMD64_Op getOpUDiv(const Type* type);
+
+    AMD64_Op getOpAnd(const Type* type);
+    AMD64_Op getOpOr(const Type* type);
+    AMD64_Op getOpXor(const Type* type);
+
+    AMD64_Op getOpShl(const Type* type);
+    AMD64_Op getOpShr(const Type* type);
+    AMD64_Op getOpSar(const Type* type);
+
+    AMD64_Op getOpFAdd(const Type* type);
+    AMD64_Op getOpFSub(const Type* type);
+    AMD64_Op getOpFMul(const Type* type);
+    AMD64_Op getOpFDiv(const Type* type);
+
+    AMD64_Op getOpNot(const Type* type);
+    AMD64_Op getOpINeg(const Type* type);
+
+    AMD64_Op getOpSS2SI(const Type* type);
+    AMD64_Op getOpSD2SI(const Type* type);
+    AMD64_Op getOpSS2UI(const Type* type);
+    AMD64_Op getOpSD2UI(const Type* type);
 
     /// Create and return a new virtual register of the given |cls|.
     Register create_vreg(RegisterClass cls);

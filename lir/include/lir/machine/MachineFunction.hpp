@@ -154,8 +154,7 @@ private:
     Labels m_labels = {};
 
 public:
-    MachineFunction(MachineObject *parent, const FunctionABI &abi, 
-                    const std::string &name);
+    MachineFunction(MachineObject *parent, const FunctionABI &abi, const std::string &name);
 
     ~MachineFunction();
 

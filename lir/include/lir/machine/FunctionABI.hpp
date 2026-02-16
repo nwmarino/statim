@@ -15,7 +15,7 @@
 
 namespace lir {
 
-/// Descriptor for function ABIs regarding positions of argument and results.
+/// Descriptor for function ABIs regarding positions of arguments and results.
 class FunctionABI final {
 public:
     struct Location final {
@@ -33,24 +33,25 @@ private:
     std::optional<Location> m_result = std::nullopt;
 
 public:
-    FunctionABI(const Machine &mach, const Function *func);
+    FunctionABI(const Machine& mach, const Function* func);
 
-    /// Test if there are any parameters to this function.
-    bool has_params() const { return !m_params.size(); }
+    /// Test if this ABI contains any parameter locations.
+    bool hasParams() const { return !m_params.size(); }
 
     /// Returns the number of parameters in the ABI for this function.
-    uint32_t num_params() const { return m_params.size(); }
+    uint32_t numParams() const { return m_params.size(); }
 
-    const Location &get_param_location(uint32_t index) const {
+    /// Returns the ABI location for the parameter at the given |index|.
+    const Location& getParamLocation(uint32_t index) const {
         assert(index < m_params.size() && "index out of bounds!");
         return m_params[index];
     }
 
     /// Test if this ABI provides a result value.
-    bool has_result() const { return m_result.has_value(); }
+    bool hasResult() const { return m_result.has_value(); }
 
-    const Location &get_result_location() const {
-        assert(has_result() && "function does not have a result!");
+    const Location& getResultLocation() const {
+        assert(hasResult() && "function does not have a result!");
         return *m_result;
     }
 };

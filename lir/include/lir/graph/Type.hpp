@@ -238,7 +238,7 @@ public:
     Type *get_result() { return m_result; }
 
     /// Test if functions of this type have a result.
-    bool has_result() const { return m_result != nullptr; }
+    bool has_result() const { return m_result && !m_result->is_void_type(); }
 
     std::string to_string() const override;
 };
