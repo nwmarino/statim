@@ -13,35 +13,35 @@
 
 namespace lir {
 
+class ConstantPool;
+
 /// Represents potentially named, constant data. Can exist at either the global
 /// level or within a function pool. 
 class MachineData final {
-public:
-    using Data = std::vector<MachineConstant>;
-
-private:
+    const ConstantPool* m_pool;
     std::string m_name;
-    Data m_data;
-    bool m_pub;
+    std::vector<MachineConstant> m_data;
+    bool m_global;
     bool m_readonly;
 
 public:
-    MachineData(const std::string &name, const Data &data, bool pub = false, 
-                bool readonly = true)
-      : m_name(name), m_data(data), m_pub(pub), m_readonly(readonly) {}
+    MachineData(const std::string& name, const std::vector<MachineConstant>& data, 
+                bool global = false, bool readonly = true, ConstantPool* pool = nullptr)
+      : m_name(name), m_data(data), m_global(global), m_readonly(readonly), m_pool(pool) {}
 
-    /// Returns the name of this data, if it has one.
-    const std::string &get_name() const { return m_name; }
+    const ConstantPool* pool() const { return m_pool; }
 
-    /// Test if this data has a name.
-    bool has_name() const { return !m_name.empty(); }
+    bool hasPool() const { return m_pool != nullptr; }
 
-    const Data &get_data() const { return m_data; }
-    Data &get_data() { return m_data; }
+    /// Returns the name of this data.
+    const std::string& name() const { return m_name; }
 
-    inline bool is_public() const { return m_pub; }
+    const std::vector<MachineConstant>& data() const { return m_data; }
+    std::vector<MachineConstant>& data() { return m_data; }
 
-    inline bool is_readonly() const { return m_readonly; }
+    bool isGlobal() const { return m_global; }
+
+    inline bool isReadonly() const { return m_readonly; }
 };
 
 } // namespace lir

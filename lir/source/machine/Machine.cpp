@@ -104,11 +104,11 @@ uint32_t Machine::get_field_offset(const StructType *type, uint32_t i) const {
     for (uint32_t j = 0; j < i; ++j) {
         const Type *field = type->get_field(j);
 
-        uint32_t align = get_type_align(field);
-        offset = align_to(offset, align) + get_type_size(field);
+        uint32_t align = get_type_align(field) / 8;
+        offset = align_to(offset, align) + get_type_size(field) / 8;
     }
 
-    return align_to(offset, get_type_align(type->get_field(i)));
+    return align_to(offset, get_type_align(type->get_field(i)) / 8);
 }
 
 /*

@@ -315,7 +315,7 @@ const char* lir::to_string(AMD64_Op op) {
     }
 }
 
-const char* lir::to_string(AMD64_Register reg, uint16_t subreg) {
+const char* lir::to_string(AMD64_Register reg, uint8_t subreg) {
     switch (reg) 
     {
         case RAX:

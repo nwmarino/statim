@@ -43,6 +43,25 @@ void MachineLabel::append(MachineOp *op) {
     op->set_parent(this);
 }
 
+void MachineLabel::insertAfter(MachineOp* op, MachineOp* target) {
+    assert(op && "op cannot be null!");
+    assert(!op->has_parent() && "op already belongs to a label!");
+    assert(target && "target cannot be null!");
+    assert(target->get_parent() == this && "target does not belong to this label!");
+
+    if (m_tail == target)
+        m_tail = op;
+
+    if (target->get_next())
+        target->get_next()->set_prev(op);
+
+    op->set_prev(target);
+    op->set_next(target->get_next());
+
+    op->set_next(target);
+    op->set_parent(this);
+}
+
 void MachineLabel::remove(MachineOp *op) {
     assert(op && "op cannot be null!");
     assert(op->get_parent() == this && "op does not belong to this label!");

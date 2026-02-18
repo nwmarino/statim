@@ -1,13 +1,13 @@
-#   Copyright (c) 2026 Nick Marino
+#   Copyright (c) 2025-2026 Nicholas Marino
 #  
-#   All runtime functions defined here assume the Linux x86 SystemV ABI.
+#   All runtime functions defined here assume the lace pure-stack ABI.
 
     .text
     .global _start
     .type   _start, @function
 _start:
-    call    __rt_init
-    call    main@PLT
+    callq   __rt_init
+    callq   main@PLT
     movq    %rax, %rdi
     movq    $60, %rax   # exit syscall
     syscall
@@ -17,23 +17,30 @@ _start:
     .type   __rt_init, @function
 __rt_init:
 #   call    __fmt_arena_init@PLT
-    ret
+    retq
 
     .text
     .type   __rt_shutdown, @function
 __rt_shutdown:
 #   call    __fmt_arena_destroy@PLT
-    ret
+    retq
 
 # __copy :: (*void, *void, s64) -> void
     .text
     .global __copy
     .type   __copy, @function
 __copy:
+    pushq	%rbp
+	movq	%rsp, %rbp
+    movq    16(%rbp), %rdi
+    movq    24(%rbp), %rsi
+    movq    32(%rbp), %rdx
 .__copy_cnd:
     cmpq    $0, %rdx
     jne     .__copy_bdy
-    ret
+    movq	%rbp, %rsp
+	popq	%rbp
+    retq
 .__copy_bdy:
     movb    (%rsi), %al
     movb    %al, (%rdi)
@@ -41,34 +48,6 @@ __copy:
     incq    %rsi
     decq    %rdx
     jmp     .__copy_cnd
-
-# __set :: (*void, s8, s64) -> void
-    .text
-    .global __set
-    .type   __set, @function
-__set:
-.__set_cnd:
-    cmpq    $0, %rdx
-    jne     .__set_bdy
-    ret
-.__set_bdy:
-    movb    %sil, (%rdi)
-    decq    %rdx
-    jmp     .__set_cnd
-
-# __zero :: (*void, s64) -> void
-    .text
-    .global __zero
-    .type   __zero, @function
-__zero:
-.__zero_cnd:
-    cmpq    $0, %rdx
-    jne     .__zero_bdy
-    ret
-.__zero_bdy:
-    movb    $0, (%rdi)
-    decq    %rdx
-    jmp     .__zero_cnd
 
 # __abort :: () -> void
     .text
@@ -79,7 +58,7 @@ __abort:
     movq    $0, %rdi    # pid 0
     movq    $0, %rsi    # signal 6 (SIGABRT)
     syscall             # kill syscall
-    call    __unreachable 
+    callq   __unreachable 
 
 # __unreachable :: () -> void
     .text
@@ -93,6 +72,7 @@ __unreachable:
     .global exit
     .type   exit, @function
 exit:
+    movq    16(%rbp), %rdi
     movq    $60, %rax
     syscall
 
@@ -101,42 +81,53 @@ exit:
     .global open
     .type   open, @function
 open: 
+    movq    16(%rbp), %rdi
+    movq    24(%rbp), %rsi
+    movq    32(%rbp), %rdx
     movq    $2, %rax
     syscall
-    ret
+    retq
 
 # close :: (s64) -> s64
     .text
     .global close
     .type   close, @function
 close:
+    movq    16(%rbp), %rdi
     movq    $3, %rax
     syscall
-    ret
+    retq
 
 # read :: (s64, *char, s64) -> s64
     .text
     .global read
     .type   read, @function
 read:
+    movq    16(%rbp), %rdi
+    movq    24(%rbp), %rsi
+    movq    32(%rbp), %rdx
     movq    $0, %rax
     syscall
-    ret
+    retq
 
 # write :: (s64, *mut char, s64) -> s64
     .text
     .global write
     .type   write, @function
 write:
+    movq    16(%rbp), %rdi
+    movq    24(%rbp), %rsi
+    movq    32(%rbp), %rdx
     movq    $1, %rax
     syscall
-    ret
+    retq
 
 # brk :: (u64) -> *void
     .text
     .global brk
     .type   brk, @function
 brk:
+    movq    16(%rbp), %rdi
     movq    $12, %rax
     syscall
-    ret
+    retq

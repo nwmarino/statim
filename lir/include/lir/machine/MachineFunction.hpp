@@ -69,7 +69,7 @@ private:
     Constants m_constants = {};
 
 public:
-    ConstantPool() = default;
+    ConstantPool(MachineFunction* parent) : m_parent(parent) {}
 
     ~ConstantPool();
 
@@ -95,8 +95,8 @@ public:
     /// Test if this constant pool is empty i.e. contains no data.
     bool empty() const { return m_constants.empty(); }
 
-    /// Materialize a new data constant from the given |constant|.
-    MachineData *materialize(const MachineData::Data &data);
+    /// Materialize a new data constant from the given |data|.
+    MachineData* materialize(const std::vector<MachineConstant>& data);
 };
 
 /// Representation of a stack frame for a machine function.
@@ -111,7 +111,7 @@ private:
     Locals m_locals = {};
 
 public:
-    StackFrame() = default;
+    StackFrame(MachineFunction* parent) : m_parent(parent) {}
 
     ~StackFrame();
 
@@ -149,12 +149,14 @@ private:
     MachineObject *m_parent;
     const std::string m_name;
     const FunctionABI m_abi;
-    ConstantPool m_pool = {};
-    StackFrame m_frame = {};
+    ConstantPool m_pool;
+    StackFrame m_frame;
     Labels m_labels = {};
+    bool m_global;
 
 public:
-    MachineFunction(MachineObject *parent, const FunctionABI &abi, const std::string &name);
+    MachineFunction(MachineObject *parent, const FunctionABI &abi, const std::string &name, 
+                    bool global);
 
     ~MachineFunction();
 
@@ -174,6 +176,9 @@ public:
     const FunctionABI &abi() const { return m_abi; }
 
     const std::string &get_name() const { return m_name; }
+
+    /// Returns true if this function should have global linkage.
+    bool isGlobal() const { return m_global; }
 
     const ConstantPool &get_pool() const { return m_pool; }
     ConstantPool &get_pool() { return m_pool; }
@@ -197,6 +202,9 @@ public:
         assert(i < num_labels() && "index out of bounds!");
         return m_labels[i];
     }
+
+    /// Test if this function is empty i.e. contains no code.
+    [[nodiscard]] bool empty() const { return num_labels() == 0; }
 
     /// Add the given |label| to the back of this function.
     void add(MachineLabel *label);

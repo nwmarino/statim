@@ -10,7 +10,7 @@ using namespace lir;
 
 FunctionABI::FunctionABI(const Machine& mach, const Function* func) {
     const FunctionType* type = func->get_type();
-    int32_t offset = 16; // @Todo: changes with architecture and system ABI.
+    int32_t offset = 0; // @Todo: changes with architecture and system ABI.
 
     if (type->has_result()) {
         const Type* result = type->get_result();

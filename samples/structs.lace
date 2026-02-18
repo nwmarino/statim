@@ -13,7 +13,7 @@ vec3_new :: (x: f64, y: f64, z: f64) -> vec3 {
     ret vec;
 }
 
-vec3_mag :: (vec: vec3) -> f64 {
+vec3_secret :: (vec: vec3) -> f64 {
     let res: f64 = vec.x + vec.y + vec.z;
     ret res * res;
 }
@@ -21,5 +21,5 @@ vec3_mag :: (vec: vec3) -> f64 {
 $public
 main :: () -> s64 {
     let vec: vec3 = vec3_new(1, 2, 5);
-    ret cast<s64>(vec3_mag(vec));
+    ret cast<s64>(vec3_secret(vec));
 }

@@ -24,3 +24,9 @@ const MachineFunction *MachineOp::get_function() const {
     assert(has_parent() && "op does not belong to a label!");
     return get_parent()->get_parent();
 }
+
+void MachineOp::insertAfter(MachineOp* op) {
+    assert(op && "op cannot be null!");
+
+    op->get_parent()->insertAfter(this, op);
+}

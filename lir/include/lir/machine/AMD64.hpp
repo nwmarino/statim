@@ -224,20 +224,8 @@ enum AMD64_Op : uint32_t {
 };
 
 const char* to_string(AMD64_Op op);
-const char* to_string(AMD64_Register reg, uint16_t subreg = 0);
+const char* to_string(AMD64_Register reg, uint8_t subreg = 0);
 
 } // namespace lir
 
 #endif // LIR_AMD64_H_
-
-//
-// Local -> MachineLocal
-// Global -> MachineData
-// Function -> MachineSymbol
-// 
-
-// %1 = load <> (local) --> mov x(%rbp), %rxy (movxmr)
-//
-// %2 = load <> (global) --> mov x, %rxy (movxmr)
-//
-// %3 = load <> (op) --> mov (%x), %rxy (movxmr)

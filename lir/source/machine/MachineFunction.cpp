@@ -7,6 +7,7 @@
 #include "lir/machine/MachineObject.hpp"
 
 #include <algorithm>
+#include <string>
 
 using namespace lir;
 
@@ -36,18 +37,19 @@ const MachineFunction *MachineLocal::get_function() const {
 //>==---------------------------------------------------------------------------
 
 ConstantPool::~ConstantPool() {
-    for (MachineData *constant : m_constants)
+    for (MachineData* constant : m_constants)
         delete constant;
 }
 
-MachineData *ConstantPool::materialize(const MachineData::Data &data) {
+MachineData* ConstantPool::materialize(const std::vector<MachineConstant>& data) {
     const std::string name = std::to_string(m_constants.size());
 
-    MachineData *MD = new MachineData(
+    MachineData* MD = new MachineData(
         std::to_string(m_constants.size()),
         data,
         false, // private
-        true // read only
+        true, // read only
+        this
     );
     assert(MD);
 
@@ -60,7 +62,7 @@ MachineData *ConstantPool::materialize(const MachineData::Data &data) {
 //>==---------------------------------------------------------------------------
 
 StackFrame::~StackFrame() {
-    for (MachineLocal *local : m_locals)
+    for (MachineLocal* local : m_locals)
         delete local;
 }
 
@@ -68,7 +70,7 @@ uint32_t StackFrame::size() const {
     if (empty())
         return 0;
 
-    const MachineLocal *back = m_locals.back();
+    const MachineLocal* back = m_locals.back();
     return align_to(back->get_offset() + back->get_size(), 16);
 }
 
@@ -77,8 +79,8 @@ uint32_t StackFrame::size() const {
 //>==---------------------------------------------------------------------------
 
 MachineFunction::MachineFunction(MachineObject *parent, const FunctionABI &abi, 
-                                 const std::string &name) : m_parent(parent), m_abi(abi), 
-                                                            m_name(name) {
+                                 const std::string &name, bool global) 
+  : m_parent(parent), m_pool(this), m_frame(this), m_abi(abi), m_name(name), m_global(global) {
     if (parent)
         parent->get_functions().emplace(name, this);
 }

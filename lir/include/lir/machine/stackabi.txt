@@ -30,3 +30,29 @@ retq
 
 ... at callsite ...
 
+
+
+
+
+
+
+
+- moves into -rsp
+
+- rsp (caller)
+
+- ret addr (pushed by callq)
+
+- xxx move dests
+
+- xxx ...
+
+
+
+
+
+
+
+
+
+

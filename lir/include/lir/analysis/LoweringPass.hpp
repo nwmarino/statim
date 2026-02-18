@@ -30,7 +30,7 @@ public:
 
 protected:
     /// Lower the given constant |C| into another value entry for |data|.
-    void lower_constant(const Constant *C, MachineData::Data &data) const;
+    void lower_constant(const Constant *C, std::vector<MachineConstant>& data) const;
 };
 
 } // namespace lir

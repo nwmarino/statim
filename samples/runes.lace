@@ -1,8 +1,0 @@
-$public
-main :: () -> s64 {
-    if false {
-        $unreachable;
-    }
-
-    ret 42;
-}

@@ -80,7 +80,7 @@ void Printer::print_operand(std::ostream &os, const MachineOperand &operand) {
             break;
 
         case MachineOperand::Kind::Data:
-            os << std::format("<data {}>", operand.data()->get_name());
+            os << std::format("<data {}>", operand.data()->name());
             break;
 
         case MachineOperand::Kind::Local:
@@ -190,9 +190,9 @@ void Printer::print_function(std::ostream &os, const MachineFunction &func) {
         os << "<pool>\n";
 
         for (const MachineData *data : pool.get_constants()) {
-            os << std::format("\t.C{}:\n", data->get_name());
+            os << std::format("\t.C{}:\n", data->name());
             
-            for (const MachineConstant& constant : data->get_data()) {
+            for (const MachineConstant& constant : data->data()) {
                 os << "\t\t";
                 print_constant(os, constant);
                 os << '\n';
@@ -242,9 +242,9 @@ void Printer::print_constant(std::ostream &os, const MachineConstant &constant) 
 }
 
 void Printer::print_data(std::ostream &os, const MachineData &data) {
-    os << std::format("{}:\n", data.get_name());
+    os << std::format("{}:\n", data.name());
 
-    for (const MachineConstant &constant : data.get_data()) {
+    for (const MachineConstant &constant : data.data()) {
         os << '\t';
         print_constant(os, constant);
         os << '\n';

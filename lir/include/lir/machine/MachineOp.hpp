@@ -58,6 +58,10 @@ public:
     const MachineLabel *get_parent() const { return m_parent; }
     MachineLabel *get_parent() { return m_parent; }
 
+    /// Insert this immediately after the given |op| in its parent label.
+    /// Fails if |op| does not belong to a label, or if this op already belongs to one.
+    void insertAfter(MachineOp* op);
+
     /// Test if this op belongs to a label.
     bool has_parent() const { return m_parent != nullptr; }
 
@@ -137,6 +141,8 @@ public:
 
         return res;
     }
+
+    uint32_t num_explicit_operands() const { return num_operands() - num_implicit_operands(); }
 
     void set_comment(const std::string &comment) { m_comment = comment; }
     const std::string &get_comment() const { return m_comment; }

@@ -11,8 +11,7 @@ using namespace lir;
 LoweringPass::LoweringPass(CFG &cfg, MachineObject &obj)
   : Pass(cfg), m_mach(cfg.get_machine()), m_obj(obj) {}
 
-void LoweringPass::lower_constant(const Constant *C, 
-                                  MachineData::Data &data) const {
+void LoweringPass::lower_constant(const Constant* C, std::vector<MachineConstant>& data) const {
     if (auto integer = dynamic_cast<const Integer*>(C)) {
         const uint32_t bits = m_mach.get_type_size(C->get_type());
         const int64_t value = integer->get_value();

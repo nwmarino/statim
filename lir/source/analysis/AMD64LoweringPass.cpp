@@ -11,6 +11,7 @@
 #include "lir/graph/Type.hpp"
 #include "lir/machine/AMD64.hpp"
 #include "lir/machine/FunctionABI.hpp"
+#include "lir/machine/MachineConstant.hpp"
 #include "lir/machine/MachineFunction.hpp"
 #include "lir/machine/MachineOp.hpp"
 #include "lir/machine/MachineOperand.hpp"
@@ -21,6 +22,7 @@
 #include <string>
 #include <sstream>
 #include <unordered_map>
+#include <vector>
 
 using namespace lir;
 
@@ -159,7 +161,7 @@ static std::string stringify_inst(const Instruction *inst) {
 
 void AMD64LoweringPass::run() {
     for (const Global* global : m_cfg.get_globals()) {
-        MachineData::Data bytes = {};
+        std::vector<MachineConstant> bytes = {};
         
         if (global->has_initializer()) {
             lower_constant(global->get_initializer(), bytes);
@@ -189,7 +191,11 @@ void AMD64LoweringPass::run() {
 
         FunctionABI abi = FunctionABI(m_mach, func);
 
-        MachineFunction* MF = new MachineFunction(&m_obj, abi, func->get_name());
+        MachineFunction* MF = new MachineFunction(
+            &m_obj, 
+            abi, 
+            func->get_name(), 
+            func->has_linkage(Function::LinkageType::Public));
         assert(MF && "failed to create new machine function!");
 
         const BasicBlock* curr = func->get_head();
@@ -443,7 +449,7 @@ MachineOperand AMD64LoweringPass::to_operand(const Value *value) {
         const FunctionABI::Location &loc = abi.getParamLocation(index);
         MachineRegister BP(RBP, 8);
 
-        return MachineOperand(Memory { BP, loc.offset });
+        return MachineOperand(Memory { BP, loc.offset + 16 });
     } else if (auto func = dynamic_cast<const Function*>(value)) {
         MachineFunction *MF = m_obj.get_function(func->get_name());
         assert(MF && "function not lowered!");
@@ -546,7 +552,7 @@ void AMD64LoweringPass::lower_const(const Const *C) {
             .add_comment(stringify_inst(C));
     } else if (auto fp = dynamic_cast<const Float*>(constant)) {
         // Floats need to be pooled within the local function.
-        MachineData::Data bytes = {};
+        std::vector<MachineConstant> bytes = {};
         lower_constant(fp, bytes);
 
         // Materialie a new floating point constant from the function pool.
@@ -559,7 +565,7 @@ void AMD64LoweringPass::lower_const(const Const *C) {
             .add_comment(stringify_inst(C));
     } else if (auto string = dynamic_cast<const String*>(constant)) {
         // Strings must also be pooled into the local function.
-        MachineData::Data bytes = {};
+        std::vector<MachineConstant> bytes = {};
         lower_constant(string, bytes);
 
         ConstantPool &pool = m_func->get_pool();
@@ -640,13 +646,22 @@ void AMD64LoweringPass::lower_access(const Access* A) {
 
     MachineRegister MR(get_vreg_from_def(A), get_subreg_byte(A->get_type()));
 
-    emit(AMD64_MOV64, { source })
-        .add_reg(MR)
-        .add_comment(stringify_inst(A));
+    if (dynamic_cast<const Local*>(A->get_base()) || dynamic_cast<const Global*>(A->get_base())) {
+        emit(AMD64_LEA64, { source })
+            .add_reg(MR)
+            .add_comment(stringify_inst(A));
+    } else {
+        emit(AMD64_MOV64, { source })
+            .add_reg(MR)
+            .add_comment(stringify_inst(A));
+    }
 
-    emit(AMD64_ADD64)
-        .add_imm(offset)
-        .add_reg(MR);
+    if (offset != 0) {
+        // If the field offset is non-zero, then add it to the base pointer.
+        emit(AMD64_ADD64)
+            .add_imm(offset)
+            .add_reg(MR);
+    }
 }
 
 void AMD64LoweringPass::lower_extract(const Extract *E) {
@@ -715,7 +730,7 @@ void AMD64LoweringPass::lower_call(const Call* C) {
 
             emit(AMD64_LEA64, { arg_op, tmp });
             emit(AMD64_MOV64, { tmp })
-                .add_mem(MachineRegister(RSP, 8), -loc.offset);
+                .add_mem(MachineRegister(RSP, 8), loc.offset);
         } else if (dynamic_cast<const Parameter*>(arg_val)) {
             // Parameter operands come from the stack, and must be moved to a temporary first,
             // since the destination is also on the stack (a reference to memory).
@@ -728,10 +743,10 @@ void AMD64LoweringPass::lower_call(const Call* C) {
 
             emit(get_move_op(arg_val->get_type()), { arg_op, tmp });
             emit(get_move_op(arg_val->get_type()), { tmp })
-                .add_mem(MachineRegister(RSP, 8), -loc.offset);
+                .add_mem(MachineRegister(RSP, 8), loc.offset);
         } else {
             emit(get_move_op(arg_val->get_type()), { arg_op })
-                .add_mem(MachineRegister(RSP, 8), -loc.offset);
+                .add_mem(MachineRegister(RSP, 8), loc.offset);
         }
     }
 

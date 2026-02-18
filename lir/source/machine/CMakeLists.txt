@@ -1,12 +1,16 @@
 set(MACHINE_SOURCES
     AMD64.cpp
+    AsmWriter.cpp
     FunctionABI.cpp
+    LinearScan.cpp
     Machine.cpp
     MachineFunction.cpp
     MachineLabel.cpp
     MachineObject.cpp
     MachineOp.cpp
     Printer.cpp
+    RegisterAllocator.cpp
+    RegisterAnalysis.cpp
 )
 
 add_library(Machine

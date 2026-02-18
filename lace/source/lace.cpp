@@ -16,8 +16,10 @@
 #include "lace/tree/TypeResolution.h"
 
 #include "lir/analysis/AMD64LoweringPass.hpp"
+#include "lir/machine/AsmWriter.h"
 #include "lir/machine/Machine.hpp"
 #include "lir/machine/Printer.hpp"
+#include "lir/machine/RegisterAnalysis.h"
 
 #include <chrono>
 #include <cstdint>
@@ -219,17 +221,24 @@ void drive_lir_backend(const Options &options, const Asts &asts) {
             mir.close();
         }
 
-        /*
+        Timestamp time_rega_start = get_time();
 
-        lir::RegisterAnalysis rega(seg);
+        lir::RegisterAnalysis rega(obj);
         rega.run();
+
+        Timestamp time_rega_end = get_time();
+        if (options.verbose) {
+            duration<double> dur = time_rega_end - time_rega_start;
+            std::cout << std::format("{}: Finished register analysis\n-- took {}\n", 
+                ast->get_file(), dur);
+        }
 
         if (options.dump_mir) {
             std::ofstream rmir(ast->get_file() + ".rmir");
             if (!rmir || !rmir.is_open())
                 log::fatal("failed to open: " + ast->get_file() + ".rmir");
 
-            lir::Printer printer(seg);
+            lir::Printer printer(obj);
             printer.run(rmir);
             rmir.close();
         }
@@ -238,17 +247,11 @@ void drive_lir_backend(const Options &options, const Asts &asts) {
         if (!as || !as.is_open())
             log::fatal("failed to open: " + ast->get_file() + ".s");
 
-        lir::AsmWriter writer(seg);
+        lir::AsmWriter writer(obj);
         writer.run(as);
         as.close();
 
-        Timestamp time_bend_end = get_time();
-        if (options.verbose) {
-            duration<double> dur = time_bend_end - time_bend_start;
-            std::cout << std::format("{}: finished backend\n-- took {}\n", 
-                ast->get_file(), dur);
-        }
-
+        /*
         std::string assembler = "as " + ast->get_file() + ".s -o " + ast->get_file() + ".o";
         std::system(assembler.c_str());
         */
