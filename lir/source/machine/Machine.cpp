@@ -4,8 +4,10 @@
 //
 
 #include "lir/machine/Machine.hpp"
+#include "lir/machine/AMD64.hpp"
 
 #include <algorithm>
+#include <unordered_set>
 
 using namespace lir;
 
@@ -111,6 +113,28 @@ uint32_t Machine::get_field_offset(const StructType *type, uint32_t i) const {
     return align_to(offset, get_type_align(type->get_field(i)) / 8);
 }
 
+bool Machine::isCallerSaved(uint32_t reg) const {
+    switch (m_os) 
+    {
+    case Linux: {
+        static std::unordered_set<AMD64_Register> regs = {
+            RAX, RCX, RDX, 
+            RDI, RSI, 
+            R8, R9, R10, R11, 
+            R12, R13, R14, R15, 
+            XMM0, XMM1, XMM2, XMM3, 
+            XMM4, XMM5, XMM6, XMM7, 
+            XMM8, XMM9, XMM10, XMM11, 
+            XMM12, XMM13, XMM14, XMM15,
+        };
+        return regs.contains(static_cast<AMD64_Register>(reg));
+    }
+
+    case Windows:
+        assert(false && "windows ABI not implemented yet!");
+    }
+}
+
 /*
 bool Machine::is_callee_saved(X64_Register reg) const {
     switch (m_os) {
@@ -126,22 +150,6 @@ bool Machine::is_callee_saved(X64_Register reg) const {
 }
 
 bool Machine::is_caller_saved(X64_Register reg) const {
-    switch (m_os) {
-    case Linux:
-        static std::unordered_set<X64_Register> regs = {
-            RAX, RCX, RDX, 
-            RDI, RSI, 
-            R8, R9, R10, R11, 
-            R12, R13, R14, R15, 
-            XMM0, XMM1, XMM2, XMM3, 
-            XMM4, XMM5, XMM6, XMM7, 
-            XMM8, XMM9, XMM10, XMM11, 
-            XMM12, XMM13, XMM14, XMM15,
-        };
-        return regs.contains(reg);
-
-    case Windows:
-        assert(false && "windows ABI not implemented yet!");
-    }
+    
 }
 */

@@ -25,6 +25,12 @@ const MachineFunction *MachineOp::get_function() const {
     return get_parent()->get_parent();
 }
 
+void MachineOp::insertBefore(MachineOp* op) {
+    assert(op && "op cannot be null!");
+
+    op->get_parent()->insertBefore(this, op);
+}
+
 void MachineOp::insertAfter(MachineOp* op) {
     assert(op && "op cannot be null!");
 

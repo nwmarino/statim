@@ -1,6 +1,7 @@
 set(MACHINE_SOURCES
     AMD64.cpp
     AsmWriter.cpp
+    CallsiteAnalysis.cpp
     FunctionABI.cpp
     LinearScan.cpp
     Machine.cpp

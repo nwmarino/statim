@@ -95,8 +95,10 @@ void AsmWriter::writeOpcode(std::ostream& os, AMD64_Op op) {
         os << "leaq";
         return;
     case AMD64_PUSH32:
+        os << "pushl";
+        return;
     case AMD64_PUSH64:
-        os << "push";
+        os << "pushq";
         return;
     case AMD64_POP32:
         os << "popl";

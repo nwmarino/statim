@@ -54,8 +54,12 @@ public:
     /// Append the given |op| to the back of this label.
     void append(MachineOp *op);
 
-    /// Insert the given |op| after the |target| op.
-    /// Fails if |target| does not belong to this label, or if |op| belongs to another label.
+    /// Insert |op| immediately before the given |target|.
+    /// Fails if |target| does not belong to this label, or if |op| belongs to a label already.
+    void insertBefore(MachineOp* op, MachineOp* target);
+
+    /// Insert |op| immediately after the given |target|.
+    /// Fails if |target| does not belong to this label, or if |op| belongs to a label already.
     void insertAfter(MachineOp* op, MachineOp* target);
 
     /// Remove the given |op| from this label.

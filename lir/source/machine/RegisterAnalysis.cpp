@@ -3,6 +3,7 @@
 //  All rights reserved.
 //
 
+#include "lir/machine/CallsiteAnalysis.h"
 #include "lir/machine/LinearScan.h"
 #include "lir/machine/RegisterAnalysis.h"
 #include "lir/machine/Register.hpp"
@@ -19,11 +20,14 @@ void RegisterAnalysis::run() {
     for (const auto& [name, func] : m_obj.get_functions()) {
         std::vector<LiveRange> ranges = {};
 
-        LinearScan linear_scan { *func, ranges };
-        linear_scan.run();
+        LinearScan LS = { *func, ranges };
+        LS.run();
 
-        RegisterAllocator allocator { *func, ranges };
-        allocator.run();
+        RegisterAllocator RA = { *func, ranges };
+        RA.run();
+
+        CallsiteAnalysis CA = { m_obj.get_machine(), *func, ranges };
+        CA.run();
 
         // Create a mapping between virtual register ids -> physical register ids.
         std::unordered_map<uint32_t, Register> allocations = {};
@@ -64,5 +68,7 @@ void RegisterAnalysis::run() {
                 op = op->get_next();
             }
         }
+
+        func->update_positions();
     }
 }

@@ -58,8 +58,12 @@ public:
     const MachineLabel *get_parent() const { return m_parent; }
     MachineLabel *get_parent() { return m_parent; }
 
+    /// Insert this immediately before the given |op| ints parent label.
+    /// Fails if |op| does not belong to a label, or if this op has a parent already.
+    void insertBefore(MachineOp* op);
+
     /// Insert this immediately after the given |op| in its parent label.
-    /// Fails if |op| does not belong to a label, or if this op already belongs to one.
+    /// Fails if |op| does not belong to a label, or if this op has a parent already.
     void insertAfter(MachineOp* op);
 
     /// Test if this op belongs to a label.

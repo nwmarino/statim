@@ -7,6 +7,7 @@
 #define LIR_MACHINE_H_
 
 #include "lir/graph/Type.hpp"
+#include "lir/machine/Register.hpp"
 
 namespace lir {
 
@@ -59,6 +60,8 @@ public:
 
     /// Returns the byte offset for the |i|-th field of the given |type|.
     uint32_t get_field_offset(const StructType *type, uint32_t i) const;
+
+    bool isCallerSaved(uint32_t reg) const;
 };
 
 } // namespace lir
