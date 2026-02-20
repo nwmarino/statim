@@ -431,8 +431,6 @@ int32_t main(int32_t argc, char *argv[]) {
     resolveDependencies(options, ordering, deps);
 
     // Perform symbol analysis on each syntax tree.
-    //
-    // @Todo: expirement if this needs the dependency ordering or not.
     for (AST* ast : asts) {
         const Timestamp syma_start = get_time();
 
