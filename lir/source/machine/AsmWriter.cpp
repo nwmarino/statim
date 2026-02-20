@@ -896,7 +896,7 @@ void AsmWriter::writeOperand(std::ostream& os, const MachineOperand& operand) {
             return;
 
         case MachineOperand::Kind::Label:
-            os << std::format(".LBB{}_{}\n", m_ids.at(m_func), operand.label()->position());
+            os << std::format(".LBB{}_{}", m_ids.at(m_func), operand.label()->position());
             return;
     }
 }

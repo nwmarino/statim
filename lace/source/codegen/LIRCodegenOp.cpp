@@ -257,7 +257,7 @@ lir::Value *LIRCodegen::codegen_bitwise_arithmetic(const BinaryOp *expr) {
         }
         
         return m_builder.build_and(lhs, rhs);
-    } else if (expr->get_operator() == BinaryOp::And) {
+    } else if (expr->get_operator() == BinaryOp::Or) {
         if (lhs_integer && rhs_integer) {
             return lir::Integer::get(
                 m_cfg, 
@@ -267,7 +267,7 @@ lir::Value *LIRCodegen::codegen_bitwise_arithmetic(const BinaryOp *expr) {
         }
         
         return m_builder.build_or(lhs, rhs);
-    } else if (expr->get_operator() == BinaryOp::And) {
+    } else if (expr->get_operator() == BinaryOp::Xor) {
         if (lhs_integer && rhs_integer) {
             return lir::Integer::get(
                 m_cfg, 

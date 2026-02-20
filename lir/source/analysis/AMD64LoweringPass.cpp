@@ -1324,7 +1324,7 @@ void AMD64LoweringPass::lower_cmp(const Cmp* C) {
 
     AMD64_Op SETcc = cmp_to_setcc(C->pred());
 
-    if (left.is_imm()) {
+    if (right.is_imm()) {
         // Left hand side cannot be an immediate, so swap the operands.
         const MachineOperand tmp = left;
         left = right;
