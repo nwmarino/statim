@@ -261,7 +261,7 @@ void Phi::print(std::ostream &os, PrintPolicy policy) const {
         os << std::format("%{} := phi <{}> ", m_def, get_type()->to_string());
 
         for (uint32_t i = 0, e = num_edges(); i < e; ++i) {
-            const Edge edge = get_edge(i);
+            const CEdge edge = get_edge(i);
 
             os << '(';
             edge.value->print(os, PrintPolicy::Use);

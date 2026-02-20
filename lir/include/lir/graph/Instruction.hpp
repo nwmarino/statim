@@ -337,9 +337,15 @@ public:
     using Preds = std::vector<BasicBlock*>;
 
     /// Represents an edge to a phi node.
+    struct CEdge final {
+        const Value* value;
+        const BasicBlock* pred;
+    };
+
+    /// Represents an edge to a phi node.
     struct Edge final {
-        const Value *value;
-        const BasicBlock *pred;
+        Value* value;
+        BasicBlock* pred;
     };
 
 private:
@@ -368,7 +374,15 @@ public:
     inline uint32_t num_edges() const { return num_operands(); }
 
     /// Returns the |i|-th edge to this node.
-    Edge get_edge(uint32_t i) const {
+    CEdge get_edge(uint32_t i) const {
+        assert(i < num_operands() && "index out of bounds!");
+        return CEdge {
+            get_operand(i),
+            get_pred(i),
+        };
+    }
+
+    Edge get_edge(uint32_t i) {
         assert(i < num_operands() && "index out of bounds!");
         return Edge {
             get_operand(i),

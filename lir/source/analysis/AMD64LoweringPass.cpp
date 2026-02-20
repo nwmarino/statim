@@ -850,7 +850,7 @@ void AMD64LoweringPass::lower_phi(const Phi* P) {
     MachineLabel* curr = m_insert;
 
     for (uint32_t i = 0; i < P->num_edges(); ++i) {
-        Phi::Edge edge = P->get_edge(i);
+        Phi::CEdge edge = P->get_edge(i);
 
         m_insert = m_func->get_label(edge.pred->position());
         assert(m_insert);
