@@ -6,6 +6,7 @@
 #include "lace/core/Diagnostics.h"
 #include "lace/tree/AST.h"
 #include "lace/tree/Defn.h"
+#include "lace/tree/Expr.h"
 #include "lace/tree/LIRCodegen.h"
 #include "lace/tree/Type.h"
 
@@ -15,30 +16,22 @@
 using namespace lace;
 
 lir::Value *LIRCodegen::codegen_addressed_expression(const Expr *expr) {
-    switch (expr->get_kind()) {
-        case Expr::Unary: {
-            auto unary = static_cast<const UnaryOp*>(expr);
-            assert(unary->get_operator() == UnaryOp::Dereference &&
-                "cannot generate an address from non-dereference unary op!");
-            
-            return codegen_addressed_dereference(unary);
-        }
-
-        case Expr::Access:
-            return codegen_addressed_access(static_cast<const AccessExpr*>(expr));
-
-        case Expr::Ref:
-            return codegen_addressed_reference(static_cast<const RefExpr*>(expr));
-
-        case Expr::Subscript:
-            return codegen_addressed_subscript(static_cast<const SubscriptExpr*>(expr));
-
-        case Expr::Call:
-            return codegen_function_call(static_cast<const CallExpr*>(expr));
-
-        default:
-            return nullptr;
+    if (auto unary = dynamic_cast<const UnaryOp*>(expr)) {
+        assert(unary->get_operator() == UnaryOp::Dereference &&
+            "cannot generate an address from non-dereference unary op!");
+        
+        return codegen_addressed_dereference(unary);
+    } else if (auto access = dynamic_cast<const AccessExpr*>(expr)) {
+        return codegen_addressed_access(access);
+    } else if (auto ref = dynamic_cast<const RefExpr*>(expr)) {
+        return codegen_addressed_reference(ref);
+    } else if (auto subscript = dynamic_cast<const SubscriptExpr*>(expr)) {
+        return codegen_addressed_subscript(subscript);
+    } else if (auto call = dynamic_cast<const CallExpr*>(expr)) {
+        return codegen_function_call(call);
     }
+
+    return nullptr;
 }
 
 lir::Value *LIRCodegen::codegen_addressed_access(const AccessExpr *expr) {

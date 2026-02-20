@@ -50,6 +50,7 @@ class ParenExpr;
 class RefExpr;
 class SizeofExpr;
 class SubscriptExpr;
+class StructInitExpr;
 
 class QualType;
 
@@ -104,10 +105,11 @@ public:
     virtual void visit(AccessExpr& node);
     virtual void visit(CallExpr& node);
     virtual void visit(CastExpr& node);
-    virtual void visit(SizeofExpr& node);
-    virtual void visit(SubscriptExpr& node);
     virtual void visit(ParenExpr& node);
     virtual void visit(RefExpr& node);
+    virtual void visit(SizeofExpr& node);
+    virtual void visit(SubscriptExpr& node);
+    virtual void visit(StructInitExpr& node);
 
 protected:
     /// Replace all deferred types composed in given |type| with fully resolved types.

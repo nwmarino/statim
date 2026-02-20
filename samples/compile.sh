@@ -7,6 +7,7 @@ cd ../samples/
 for file in *.lace; do
     if [[ -f "$file" ]]; then
         ./../lace/lace "$file"
+        as "$file".s -o "$file".o
         ld "$file".o ../std/rt.o -o "${file%.lace}"
     fi
 done

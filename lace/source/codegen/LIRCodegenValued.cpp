@@ -14,92 +14,86 @@
 
 using namespace lace;
 
-lir::Value *LIRCodegen::codegen_valued_expression(const Expr *expr) {
-    switch (expr->get_kind()) {
-        case Expr::Bool:
-            return codegen_literal_boolean(static_cast<const BoolLiteral*>(expr));
-        case Expr::Char:
-            return codegen_literal_character(static_cast<const CharLiteral*>(expr));
-        case Expr::Integer:
-            return codegen_literal_integer(static_cast<const IntegerLiteral*>(expr));
-        case Expr::Float:
-            return codegen_literal_float(static_cast<const FloatLiteral*>(expr));
-        case Expr::Null:
-            return codegen_literal_null(static_cast<const NullLiteral*>(expr));
-        case Expr::String:
-            return codegen_literal_string(static_cast<const StringLiteral*>(expr));
-
-        case Expr::Binary: {
-            auto binary = static_cast<const BinaryOp*>(expr);
-
-            switch (binary->get_operator()) {
-                case BinaryOp::Assign:
-                    return codegen_assignment(binary);
-                case BinaryOp::Add:
-                case BinaryOp::Sub:
-                    return codegen_addition(binary);
-                case BinaryOp::Mul:
-                    return codegen_multiply(binary);
-                case BinaryOp::Div:
-                case BinaryOp::Mod:
-                    return codegen_division(binary);
-                case BinaryOp::And:
-                case BinaryOp::Or:
-                case BinaryOp::Xor:
-                    return codegen_bitwise_arithmetic(binary);
-                case BinaryOp::LShift:
-                case BinaryOp::RShift:
-                    return codegen_bit_shift(binary);
-                case BinaryOp::LogicAnd:
-                    return codegen_logical_and(binary);
-                case BinaryOp::LogicOr:
-                    return codegen_logical_or(binary);
-                case BinaryOp::Eq:
-                case BinaryOp::NEq:
-                case BinaryOp::Lt:
-                case BinaryOp::LtEq:
-                case BinaryOp::Gt:
-                case BinaryOp::GtEq:
-                    return codegen_numerical_comparison(binary);
-                default:
-                    assert(false && "unknown binary operator!");
-            }
+lir::Value* LIRCodegen::codegen_valued_expression(const Expr* expr) {
+    if (auto boolean = dynamic_cast<const BoolLiteral*>(expr)) {
+        return codegen_literal_boolean(boolean);
+    } else if (auto character = dynamic_cast<const CharLiteral*>(expr)) {
+        return codegen_literal_character(character);
+    } else if (auto integer = dynamic_cast<const IntegerLiteral*>(expr)) {
+        return codegen_literal_integer(integer);
+    } else if (auto fp = dynamic_cast<const FloatLiteral*>(expr)) {
+        return codegen_literal_float(fp);
+    } else if (auto null = dynamic_cast<const NullLiteral*>(expr)) {
+        return codegen_literal_null(null);
+    } else if (auto string = dynamic_cast<const StringLiteral*>(expr)) {
+        return codegen_literal_string(string);
+    } else if (auto binary = dynamic_cast<const BinaryOp*>(expr)) {
+        switch (binary->get_operator()) 
+        {
+        case BinaryOp::Assign:
+            return codegen_assignment(binary);
+        case BinaryOp::Add:
+        case BinaryOp::Sub:
+            return codegen_addition(binary);
+        case BinaryOp::Mul:
+            return codegen_multiply(binary);
+        case BinaryOp::Div:
+        case BinaryOp::Mod:
+            return codegen_division(binary);
+        case BinaryOp::And:
+        case BinaryOp::Or:
+        case BinaryOp::Xor:
+            return codegen_bitwise_arithmetic(binary);
+        case BinaryOp::LShift:
+        case BinaryOp::RShift:
+            return codegen_bit_shift(binary);
+        case BinaryOp::LogicAnd:
+            return codegen_logical_and(binary);
+        case BinaryOp::LogicOr:
+            return codegen_logical_or(binary);
+        case BinaryOp::Eq:
+        case BinaryOp::NEq:
+        case BinaryOp::Lt:
+        case BinaryOp::LtEq:
+        case BinaryOp::Gt:
+        case BinaryOp::GtEq:
+            return codegen_numerical_comparison(binary);
+        default:
+            assert(false && "unknown binary operator!");
         }
-
-        case Expr::Unary: {
-            auto unary = static_cast<const UnaryOp*>(expr);
-
-            switch (unary->get_operator()) {
-                case UnaryOp::Negate:
-                    return codegen_negation(unary);
-                case UnaryOp::Not:
-                    return codegen_bitwise_not(unary);
-                case UnaryOp::LogicNot:
-                    return codegen_logical_not(unary);
-                case UnaryOp::AddressOf:
-                    return codegen_address_of(unary);
-                case UnaryOp::Dereference:
-                    return codegen_valued_dereference(unary);
-                default:
-                    assert(false && "unknown unary operator!");
-            }
+    } else if (auto unary = dynamic_cast<const UnaryOp*>(expr)) {
+        switch (unary->get_operator()) 
+        {
+        case UnaryOp::Negate:
+            return codegen_negation(unary);
+        case UnaryOp::Not:
+            return codegen_bitwise_not(unary);
+        case UnaryOp::LogicNot:
+            return codegen_logical_not(unary);
+        case UnaryOp::AddressOf:
+            return codegen_address_of(unary);
+        case UnaryOp::Dereference:
+            return codegen_valued_dereference(unary);
+        default:
+            assert(false && "unknown unary operator!");
         }
-        
-        case Expr::Access:
-            return codegen_valued_access(static_cast<const AccessExpr*>(expr));
-        case Expr::Ref:
-            return codegen_valued_reference(static_cast<const RefExpr*>(expr));
-        case Expr::Subscript:
-            return codegen_valued_subscript(static_cast<const SubscriptExpr*>(expr));
-        case Expr::Call:
-            return codegen_function_call(static_cast<const CallExpr*>(expr));
-        case Expr::Cast:
-            return codegen_type_cast(static_cast<const CastExpr*>(expr));
-        case Expr::Paren:
-            return codegen_parentheses(static_cast<const ParenExpr*>(expr));
-        case Expr::Sizeof:
-            return codegen_sizeof(static_cast<const SizeofExpr*>(expr));
+    } else if (auto access = dynamic_cast<const AccessExpr*>(expr)) {
+        return codegen_valued_access(access);
+    } else if (auto ref = dynamic_cast<const RefExpr*>(expr)) {
+        return codegen_valued_reference(ref);
+    } else if (auto subscript = dynamic_cast<const SubscriptExpr*>(expr)) {
+        return codegen_valued_subscript(subscript);
+    } else if (auto call = dynamic_cast<const CallExpr*>(expr)) {
+        return codegen_function_call(call);
+    } else if (auto cast = dynamic_cast<const CastExpr*>(expr)) {
+        return codegen_type_cast(cast);
+    } else if (auto paren = dynamic_cast<const ParenExpr*>(expr)) {
+        return codegen_parentheses(paren);
+    } else if (auto szof = dynamic_cast<const SizeofExpr*>(expr)) {
+        return codegen_sizeof(szof);
     }
+
+    return nullptr;
 }
 
 lir::Value *LIRCodegen::codegen_valued_access(const AccessExpr *expr) {

@@ -11,39 +11,74 @@
 
 using namespace lace;
 
+//>==---------------------------------------------------------------------------
+//                          BoolLiteral Implementation
+//>==---------------------------------------------------------------------------
+
 BoolLiteral* BoolLiteral::create(AST::Context& ctx, SourceSpan span, 
                                  bool value) {
     return new BoolLiteral(
-        span, BuiltinType::get(ctx, BuiltinType::Kind::Bool), value);
+        span, 
+        BuiltinType::get(ctx, BuiltinType::Kind::Bool), 
+        value
+    );
 }
+
+//>==---------------------------------------------------------------------------
+//                          CharLiteral Implementation
+//>==---------------------------------------------------------------------------
 
 CharLiteral* CharLiteral::create(AST::Context& ctx, SourceSpan span, char value) {
     return new CharLiteral(
-        span, BuiltinType::get(ctx, BuiltinType::Kind::Char), value);
+        span, 
+        BuiltinType::get(ctx, BuiltinType::Kind::Char), 
+        value
+    );
 }
+
+//>==---------------------------------------------------------------------------
+//                          IntegerLiteral Implementation
+//>==---------------------------------------------------------------------------
 
 IntegerLiteral* IntegerLiteral::create(AST::Context& ctx, SourceSpan span, 
                                        const QualType& type, int64_t value) {
     return new IntegerLiteral(span, type, value);
 }
 
+//>==---------------------------------------------------------------------------
+//                          FloatLiteral Implementation
+//>==---------------------------------------------------------------------------
+
 FloatLiteral* FloatLiteral::create(AST::Context& ctx, SourceSpan span, 
                                    const QualType& type, double value) {
     return new FloatLiteral(span, type, value);
 }
+
+//>==---------------------------------------------------------------------------
+//                          NullLiteral Implementation
+//>==---------------------------------------------------------------------------
 
 NullLiteral* NullLiteral::create(AST::Context& ctx, SourceSpan span, 
                                  const QualType& type) {
     return new NullLiteral(span, type);
 }
 
+//>==---------------------------------------------------------------------------
+//                          StringLiteral Implementation
+//>==---------------------------------------------------------------------------
+
 StringLiteral* StringLiteral::create(AST::Context& ctx, SourceSpan span, 
                                      const std::string& value) {
     return new StringLiteral(
         span, 
         PointerType::get(ctx, BuiltinType::get(ctx, BuiltinType::Kind::Char)),
-        value);
+        value
+    );
 }
+
+//>==---------------------------------------------------------------------------
+//                          BinaryOp Implementation
+//>==---------------------------------------------------------------------------
 
 BinaryOp::~BinaryOp() {
     delete m_lhs;
@@ -56,10 +91,14 @@ BinaryOp::~BinaryOp() {
 BinaryOp* BinaryOp::create(AST::Context& ctx, SourceSpan span, Operator op, 
                            Expr* lhs, Expr* rhs) {
     assert(op != Unknown && "invalid operator!");
-    assert(lhs && "invalid left operand!");
-    assert(rhs && "invalid right operand!");
+    assert(lhs && "lhs cannot be null!");
+    assert(rhs && "rhs cannot be null!");
     return new BinaryOp(span, lhs->get_type(), op, lhs, rhs);
 }
+
+//>==---------------------------------------------------------------------------
+//                          UnaryOp Implementation
+//>==---------------------------------------------------------------------------
 
 UnaryOp::~UnaryOp() {
     delete m_expr;
@@ -69,9 +108,13 @@ UnaryOp::~UnaryOp() {
 UnaryOp* UnaryOp::create(AST::Context& ctx, SourceSpan span, Operator op, 
                          bool prefix, Expr* expr) {
     assert(op != Unknown && "invalid operator!");
-    assert(expr && "invalid operand!");
+    assert(expr && "expr cannot be null!");
     return new UnaryOp(span, expr->get_type(), op, prefix, expr);
 }
+
+//>==---------------------------------------------------------------------------
+//                          AccessExpr Implementation
+//>==---------------------------------------------------------------------------
 
 AccessExpr::~AccessExpr() {
     delete m_base;
@@ -80,52 +123,81 @@ AccessExpr::~AccessExpr() {
 
 AccessExpr* AccessExpr::create(AST::Context& ctx, SourceSpan span, Expr* base, 
                                const std::string& name) {
-    assert(base && "invalid access base expression!");
+    assert(base && "base cannot be null!");
     return new AccessExpr(
         span, 
         {},
         base, 
         name, 
-        nullptr);
+        nullptr
+    );
 }
 
+//>==---------------------------------------------------------------------------
+//                          CallExpr Implementation
+//>==---------------------------------------------------------------------------
+
 CallExpr::~CallExpr() {
-    delete m_callee;
+    if (m_callee)
+        delete m_callee;
+    
     m_callee = nullptr;
     
-    for (Expr* arg : m_args)
-        delete arg;
+    for (Expr* arg : m_args) {
+        if (arg)
+            delete arg;
+    }
 
     m_args.clear();
 }
 
 CallExpr* CallExpr::create(AST::Context& ctx, SourceSpan span, Expr* callee, 
-                           const Args& args) {
-    assert(callee && "invalid callee expression!");
+                           const std::vector<Expr*>& args) {
+    assert(callee && "callee cannot be null!");
     return new CallExpr(
-        span, callee ? callee->get_type() : nullptr, callee, args);
+        span, 
+        callee->get_type(), 
+        callee, 
+        args
+    );
 }
 
+//>==---------------------------------------------------------------------------
+//                          CastExpr Implementation
+//>==---------------------------------------------------------------------------
+
 CastExpr::~CastExpr() {
-    delete m_expr;
+    if (m_expr)
+        delete m_expr;
+    
     m_expr = nullptr;
 }
 
 CastExpr* CastExpr::create(AST::Context& ctx, SourceSpan span, 
                            const QualType& type, Expr* expr) {
-    assert(expr && "invalid cast expression!");
+    assert(expr && "expr cannot be null!");
     return new CastExpr(span, type, expr);
 }
 
+//>==---------------------------------------------------------------------------
+//                          ParenExpr Implementation
+//>==---------------------------------------------------------------------------
+
 ParenExpr::~ParenExpr() {
-    delete m_expr;
+    if (m_expr)
+        delete m_expr;
+    
     m_expr = nullptr;
 }
 
 ParenExpr* ParenExpr::create(AST::Context& ctx, SourceSpan span, Expr* expr) {
-    assert(expr && "invalid parentheses expression!");
+    assert(expr && "expr cannot be null!");
     return new ParenExpr(span, expr->get_type(), expr);
 }
+
+//>==---------------------------------------------------------------------------
+//                          ParenExpr Implementation
+//>==---------------------------------------------------------------------------
 
 RefExpr* RefExpr::create(AST::Context& ctx, SourceSpan span, 
                          const std::string& name, const ValueDefn* defn) {
@@ -133,29 +205,63 @@ RefExpr* RefExpr::create(AST::Context& ctx, SourceSpan span,
 }
 
 bool RefExpr::is_lvalue() const {
-    assert(m_defn && "reference not resolved yet!");
+    assert(is_resolved() && "reference not resolved yet!");
 
-    return m_defn->get_kind() == Defn::Parameter 
-        || m_defn->get_kind() == Defn::Variable;
+    return dynamic_cast<const VariableDefn*>(m_defn) 
+        || dynamic_cast<const ParameterDefn*>(m_defn);
 }
+
+//>==---------------------------------------------------------------------------
+//                          SizeofExpr Implementation
+//>==---------------------------------------------------------------------------
 
 SizeofExpr* SizeofExpr::create(AST::Context& ctx, SourceSpan span, 
                                const QualType& target) {
     return new SizeofExpr(
-        span, BuiltinType::get(ctx, BuiltinType::Kind::UInt64), target);
+        span, 
+        BuiltinType::get(ctx, BuiltinType::Kind::UInt64), 
+        target
+    );
 }
 
+//>==---------------------------------------------------------------------------
+//                          SubscriptExpr Implementation
+//>==---------------------------------------------------------------------------
+
 SubscriptExpr::~SubscriptExpr() {
-    delete m_base;
+    if (m_base)
+        delete m_base;
+    
     m_base = nullptr;
 
-    delete m_index;
+    if (m_index)
+        delete m_index;
+    
     m_index = nullptr;
 }
 
 SubscriptExpr* SubscriptExpr::create(AST::Context& ctx, SourceSpan span, 
                                      Expr* base, Expr* index) {
-    assert(base && "invalid base expression!");
-    assert(index && "invalid index expression!");
+    assert(base && "base cannot be null!");
+    assert(index && "index cannot be null!");
     return new SubscriptExpr(span, base->get_type(), base, index);
+}
+
+//>==---------------------------------------------------------------------------
+//                          StructInitExpr Implementation
+//>==---------------------------------------------------------------------------
+
+StructInitExpr::~StructInitExpr() {
+    for (const auto& [field, expr] : m_fields) {
+        if (expr)
+            delete expr;
+    }
+
+    m_fields.clear();
+}
+
+StructInitExpr* StructInitExpr::create(
+        AST::Context& ctx, SourceSpan span, const QualType& type, 
+        const std::map<std::string, Expr*>& fields) {
+    return new StructInitExpr(span, type, fields);
 }

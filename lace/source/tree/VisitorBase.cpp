@@ -163,6 +163,14 @@ void VisitorBase::visit(CastExpr& node) {
     node.get_expr()->accept(*this);
 }
 
+void VisitorBase::visit(ParenExpr& node) {
+    node.get_expr()->accept(*this);
+}
+
+void VisitorBase::visit(RefExpr& node) {
+
+}
+
 void VisitorBase::visit(SizeofExpr& node) {
 
 }
@@ -172,11 +180,7 @@ void VisitorBase::visit(SubscriptExpr& node) {
     node.get_index()->accept(*this);
 }
 
-void VisitorBase::visit(ParenExpr& node) {
-    node.get_expr()->accept(*this);
-}
-
-void VisitorBase::visit(RefExpr& node) {
+void VisitorBase::visit(StructInitExpr& node) {
 
 }
 

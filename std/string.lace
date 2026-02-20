@@ -6,13 +6,12 @@ string :: struct {
     len: mut u32,
 }
 
-$public
-string_stuff :: (s1: string, s2: string, s3: string, s4: string) -> void {
-    ret;
-}
-
 /// Create a new, empty string.
 $public
+new :: () -> string {
+    
+}
+
 string_new :: () -> string {
     let str: string;
     str.data = null;

@@ -197,7 +197,7 @@ Expr* Parser::parse_postfix_operator() {
             // '(...' operator -> CallExpr.
             next(); // '('
 
-            CallExpr::Args args = {};
+            std::vector<Expr*> args = {};
             args.reserve(2);
 
             while (!expect(Token::CloseParen)) {
