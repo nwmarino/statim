@@ -6,8 +6,10 @@ Colors :: enum {
     Green,
 }
 
-$[public]
+$public
 main :: () -> s64 {
     let yellow: Colors = Yellow;
-    ret yellow;
+    let green: Colors = Green;
+
+    ret yellow + green; // should be 42 + 16 = 58
 }

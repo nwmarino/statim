@@ -1,4 +1,4 @@
-$[public]
+$public
 main :: () -> s64 {
     let i: mut s64 = 0;
     let x: mut bool = false;

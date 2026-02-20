@@ -618,6 +618,7 @@ void AMD64LoweringPass::lower_store(const Store *S) {
             cls = RegisterClass::FloatingPoint;
         
         MachineRegister tmp = create_vreg(cls);
+        tmp.setSubreg(get_subreg_byte(value->get_type()));
 
         emit(get_move_op(value->get_type()), { source, tmp })
             .add_comment(stringify_inst(S));
@@ -1015,12 +1016,12 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
             if (is_mod) {
                 emit(get_move_op(type))
                     // Remainder is explicitly moved from RDX, so it expires.
-                    .add_reg({ RDX, get_subreg_byte(type), false, true })
+                    .add_reg({ RDX, get_subreg_byte(type), false, false, true })
                     .add_reg(dReg);
             } else {
                 emit(get_move_op(type))
                     // Quotient is explicitly moved from RAX, so it expires.
-                    .add_reg({ RAX, get_subreg_byte(type), false, true })
+                    .add_reg({ RAX, get_subreg_byte(type), false, false, true })
                     .add_reg(dReg);
             }
 

@@ -1,8 +1,9 @@
 $[public]
 main :: () -> s64 {
-    let x: s64 = 42;
-    let y: s64 = x + 21;
-    let z: s64 = x - 21;
+    let a: s64 = 42;
+    let b: s64 = a + 21;
+    let c: s64 = a - 21;
+    let d: s64 = (a - 1) % 21;
 
-    ret x * y / z;
+    ret b * c / d;
 }
