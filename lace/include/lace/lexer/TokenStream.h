@@ -37,8 +37,13 @@ public:
 
     /// Returns the current token in the stream.
     [[nodiscard]] const Token& get() const {
-        assert(m_position < size() && "index out of bounds!");
-        return m_tokens[m_position];
+        return get(m_position);
+    }
+
+    /// Returns the token in this stream at the given |position|.
+    [[nodiscard]] const Token& get(uint64_t position) const {
+        assert(position < size() && "index out of bounds!");
+        return m_tokens[position];
     }
 
     /// Returns the current position of this stream.
@@ -56,13 +61,9 @@ public:
     }
 
     /// Seek to the absolute |position| of this stream.
-    /// Fails if the position would exceed the bounds of this stream.
-    [[nodiscard]] Result seek(uint64_t position) {
-        if (position < 0 || position >= size())
-            return false;
-
+    void seek(uint64_t position) {
+        assert(0 <= position && position <= size() && "position out of bounds!");
         m_position = position;
-        return true;
     }
 
     /// Reset the position of this stream.

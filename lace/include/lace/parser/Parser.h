@@ -27,6 +27,29 @@ class Parser final {
     AST::Context* m_context = nullptr;
     Scope* m_scope = nullptr;
 
+public:
+    /// Create a new parser instance to work on |source|. 
+    ///
+    /// Optionally, a |path| may be provided for better diagnostics i.e. 
+    /// reading in invalid code from the file which contains |source|.
+    Parser(TokenStream& stream, const std::string& file = "");
+
+    /// Attempt to parse and a new abstract syntax tree from the source
+    /// this parser was constructed with.
+    [[nodiscard]] AST* parse();
+
+private:
+    /// Returns the current token in use.
+    inline const Token& curr() const {
+        return m_stream.get();
+    }
+
+    /// Lex the next token.
+    inline const Token& next() {
+        m_stream.advance();
+        return curr(); 
+    }
+
     /// Returns the current location in source, based on the current token.
     inline SourceLocation loc() const { return curr().loc; }
 
@@ -117,40 +140,18 @@ class Parser final {
     Expr* parse_postfix_operator();
     Expr* parse_binary_operator(Expr* base, int8_t precedence);
 
-    Expr* parse_boolean_literal();
-    Expr* parse_integer_literal();
-    Expr* parse_floating_point_literal();
-    Expr* parse_character_literal();
-    Expr* parse_null_pointer_literal();
-    Expr* parse_string_literal();
+    Expr* parse_literal_bool();
+    Expr* parse_literal_int();
+    Expr* parse_literal_float();
+    Expr* parse_literal_char();
+    Expr* parse_literal_null();
+    Expr* parse_literal_string();
 
     Expr* parse_type_cast();
     Expr* parse_parentheses();
     Expr* parse_sizeof_operator();
     Expr* parse_named_reference();
-
-public:
-    /// Create a new parser instance to work on |source|. 
-    ///
-    /// Optionally, a |path| may be provided for better diagnostics i.e. 
-    /// reading in invalid code from the file which contains |source|.
-    Parser(TokenStream& stream, const std::string& file = "");
-
-    /// Attempt to parse and a new abstract syntax tree from the source
-    /// this parser was constructed with.
-    [[nodiscard]] AST* parse();
-
-private:
-    /// Returns the current token in use.
-    inline const Token& curr() const {
-        return m_stream.get();
-    }
-
-    /// Lex the next token.
-    inline const Token& next() {
-        m_stream.advance();
-        return curr(); 
-    }
+    Expr* parse_struct_initializer(uint64_t start);
 };
 
 } // namespace lace

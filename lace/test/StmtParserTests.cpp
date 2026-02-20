@@ -146,35 +146,4 @@ TEST_F(StmtParserTests, UntilStatementNoBody_Positive) {
     EXPECT_FALSE(US->has_body());
 }
 
-/*
-TEST_F(StmtParserTests, AsmStatement_Positive) {
-    Parser parser("test :: () -> void { asm {\"movq ^0, %rax\n\" \"syscall\n\" : : \"r\" (x) : \"rax\"}; }");
-    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
-
-    EXPECT_EQ(ast->num_defns(), 1);
-
-    FunctionDefn* FD = dynamic_cast<FunctionDefn*>(ast->get_defns()[0]);
-    EXPECT_NE(FD, nullptr);
-    EXPECT_TRUE(FD->has_body());
-
-    BlockStmt* BS = dynamic_cast<BlockStmt*>(FD->get_body());
-    EXPECT_NE(BS, nullptr);
-    EXPECT_EQ(BS->num_stmts(), 1);
-
-    AsmStmt* AS = dynamic_cast<AsmStmt*>(BS->get_stmt(0));
-    EXPECT_NE(AS, nullptr);
-    EXPECT_EQ(AS->num_output_constraints(), 0);
-    EXPECT_EQ(AS->num_input_constraints(), 1);
-    EXPECT_EQ(AS->num_args(), 1);
-    EXPECT_EQ(AS->num_clobbers(), 1);
-    
-    EXPECT_EQ(AS->get_input_constraint(0), "r");
-    EXPECT_EQ(AS->get_clobber(0), "rax");
-
-    DeclRefExpr* A1 = dynamic_cast<DeclRefExpr*>(AS->get_arg(0));
-    EXPECT_NE(A1, nullptr);
-    EXPECT_EQ(A1->get_name(), "x");   
-}
-*/
-
 } // namespace lace::test

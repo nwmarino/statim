@@ -18,13 +18,10 @@ void Parser::parse_rune_decorators(std::vector<Rune*>& runes) {
         { "private", Rune::Private },
     };
 
-    if (expect(Token::OpenBrack)) 
-    {
+    if (expect(Token::OpenBrack)) {
         // '[' means this is a delimited list of runes, so parse runes until a
         // ']' is found.
-        
-        while (!expect(Token::CloseBrack)) 
-        {
+        while (!expect(Token::CloseBrack)) {
             if (!match(Token::Identifier))
                 log::fatal("expected identifier", log::Span(m_file, loc()));
 
@@ -40,13 +37,9 @@ void Parser::parse_rune_decorators(std::vector<Rune*>& runes) {
 
             if (!expect(Token::Comma))
                 log::fatal("expected ','", log::Span(m_file, loc()));
-
         }
-    } 
-    else 
-    {
+    } else {
         // No '[' means this is a single rune.
-
         if (!match(Token::Identifier))
             log::fatal("expected identifier", log::Span(m_file, loc()));
 
