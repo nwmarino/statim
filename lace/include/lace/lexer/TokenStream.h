@@ -70,6 +70,11 @@ public:
         m_position = 0;
     }
 
+    /// Test if this stream is complete, i.e. the end has been reached.
+    [[nodiscard]] bool complete() const { 
+        return m_position + 1 >= m_tokens.size(); 
+    }
+
     /// Returns the size of this stream based on how many tokens are in it.
     uint64_t size() const { return m_tokens.size(); }
 };

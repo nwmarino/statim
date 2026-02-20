@@ -3,6 +3,7 @@
 //  All rights reserved.
 //
 
+#include "lace/lexer/Lexer.h"
 #include "lace/parser/Parser.h"
 #include "lace/tree/AST.h"
 #include "lace/tree/Defn.h"
@@ -30,7 +31,11 @@ protected:
 };
 
 TEST_F(StmtParserTests, IfStatement_Positive) {
-    Parser parser("test :: () -> s64 { if 5 { ret 0; } }");
+    TokenStream stream;
+    Lexer lexer("test :: () -> s64 { if 5 { ret 0; } }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     EXPECT_EQ(ast->num_defns(), 1);
@@ -60,7 +65,11 @@ TEST_F(StmtParserTests, IfStatement_Positive) {
 }
 
 TEST_F(StmtParserTests, IfElseStatement_Positive) {
-    Parser parser("test :: () -> s64 { if 5 ret 0; else ret 1; }");
+    TokenStream stream;
+    Lexer lexer("test :: () -> s64 { if 5 ret 0; else ret 1; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     EXPECT_EQ(ast->num_defns(), 1);
@@ -89,7 +98,11 @@ TEST_F(StmtParserTests, IfElseStatement_Positive) {
 }
 
 TEST_F(StmtParserTests, UntilStatement_Positive) {
-    Parser parser("test :: () -> s64 { until 1 restart; }");
+    TokenStream stream;
+    Lexer lexer("test :: () -> s64 { until 1 restart; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     EXPECT_EQ(ast->num_defns(), 1);
@@ -111,7 +124,11 @@ TEST_F(StmtParserTests, UntilStatement_Positive) {
 }
 
 TEST_F(StmtParserTests, UntilStatementNoBody_Positive) {
-    Parser parser("test :: () -> s64 { until 1; }");
+    TokenStream stream;
+    Lexer lexer("test :: () -> s64 { until 1; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     EXPECT_EQ(ast->num_defns(), 1);

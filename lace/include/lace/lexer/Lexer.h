@@ -7,12 +7,13 @@
 #define LACE_LEXER_H_
 
 //
-//  This header file declares the Lexer class, whom instances thereof interpret strings of source 
-//  code into tokens usable by the parser for syntax analysis.
+//  This header file declares the Lexer class, whom instances thereof interpret 
+//  strings of source code into tokens usable by the parser for syntax 
+//  analysis.
 //
 
 #include "lace/core/Common.h"
-#include "lace/lexer/Token.h"
+#include "lace/lexer/TokenStream.h"
 
 #include <cassert>
 #include <string>
@@ -25,11 +26,32 @@ class Lexer final {
     uint32_t m_cursor = 0;
     SourceLocation m_loc = {};
 
+public:
+    /// Create a new lexer for the given |source| buffer.
+    ///
+    /// Optionally, the |filename| argument designates the source file which 
+    /// |source| is from, and allows for more accurate diagnostics should there 
+    /// be unrecognized tokens. 
+    Lexer(const std::string& source, const std::string& filename = "");
+
+    /// Lex the rest of the input source into the given token |stream|.
+    /// Returns the result of the operation, i.e. if any errors were logged.
+    [[nodiscard]] Result lex(TokenStream& stream);
+
+    /// Lex a new token.
+    [[nodiscard]] Result lex(Token& token);
+
+    /// Test if the end of the source buffer has been reached.
+    inline bool is_eof() const {
+        return m_cursor >= m_source.size();
+    }
+
+private:
     /// Returns the character the cursor is currently looking at.
     /// 
     /// If the end of the source buffer has been reached i.e. there is no
     /// character to look at, then the null terminator is returned instead.
-    inline char curr() const { return isEof() ? '\0' : m_source[m_cursor]; }
+    inline char curr() const { return is_eof() ? '\0' : m_source[m_cursor]; }
 
     /// Returns the character |n| positions ahead in the source code buffer.
     /// 
@@ -47,24 +69,10 @@ class Lexer final {
     }
 
     /// Update the location of the lexer per a new line.
-    inline void endLine() {
+    inline void end_line() {
         m_loc.line++;
         m_loc.col = 1;
     }
-
-public:
-    /// Create a new lexer using the given |source| buffer.
-    ///
-    /// Optionally, the |filename| argument designates the source file which |source| is from, and 
-    /// allows for more accurate diagnostics should there be unrecognized tokens. 
-    Lexer(const std::string& source, const std::string& filename = "") : m_source(source), 
-                                                                         m_filename(filename) {}
-
-    /// Test if the end of the source code buffer has been reached.
-    Result isEof() const { return m_cursor >= m_source.size(); }
-
-    /// Lex a new token and save its state to |token|.
-    void lex(Token& token);
 };
 
 } // namespace lace

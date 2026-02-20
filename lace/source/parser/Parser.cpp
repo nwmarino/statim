@@ -4,7 +4,6 @@
 //
 
 #include "lace/core/Diagnostics.h"
-#include "lace/lexer/Lexer.h"
 #include "lace/parser/Parser.h"
 #include "lace/tree/AST.h"
 #include "lace/tree/Defn.h"
@@ -15,17 +14,15 @@
 
 using namespace lace;
 
-Parser::Parser(const std::string& source, const std::string& path)
-  : m_file(path), m_lexer(source, path) {}
+Parser::Parser(TokenStream& stream, const std::string& file)
+  : m_stream(stream), m_file(file) {}
 
 AST* Parser::parse() {
     m_ast = AST::create(m_file);
     m_context = &m_ast->get_context();
     m_scope = m_ast->get_scope();
 
-    next(); // Lex the first token.
-
-    while (!m_lexer.isEof()) {
+    while (!m_stream.complete()) {
         Defn* defn = parse_initial_definition();
         if (!defn)
             log::fatal("expected definition", log::Location(m_file, loc()));

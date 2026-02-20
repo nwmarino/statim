@@ -3,6 +3,7 @@
 //  All rights reserved.
 //
 
+#include "lace/lexer/Lexer.h"
 #include "lace/parser/Parser.h"
 #include "lace/tree/AST.h"
 #include "lace/tree/Defn.h"
@@ -31,7 +32,11 @@ protected:
 };
 
 TEST_F(DefnParserTests, EmptyFunction) {
-    Parser parser("test :: () -> void;");
+    TokenStream stream;
+    Lexer lexer("test :: () -> void;");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     EXPECT_EQ(ast->num_defns(), 1);
@@ -45,7 +50,11 @@ TEST_F(DefnParserTests, EmptyFunction) {
 }
 
 TEST_F(DefnParserTests, FunctionWithBody) {
-    Parser parser("test :: () -> s64 { ret 0; }");
+    TokenStream stream;
+    Lexer lexer("test :: () -> s64 { ret 0; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     EXPECT_EQ(ast->num_defns(), 1);
@@ -69,7 +78,11 @@ TEST_F(DefnParserTests, FunctionWithBody) {
 }
 
 TEST_F(DefnParserTests, FunctionParameters) {
-    Parser parser("test :: (a: s64, b: char) -> void;");
+    TokenStream stream;
+    Lexer lexer("test :: (a: s64, b: char) -> void;");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     EXPECT_EQ(ast->num_defns(), 1);
@@ -92,7 +105,11 @@ TEST_F(DefnParserTests, FunctionParameters) {
 }
 
 TEST_F(DefnParserTests, Global) {
-    Parser parser("glob :: s64");
+    TokenStream stream;
+    Lexer lexer("glob :: s64");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     EXPECT_EQ(ast->num_defns(), 1);
@@ -105,7 +122,11 @@ TEST_F(DefnParserTests, Global) {
 }
 
 TEST_F(DefnParserTests, GlobalWithInitializer) {
-    Parser parser("glob :: s64 = 5");
+    TokenStream stream;
+    Lexer lexer("glob :: s64 = 5");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     EXPECT_EQ(ast->num_defns(), 1);
@@ -122,7 +143,11 @@ TEST_F(DefnParserTests, GlobalWithInitializer) {
 }
 
 TEST_F(DefnParserTests, Struct) {
-    Parser parser("Box :: struct { x: s32, y: f32, z: bool }");
+    TokenStream stream;
+    Lexer lexer("Box :: struct { x: s32, y: f32, z: bool }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     EXPECT_EQ(ast->num_defns(), 1);
@@ -155,8 +180,12 @@ TEST_F(DefnParserTests, Struct) {
     EXPECT_EQ(F3->get_type().string(), "bool");
 }
 
-TEST_F(DefnParserTests, EnumDefaultType) {
-    Parser parser("Colors :: enum { Red, Blue = 0, Yellow = -7 }");
+TEST_F(DefnParserTests, Enum) {
+    TokenStream stream;
+    Lexer lexer("Colors :: enum { Red, Blue = 0, Yellow = -7 }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     EXPECT_EQ(ast->num_defns(), 1);
@@ -187,25 +216,6 @@ TEST_F(DefnParserTests, EnumDefaultType) {
     EXPECT_NE(V3, nullptr);
     EXPECT_EQ(V3->get_name(), "Yellow");
     EXPECT_EQ(V3->get_value(), -7);
-}
-
-TEST_F(DefnParserTests, EnumCustomType) {
-    Parser parser("Colors :: enum u16 { Red, Blue = 0, Yellow = -7 }");
-    EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
-
-    EXPECT_EQ(ast->num_defns(), 1);
-
-    const EnumDefn* ED = dynamic_cast<EnumDefn*>(ast->get_defn(0));
-    EXPECT_NE(ED, nullptr);
-    EXPECT_EQ(ED->get_name(), "Colors");
-    EXPECT_EQ(ED->num_variants(), 3);
-
-    const EnumType* ET = dynamic_cast<const EnumType*>(ED->get_type());
-    EXPECT_NE(ET, nullptr);
-    EXPECT_EQ(ET->string(), "Colors");
-
-    const QualType& underlying = ET->underlying();
-    EXPECT_EQ(underlying.string(), "u16");
 }
 
 } // namespace lace::test

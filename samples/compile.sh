@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd ./std/
+cd ../std/
 as rt.s -o rt.o
 cd ../samples/
 

@@ -3,6 +3,7 @@
 //  All rights reserved.
 //
 
+#include "lace/lexer/Lexer.h"
 #include "lace/parser/Parser.h"
 #include "lace/tree/AST.h"
 #include "lace/tree/SymbolAnalysis.h"
@@ -30,7 +31,11 @@ protected:
 };
 
 TEST_F(SymbolAnalysisTests, VariableRef_Positive) {
-    Parser parser("test :: () -> s64 { let x: s64 = 0; ret x; }");
+    TokenStream stream;
+    Lexer lexer("test :: () -> s64 { let x: s64 = 0; ret x; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
@@ -38,7 +43,11 @@ TEST_F(SymbolAnalysisTests, VariableRef_Positive) {
 }
 
 TEST_F(SymbolAnalysisTests, VariableRef_Negative) {
-    Parser parser("test :: () -> s64 { let x: s64 = 0; ret y; }");
+    TokenStream stream;
+    Lexer lexer("test :: () -> s64 { let x: s64 = 0; ret y; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
@@ -46,7 +55,11 @@ TEST_F(SymbolAnalysisTests, VariableRef_Negative) {
 }
 
 TEST_F(SymbolAnalysisTests, CalleeRef_Positive) {
-    Parser parser("foo :: () -> s64 { ret bar(); } bar :: () -> s64 { ret 0; }");
+    TokenStream stream;
+    Lexer lexer("foo :: () -> s64 { ret bar(); } bar :: () -> s64 { ret 0; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
@@ -54,7 +67,11 @@ TEST_F(SymbolAnalysisTests, CalleeRef_Positive) {
 }
 
 TEST_F(SymbolAnalysisTests, ParamRef_Positive) {
-    Parser parser("foo :: (a: s64) -> s64 { ret a; }");
+    TokenStream stream;
+    Lexer lexer("foo :: (a: s64) -> s64 { ret a; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);

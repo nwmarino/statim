@@ -3,6 +3,7 @@
 //  All rights reserved.
 //
 
+#include "lace/lexer/Lexer.h"
 #include "lace/parser/Parser.h"
 #include "lace/tree/AST.h"
 #include "lace/tree/Defn.h"
@@ -87,7 +88,11 @@ TEST_F(ExprParserTests, IntegerLiteral_TypeSuffixes) {
 */
 
 TEST_F(ExprParserTests, FloatLiteral_TypeSuffixes) {
-    Parser parser("test :: () -> void { 1.f; 2.d; }");
+    TokenStream stream;
+    Lexer lexer("test :: () -> void { 1.f; 2.d; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     EXPECT_EQ(ast->num_defns(), 1);
@@ -117,4 +122,4 @@ TEST_F(ExprParserTests, FloatLiteral_TypeSuffixes) {
     EXPECT_EQ(FL->get_type().string(), "f64");
 }
 
-} // namespace stm::test
+} // namespace lace::test

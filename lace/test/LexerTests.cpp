@@ -13,6 +13,7 @@ namespace lace::test {
 class LexerTests : public ::testing::Test {};
 
 TEST_F(LexerTests, Identifier) {
+    TokenStream stream;
     Lexer lexer("test");
     Token token;
 
@@ -25,6 +26,7 @@ TEST_F(LexerTests, Identifier) {
 }
 
 TEST_F(LexerTests, MultipleIdentifiers) {
+    TokenStream stream;
     Lexer lexer("one_ _two three_ _four");
     Token token;
 
@@ -46,6 +48,7 @@ TEST_F(LexerTests, MultipleIdentifiers) {
 }
 
 TEST_F(LexerTests, IntegerLiteral) {
+    TokenStream stream;
     Lexer lexer("1 0u 1L 5ul");
     Token token;
 
@@ -79,6 +82,7 @@ TEST_F(LexerTests, IntegerLiteral) {
 }
 
 TEST_F(LexerTests, FloatLiteral) {
+    TokenStream stream;
     Lexer lexer("1.0 1.f .1 3.14F");
     Token token;
 
@@ -108,6 +112,7 @@ TEST_F(LexerTests, FloatLiteral) {
 }
 
 TEST_F(LexerTests, CharacterLiteral) {
+    TokenStream stream;
     Lexer lexer("'a' '0'");
     Token token;
 
@@ -121,6 +126,7 @@ TEST_F(LexerTests, CharacterLiteral) {
 }
 
 TEST_F(LexerTests, CharacterEscapeSequences) {
+    TokenStream stream;
     Lexer lexer("'\v' '\n' '\t' '\''");
     Token token;
 
@@ -142,6 +148,7 @@ TEST_F(LexerTests, CharacterEscapeSequences) {
 }
 
 TEST_F(LexerTests, StringLiteral) {
+    TokenStream stream;
     Lexer lexer("\"hello, world!\"");
     Token token;
 
@@ -151,6 +158,7 @@ TEST_F(LexerTests, StringLiteral) {
 }
 
 TEST_F(LexerTests, StringEscapeSequences) {
+    TokenStream stream;
     Lexer lexer("\"hello,\tworld!\n\"");
     Token token;
 
@@ -160,6 +168,7 @@ TEST_F(LexerTests, StringEscapeSequences) {
 }
 
 TEST_F(LexerTests, IsolatedToken) {
+    TokenStream stream;
     Lexer lexer(".");
     Token token;
 
@@ -168,6 +177,7 @@ TEST_F(LexerTests, IsolatedToken) {
 }
 
 TEST_F(LexerTests, CompoundToken) {
+    TokenStream stream;
     Lexer lexer("->");
     Token token;
 
@@ -176,6 +186,7 @@ TEST_F(LexerTests, CompoundToken) {
 }
 
 TEST_F(LexerTests, Complete) {
+    TokenStream stream;
     Lexer lexer("main :: (argc: s32, argv: **char) { ret argc * 3; }");
     Token token;
 

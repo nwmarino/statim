@@ -3,6 +3,7 @@
 //  All rights reserved.
 //
 
+#include "lace/lexer/Lexer.h"
 #include "lace/parser/Parser.h"
 #include "lace/tree/AST.h"
 #include "lace/tree/Defn.h"
@@ -29,7 +30,11 @@ protected:
 };
 
 TEST_F(TypeParserTests, BuiltinType) {
-    Parser parser("test :: () -> s64;");
+    TokenStream stream;
+    Lexer lexer("test :: () -> s64;");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     EXPECT_EQ(ast->num_defns(), 1);
@@ -46,7 +51,11 @@ TEST_F(TypeParserTests, BuiltinType) {
 }
 
 TEST_F(TypeParserTests, PointerType) {
-    Parser parser("test :: () -> *bool;");
+    TokenStream stream;
+    Lexer lexer("test :: () -> *bool;");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     EXPECT_EQ(ast->num_defns(), 1);
@@ -69,7 +78,11 @@ TEST_F(TypeParserTests, PointerType) {
 }
 
 TEST_F(TypeParserTests, MutableType) {
-    Parser parser("test :: () -> mut void;");
+    TokenStream stream;
+    Lexer lexer("test :: () -> mut void;");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     EXPECT_EQ(ast->num_defns(), 1);
@@ -87,7 +100,11 @@ TEST_F(TypeParserTests, MutableType) {
 }
 
 TEST_F(TypeParserTests, MutablePointerToVoidType) {
-    Parser parser("test :: () -> mut *void;");
+    TokenStream stream;
+    Lexer lexer("test :: () -> mut *void;");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     EXPECT_EQ(ast->num_defns(), 1);
@@ -113,7 +130,11 @@ TEST_F(TypeParserTests, MutablePointerToVoidType) {
 }
 
 TEST_F(TypeParserTests, PointerToMutableVoidType) {
-    Parser parser("test :: () -> *mut void;");
+    TokenStream stream;
+    Lexer lexer("test :: () -> *mut void;");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     EXPECT_EQ(ast->num_defns(), 1);
@@ -139,7 +160,11 @@ TEST_F(TypeParserTests, PointerToMutableVoidType) {
 }
 
 TEST_F(TypeParserTests, MutablePointerToMutableVoidType) {
-    Parser parser("test :: () -> mut *mut void;");
+    TokenStream stream;
+    Lexer lexer("test :: () -> mut *mut void;");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     EXPECT_EQ(ast->num_defns(), 1);

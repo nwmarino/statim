@@ -7,11 +7,11 @@
 #define LACE_PARSER_H_
 
 //
-//  This header file declares the Parser class, which is used in tandem with the lexer to turn 
-//  source code into an abstract syntax tree.
+//  This header file declares the Parser class, which is used in tandem with 
+//  the lexer to turn source code into a syntax tree.
 //
 
-#include "lace/lexer/Lexer.h"
+#include "lace/lexer/TokenStream.h"
 #include "lace/tree/AST.h"
 #include "lace/tree/Defn.h"
 #include "lace/tree/Expr.h"
@@ -21,29 +21,11 @@ namespace lace {
 
 /// Definition of a parser for a lace translation unit into a syntax tree.
 class Parser final {
-    using Tokens = std::vector<Token>;
-
+    TokenStream& m_stream;
     std::string m_file;
-    Lexer m_lexer;
-    Tokens m_tokens = {};
     AST* m_ast = nullptr;
     AST::Context* m_context = nullptr;
     Scope* m_scope = nullptr;
-
-    /// Returns the current token in use.
-    ///
-    /// Fails by assertion if no tokens have been lexed yet.
-    inline const Token& curr() const {
-        assert(!m_tokens.empty() && "no tokens have been lexed yet!");
-        return m_tokens.back();
-    }
-
-    /// Lex the next token.
-    inline void next() {
-        Token token;
-        m_lexer.lex(token);
-        m_tokens.push_back(token); 
-    }
 
     /// Returns the current location in source, based on the current token.
     inline SourceLocation loc() const { return curr().loc; }
@@ -148,15 +130,27 @@ class Parser final {
     Expr* parse_named_reference();
 
 public:
-    /// Create a new parser instance to work on |source|. Optionally, a |path|
-    /// may be provided for better diagnostics i.e. reading in faulty code
-    /// from a file which contains |source|.
-    Parser(const std::string& source, const std::string& path = "");
+    /// Create a new parser instance to work on |source|. 
+    ///
+    /// Optionally, a |path| may be provided for better diagnostics i.e. 
+    /// reading in invalid code from the file which contains |source|.
+    Parser(TokenStream& stream, const std::string& file = "");
 
-    /// Attempt to parse and return an abstract syntax tree from the source
+    /// Attempt to parse and a new abstract syntax tree from the source
     /// this parser was constructed with.
-    [[nodiscard]] 
-    AST* parse();
+    [[nodiscard]] AST* parse();
+
+private:
+    /// Returns the current token in use.
+    inline const Token& curr() const {
+        return m_stream.get();
+    }
+
+    /// Lex the next token.
+    inline const Token& next() {
+        m_stream.advance();
+        return curr(); 
+    }
 };
 
 } // namespace lace

@@ -6,6 +6,8 @@
 #include "lace/core/Diagnostics.h"
 #include "lace/core/ThreadPool.h"
 #include "lace/core/Options.h"
+#include "lace/lexer/Lexer.h"
+#include "lace/lexer/TokenStream.h"
 #include "lace/parser/Parser.h"
 #include "lace/tools/Files.h"
 #include "lace/tree/AST.h"
@@ -377,8 +379,14 @@ int32_t main(int32_t argc, char *argv[]) {
                 if (!readFile(f.file, contents))
                     log::flush();
 
-                Parser parser(contents, f.file);
+                TokenStream stream;
+                Lexer lexer(contents, f.file);
+                if (!lexer.lex(stream))
+                    log::flush();
+
+                Parser parser(stream, f.file);
                 f.ast = parser.parse();
+                assert(f.ast);
 
                 if (options.verbose) {
                     duration<double> dur = get_time() - parse_start;
@@ -400,8 +408,14 @@ int32_t main(int32_t argc, char *argv[]) {
         if (!readFile(f.file, contents))
             log::flush();
 
-        Parser parser(contents, f.file);
+        TokenStream stream;
+        Lexer lexer(contents, f.file);
+        if (!lexer.lex(stream))
+            log::flush();
+
+        Parser parser(stream, f.file);
         f.ast = parser.parse();
+        assert(f.ast);
         
         if (options.verbose) {
             duration<double> dur = get_time() - parse_start;

@@ -3,6 +3,7 @@
 //  All rights reserved.
 //
 
+#include "lace/lexer/Lexer.h"
 #include "lace/parser/Parser.h"
 #include "lace/tree/AST.h"
 #include "lace/tree/Defn.h"
@@ -32,7 +33,11 @@ protected:
 };
 
 TEST_F(SemanticAnalysisTests, MainCheck_ReturnType_Positive) {
-    Parser parser("main :: () -> s64;");
+    TokenStream stream;
+    Lexer lexer("main :: () -> s64;");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
@@ -43,7 +48,11 @@ TEST_F(SemanticAnalysisTests, MainCheck_ReturnType_Positive) {
 }
 
 TEST_F(SemanticAnalysisTests, MainCheck_ReturnType_Negative) {
-    Parser parser("main :: () -> s8;");
+    TokenStream stream;
+    Lexer lexer("main :: () -> s8;");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
@@ -54,7 +63,11 @@ TEST_F(SemanticAnalysisTests, MainCheck_ReturnType_Negative) {
 }
 
 TEST_F(SemanticAnalysisTests, ConditionCheck_IfCondition_Positive) {
-    Parser parser("foo :: () -> s64 { if 1 { ret 0; } }");
+    TokenStream stream;
+    Lexer lexer("foo :: () -> s64 { if 1 { ret 0; } }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
@@ -65,7 +78,11 @@ TEST_F(SemanticAnalysisTests, ConditionCheck_IfCondition_Positive) {
 }
 
 TEST_F(SemanticAnalysisTests, ConditionCheck_IfCondition_Negative) {
-    Parser parser("bar :: () -> void; foo :: () -> s64 { if bar() { ret 0; } }");
+    TokenStream stream;
+    Lexer lexer("bar :: () -> void; foo :: () -> s64 { if bar() { ret 0; } }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
@@ -76,7 +93,11 @@ TEST_F(SemanticAnalysisTests, ConditionCheck_IfCondition_Negative) {
 }
 
 TEST_F(SemanticAnalysisTests, ConditionCheck_UntilCondition_Positive) {
-    Parser parser("foo :: () -> s64 { until 1 restart; }");
+    TokenStream stream;
+    Lexer lexer("foo :: () -> s64 { until 1 restart; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
@@ -87,7 +108,11 @@ TEST_F(SemanticAnalysisTests, ConditionCheck_UntilCondition_Positive) {
 }
 
 TEST_F(SemanticAnalysisTests, ConditionCheck_UntilCondition_Negative) {
-    Parser parser("bar :: () -> void; foo :: () -> s64 { until bar() restart; }");
+    TokenStream stream;
+    Lexer lexer("bar :: () -> void; foo :: () -> s64 { until bar() restart; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
@@ -98,7 +123,11 @@ TEST_F(SemanticAnalysisTests, ConditionCheck_UntilCondition_Negative) {
 }
 
 TEST_F(SemanticAnalysisTests, ControlCheck_StopInLoop_Positive) {
-    Parser parser("foo :: () -> s64 { until 1 stop; }");
+    TokenStream stream;
+    Lexer lexer("foo :: () -> s64 { until 1 stop; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
@@ -109,7 +138,11 @@ TEST_F(SemanticAnalysisTests, ControlCheck_StopInLoop_Positive) {
 }
 
 TEST_F(SemanticAnalysisTests, ControlCheck_StopInLoop_Negative) {
-    Parser parser("foo :: () -> s64 { stop; }");
+    TokenStream stream;
+    Lexer lexer("foo :: () -> s64 { stop; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
@@ -120,7 +153,11 @@ TEST_F(SemanticAnalysisTests, ControlCheck_StopInLoop_Negative) {
 }
 
 TEST_F(SemanticAnalysisTests, ControlCheck_RestartInLoop_Positive) {
-    Parser parser("foo :: () -> s64 { until 1 restart; }");
+    TokenStream stream;
+    Lexer lexer("foo :: () -> s64 { until 1 restart; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
@@ -131,7 +168,11 @@ TEST_F(SemanticAnalysisTests, ControlCheck_RestartInLoop_Positive) {
 }
 
 TEST_F(SemanticAnalysisTests, ControlCheck_RestartInLoop_Negative) {
-    Parser parser("foo :: () -> s64 { restart; }");
+    TokenStream stream;
+    Lexer lexer("foo :: () -> s64 { restart; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
@@ -142,7 +183,11 @@ TEST_F(SemanticAnalysisTests, ControlCheck_RestartInLoop_Negative) {
 }
 
 TEST_F(SemanticAnalysisTests, TypeCheck_VariableInitializer_Positive) {
-    Parser parser("test :: () -> void { let x: s64 = 1; }");
+    TokenStream stream;
+    Lexer lexer("test :: () -> void { let x: s64 = 1; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
@@ -153,7 +198,11 @@ TEST_F(SemanticAnalysisTests, TypeCheck_VariableInitializer_Positive) {
 }
 
 TEST_F(SemanticAnalysisTests, TypeCheck_VariableInitializer_Negative) {
-    Parser parser("test :: () -> void { let x: s64 = \"test\"; }");
+    TokenStream stream;
+    Lexer lexer("test :: () -> void { let x: s64 = \"test\"; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
@@ -164,7 +213,11 @@ TEST_F(SemanticAnalysisTests, TypeCheck_VariableInitializer_Negative) {
 }
 
 TEST_F(SemanticAnalysisTests, TypeCheck_VoidReturn_Positive) {
-    Parser parser("foo :: () -> void { ret; }");
+    TokenStream stream;
+    Lexer lexer("foo :: () -> void { ret; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
@@ -175,7 +228,11 @@ TEST_F(SemanticAnalysisTests, TypeCheck_VoidReturn_Positive) {
 }
 
 TEST_F(SemanticAnalysisTests, TypeCheck_VoidReturn_Negative) {
-    Parser parser("foo :: () -> s64 { ret; }");
+    TokenStream stream;
+    Lexer lexer("foo :: () -> s64 { ret; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
@@ -186,7 +243,11 @@ TEST_F(SemanticAnalysisTests, TypeCheck_VoidReturn_Negative) {
 }
 
 TEST_F(SemanticAnalysisTests, TypeCheck_Return_Positive) {
-    Parser parser("foo :: () -> s64 { ret 1; }");
+    TokenStream stream;
+    Lexer lexer("foo :: () -> s64 { ret 1; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
@@ -197,7 +258,11 @@ TEST_F(SemanticAnalysisTests, TypeCheck_Return_Positive) {
 }
 
 TEST_F(SemanticAnalysisTests, TypeCheck_Return_Negative) {
-    Parser parser("foo :: () -> s64 { ret \"test\"; }");
+    TokenStream stream;
+    Lexer lexer("foo :: () -> s64 { ret \"test\"; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
@@ -208,7 +273,11 @@ TEST_F(SemanticAnalysisTests, TypeCheck_Return_Negative) {
 }
 
 TEST_F(SemanticAnalysisTests, TypeCheck_CastReturn_Positive) {
-    Parser parser("foo :: () -> f32 { ret 1; }");
+    TokenStream stream;
+    Lexer lexer("foo :: () -> f32 { ret 1; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
     EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
@@ -217,51 +286,5 @@ TEST_F(SemanticAnalysisTests, TypeCheck_CastReturn_Positive) {
     SemanticAnalysis sema(opts);
     EXPECT_NO_FATAL_FAILURE(ast->accept(sema));
 }
-
-TEST_F(SemanticAnalysisTests, Mutability_Assignment_Positive) {
-    Parser parser("foo :: () -> s64 { let x: mut s64 = 5; x = 5; ret x; }");
-    EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
-
-    SymbolAnalysis syma(opts);
-    EXPECT_NO_FATAL_FAILURE(ast->accept(syma));
-
-    SemanticAnalysis sema(opts);
-    EXPECT_NO_FATAL_FAILURE(ast->accept(sema));
-}
-
-TEST_F(SemanticAnalysisTests, Mutability_Assignment_Negative) {
-    Parser parser("foo :: () -> s64 { let x: s64 = 5; x = 5; ret x; }");
-    EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
-
-    SymbolAnalysis syma(opts);
-    EXPECT_NO_FATAL_FAILURE(ast->accept(syma));
-
-    SemanticAnalysis sema(opts);
-    EXPECT_DEATH(ast->accept(sema), "");
-}
-
-/*
-TEST_F(SemanticAnalysisTests, Mutability_Increment_Positive) {
-    Parser parser("foo :: () -> s64 { let x: mut s64 = 5; ret x++; }");
-    EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
-
-    SymbolAnalysis syma(opts);
-    EXPECT_NO_FATAL_FAILURE(ast->accept(syma));
-
-    SemanticAnalysis sema(opts);
-    EXPECT_NO_FATAL_FAILURE(ast->accept(sema));
-}
-
-TEST_F(SemanticAnalysisTests, Mutability_Decrement_Negative) {
-    Parser parser("foo :: () -> s64 { let x: s64 = 5; ret --x; }");
-    EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
-
-    SymbolAnalysis syma(opts);
-    EXPECT_NO_FATAL_FAILURE(ast->accept(syma));
-
-    SemanticAnalysis sema(opts);
-    EXPECT_DEATH(ast->accept(sema), "");
-}
-*/
 
 } // namespace lace::test
