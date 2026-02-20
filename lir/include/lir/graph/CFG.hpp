@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
@@ -20,6 +20,8 @@
 
 namespace lir {
 
+/// A control flow graph. This holds all the top-level members of the IR, and
+/// manages pooling for constant values and types.
 class CFG final {
     friend class Type;
     friend class ArrayType;
@@ -34,7 +36,6 @@ class CFG final {
     friend class Float;
     friend class Null;
     friend class String;
-    friend class BlockAddress;
     friend class Aggregate;
 
     using Functions = std::map<std::string, Function*>;
@@ -56,10 +57,9 @@ class CFG final {
     using DoublePool = std::unordered_map<double, Float*>;
     using NullPool = std::unordered_map<const Type*, Null*>;
     using StringPool = std::unordered_map<std::string, String*>;
-    using AddressPool = std::unordered_map<const BasicBlock*, BlockAddress*>;
     using AggregatePool = std::vector<Aggregate*>;
 
-    const Machine& m_mach;
+    const Machine &m_mach;
 
     std::string m_filename;
     uint32_t m_def_id = 1;
@@ -67,7 +67,7 @@ class CFG final {
     Functions m_functions = {};
 
     struct TypePools final {
-        VoidType* void_type = nullptr;
+        VoidType *void_type = nullptr;
         ArrayTypePool arrays = {};
         FloatTypePool floats = {};
         FunctionTypePool functions = {};
@@ -77,8 +77,6 @@ class CFG final {
     } m_types;
 
     struct ConstantPools final {
-        Integer* zero;
-        Integer* one;
         BytePool bytes = {};
         ShortPool shorts = {};
         IntPool ints = {};
@@ -87,12 +85,11 @@ class CFG final {
         DoublePool doubles = {};
         NullPool nulls = {};
         StringPool strings = {};
-        AddressPool addresses = {};
         AggregatePool aggregates = {};
     } m_constants;
 
 public:
-    CFG(const Machine& mach, const std::string& filename);
+    CFG(const Machine &mach, const std::string &filename);
 
     ~CFG();
     
@@ -102,51 +99,53 @@ public:
     CFG(CFG&&) noexcept = delete;
     void operator=(CFG&&) noexcept = delete;
 
-    const Machine& get_machine() const { return m_mach; }
+    const Machine &get_machine() const { return m_mach; }
 
-    void set_filename(std::string& filename) { m_filename = filename; }
-    const std::string& get_filename() const { return m_filename; }
-    std::string& get_filename() { return m_filename; }
+    void set_filename(std::string &filename) { m_filename = filename; }
+    const std::string &get_filename() const { return m_filename; }
+    std::string &get_filename() { return m_filename; }
     
+    /// Returns a list of the structure types in this graph.
     std::vector<StructType*> get_structs() const;
 
+    /// Returns a list of the globals in this graph.
     std::vector<Global*> get_globals() const;
 
     /// Returns the global in this graph with the given |name|.
-    const Global* get_global(const std::string& name) const;
-    Global* get_global(const std::string& name) {
+    const Global *get_global(const std::string &name) const;
+    Global *get_global(const std::string &name) {
         return const_cast<Global*>(
             static_cast<const CFG*>(this)->get_global(name));
     }
 
-    /// Add the given |global| to this graph. Fails if there is any existing 
-    /// top-level symbol with the same name.
-    void add_global(Global* global);
+    /// Add the given |global| to this graph. 
+    /// Fails if there are any existing top-level symbols with the same name.
+    void add_global(Global *global);
 
     /// Remove the given |global| from this graph, if it belongs.
-    void remove_global(Global* global);
+    void remove_global(Global *global);
 
-    /// Returns a list of all functions in this graph, in order of addition.
+    /// Returns a list of the functions in this graph.
     std::vector<Function*> get_functions() const;
 
     /// Returns the function in this graph with the given |name|.
-    const Function* get_function(const std::string& name) const;
-    Function* get_function(const std::string& name) {
+    const Function *get_function(const std::string &name) const;
+    Function *get_function(const std::string &name) {
         return const_cast<Function*>(
             static_cast<const CFG*>(this)->get_function(name));
     }
 
-    /// Add the given |function| to this graph. Fails if there is any existing 
-    /// top-level symbol with the same name.
-    void add_function(Function* function);
+    /// Add the given |func| to this graph. 
+    /// Fails if there are any existing top-level symbols with the same name.
+    void add_function(Function *func);
 
-    /// Remove the given |function| from this graph, if it belongs.
-    void remove_function(Function* function);
+    /// Remove the given |func| from this graph, if it belongs.
+    void remove_function(Function *func);
 
     /// Return a new unique definition id to create an instruction with.
     uint32_t get_def_id() { return m_def_id++; }
 
-    void print(std::ostream& os) const;
+    void print(std::ostream &os) const;
 };
 
 } // namespace lir

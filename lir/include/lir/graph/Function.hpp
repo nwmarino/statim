@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
@@ -8,6 +8,7 @@
 
 #include "lir/graph/BasicBlock.hpp"
 #include "lir/graph/Local.hpp"
+#include "lir/graph/Parameter.hpp"
 #include "lir/graph/Type.hpp"
 #include "lir/graph/Value.hpp"
 
@@ -20,66 +21,38 @@
 namespace lir {
 
 class CFG;
+class Parameter;
 
-/// A function routine consisting of basic blocks.
+/// A function consisting of basic blocks.
 class Function final : public Value {
 public:
-    /// Recognized linkage types for global functions.
-    enum LinkageType : uint8_t {
-        Internal = 0, External,
-    };
-
-    /// Represents an argument to a function.
-    class Arg final : public Value {
-        Function* m_parent;
-        std::string m_name;
-
-        Arg(Type* type, Function* parent, const std::string& name)
-          : Value(type), m_parent(parent), m_name(name) {}
-
-    public:
-        [[nodiscard]] static Arg* create(Type* type, const std::string& name,
-                                         Function* parent = nullptr);
-
-        void set_parent(Function* function) { m_parent = function; }
-        const Function* get_parent() const { return m_parent; }
-        Function* get_parent() { return m_parent; }
-        
-        bool has_parent() const { return m_parent != nullptr; }
-
-        void set_name(const std::string& name) { m_name = name; }
-        const std::string& get_name() const { return m_name; }
-        std::string& get_name() { return m_name; }
-
-        bool has_name() const { return !m_name.empty(); }
-
-        /// Returns the index of this argument in its parent function. Fails if 
-        /// this argument does not belong to a function.
-        uint32_t get_index() const;
-
-        void print(std::ostream& os, PrintPolicy policy) const override;
-    };
-
-    using Args = std::vector<Arg*>;
+    using Params = std::vector<Parameter*>;
     using Locals = std::map<std::string, Local*>;
 
+    /// The different kinds of linkage a function can have.
+    enum class LinkageType : uint8_t {
+        Public,
+        Private,
+    };
+
 private:
-    CFG* m_parent;
+    CFG *m_parent;
     LinkageType m_linkage;
     std::string m_name;
-    Args m_args;
+    Params m_params = {};
     Locals m_locals = {};
-    BasicBlock* m_head = nullptr;
-    BasicBlock* m_tail = nullptr;
+    BasicBlock *m_head = nullptr;
+    BasicBlock *m_tail = nullptr;
 
-    Function(FunctionType* type, CFG* parent, LinkageType linkage, 
-             const std::string& name, const Args& args)
+    Function(FunctionType *type, CFG *parent, LinkageType linkage, 
+             const std::string &name, const Params &params)
       : Value(type), m_parent(parent), m_linkage(linkage), m_name(name), 
-        m_args(args) {}
+        m_params(params) {}
 
 public:
-    static Function* create(CFG& cfg, LinkageType linkage, FunctionType* type, 
-                            const std::string& name, const Args& args);
+    [[nodiscard]] static 
+    Function *create(CFG &cfg, LinkageType linkage, FunctionType *type, 
+                     const std::string &name, const Params &params);
 
     ~Function() override;
 
@@ -91,92 +64,139 @@ public:
 
     void set_linkage(LinkageType linkage) { m_linkage = linkage; }
     LinkageType get_linkage() const { return m_linkage; }
+
+    /// Test if this function has the given |linkage| type.
+    bool has_linkage(LinkageType linkage) const { 
+        return m_linkage == linkage; 
+    }
     
-    const FunctionType* get_type() const { 
+    const FunctionType *get_type() const { 
         return static_cast<const FunctionType*>(m_type); 
     }
-
-    const Type* get_return_type() const {
-        return get_type()->get_return_type();
+    
+    FunctionType *get_type() { 
+        return static_cast<FunctionType*>(m_type); 
     }
 
-    void set_name(const std::string& name) { m_name = name; }
-    const std::string& get_name() const { return m_name; }
+    void set_name(const std::string &name) { m_name = name; }
+    const std::string &get_name() const { return m_name; }
+    std::string &get_name() { return m_name; }
 
-    void set_parent(CFG* cfg) { m_parent = cfg; }
-    void clear_parent() { m_parent = nullptr; }
-    const CFG* get_parent() const { return m_parent; }
-    CFG* get_parent() { return m_parent; }
+    void set_parent(CFG *cfg) { m_parent = cfg; }
+    const CFG *get_parent() const { return m_parent; }
+    CFG *get_parent() { return m_parent; }
 
     /// Detach this function from its parent graph.
     ///
     /// Does not free any memory allocated for this function.
     void detach();
 
-    const Args& get_args() const { return m_args; }
-    Args& get_args() { return m_args; }
+    const Params &get_params() const { return m_params; }
+    Params &get_params() { return m_params; }
 
-    const Function::Arg* get_arg(uint32_t i) const {
-        assert(i < num_args() && "index out of bounds!");
-        return m_args[i];
+    /// Returns the number of parameters this function has.
+    uint32_t num_params() const { return m_params.size(); }
+
+    /// Test if this function has any parameters.
+    bool has_params() const { return !m_params.empty(); }
+
+    /// Returns the |i|-th parameter of this function.
+    const Parameter *get_param(uint32_t i) const {
+        assert(i < num_params() && "index out of bounds!");
+        return m_params[i];
     }
 
-    Function::Arg* get_arg(uint32_t i) {
-        assert(i < num_args() && "index out of bounds!");
-        return m_args[i];
+    Parameter *get_param(uint32_t i) {
+        assert(i < num_params() && "index out of bounds!");
+        return m_params[i];
     }
 
-    uint32_t num_args() const { return m_args.size(); }
-    bool has_args() const { return !m_args.empty(); }
+    /// Returns the parameter in this function with the given |name| if it 
+    /// exists, and null otherwise.
+    const Parameter *get_param(const std::string &name) const {
+        for (Parameter *param : m_params) {
+            if (param->get_name() == name)
+                return param;
+        }
 
-    /// Set the argument at position |i| to |arg|.
-    void set_arg(uint32_t i, Function::Arg* arg);
+        return nullptr;
+    }
 
-    /// Append the given |arg| to the back of this functions' argument list.
-    void append_arg(Function::Arg* arg);
+    Parameter *get_param(const std::string &name) {
+        return const_cast<Parameter*>(
+            static_cast<const Function*>(this)->get_param(name));
+    }
 
-    const Locals& get_locals() const { return m_locals; }
-    Locals& get_locals() { return m_locals; }
+    /// Append the given |param| to the back of this functions' parameter list,
+    /// and returns the result of the addition.
+    ///
+    /// If the parameter were to conflict name-wise with another symbol already
+    /// in this function, then the call fails.
+    bool add_param(Parameter *param);
 
-    /// Returns the local in this function with the given |name| if one exists.
-    const Local* get_local(const std::string& name) const;
-    Local* get_local(const std::string& name) {
+    /// Remove the given |param| from this function. If it does not belong to
+    /// this function, then the call fails silently.
+    void remove_param(Parameter *param);
+
+    /// Test if this function contains an aggregate return parameter.
+    Result hasAggregateReturn() const {
+        if (m_params.size() < 1)
+            return false;
+
+        return m_params[0]->hasTrait(Parameter::Trait::ARet);
+    }
+
+    const Locals &get_locals() const { return m_locals; }
+    Locals &get_locals() { return m_locals; }
+
+    /// Returns the number of locals in this function.
+    uint32_t num_locals() const { return m_locals.size(); }
+
+    /// Test if this function has any locals.
+    bool has_locals() const { return !m_locals.empty(); }
+
+    /// Returns the local in this function with the given |name| if one exists,
+    /// and null otherwise.
+    const Local *get_local(const std::string &name) const;
+    Local *get_local(const std::string &name) {
         return const_cast<Local*>(
             static_cast<const Function*>(this)->get_local(name));
     }
 
-    /// Add the given |local| to this function. Fails if it would conflict 
-    /// name-wise with an existing local in the function.
-    void add_local(Local* local);
+    /// Add the given |local| to this function, and returns the result of the
+    /// addition.
+    ///
+    /// If the local were to conflict name-wise with another symbol already in
+    /// this function, then the call fails.
+    bool add_local(Local *local);
 
-    /// Remove |local| from this function if it already belongs.
-    void remove_local(Local* local);
+    /// Remove the given |local| from this function. If it does not belong to
+    /// this function, then the call fails silently.
+    void remove_local(Local *local);
 
-    /// Returns the first basic block of this function, if one exists.
-    void set_head(BasicBlock* block) { m_head = block; }
-    const BasicBlock* get_head() const { return m_head; }
-    BasicBlock* get_head() { return m_head; }
+    void set_head(BasicBlock *block) { m_head = block; }
+    const BasicBlock *get_head() const { return m_head; }
+    BasicBlock *get_head() { return m_head; }
 
-    /// Returns the last basic block of this function, if one exists.
-    void set_tail(BasicBlock* block) { m_tail = block; }
-    const BasicBlock* get_tail() const { return m_tail; }
-    BasicBlock* get_tail() { return m_tail; }
+    void set_tail(BasicBlock *block) { m_tail = block; }
+    const BasicBlock *get_tail() const { return m_tail; }
+    BasicBlock *get_tail() { return m_tail; }
 
     /// Prepend the given |block| to the front of this function.
-    void prepend(BasicBlock* block);
+    void prepend(BasicBlock *block);
 
     /// Append the given |block| to the back of this function.
-    void append(BasicBlock* block);
+    void append(BasicBlock *block);
 
     /// Insert the given |block| into this function at position |i|.
-    void insert(BasicBlock* block, uint32_t i);
+    void insert(BasicBlock *block, uint32_t i);
 
     /// Insert |block| into this function immediately after |insert_after|. 
     /// Fails if |insert_after| does not already belong to this function.
-    void insert(BasicBlock* block, BasicBlock* insert_after);
+    void insert(BasicBlock *block, BasicBlock *insert_after);
 
-    /// Remove the basic block |block| if it belongs to this function.
-    void remove(BasicBlock* block);
+    /// Remove the given |block| from this function, if it belongs to it.
+    void remove(BasicBlock *block);
 
     /// Test if this function has no basic blocks.
     bool empty() const { return m_head == nullptr; }
@@ -184,9 +204,9 @@ public:
     /// Returns the size of this function by the number of basic blocks in it.
     uint32_t size() const;
 
-    void print(std::ostream& os, PrintPolicy policy) const override;
+    void print(std::ostream &os, PrintPolicy policy) const override;
 };
 
-} // namespace spbe
+} // namespace lir
 
-#endif // SPBE_FUNCTION_H_
+#endif // LOVELACE_IR_FUNCTION_H_

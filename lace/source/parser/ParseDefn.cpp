@@ -3,17 +3,15 @@
 //  All rights reserved.
 //
 
-#include "lace/core/Diagnostics.hpp"
-#include "lace/parser/Parser.hpp"
-#include "lace/tree/Defn.hpp"
-#include "lace/tree/Scope.hpp"
-#include "lace/tree/Type.hpp"
-#include "lace/types/SourceLocation.hpp"
+#include "lace/core/Diagnostics.h"
+#include "lace/parser/Parser.h"
+#include "lace/tree/Defn.h"
+#include "lace/tree/Type.h"
 
 using namespace lace;
 
 Defn* Parser::parse_initial_definition() {
-    Runes runes = {};
+    std::vector<Rune*> runes = {};
     parse_rune_decorators(runes);
 
     if (!match(Token::Identifier))
@@ -31,7 +29,7 @@ Defn* Parser::parse_initial_definition() {
     return nullptr;
 }
 
-Defn* Parser::parse_binding_definition(Runes runes, const Token name) {
+Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token name) {
     if (expect(Token::OpenParen)) {
         Scope* scope = enter_scope();
 
@@ -171,7 +169,7 @@ Defn* Parser::parse_binding_definition(Runes runes, const Token name) {
         if (match(Token::Identifier)) {
             underlying = parse_type_specifier();
         } else {
-            underlying = BuiltinType::get(*m_context, BuiltinType::Int64);
+            underlying = BuiltinType::get(*m_context, BuiltinType::Kind::Int64);
         }
 
         EnumDefn* defn = EnumDefn::create(
@@ -179,7 +177,8 @@ Defn* Parser::parse_binding_definition(Runes runes, const Token name) {
             name.loc, 
             name.value, 
             runes,
-            underlying.get_type());
+            underlying.getType()
+        );
 
         const EnumType* type = EnumType::create(*m_context, underlying, defn);
         defn->set_type(type);

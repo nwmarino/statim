@@ -1,5 +1,6 @@
 set(CORE_SOURCES
     Diagnostics.cpp
+    ThreadPool.cpp
 )
 
 add_library(Core

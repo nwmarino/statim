@@ -3,9 +3,8 @@
 //  All rights reserved.
 //
 
-#include "lace/tree/Defn.hpp"
-#include "lace/tree/Expr.hpp"
-#include "lace/tree/Scope.hpp"
+#include "lace/tree/Defn.h"
+#include "lace/tree/Expr.h"
 
 using namespace lace;
 
@@ -29,7 +28,7 @@ VariableDefn::~VariableDefn() {
 }
 
 VariableDefn* VariableDefn::create(AST::Context& ctx, SourceSpan span, 
-                                   const std::string& name, const Runes& runes, 
+                                   const std::string& name, const std::vector<Rune*>& runes, 
                                    const QualType& type, Expr* init, 
                                    bool global) {
     return new VariableDefn(span, name, runes, type, init, global);
@@ -37,7 +36,7 @@ VariableDefn* VariableDefn::create(AST::Context& ctx, SourceSpan span,
 
 ParameterDefn* ParameterDefn::create(AST::Context& ctx, SourceSpan span, 
                                      const std::string& name, 
-                                     const Runes& runes, const QualType& type) {
+                                     const std::vector<Rune*>& runes, const QualType& type) {
     return new ParameterDefn(span, name, runes, type);
 }
 
@@ -57,26 +56,26 @@ FunctionDefn::~FunctionDefn() {
 }
 
 FunctionDefn* FunctionDefn::create(AST::Context& ctx, SourceSpan span, 
-                                   const std::string& name, const Runes &runes, 
+                                   const std::string& name, const std::vector<Rune*> &runes, 
                                    const QualType& type, Scope* scope, 
                                    const Params& params, BlockStmt* body) {
     return new FunctionDefn(span, name, runes, type, scope, params, body);
 }
 
 FieldDefn* FieldDefn::create(AST::Context& ctx, SourceSpan span, 
-                             const std::string& name, const Runes& runes, 
+                             const std::string& name, const std::vector<Rune*>& runes, 
                              const QualType& type, uint32_t index) {
     return new FieldDefn(span, name, runes, type, index);
 }
 
 VariantDefn* VariantDefn::create(AST::Context& ctx, SourceSpan span, 
-                                 const std::string& name, const Runes& runes, 
+                                 const std::string& name, const std::vector<Rune*>& runes, 
                                  const QualType& type, int64_t value) {
     return new VariantDefn(span, name, runes, type, value);
 }
 
 AliasDefn* AliasDefn::create(AST::Context& ctx, SourceSpan span, 
-                             const std::string& name, const Runes& runes, 
+                             const std::string& name, const std::vector<Rune*>& runes, 
                              const Type* type) {
     return new AliasDefn(span, name, runes, type);
 }
@@ -89,7 +88,7 @@ StructDefn::~StructDefn() {
 }
 
 StructDefn* StructDefn::create(AST::Context& ctx, SourceSpan span, 
-                               const std::string& name, const Runes& runes, 
+                               const std::string& name, const std::vector<Rune*>& runes, 
                                const Type* type) {
     return new StructDefn(span, name, runes, type);
 }
@@ -102,7 +101,7 @@ EnumDefn::~EnumDefn() {
 }
 
 EnumDefn* EnumDefn::create(AST::Context& ctx, SourceSpan span, 
-                           const std::string& name, const Runes& runes, 
+                           const std::string& name, const std::vector<Rune*>& runes, 
                            const Type* type) {
     return new EnumDefn(span, name, runes, type);
 }

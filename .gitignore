@@ -22,6 +22,4 @@ lib/
 dump
 main
 vgcore.*
-*.lovelace.o
-*.lovelace.s
 legacy/

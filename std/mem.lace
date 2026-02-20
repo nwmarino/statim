@@ -1,0 +1,158 @@
+load "linux.lace";
+
+Metadata :: struct {
+    size: mut u64,
+    next: mut *Metadata,
+    free: mut bool,
+}
+
+border :: mut *void = null;
+head :: mut *Metadata = null;
+
+$public
+mem_copy :: (dst: *mut void, src: *mut void, n: mut u64) -> void {
+    let d: *mut char = dst;
+    let s: *mut char = src;
+
+    let i: mut u64 = 0;
+    until i > n {
+        d[i] = s[i];
+        i = i + 1;
+    }
+}
+
+$public
+mem_alloc :: (size: u64) -> *void {
+    let block: mut *Metadata = null;
+    let align: mut u64 = size;
+
+    if size % 16 != 0 {
+        align = align + 16 - (size % 16);
+    }
+
+    if !head {
+        block = request_space(null, align);
+        if !block {
+            ret null;
+        }
+
+        head = block;
+    } else {
+        let last: mut *Metadata = head;
+        block = find_free_space(&last, align);
+
+        if block {
+            block.free = false;
+        } else {
+            block = request_space(last, align);
+            if !block {
+                ret null;
+            }
+        }
+    }
+
+    ret block + 1;
+}
+
+$public
+mem_free :: (p: *void) -> void {
+    if !p {
+        ret;
+    }
+
+    let block: mut *Metadata = get_block_pointer(p);
+    block.free = true;
+    
+    if block.next {
+        if block.next.free {
+            block.size = block.size + block.next.size + sizeof(Metadata);
+            block.next = block.next.next;
+        }
+    }
+}
+
+$public
+mem_realloc :: (p: *void, size: u64) -> *void {
+    if !p {
+        ret mem_alloc(size);
+    }
+
+    let block: mut *Metadata = get_block_pointer(p);
+    if block.size >= size {
+        ret p;
+    }
+
+    let new_p: mut *void = mem_alloc(size);
+    if !new_p {
+        ret null;
+    }
+
+    mem_copy(new_p, p, block.size);
+    mem_free(p);
+    ret new_p;
+}
+
+update_border :: () -> *void {
+    border = brk(0);
+    ret border;
+}
+
+get_block_pointer :: (p: *void) -> *Metadata {
+    ret cast<*Metadata>(p) - 1;
+}
+
+extend_heap :: (inc: u64) -> *void {
+    if !border {
+        update_border();
+        if !border {
+            ret cast<*void>(-1);
+        }
+    }
+
+    if inc == 0 {
+        ret border;
+    }
+
+    let old_border: mut *void = border;
+    let new_border: mut *void = cast<*char>(border) + inc;
+
+    if brk(new_border) == old_border {
+        ret cast<*void>(-1);
+    }
+
+    border = new_border;
+    ret border;
+}
+
+find_free_space :: (last: *mut *Metadata, size: u64) -> *Metadata {
+    let curr: mut *Metadata = border;
+    until !curr {
+        if curr.free && curr.size >= size {
+            stop;
+        }
+
+        *last = curr;
+        curr = curr.next;
+    }
+
+    ret curr;
+}
+
+request_space :: (last: mut *Metadata, size: u64) -> *Metadata {
+    let total_size: u64 = size + sizeof(Metadata);
+    let block: mut *Metadata = null;
+    let mem: mut *void = null;
+    let border_meta: *Metadata = cast<*Metadata>(extend_heap(0));
+
+    block = cast<*Metadata>(border_meta);
+    mem = extend_heap(total_size);
+
+    if last {
+        last.next = block;
+    }
+
+    block.size = size;
+    block.next = null;
+    block.free = false;
+    ret block;
+}

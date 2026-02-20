@@ -1,6 +1,0 @@
-$[public]
-main :: () -> s64 {
-    let x: f64 = 42.5;
-
-    ret cast<s64>(x);
-}

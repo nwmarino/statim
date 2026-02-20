@@ -1,643 +1,1054 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
-#include "lir/graph/BasicBlock.hpp"
-#include "lir/graph/CFG.hpp"
-#include "lir/graph/Constant.hpp"
-#include "lir/graph/Function.hpp"
-#include "lir/graph/Type.hpp"
-#include "lir/machine/AsmWriter.hpp"
-#include "lir/machine/MachInst.hpp"
-#include "lir/machine/MachOperand.hpp"
-#include "lir/machine/MachFunction.hpp"
-#include "lir/machine/Register.hpp"
+#include "lir/machine/AsmWriter.h"
+#include "lir/machine/MachineConstant.hpp"
+#include "lir/machine/MachineFunction.hpp"
+#include "lir/machine/MachineObject.hpp"
+#include "lir/machine/MachineOp.hpp"
+#include "lir/machine/MachineOperand.hpp"
+#include "lir/machine/MachineRegister.hpp"
 
-#include <cmath>
-#include <cstdint>
 #include <cstring>
 #include <format>
 
 using namespace lir;
 
-static const char* to_string(X64_Size size) {
-    switch (size) {
-        case X64_Size::None:
-            return "";
-        case X64_Size::Byte:
-            return "b";
-        case X64_Size::Word:
-            return "w";
-        case X64_Size::Long:
-            return "l";
-        case X64_Size::Quad:
-            return "q";
-        case X64_Size::Single:
-            return "s";
-        case X64_Size::Double:
-            return "d";
+AsmWriter::AsmWriter(const MachineObject& obj) : m_obj(obj) {}
+
+void AsmWriter::run(std::ostream& os) {
+    for (const auto& [name, data] : m_obj.get_globals()) {
+        writeData(os, *data);
+    }
+
+    for (const auto& [name, func] : m_obj.get_functions()) {
+        if (func->empty())
+            continue;
+
+        writeFunction(os, *func);
     }
 }
 
-static const char* to_string(X64_Mnemonic op) {
-    switch (op) {
-        case X64_Mnemonic::NOP:
-            return "nop";
-        case X64_Mnemonic::JMP:
-            return "jmp";
-        case X64_Mnemonic::UD2:
-            return "ud2";
-        case X64_Mnemonic::CQO:
-            return "cqo";
-        case X64_Mnemonic::SYSCALL:
-            return "syscall";
-        case X64_Mnemonic::CALL:
-            return "call";
-        case X64_Mnemonic::RET:
-            return "ret";
-        case X64_Mnemonic::LEA:
-            return "lea";
-        case X64_Mnemonic::PUSH:
-            return "push";
-        case X64_Mnemonic::POP:
-            return "pop";
-        case X64_Mnemonic::MOV:
-            return "mov";
-        case X64_Mnemonic::ADD:
-            return "add";
-        case X64_Mnemonic::SUB:
-            return "sub";
-        case X64_Mnemonic::MUL:
-            return "mul";
-        case X64_Mnemonic::IMUL:
-            return "imul";
-        case X64_Mnemonic::DIV:
-            return "div";
-        case X64_Mnemonic::IDIV:
-            return "idiv";
-        case X64_Mnemonic::AND:
-            return "and";
-        case X64_Mnemonic::OR:
-            return "or";
-        case X64_Mnemonic::XOR:
-            return "xor";
-        case X64_Mnemonic::SHL:
-            return "shl";
-        case X64_Mnemonic::SHR:
-            return "shr";
-        case X64_Mnemonic::SAR:
-            return "sar";
-        case X64_Mnemonic::CMP:
-            return "cmp";
-        case X64_Mnemonic::NOT:
-            return "not";
-        case X64_Mnemonic::NEG:
-            return "neg";
-        case X64_Mnemonic::MOVABS:
-            return "movabs";
-        case X64_Mnemonic::MOVSX:
-            return "movsx";
-        case X64_Mnemonic::MOVSXD:
-            return "movsxd";
-        case X64_Mnemonic::MOVZX:
-            return "movzx";
-        case X64_Mnemonic::JE:
-            return "je";
-        case X64_Mnemonic::JNE:
-            return "jne";
-        case X64_Mnemonic::JZ:
-            return "jz";
-        case X64_Mnemonic::JNZ:
-            return "jnz";
-        case X64_Mnemonic::JL:
-            return "jl";
-        case X64_Mnemonic::JLE:
-            return "jle";
-        case X64_Mnemonic::JG:
-            return "jg";
-        case X64_Mnemonic::JGE:
-            return "jge";
-        case X64_Mnemonic::JA:
-            return "ja";
-        case X64_Mnemonic::JAE:
-            return "jae";
-        case X64_Mnemonic::JB:
-            return "jb";
-        case X64_Mnemonic::JBE:
-            return "jbe";
-        case X64_Mnemonic::SETE:
-            return "sete";
-        case X64_Mnemonic::SETNE:
-            return "setne";
-        case X64_Mnemonic::SETZ:
-            return "setz";
-        case X64_Mnemonic::SETNZ:
-            return "setnz";
-        case X64_Mnemonic::SETL:
-            return "setl";
-        case X64_Mnemonic::SETLE:
-            return "setle";
-        case X64_Mnemonic::SETG:
-            return "setg";
-        case X64_Mnemonic::SETGE:
-            return "setge";
-        case X64_Mnemonic::SETA:
-            return "seta";
-        case X64_Mnemonic::SETAE:
-            return "setae";
-        case X64_Mnemonic::SETB:
-            return "setb";
-        case X64_Mnemonic::SETBE:
-            return "setbe";
-        case X64_Mnemonic::MOVS:
-            return "movs";
-        case X64_Mnemonic::MOVAP:
-            return "movap";
-        case X64_Mnemonic::UCOMIS:
-            return "ucomis";
-        case X64_Mnemonic::ADDS:
-            return "adds";
-        case X64_Mnemonic::SUBS:
-            return "subs";
-        case X64_Mnemonic::MULS:
-            return "muls";
-        case X64_Mnemonic::DIVS:
-            return "divs";
-        case X64_Mnemonic::ANDP:
-            return "andp";
-        case X64_Mnemonic::ORP:
-            return "orp";
-        case X64_Mnemonic::XORP:
-            return "xorp";
-        case X64_Mnemonic::CVTSS2SD:
-            return "cvtss2sd";
-        case X64_Mnemonic::CVTSD2SS:
-            return "cvtsd2ss";
-        case X64_Mnemonic::CVTSI2SS:
-            return "cvtsi2ss";
-        case X64_Mnemonic::CVTSI2SD:
-            return "cvtsi2sd";
-        case X64_Mnemonic::CVTTSS2SI:
-            return "cvttss2si";
-        case X64_Mnemonic::CVTTSD2SI:
-            return "cvttsd2si";
-        default:
-            assert(false && "invalid mnemonic!");
-    }
-}
-
-static const char* to_string(X64_Register reg, uint16_t subreg = 0) {
-    switch (reg) {
-        case RAX:
-            switch (subreg) {
-                case 8: return "rax";
-                case 4: return "eax";
-                case 2: return "ax";
-                case 1: return "al";
-                default: return "rax";
-            }
-        case RBX:
-            switch (subreg) {
-                case 8: return "rbx";
-                case 4: return "ebx";
-                case 2: return "bx";
-                case 1: return "bl";
-                default: return "rbx";
-            }
-        case RCX:
-            switch (subreg) {
-                case 8: return "rcx";
-                case 4: return "ecx";
-                case 2: return "cx";
-                case 1: return "cl";
-                default: return "rcx";
-            }
-        case RDX:
-            switch (subreg) {
-                case 8: return "rdx";
-                case 4: return "edx";
-                case 2: return "dx";
-                case 1: return "dl";
-                default: return "rdx";
-            }
-        case RDI:
-            switch (subreg) {
-                case 8: return "rdi";
-                case 4: return "edi";
-                case 2: return "di";
-                case 1: return "dil";
-                default: return "rdi";
-            }
-        case RSI:
-            switch (subreg) {
-                case 8: return "rsi";
-                case 4: return "esi";
-                case 2: return "si";
-                case 1: return "sil";
-                default: return "rsi";
-            }
-        case RBP:
-            switch (subreg) {
-                case 8: return "rbp";
-                case 4: return "ebp";
-                case 2: return "bp";
-                case 1: return "bpl";
-                default: return "rbp";
-            }
-        case RSP:
-            switch (subreg) {
-                case 8: return "rsp";
-                case 4: return "esp";
-                case 2: return "sp";
-                case 1: return "spl";
-                default: return "rsp";
-            }
-        case R8:
-            switch (subreg) {
-                case 8: return "r8";
-                case 4: return "r8d";
-                case 2: return "r8w";
-                case 1: return "r8b";
-                default: return "r8";
-            }
-        case R9:
-            switch (subreg) {
-                case 8: return "r9";
-                case 4: return "r9d";
-                case 2: return "r9w";
-                case 1: return "r9b";
-                default: return "r9";
-            }
-        case R10:
-            switch (subreg) {
-                case 8: return "r10";
-                case 4: return "r10d";
-                case 2: return "r10w";
-                case 1: return "r10b";
-                default: return "r10";
-            }
-        case R11:
-            switch (subreg) {
-                case 8: return "r11";
-                case 4: return "r11d";
-                case 2: return "r11w";
-                case 1: return "r11b";
-                default: return "r11";
-            }
-        case R12:
-            switch (subreg) {
-                case 8: return "r12";
-                case 4: return "r12d";
-                case 2: return "r12w";
-                case 1: return "r12b";
-                default: return "";
-            }
-        case R13:
-            switch (subreg) {
-                case 8: return "r13";
-                case 4: return "r13d";
-                case 2: return "r13w";
-                case 1: return "r13b";
-                default: return "r13";
-            }
-        case R14:
-            switch (subreg) {
-                case 8: return "r14";
-                case 4: return "r14d";
-                case 2: return "r14w";
-                case 1: return "r14b";
-                default: return "r14";
-            }
-        case R15:
-            switch (subreg) {
-                case 8: return "r15";
-                case 4: return "r15d";
-                case 2: return "r15w";
-                case 1: return "r15b";
-                default: return "r15";
-            }
-        case RIP:
-            return "rip";
-        case XMM0:
-            return "xmm0";
-        case XMM1:
-            return "xmm1";
-        case XMM2:
-            return "xmm2";
-        case XMM3: 
-            return "xmm3";
-        case XMM4: 
-            return "xmm4";
-        case XMM5: 
-            return "xmm5";
-        case XMM6: 
-            return "xmm6";
-        case XMM7: 
-            return "xmm7";
-        case XMM8: 
-            return "xmm8";
-        case XMM9: 
-            return "xmm9";
-        case XMM10:
-            return "xmm10";
-        case XMM11:
-            return "xmm11";
-        case XMM12:
-            return "xmm12";
-        case XMM13:
-            return "xmm13";
-        case XMM14:
-            return "xmm14";
-        case XMM15:
-            return "xmm15";
-        default:
-            assert(false && "invalid register!");
-    }
-}
-
-X64_Register AsmWriter::map_register(Register reg, const MachFunction& func) {
-    if (reg.is_virtual())
-        reg = func.get_register_table().at(reg.id()).alloc;
-
-    return static_cast<X64_Register>(reg.id());
-}
-
-bool AsmWriter::is_redundant_move(const MachFunction& func, const MachInst& inst) {
-    if (inst.op() != X64_Mnemonic::MOV)
-        return false;
-
-    if (inst.num_operands() != 2)
-        return false;
-
-    const MachOperand& left = inst.get_operand(0);
-    const MachOperand& right = inst.get_operand(1);
-
-    if (!left.is_reg() || !right.is_reg())
-        return false;
-
-    X64_Register regl = map_register(left.get_reg(), func);
-    X64_Register regr = map_register(right.get_reg(), func);
-    return regl == regr && left.get_subreg() == right.get_subreg();
-}
-
-void AsmWriter::emit_operand(
-        std::ostream& os, const MachFunction& func, const MachOperand& op) {
-    switch (op.kind()) {
-        case MachOperand::Reg:
-            os << std::format("%{}", 
-                to_string(map_register(op.get_reg(), func), op.get_subreg()));
-            break;
-
-        case MachOperand::Memory:
-            if (op.get_mem_disp() != 0) 
-                os << op.get_mem_disp();
-
-            os << std::format("(%{})", 
-                to_string(map_register(op.get_mem_base(), func)));
-            break;
-
-        case MachOperand::Stack: {
-            const StackFrame& frame = func.get_stack_frame();
-            const StackEntry& entry = frame.entries.at(op.get_stack());
-
-            // Stack is accessed on negative offsets, so negate the offset.
-            os << std::format("{}(%rbp)", 
-                (-entry.offset - static_cast<int32_t>(entry.size)));
-            break;
-        }
-
-        case MachOperand::Immediate:
-            os << '$' << op.get_imm();
-            break;
-
-        case MachOperand::Label:
-            os << std::format(".L{}_{}", m_funcs.at(&func), op.get_label()->position());
-            break;
-        
-        case MachOperand::Constant:
-            os << std::format(".LCPI{}_{}(%rip)", m_funcs.at(&func), op.get_constant());
-            break;
-        
-        case MachOperand::Symbol:
-            os << op.get_symbol();
-            break;
-        
-        default:
-            assert(false && "unrecognized machine operand kind!");
-    }
-}
-
-void AsmWriter::emit_inst(
-        std::ostream& os, const MachFunction& func, const MachInst& inst) {
-    if (inst.has_comment())
-        os << std::format("#\t{}\n", inst.get_comment());
-    
-    if (is_redundant_move(func, inst))
-        os << "#RM"; // Little marking for removed instructions.
-
-    // If this is a return instruction, inject necessary epilogue parts.
-    // @Todo: make this optional along with prologue injection.
-    if (inst.op() == X64_Mnemonic::RET) {
-        os << std::format(
-            "\taddq\t${}, %rsp\n\tpopq\t%rbp\n\tretq\n", 
-            func.get_stack_frame().alignment());
+void AsmWriter::writeOpcode(std::ostream& os, AMD64_Op op) {
+    switch (op) 
+    {
+    case AMD64_NOP:
+        os << "nop";
+        return;
+    case AMD64_JMP:
+        os << "jmp";
+        return;
+    case AMD64_UD2:
+        os << "ud2";
+        return;
+    case AMD64_CQO:
+        os << "cqo";
+        return;
+    case AMD64_SYSCALL:
+        os << "syscall";
+        return;
+    case AMD64_MOV:
+        os << "mov";
+        return;
+    case AMD64_MOV8:
+        os << "movb";
+        return;
+    case AMD64_MOV16:
+        os << "movw";
+        return;
+    case AMD64_MOV32:
+        os << "movl";
+        return;
+    case AMD64_MOV64:
+        os << "movq";
+        return;
+    case AMD64_MOVZX:
+        os << "movzx";
+        return;
+    case AMD64_MOVSX:
+        os << "movsx";
+        return;
+    case AMD64_MOVSXD:
+        os << "movsxd";
+        return;
+    case AMD64_MOVABS:
+        os << "movabs";
+        return;
+    case AMD64_CALL32:
+        os << "calll";
+        return;
+    case AMD64_CALL64:
+        os << "callq";
+        return;
+    case AMD64_RET32:
+        os << "retl";
+        return;
+    case AMD64_RET64:
+        os << "retq";
+        return;
+    case AMD64_LEA32:
+        os << "leal";
+        return;
+    case AMD64_LEA64:
+        os << "leaq";
+        return;
+    case AMD64_PUSH32:
+        os << "pushl";
+        return;
+    case AMD64_PUSH64:
+        os << "pushq";
+        return;
+    case AMD64_POP32:
+        os << "popl";
+        return;
+    case AMD64_POP64:
+        os << "popq";
+        return;
+    case AMD64_ADD8:
+        os << "addb";
+        return;
+    case AMD64_ADD16:
+        os << "addw";
+        return;
+    case AMD64_ADD32:
+        os << "addl";
+        return;
+    case AMD64_ADD64:
+        os << "addq";
+        return;
+    case AMD64_SUB8:
+        os << "subb";
+        return;
+    case AMD64_SUB16:
+        os << "subw";
+        return;
+    case AMD64_SUB32:
+        os << "subl";
+        return;
+    case AMD64_SUB64:
+        os << "subq";
+        return;
+    case AMD64_MUL8:
+        os << "mulb";
+        return;
+    case AMD64_MUL16:
+        os << "mulw";
+        return;
+    case AMD64_MUL32:
+        os << "mull";
+        return;
+    case AMD64_MUL64:
+        os << "mulq";
+        return;
+    case AMD64_IMUL8:
+        os << "imulb";
+        return;
+    case AMD64_IMUL16:
+        os << "imulw";
+        return;
+    case AMD64_IMUL32:
+        os << "imull";
+        return;
+    case AMD64_IMUL64:
+        os << "imulq";
+        return;
+    case AMD64_DIV8:
+        os << "divb";
+        return;
+    case AMD64_DIV16:
+        os << "divw";
+        return;
+    case AMD64_DIV32:
+        os << "divl";
+        return;
+    case AMD64_DIV64:
+        os << "divq";
+        return;
+    case AMD64_IDIV8:
+        os << "idivb";
+        return;
+    case AMD64_IDIV16:
+        os << "idivw";
+        return;
+    case AMD64_IDIV32:
+        os << "idivl";
+        return;
+    case AMD64_IDIV64:
+        os << "idivq";
+        return;
+    case AMD64_AND8:
+        os << "andb";
+        return;
+    case AMD64_AND16:
+        os << "andw";
+        return;
+    case AMD64_AND32:
+        os << "andl";
+        return;
+    case AMD64_AND64:
+        os << "andq";
+        return;
+    case AMD64_OR8:
+        os << "orb";
+        return;
+    case AMD64_OR16:
+        os << "orw";
+        return;
+    case AMD64_OR32:
+        os << "orl";
+        return;
+    case AMD64_OR64:
+        os << "orq";
+        return;
+    case AMD64_XOR8:
+        os << "xorb";
+        return;
+    case AMD64_XOR16:
+        os << "xorw";
+        return;
+    case AMD64_XOR32:
+        os << "xorl";
+        return;
+    case AMD64_XOR64:
+        os << "xorq";
+        return;
+    case AMD64_SHL8:
+        os << "shlb";
+        return;
+    case AMD64_SHL16:
+        os << "shlw";
+        return;
+    case AMD64_SHL32:
+        os << "shll";
+        return;
+    case AMD64_SHL64:
+        os << "shlq";
+        return;
+    case AMD64_SHR8:
+        os << "shrb";
+        return;
+    case AMD64_SHR16:
+        os << "shrw";
+        return;
+    case AMD64_SHR32:
+        os << "shrl";
+        return;
+    case AMD64_SHR64:
+        os << "shrq";
+        return;
+    case AMD64_SAR8:
+        os << "sarb";
+        return;
+    case AMD64_SAR16:
+        os << "sarw";
+        return;
+    case AMD64_SAR32:
+        os << "sarl";
+        return;
+    case AMD64_SAR64:
+        os << "sarq";
+        return;
+    case AMD64_CMP8:
+        os << "cmpb";
+        return;
+    case AMD64_CMP16:
+        os << "cmpw";
+        return;
+    case AMD64_CMP32:
+        os << "cmpl";
+        return;
+    case AMD64_CMP64:
+        os << "cmpq";
+        return;
+    case AMD64_NOT8:
+        os << "notb";
+        return;
+    case AMD64_NOT16:
+        os << "notw";
+        return;
+    case AMD64_NOT32:
+        os << "notl";
+        return;
+    case AMD64_NOT64:
+        os << "notq";
+        return;
+    case AMD64_NEG8:
+        os << "negb";
+        return;
+    case AMD64_NEG16:
+        os << "negw";
+        return;
+    case AMD64_NEG32:
+        os << "negl";
+        return;
+    case AMD64_NEG64:
+        os << "negq";
+        return;
+    case AMD64_JE:
+        os << "je";
+        return;
+    case AMD64_JNE:
+        os << "jne";
+        return;
+    case AMD64_JZ:
+        os << "jz";
+        return;
+    case AMD64_JNZ:
+        os << "jnz";
+        return;
+    case AMD64_JL:
+        os << "jl";
+        return;
+    case AMD64_JLE:
+        os << "jle";
+        return;
+    case AMD64_JG:
+        os << "jg";
+        return;
+    case AMD64_JGE:
+        os << "jge";
+        return;
+    case AMD64_JA:
+        os << "ja";
+        return;
+    case AMD64_JAE:
+        os << "jae";
+        return;
+    case AMD64_JB:
+        os << "jb";
+        return;
+    case AMD64_JBE:
+        os << "jbe";
+        return;
+    case AMD64_SETE:
+        os << "sete";
+        return;
+    case AMD64_SETNE:
+        os << "setne";
+        return;
+    case AMD64_SETZ:
+        os << "setz";
+        return;
+    case AMD64_SETNZ:
+        os << "setnz";
+        return;
+    case AMD64_SETL:
+        os << "setl";
+        return;
+    case AMD64_SETLE:
+        os << "setle";
+        return;
+    case AMD64_SETG:
+        os << "setg";
+        return;
+    case AMD64_SETGE:
+        os << "setge";
+        return;
+    case AMD64_SETA:
+        os << "seta";
+        return;
+    case AMD64_SETAE:
+        os << "setae";
+        return;
+    case AMD64_SETB:
+        os << "setb";
+        return;
+    case AMD64_SETBE:
+        os << "setbe";
+        return;
+    case AMD64_MOVSS:
+        os << "movss";
+        return;
+    case AMD64_MOVSD:
+        os << "movsd";
+        return;
+    case AMD64_MOVAPS:
+        os << "movaps";
+        return;
+    case AMD64_MOVAPD:
+        os << "movapd";
+        return;
+    case AMD64_UCOMISS:
+        os << "ucomiss";
+        return;
+    case AMD64_UCOMISD:
+        os << "ucomisd";
+        return;
+    case AMD64_ADDSS:
+        os << "addss";
+        return;
+    case AMD64_ADDSD:
+        os << "addsd";
+        return;
+    case AMD64_SUBSS:
+        os << "subss";
+        return;
+    case AMD64_SUBSD:
+        os << "subsd";
+        return;
+    case AMD64_MULSS:
+        os << "mulss";
+        return;
+    case AMD64_MULSD:
+        os << "mulsd";
+        return;
+    case AMD64_DIVSS:
+        os << "divss";
+        return;
+    case AMD64_DIVSD:
+        os << "divsd";
+        return;
+    case AMD64_ANDPS:
+        os << "andps";
+        return;
+    case AMD64_ANDPD:
+        os << "andpd";
+        return;
+    case AMD64_ORPS:
+        os << "orps";
+        return;
+    case AMD64_ORPD:
+        os << "orpd";
+        return;
+    case AMD64_XORPS:
+        os << "xorps";
+        return;
+    case AMD64_XORPD:
+        os << "xorpd";
+        return;
+    case AMD64_CVTSS2SD:
+        os << "cvtss2sd";
+        return;
+    case AMD64_CVTSD2SS:
+        os << "cvtsd2ss";
+        return;
+    case AMD64_CVTSI2SS:
+        os << "cvtsi2ss";
+        return;
+    case AMD64_CVTSI2SD:
+        os << "cvtsi2sd";
+        return;
+    case AMD64_VCVTUSI2SS:
+        os << "vcvtusi2ss";
+        return;
+    case AMD64_VCVTUSI2SD:
+        os << "vcvtusi2sd";
+        return;
+    case AMD64_CVTTSS2SI8:
+        os << "cvttss2sib";
+        return;
+    case AMD64_CVTTSS2SI16:
+        os << "cvttss2siw";
+        return;
+    case AMD64_CVTTSS2SI32:
+        os << "cvttss2sil";
+        return;
+    case AMD64_CVTTSS2SI64:
+        os << "cvttss2siq";
+        return;
+    case AMD64_CVTTSD2SI8:
+        os << "cvttsd2sib";
+        return;
+    case AMD64_CVTTSD2SI16:
+        os << "cvttsd2siw";
+        return;
+    case AMD64_CVTTSD2SI32:
+        os << "cvttsd2sil";
+        return;
+    case AMD64_CVTTSD2SI64:
+        os << "cvttsd2siq";
+        return;
+    case AMD64_VCVCTSS2USI8:
+        os << "vcvctss2usib";
+        return;
+    case AMD64_VCVCTSS2USI16:
+        os << "vcvctss2usiw";
+        return;
+    case AMD64_VCVCTSS2USI32:
+        os << "vcvctss2usil";
+        return;
+    case AMD64_VCVCTSS2USI64:
+        os << "vcvctss2usiq";
+        return;
+    case AMD64_VCVCTSD2USI8:
+        os << "vcvctsd2usib";
+        return;
+    case AMD64_VCVCTSD2USI16:
+        os << "vcvctsd2usiw";
+        return;
+    case AMD64_VCVCTSD2USI32:
+        os << "vcvctsd2usil";
+        return;
+    case AMD64_VCVCTSD2USI64:
+        os << "vcvctsd2usiq";
         return;
     }
+}
 
-    os << std::format("\t{}{}\t", to_string(inst.op()), to_string(inst.size()));
+void AsmWriter::writeRegister(std::ostream& os, AMD64_Register reg, uint8_t subreg) {
+    os << '%';
 
-    // Emit all (explicit) instruction operands.
-    for (uint32_t i = 0, e = inst.num_explicit_operands(); i < e; ) {
-        emit_operand(os, func, inst.get_operand(i));
-        if (++i != e) 
+    switch (reg) 
+    {
+    case RAX:
+        switch (subreg)
+        {
+        case 1:
+            os << "al";
+            return;
+        case 2:
+            os << "ax";
+            return;
+        case 4:
+            os << "eax";
+            return;
+        default:
+            os << "rax";
+            return;
+        }
+
+    case RBX:
+        switch (subreg) 
+        {
+            case 1: 
+                os << "bl";
+                return;
+            case 2: 
+                os << "bx";
+                return;
+            case 4: 
+                os << "ebx";
+                return;
+            default: 
+                os << "rbx";
+                return;
+        }
+
+    case RCX:
+        switch (subreg) 
+        {
+            case 1:
+                os << "cl";
+                return;
+            case 2: 
+                os << "cx";
+                return;
+            case 4: 
+                os << "ecx";
+                return;
+            default: 
+                os << "rcx";
+                return;
+        }
+
+    case RDX:
+        switch (subreg) 
+        {
+            case 1: 
+                os << "dl";
+                return;
+            case 2: 
+                os << "dx";
+                return;
+            case 4: 
+                os << "edx";
+                return;
+            default: 
+                os << "rdx";
+                return;
+        }
+
+    case RDI:
+        switch (subreg) 
+        {
+            case 1: 
+                os << "dil";
+                return;
+            case 2: 
+                os << "di";
+                return;
+            case 4: 
+                os << "edi";
+                return;
+            default: 
+                os << "rdi";
+                return;
+        }
+
+    case RSI:
+        switch (subreg) 
+        {
+            case 1: 
+                os << "sil";
+                return;
+            case 2: 
+                os << "si";
+                return;
+            case 4: 
+                os << "esi";
+                return;
+            default: 
+                os << "rsi";
+                return;
+        }
+
+    case RBP:
+        switch (subreg) 
+        {
+            case 1: 
+                os << "bpl";
+                return;
+            case 2: 
+                os << "bp";
+                return;
+            case 4: 
+                os << "ebp";
+                return;
+            default: 
+                os << "rbp";
+                return;
+        }
+
+    case RSP:
+        switch (subreg) 
+        {
+            case 1: 
+                os << "spl";
+                return;
+            case 2: 
+                os << "sp";
+                return;
+            case 4: 
+                os << "esp";
+                return;
+            default: 
+                os << "rsp";
+                return;
+        }
+
+    case R8:
+        switch (subreg) 
+        {
+            case 1: 
+                os << "r8b";
+                return;
+            case 2: 
+                os << "r8w";
+                return;
+            case 4: 
+                os << "r8d";
+                return;
+            default: 
+                os << "r8";
+                return;
+        }
+
+    case R9:
+        switch (subreg) 
+        {
+            case 1: 
+                os << "r9b";
+                return;
+            case 2: 
+                os << "r9w";
+                return;
+            case 4: 
+                os << "r9d";
+                return;
+            default: 
+                os << "r9";
+                return;
+        }
+
+    case R10:
+        switch (subreg) 
+        {
+            case 1: 
+                os << "r10b";
+                return;
+            case 2: 
+                os << "r10w";
+                return;
+            case 4: 
+                os << "r10d";
+                return;
+            default: 
+                os << "r10";
+                return;
+        }
+
+    case R11:
+        switch (subreg) 
+        {
+            case 1: 
+                os << "r11b";
+                return;
+            case 2: 
+                os << "r11w";
+                return;
+            case 4: 
+                os << "r11d";
+                return;
+            default: 
+                os << "r11";
+                return;
+        }
+
+    case R12:
+        switch (subreg) 
+        {
+            case 1: 
+                os << "r12b";
+                return;
+            case 2: 
+                os << "r12w";
+                return;
+            case 4: 
+                os << "r12d";
+                return;
+            default: 
+                os << "r12";
+                return;
+        }
+
+    case R13:
+        switch (subreg) 
+        {
+            case 1: 
+                os << "r13b";
+                return;
+            case 2: 
+                os << "r13w";
+                return;
+            case 4: 
+                os << "r13d";
+                return;
+            default: 
+                os << "r13";
+                return;
+        }
+
+    case R14:
+        switch (subreg) 
+        {
+            case 1: 
+                os << "r14b";
+                return;
+            case 2: 
+                os << "r14w";
+                return;
+            case 4: 
+                os << "r14d";
+                return;
+            default: 
+                os << "r14";
+                return;
+        }
+
+    case R15:
+        switch (subreg) 
+        {
+            case 1: 
+                os << "r15b";
+                return;
+            case 2: 
+                os << "r15w";
+                return;
+            case 4: 
+                os << "r15d";
+                return;
+            default: 
+                os << "r15";
+                return;
+        }
+
+    case RIP:
+        os << "rip";
+        return;
+
+    case XMM0:
+        os << "xmm0";
+        return;
+        
+    case XMM1:
+        os << "xmm1";
+        return;
+        
+    case XMM2:
+        os << "xmm2";
+        return;
+
+    case XMM3: 
+        os << "xmm3";
+        return;
+
+    case XMM4: 
+        os << "xmm4";
+        return;
+
+    case XMM5: 
+        os << "xmm5";
+        return;
+        
+    case XMM6: 
+        os << "xmm6";
+        return;
+
+    case XMM7: 
+        os << "xmm7";
+        return;
+
+    case XMM8: 
+        os << "xmm8";
+        return;
+
+    case XMM9: 
+        os << "xmm9";
+        return;
+
+    case XMM10:
+        os << "xmm10";
+        return;
+
+    case XMM11:
+        os << "xmm11";
+        return;
+
+    case XMM12:
+        os << "xmm12";
+        return;
+
+    case XMM13:
+        os << "xmm13";
+        return;
+
+    case XMM14:
+        os << "xmm14";
+        return;
+
+    case XMM15:
+        os << "xmm15";
+        return;
+
+    default:
+        assert(false && "invalid AMD64 register!");
+    }
+}
+
+void AsmWriter::writeOperand(std::ostream& os, const MachineOperand& operand) {
+    switch (operand.kind()) 
+    {
+        case MachineOperand::Kind::Register: {
+            assert(operand.reg().reg().is_physical() && "(1) cannot emit non-phyiscal register!");
+
+            const MachineRegister& reg = operand.reg();
+
+            writeRegister(os, static_cast<AMD64_Register>(reg.reg().id()), reg.subreg());
+            return;
+        }
+
+        case MachineOperand::Kind::Memory: {
+            const Memory& mem = operand.mem();
+            if (mem.offset != 0)
+                os << mem.offset;
+
+            const MachineRegister& base = mem.base;
+
+            assert(base.reg().is_physical() && "(2) cannot emit non-phyiscal register!");
+
+            os << '(';
+            writeRegister(os, static_cast<AMD64_Register>(base.reg().id()), base.subreg());
+            os << ')';
+
+            return;
+        }
+
+        case MachineOperand::Kind::Immediate:
+            os << std::format("${}", operand.imm());
+            return;
+
+        case MachineOperand::Kind::Data: {
+            const MachineData* data = operand.data();
+
+            if (data->hasPool()) {
+                const ConstantPool* pool = data->pool();
+                os << std::format(".LFC{}_{}(%rip)", m_ids[pool->get_parent()], operand.data()->name());
+            } else {
+                os << std::format("{}(%rip)", operand.data()->name());
+            }
+            
+            return;
+        }
+
+        case MachineOperand::Kind::Local: {
+            const MachineLocal* local = operand.local();
+
+            os << -local->get_offset() - static_cast<int32_t>(local->get_size());
+
+            os << "(%rbp)";
+            return;
+        }
+
+        case MachineOperand::Kind::Function:
+            os << operand.function()->get_name();
+            return;
+
+        case MachineOperand::Kind::Label:
+            os << std::format(".LBB{}_{}", m_ids.at(m_func), operand.label()->position());
+            return;
+    }
+}
+
+void AsmWriter::writeOp(std::ostream& os, const MachineOp& op) {
+    if (op.has_comment())
+        os << std::format("#\t> {}", op.get_comment());
+
+    if (op.is_intrinsic()) {
+        switch (static_cast<Intrinsic>(op.op())) 
+        {
+        case Intrinsic::Husk:
+        case Intrinsic::Param:
+            return;
+
+        case Intrinsic::Stack_Setup:
+            os << "\tpushq\t%rbp\n\tmovq\t%rsp, %rbp\n";
+            return;
+
+        case Intrinsic::Stack_Reserve: {
+            const StackFrame& frame = m_func->get_stack_frame();
+            const uint32_t size = frame.size();
+            if (size != 0)
+                os << std::format("\tsubq\t${}, %rsp\n", size);
+
+            return;
+        }
+
+        case Intrinsic::Stack_Restore:
+            os << "\tmovq\t%rbp, %rsp\n\tpopq\t%rbp\n";
+            return;
+            
+        case Intrinsic::Callsite_Set:
+            os << "#\tCALLSITE_SET\n";
+            return;
+
+        case Intrinsic::Callsite_End:
+            os << "#\tCALLSITE_END\n";
+            return;
+        }
+    }
+
+    os << '\t';
+    writeOpcode(os, static_cast<AMD64_Op>(op.op()));
+    os << '\t';
+
+    for (uint32_t i = 0, e = op.num_explicit_operands(); i < e; ) {
+        writeOperand(os, op.get_operand(i));
+
+        if (++i != e)
             os << ", ";
     }
 
     os << '\n';
 }
 
-void AsmWriter::emit_label(
-        std::ostream& os, const MachFunction& func, const MachLabel& label) {
-    os << std::format(".L{}_{}:\n", m_funcs.at(&func), label.position());
+void AsmWriter::writeLabel(std::ostream& os, const MachineLabel& label) {
+    os << std::format(".LBB{}_{}:\n", m_ids.at(m_func), label.position());
 
-    for (const auto& inst : label.insts()) 
-        emit_inst(os, func, inst);
+    const MachineOp* op = label.get_head();
+    while (op) {
+        writeOp(os, *op);
+        op = op->get_next();
+    }
 }
 
-void AsmWriter::emit_function(std::ostream& os, const MachFunction& func) {
-    m_funcs.emplace(&func, m_funcs.size());
-    const std::string& name = func.get_name();
-    const ConstantPool& pool = func.get_constant_pool();
-    int32_t last_size = -1;
+void AsmWriter::writeFunction(std::ostream& os, const MachineFunction& func) {
+    m_ids.emplace(&func, m_ids.size());
+    m_func = &func;
 
-    for (uint32_t i = 0, e = pool.num_entries(); i < e; ++i) {
-        const ConstantPoolEntry& entry = pool.entries.at(i);
-        const Constant* constant = entry.constant;
-
-        uint32_t size = func.get_machine().get_size(constant->get_type());
-        if (size != last_size) {
-            os << std::format(
-                "\t.section\t.rodata.cst{},\"aM\", @progbits, 8\n\t.p2align\t{},0x0\n", 
-                size, 
-                std::log2(size));
-            last_size = size;
-        }
-
-        os << std::format(".LCPI{}_{}:\n", m_funcs.at(&func), i);
-        emit_constant(os, *constant);
+    const ConstantPool& pool = func.get_pool();
+    for (const MachineData* data : pool.get_constants()) {
+        writeData(os, *data);
     }
 
-    os << "\t.text\n";
+    const std::string& name = func.get_name();
 
-    if (func.get_function()->get_linkage() == Function::External)
+    if (func.isGlobal())
         os << std::format("\t.global\t{}\n", name);
 
-    os << std::format(
-        "\t.type\t{}, @function\n{}:\n\tpushq\t%rbp\n\tmovq\t%rsp, %rbp\n\tsubq\t${}, %rsp\n", 
-        name, 
-        name, 
-        func.get_stack_frame().alignment());
+    os << std::format("\t.text\n\t.type\t{}, @function\n{}:\n", name, name);
+    
+    for (uint32_t i = 0; i < func.num_labels(); ++i)
+        writeLabel(os, *func.get_label(i));
 
-    const MachLabel* curr = func.get_head();
-    while (curr) {
-        emit_label(os, func, *curr);
-        curr = curr->get_next();
-    }
+    os << std::format(".LFE{}:\n\t.size\t{}, .-{}\n\n", m_ids.at(&func), name, name);
 
-    os << std::format(
-        ".LFE{}:\n\t.size\t{}, .-{}\n\n", m_funcs.at(&func), name, name);
+    m_func = nullptr;
 }
 
-void AsmWriter::emit_constant(std::ostream& os, const Constant& constant) {
-    const Machine& mach = m_seg.get_machine();
-    const uint32_t size = mach.get_size(constant.get_type());
+void AsmWriter::writeConstant(std::ostream& os, const MachineConstant& constant) {
+    switch (constant.kind()) 
+    {
+    case MachineConstant::Kind::Zero:
+        os << std::format("\t.zero {}\n", constant.get_zeros());
+        break;
 
-    os << "\t.";
+    case MachineConstant::Kind::Int8:
+        os << std::format("\t.byte {}\n", constant.get_int());
+        break;
 
-    if (const Integer* integer = dynamic_cast<const Integer*>(&constant)) {
-        switch (size) {
-            case 1:
-                os << "byte";
-                break;
-        
-            case 2:
-                os << "word";
-                break;
-            case 4:
-                os << "long";
-                break;
-            case 8:
-                os << "quad";
-                break;
-        }
+    case MachineConstant::Kind::Int16:
+        os << std::format("\t.word {}\n", constant.get_int());
+        break;
 
-        os << ' ' << integer->get_value();
-    } else if (const Float* fp = dynamic_cast<const Float*>(&constant)) {
-        switch (size) {
-            case 4: {
-                os << "long 0x";
+    case MachineConstant::Kind::Int32:
+        os << std::format("\t.long {}\n", constant.get_int());
+        break;
 
-                uint32_t bits = 0;
-                float value = fp->get_value();
-                std::memcpy(&bits, &value, sizeof(bits));
-                os << std::hex << bits << std::dec;
-                break;
-            }
-            case 8: {
-                os << "quad 0x";
+    case MachineConstant::Kind::Int64:
+        os << std::format("\t.quad {}\n", constant.get_int());
+        break;
 
-                uint64_t bits = 0;
-                double value = fp->get_value();
-                std::memcpy(&bits, &value, sizeof(bits));
-                os << std::hex << bits << std::dec;
-                break;
-            }
-            default:
-                assert(false && "unsupported SSE floating point size!");
-        }
-    } else if (const Null* null = dynamic_cast<const Null*>(&constant)) {
-        os << "quad 0x0";
-    } else if (const String* string = dynamic_cast<const String*>(&constant)) {
-        os << "string \"";
+    case MachineConstant::Kind::Float32: {
+        const float value = constant.get_fp();
+        os << std::format("#\t{:.5f}\n\t.long 0x", value);
 
-        for (uint32_t i = 0, e = string->get_value().size(); i < e; ++i) {
-            switch (string->get_value()[i]) {
-                case '\\':
-                    os << "\\\\";
-                    break;
-                case '\'':
-                    os << "\\'";
-                    break;
-                case '\"':
-                    os << "\\\"";
-                    break;
-                case '\n':
-                    os << "\\n";
-                    break;
-                case '\t':
-                    os << "\\t";
-                    break;
-                case '\r':
-                    os << "\\r";
-                    break;
-                case '\b':
-                    os << "\\b";
-                    break;
-                case '\0':
-                    os << "\\0";
-                    break;
-                default:
-                    os << string->get_value()[i];
-                    break;
-            }
-        }
-
-        os << '"';
+        uint32_t bits = 0;
+        std::memcpy(&bits, &value, sizeof(bits));
+        os << std::hex << bits << std::dec << '\n';
+        break;
     }
 
-    os << '\n';
+    case MachineConstant::Kind::Float64:
+        const double value = constant.get_fp();
+        os << std::format("#\t{:.5f}\n\t.quad 0x", value);
+
+        uint64_t bits = 0;
+        std::memcpy(&bits, &value, sizeof(bits));
+        os << std::hex << bits << std::dec << '\n';
+        break;
+    }
 }
 
-void AsmWriter::emit_global(std::ostream& os, const Global& global) {
-    if (global.is_read_only()) {
+void AsmWriter::writeData(std::ostream& os, const MachineData& data) {
+    if (data.isReadonly()) {
         os << "\t.section\t.rodata\n";
     } else {
         os << "\t.data\n";
     }
 
-    if (global.get_linkage() == Global::External)
-        os << std::format("\t.global{}\n", global.get_name());
-
-    const Machine& mach = m_seg.get_machine();
-    Type* type = static_cast<PointerType*>(global.get_type())->get_pointee();
-
-    const Constant* init = global.get_initializer();
-    const uint32_t size = mach.get_size(type);
-    const uint32_t align = mach.get_align(type);
-
-    os << "\t.align\t" << align << '\n'
-       << "\t.type\t" << global.get_name() << ", @object\n"
-       << "\t.size\t" << global.get_name() << ", " << size << '\n'
-       << global.get_name() << ":\n";
-
-    if (init) {
-        emit_constant(os, *init);
-    } else {
-        os << std::format("\t.zero\t{}\n", size);
-    }
-}
-
-void AsmWriter::run(std::ostream& os) {
-    os << "\t.file\t\"" << m_seg.get_graph().get_filename() << "\"\n";
-
-    for (const auto& global : m_seg.get_graph().get_globals())
-        emit_global(os, *global);
-
-    for (const auto& pair : m_seg.get_functions()) {
-        emit_function(os, *pair.second);
+    std::string name = data.name();
+    if (data.hasPool()) {
+        const ConstantPool* pool = data.pool();
+        name = std::format(".LFC{}_{}", m_ids[pool->get_parent()], name);
     }
 
-    //os << "\t.ident\t\t\"lovelace: 0.1.0\"\n" 
-    //   << "\t.section\t.note.GNU-stack,\"\",@progbits\n";
+    if (data.isGlobal())
+        os << std::format("\t.global{}\n", name);
+
+    os << std::format("\t.type\t{}, @object\n{}:\n", name, name);
+
+    for (const MachineConstant& constant : data.data())
+        writeConstant(os, constant);
 }

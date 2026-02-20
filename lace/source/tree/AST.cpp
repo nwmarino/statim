@@ -3,18 +3,15 @@
 //  All rights reserved.
 //
 
-#include "lace/tree/AST.hpp"
-#include "lace/tree/Defn.hpp"
-#include "lace/tree/Scope.hpp"
-#include "lace/tree/Type.hpp"
+#include "lace/tree/AST.h"
+#include "lace/tree/Defn.h"
+#include "lace/tree/Type.h"
 
 using namespace lace;
 
 AST::Context::Context() {
     // Initialize all built-in types.
-    for (uint32_t i = static_cast<uint32_t>(BuiltinType::Void); 
-         i <= static_cast<uint32_t>(BuiltinType::Float64); 
-         ++i) {
+    for (uint32_t i = static_cast<uint32_t>(BuiltinType::Kind::Void); i <= static_cast<uint32_t>(BuiltinType::Kind::Float64); ++i) {
         BuiltinType::Kind kind = static_cast<BuiltinType::Kind>(i);
         m_builtins.push_back(new BuiltinType(kind));
     }

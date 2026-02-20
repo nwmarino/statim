@@ -3,12 +3,11 @@
 //  All rights reserved.
 //
 
-#include "lace/core/Diagnostics.hpp"
-#include "lace/parser/Parser.hpp"
-#include "lace/tree/Defn.hpp"
-#include "lace/tree/Scope.hpp"
-#include "lace/tree/Stmt.hpp"
-#include "lace/types/SourceLocation.hpp"
+#include "lace/core/Diagnostics.h"
+#include "lace/parser/Parser.h"
+#include "lace/tree/Defn.h"
+#include "lace/tree/Scope.h"
+#include "lace/tree/Stmt.h"
 
 #include <cassert>
 
@@ -17,6 +16,8 @@ using namespace lace;
 Stmt* Parser::parse_initial_statement() {
     if (match(Token::OpenBrace)) {
         return parse_block_statement();
+    } else if (match(Token::Sign)) {
+        return parse_rune_statement();
     //} else if (match("asm")) {
     //   return parse_inline_assembly_statement();
     } else if (match("let")) {
@@ -247,4 +248,26 @@ Stmt* Parser::parse_declarative_statement() {
 
     m_scope->add(var);
     return AdapterStmt::create(*m_context, var);
+}
+
+Stmt* Parser::parse_rune_statement() {
+    const SourceLocation start = loc();
+    next(); // '$'
+
+    static std::unordered_map<std::string, Rune::Type> runes = {
+        { "abort", Rune::Abort},
+        { "unreachable", Rune::Unreachable },
+    };
+
+    if (!match(Token::Identifier))
+        log::fatal("expected identifier after '$'", log::Span(m_file, loc()));
+
+    if (!runes.contains(curr().value))
+        log::fatal("unknown rune: " + curr().value, log::Span(m_file, loc()));
+    
+    const SourceLocation end = loc();
+    Rune::Type type = runes[curr().value];
+    next();
+
+    return RuneStmt::create(*m_context, SourceSpan(start, end), new Rune(type));
 }

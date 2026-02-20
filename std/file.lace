@@ -1,0 +1,55 @@
+load "linux.lace";
+
+$public
+FileFlags :: enum {
+    FILE_FLAGS_READ_ONLY = 0,
+    FILE_FLAGS_WRITE_ONLY = 1,
+    FILE_FLAGS_READ_WRITE = 2,
+    FILE_FLAGS_CREATE = 64,
+    FILE_FLAGS_TRUNCATE = 512,
+    FILE_FLAGS_APPEND = 1024,
+}
+
+$public
+FileSeek :: enum {
+    FILE_SEEK_SET = 0,
+    FILE_SEEK_CUR = 1,
+    FILE_SEEK_END = 2,
+}
+
+$[public, intrinsic]
+File :: struct {
+    fd: mut s64,
+    buf: mut *char,
+    size: mut u64,
+    pos: mut u64,
+    open: mut bool,
+}
+
+$[public]
+file_open :: (file: *mut File, path: *char, flags: FileFlags) -> void {
+    file.fd = 0;
+    file.buf = null;
+    file.size = 0;
+    file.pos = 0;
+    file.open = false;
+
+    let res: s64 = open(path, flags, 420);
+    if res == -1 {
+        ret;
+    }
+
+    file.fd = res;
+    file.open = true;
+}
+
+$[public]
+file_close :: (file: *mut File) -> void {
+    if !file.open {
+        ret;
+    }
+
+    if close(file.fd) != -1 {
+        file.open = false;
+    }
+}

@@ -1,6 +1,6 @@
 //
-// Copyright (c) 2025 Nick Marino
-// All rights reserved.
+//  Copyright (c) 2025-2026 Nicholas Marino
+//  All rights reserved.
 //
 
 #include "spbe/analysis/SSARewritePass.hpp"
@@ -17,11 +17,11 @@
 #include <unordered_map>
 #include <vector>
 
-#ifdef SPBE_SSA_DEBUGGING
+#ifdef LIR_SSA_DEBUGGING
 #include <iostream>
-#endif // SPBE_SSA_DEBUGGING
+#endif // LIR_SSA_DEBUGGING
 
-using namespace spbe;
+using namespace lir;
 
 using InsertMode = InstrBuilder::InsertMode;
 
@@ -57,11 +57,11 @@ void SSARewritePass::process(Function* fn) {
 }
 
 void SSARewritePass::promote_local(Function* fn, Local* local) {
-#ifdef SPBE_SSA_DEBUGGING
+#ifdef LIR_SSA_DEBUGGING
     std::cerr << "Promoting local: ";
     local->print(std::cerr);
     std::cerr << '\n';
-#endif // SPBE_SSA_DEBUGGING
+#endif // LIR_SSA_DEBUGGING
 
     m_local = local;
 
@@ -77,12 +77,12 @@ void SSARewritePass::promote_local(Function* fn, Local* local) {
                 inst->replace_all_uses_with(v);
                 assert(!inst->used());
 
-#ifdef SPBE_SSA_DEBUGGING
+#ifdef LIR_SSA_DEBUGGING
                 std::cerr << "[LOAD] replaced v" << inst->result_id() << 
                     " with ";
                 v->print(std::cerr);
                 std::cerr << std::endl;
-#endif // SPBE_SSA_DEBUGGING
+#endif // LIR_SSA_DEBUGGING
 
                 m_to_remove.push_back(inst);
             } else if (inst->is_store() && inst->get_operand(1) == local) {
@@ -146,12 +146,12 @@ Value* SSARewritePass::add_phi_operands(Instruction* phi) {
     for (auto& pred : phi->get_parent()->preds()) {
         Value* value = read_variable(pred);
 
-#ifdef SPBE_SSA_DEBUGGING
+#ifdef LIR_SSA_DEBUGGING
         std::cerr << "[PHI bb" << phi->get_parent()->get_number() << "] v" << 
             phi->result_id() << " new operand: ";
         value->print(std::cerr);
         std::cerr << '\n';
-#endif // SPBE_SSA_DEBUGGING
+#endif // LIR_SSA_DEBUGGING
 
         phi->add_incoming(m_cfg, value, pred);
     }
@@ -262,7 +262,7 @@ void SSARewritePass::seal_block(BasicBlock* blk) {
 
     m_sealed.push_back(blk);
     
-#ifdef SPBE_SSA_DEBUGGING
+#ifdef LIR_SSA_DEBUGGING
     std::cerr << "Sealed block: bb" << blk->get_number() << "\n";
-#endif // SPBE_SSA_DEBUGGING
+#endif // LIR_SSA_DEBUGGING
 }

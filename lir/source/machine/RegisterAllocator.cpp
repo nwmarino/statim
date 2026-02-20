@@ -1,55 +1,17 @@
 //
-//  Copyright (c) 2025 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
-#include "lir/machine/RegisterAllocator.hpp"
+#include "lir/machine/AMD64.hpp"
+#include "lir/machine/Register.hpp"
+#include "lir/machine/RegisterAllocator.h"
 
 using namespace lir;
 
-bool RegisterAllocator::is_available(
-        Register reg, uint32_t start, uint32_t end) const {
-    // @Todo: This ends up being very slow, since it covers all ranges in a
-    // function. Should be optimized, i.e. keeping a set of non-active but
-    // overlapping ranges, which active is a subset of.
-    for (const LiveRange& range : m_ranges) {
-        // For each range within the function, if it allocates |reg| and 
-        // overlaps with [start, end], then |reg| is considered unavailable.
-        if (range.alloc == reg && range.overlaps(start, end))
-            return false;
-    }
-
-    return true;
-}
-
-void RegisterAllocator::expire_intervals(LiveRange& curr) {
-    for (auto it = m_active.begin(); it != m_active.end(); ) {
-        if (it->end < curr.start) {
-            m_active.erase(it);
-        } else {
-            ++it;
-        }
-    }
-}
-
-void RegisterAllocator::assign_register(LiveRange& range) {
-    const auto& set = m_pool.at(range.cls);
-    for (const auto& reg : set) {
-        assert(Register(reg).is_physical() && "expected physical register!");
-
-        if (is_available(reg, range.start, range.end)) {
-            range.alloc = reg;
-            break;
-        }
-    }
-
-    assert(range.alloc != Register::NoRegister &&
-        "failed to allocate register!");
-}
-
-RegisterAllocator::RegisterAllocator(MachFunction& function,
-                                     std::vector<LiveRange>& ranges)
-  : m_function(function), m_ranges(ranges) {
+RegisterAllocator::RegisterAllocator(MachineFunction& func, std::vector<LiveRange>& ranges)
+  : m_func(func), m_ranges(ranges) {
+    
     m_pool[RegisterClass::GeneralPurpose] = {
         RAX, RCX, RDX, RSI, RDX, 
         R8, R9, R10, R11, 
@@ -65,12 +27,56 @@ RegisterAllocator::RegisterAllocator(MachFunction& function,
 }
 
 void RegisterAllocator::run() {
-    for (auto& range : m_ranges) {
-        expire_intervals(range);
+    for (LiveRange& range : m_ranges) {
+        expireIntervals(range);
 
-        if (range.alloc == Register::NoRegister)
-            assign_register(range);
-        
+        if (range.alloc == Register::NO_REGISTER)
+            allocRegister(range);
+
         m_active.push_back(range);
+    }
+}
+
+bool RegisterAllocator::isAvailable(Register reg, uint32_t start, uint32_t end) const {
+    // @Todo: optimize by keeping a set of non-active, overlapping ranges, which |m_active| is a
+    // subset of, or something similar.
+
+    // For each range in the function, check if the range uses the given physical |reg|, and see
+    // if it conflicts with [start, end].
+    for (const LiveRange& range : m_ranges) {
+        if (range.alloc == reg && range.overlaps(start, end))
+            return false;
+    }
+
+    return true;
+}
+
+void RegisterAllocator::expireIntervals(LiveRange& range) {
+    // For each live range currently active, if it does not overlap with |range|, then expire it.  
+    for (auto it = m_active.begin(); it != m_active.end(); ) {
+        if (it->end < range.start) {
+            m_active.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
+void RegisterAllocator::allocRegister(LiveRange& range) {
+    const auto& set = m_pool.at(range.cls);
+
+    // For each register in the pool with the same class as the one needed by |range|, if it is
+    // available, then allocate it to |range|.
+    for (const auto& reg : set) {
+        if (isAvailable(reg, range.start, range.end)) {
+            range.alloc = reg;
+            return;
+        }
+    }
+
+    // If a register could not be allocated, then the register must be spilled to the stack.
+    if (range.alloc == Register::NO_REGISTER) {
+        // Spill to the stack.
+        assert(false && "not implemented!");
     }
 }

@@ -1,0 +1,231 @@
+//
+//  Copyright (c) 2025-2026 Nicholas Marino
+//  All rights reserved.
+//
+
+#ifndef LIR_AMD64_H_
+#define LIR_AMD64_H_
+
+#include <cstdint>
+
+namespace lir {
+
+/// Recognized AMD64 physical registers.
+enum AMD64_Register : uint32_t {
+    None = 0,
+
+    // General purpose registers.
+    RAX, RBX, RCX, RDX,
+    RDI, RSI,
+    R8, R9, R10, R11, 
+    R12, R13, R14, R15,
+    RSP, RBP, RIP,
+
+    // Floating point registers.
+    XMM0, XMM1, XMM2, XMM3,
+    XMM4, XMM5, XMM6, XMM7,
+    XMM8, XMM9, XMM10, XMM11,
+    XMM12, XMM13, XMM14, XMM15,
+};
+
+/// Recognized AMD64 ops.
+enum AMD64_Op : uint32_t {
+    AMD64_NOP, 
+    AMD64_JMP, 
+    AMD64_UD2, 
+    AMD64_CQO,
+    AMD64_SYSCALL,
+
+    AMD64_MOV, 
+    AMD64_MOVZX, 
+    AMD64_MOVSX, 
+    AMD64_MOVSXD, 
+    AMD64_MOVABS, 
+
+    AMD64_CALL32,
+    AMD64_CALL64,
+
+    AMD64_RET32,
+    AMD64_RET64,
+
+    AMD64_LEA32,
+    AMD64_LEA64,
+
+    AMD64_PUSH32,
+    AMD64_PUSH64,
+
+    AMD64_POP32, 
+    AMD64_POP64,
+
+    AMD64_MOV8,
+    AMD64_MOV16,
+    AMD64_MOV32,
+    AMD64_MOV64,
+
+    AMD64_ADD8,
+    AMD64_ADD16,
+    AMD64_ADD32,
+    AMD64_ADD64,
+
+    AMD64_SUB8,
+    AMD64_SUB16,
+    AMD64_SUB32,
+    AMD64_SUB64,
+
+    AMD64_MUL8,
+    AMD64_MUL16,
+    AMD64_MUL32,
+    AMD64_MUL64,
+
+    AMD64_IMUL8,
+    AMD64_IMUL16,
+    AMD64_IMUL32,
+    AMD64_IMUL64,
+
+    AMD64_DIV8,
+    AMD64_DIV16,
+    AMD64_DIV32,
+    AMD64_DIV64,
+
+    AMD64_IDIV8,
+    AMD64_IDIV16,
+    AMD64_IDIV32,
+    AMD64_IDIV64,
+
+    AMD64_AND8,
+    AMD64_AND16,
+    AMD64_AND32,
+    AMD64_AND64,
+
+    AMD64_OR8,
+    AMD64_OR16,
+    AMD64_OR32,
+    AMD64_OR64,
+
+    AMD64_XOR8,
+    AMD64_XOR16,
+    AMD64_XOR32,
+    AMD64_XOR64,
+
+    AMD64_SHL8,
+    AMD64_SHL16,
+    AMD64_SHL32,
+    AMD64_SHL64,
+
+    AMD64_SHR8,
+    AMD64_SHR16,
+    AMD64_SHR32,
+    AMD64_SHR64,
+
+    AMD64_SAR8,
+    AMD64_SAR16,
+    AMD64_SAR32,
+    AMD64_SAR64,
+
+    AMD64_CMP8,
+    AMD64_CMP16,
+    AMD64_CMP32,
+    AMD64_CMP64,
+
+    AMD64_NOT8,
+    AMD64_NOT16,
+    AMD64_NOT32,
+    AMD64_NOT64,
+
+    AMD64_NEG8,
+    AMD64_NEG16,
+    AMD64_NEG32,
+    AMD64_NEG64,
+
+    AMD64_JE,
+    AMD64_JNE,
+    AMD64_JZ,
+    AMD64_JNZ,
+    AMD64_JL,
+    AMD64_JLE,
+    AMD64_JG,
+    AMD64_JGE,
+    AMD64_JA,
+    AMD64_JAE,
+    AMD64_JB,
+    AMD64_JBE,
+
+    AMD64_SETE,
+    AMD64_SETNE,
+    AMD64_SETZ,
+    AMD64_SETNZ,
+    AMD64_SETL,
+    AMD64_SETLE,
+    AMD64_SETG,
+    AMD64_SETGE,
+    AMD64_SETA,
+    AMD64_SETAE,
+    AMD64_SETB,
+    AMD64_SETBE,
+
+    AMD64_MOVSS,
+    AMD64_MOVSD,
+
+    AMD64_MOVAPS,
+    AMD64_MOVAPD,
+
+    AMD64_UCOMISS,
+    AMD64_UCOMISD,
+
+    AMD64_ADDSS,
+    AMD64_ADDSD,
+
+    AMD64_SUBSS,
+    AMD64_SUBSD,
+
+    AMD64_MULSS,
+    AMD64_MULSD,
+
+    AMD64_DIVSS,
+    AMD64_DIVSD,
+
+    AMD64_ANDPS,
+    AMD64_ANDPD,
+
+    AMD64_ORPS,
+    AMD64_ORPD,
+
+    AMD64_XORPS,
+    AMD64_XORPD,
+
+    AMD64_CVTSS2SD,
+    AMD64_CVTSD2SS,
+
+    AMD64_CVTSI2SS,
+    AMD64_CVTSI2SD,
+
+    AMD64_VCVTUSI2SS,
+    AMD64_VCVTUSI2SD,
+
+    AMD64_CVTTSS2SI8,
+    AMD64_CVTTSS2SI16,
+    AMD64_CVTTSS2SI32,
+    AMD64_CVTTSS2SI64,
+
+    AMD64_CVTTSD2SI8,
+    AMD64_CVTTSD2SI16,
+    AMD64_CVTTSD2SI32,
+    AMD64_CVTTSD2SI64,
+
+    AMD64_VCVCTSS2USI8,
+    AMD64_VCVCTSS2USI16,
+    AMD64_VCVCTSS2USI32,
+    AMD64_VCVCTSS2USI64,
+
+    AMD64_VCVCTSD2USI8,
+    AMD64_VCVCTSD2USI16,
+    AMD64_VCVCTSD2USI32,
+    AMD64_VCVCTSD2USI64,
+};
+
+const char* to_string(AMD64_Op op);
+const char* to_string(AMD64_Register reg, uint8_t subreg = 0);
+
+} // namespace lir
+
+#endif // LIR_AMD64_H_

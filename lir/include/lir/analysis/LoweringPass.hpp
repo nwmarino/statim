@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
@@ -7,17 +7,30 @@
 #define LOVELACE_IR_LOWERING_PASS_H_
 
 #include "lir/analysis/Pass.hpp"
-#include "lir/machine/Segment.hpp"
+#include "lir/machine/MachineObject.hpp"
 
 namespace lir {
 
-class LoweringPass final : public Pass {
-    Segment& m_seg;
+/// Global pass that generates machine-dependent code.
+class LoweringPass : public Pass {
+protected:
+    const Machine &m_mach;
+    MachineObject &m_obj;
 
 public:
-    LoweringPass(CFG& cfg, Segment& seg) : Pass(cfg), m_seg(seg) {}
+    LoweringPass(CFG &cfg, MachineObject &obj);
 
-    void run() override;
+    virtual ~LoweringPass() = default;
+
+    LoweringPass(const LoweringPass&) = delete;
+    void operator=(const LoweringPass&) = delete;
+
+    LoweringPass(LoweringPass&&) noexcept = delete;
+    void operator=(LoweringPass&&) noexcept = delete;
+
+protected:
+    /// Lower the given constant |C| into another value entry for |data|.
+    void lower_constant(const Constant *C, std::vector<MachineConstant>& data) const;
 };
 
 } // namespace lir

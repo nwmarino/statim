@@ -1,24 +1,36 @@
 //
-// Copyright (c) 2025 Nick Marino
-// All rights reserved.
+//  Copyright (c) 2025-2026 Nicholas Marino
+//  All rights reserved.
 //
 
-#ifndef SPBE_X64_PRINTER_H_
-#define SPBE_X64_PRINTER_H_
+#ifndef LIR_PRINTER_H_
+#define LIR_PRINTER_H_
 
-#include "spbe/machine/MachObject.hpp"
+#include "lir/machine/Machine.hpp"
+#include "lir/machine/MachineObject.hpp"
+#include "lir/machine/MachineOp.hpp"
 
-namespace spbe::x64 {
+namespace lir {
 
-class X64Printer final {
-    const MachObject& m_obj;
+class Printer final {
+    const Machine &m_mach;
+    const MachineObject &m_obj;
 
 public:
-    X64Printer(const MachObject& object) : m_obj(object) {}
+    Printer(const MachineObject &obj);
 
-    void run(std::ostream& os) const;
+    void run(std::ostream &os);
+
+private:
+    void print_register(std::ostream &os, const MachineRegister &reg);
+    void print_operand(std::ostream &os, const MachineOperand &operand);
+    void print_op(std::ostream &os, const MachineOp &op);
+    void print_label(std::ostream &os, const MachineLabel &label);
+    void print_function(std::ostream &os, const MachineFunction &func);
+    void print_constant(std::ostream &os, const MachineConstant &constant);
+    void print_data(std::ostream &os, const MachineData &data);
 };
 
-} // namespace spbe::x64
+} // namespace lir
 
-#endif // SPBE_X64_PRINTER_H_
+#endif // LIR_PRINTER_H_

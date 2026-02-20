@@ -3,26 +3,25 @@
 //  All rights reserved.
 //
 
-#include "lace/tree/Defn.hpp"
-#include "lace/tree/Expr.hpp"
-#include "lace/tree/Printer.hpp"
-#include "lace/tree/Stmt.hpp"
+#include "lace/tree/Defn.h"
+#include "lace/tree/Expr.h"
+#include "lace/tree/Printer.h"
+#include "lace/tree/Stmt.h"
+#include "lace/tree/VisitorBase.h"
 
 #include <format>
 #include <ostream>
 
 using namespace lace;
 
-Printer::Printer(const Options& options, std::ostream& out)
-  : m_options(options), m_out(out) {}
+Printer::Printer(Options& options, std::ostream& out) : VisitorBase(options), m_out(out) {}
 
-void Printer::visit(AST& ast) {
-    m_out << std::format("AST \"{}\"\n", ast.get_file());
+void Printer::visit(AST& node) {
+    m_out << std::format("AST \"{}\"\n", node.get_file());
 
     ++m_indent;
 
-    for (Defn* defn : ast.get_defns())
-        defn->accept(*this);
+    VisitorBase::visit(node);
     
     --m_indent;
 }
@@ -38,7 +37,8 @@ void Printer::visit(LoadDefn& node) {
         start.col, 
         end.line, 
         end.col, 
-        node.get_path());
+        node.get_path()
+    );
 }
 
 void Printer::visit(VariableDefn& node) {
@@ -53,7 +53,8 @@ void Printer::visit(VariableDefn& node) {
         end.line, 
         end.col, 
         node.get_name(), 
-        node.get_type().to_string());
+        node.get_type().string()
+    );
 
     if (node.has_init()) {
         ++m_indent;
@@ -74,7 +75,8 @@ void Printer::visit(ParameterDefn& node) {
         end.line,
         end.col,
         node.get_name(),
-        node.get_type().to_string());
+        node.get_type().string()
+    );
 }
 
 void Printer::visit(FunctionDefn& node) {
@@ -89,7 +91,8 @@ void Printer::visit(FunctionDefn& node) {
         end.line,
         end.col,
         node.get_name(),
-        node.get_type().to_string());
+        node.get_type().string()
+    );
 
     ++m_indent;
 
@@ -114,7 +117,8 @@ void Printer::visit(FieldDefn& node) {
         end.line,
         end.col,
         node.get_name(),
-        node.get_type().to_string());
+        node.get_type().string()
+    );
 }
 
 void Printer::visit(VariantDefn& node) {
@@ -129,7 +133,8 @@ void Printer::visit(VariantDefn& node) {
         end.line,
         end.col,
         node.get_name(),
-        node.get_type().to_string());
+        node.get_type().string()
+    );
 }
 
 void Printer::visit(AliasDefn& node) {
@@ -147,7 +152,8 @@ void Printer::visit(AliasDefn& node) {
         end.line,
         end.col,
         node.get_name(),
-        type->get_underlying().to_string());
+        type->underlying().string()
+    );
 }
 
 void Printer::visit(StructDefn& node) {
@@ -161,7 +167,8 @@ void Printer::visit(StructDefn& node) {
         start.col,
         end.line,
         end.col,
-        node.get_name());
+        node.get_name()
+    );
 
     ++m_indent;
 
@@ -182,7 +189,8 @@ void Printer::visit(EnumDefn& node) {
         start.col,
         end.line,
         end.col,
-        node.get_name());
+        node.get_name()
+    );
 
     ++m_indent;
 
@@ -202,20 +210,11 @@ void Printer::visit(AdapterStmt& node) {
         start.line,
         start.col,
         end.line,
-        end.col);
+        end.col
+    );
 
     ++m_indent;
-
-    switch (node.get_flavor()) {
-    case AdapterStmt::Definitive:
-        node.get_defn()->accept(*this);
-        break;
-
-    case AdapterStmt::Expressive:
-        node.get_expr()->accept(*this);
-        break;
-    }
-
+    VisitorBase::visit(node);
     --m_indent;
 }
 
@@ -229,13 +228,11 @@ void Printer::visit(BlockStmt& node) {
         start.line,
         start.col,
         end.line,
-        end.col);
+        end.col
+    );
 
     ++m_indent;
-
-    for (Stmt* stmt : node.get_stmts())
-        stmt->accept(*this);
-
+    VisitorBase::visit(node);
     --m_indent;
 }
 
@@ -249,16 +246,11 @@ void Printer::visit(IfStmt& node) {
         start.line,
         start.col,
         end.line,
-        end.col);
+        end.col
+    );
 
     ++m_indent;
-
-    node.get_cond()->accept(*this);
-    node.get_then()->accept(*this);
-
-    if (node.has_else())
-        node.get_else()->accept(*this);
-
+    VisitorBase::visit(node);
     --m_indent;
 }
 
@@ -272,7 +264,8 @@ void Printer::visit(RestartStmt& node) {
         start.line,
         start.col,
         end.line,
-        end.col);
+        end.col
+    );
 }
 
 void Printer::visit(RetStmt& node) {
@@ -285,13 +278,12 @@ void Printer::visit(RetStmt& node) {
         start.line,
         start.col,
         end.line,
-        end.col);
+        end.col
+    );
 
-    if (node.has_expr()) {
-        ++m_indent;
-        node.get_expr()->accept(*this);
-        --m_indent;
-    }
+    ++m_indent;
+    VisitorBase::visit(node);
+    --m_indent;
 }
 
 void Printer::visit(StopStmt& node) {
@@ -304,7 +296,8 @@ void Printer::visit(StopStmt& node) {
         start.line,
         start.col,
         end.line,
-        end.col);
+        end.col
+    );
 }
 
 void Printer::visit(UntilStmt& node) {
@@ -317,15 +310,11 @@ void Printer::visit(UntilStmt& node) {
         start.line,
         start.col,
         end.line,
-        end.col);
+        end.col
+    );
 
     ++m_indent;
-
-    node.get_cond()->accept(*this);
-
-    if (node.has_body())
-        node.get_body()->accept(*this);
-
+    VisitorBase::visit(node);
     --m_indent;
 }
 
@@ -341,7 +330,8 @@ void Printer::visit(BoolLiteral& node) {
         end.line,
         end.col,
         node.get_value(),
-        node.get_type().to_string());
+        node.get_type().string()
+    );
 }
 
 void Printer::visit(CharLiteral& node) {
@@ -356,7 +346,8 @@ void Printer::visit(CharLiteral& node) {
         end.line,
         end.col,
         node.get_value(),
-        node.get_type().to_string());
+        node.get_type().string()
+    );
 }
 
 void Printer::visit(IntegerLiteral& node) {
@@ -371,7 +362,8 @@ void Printer::visit(IntegerLiteral& node) {
         end.line,
         end.col,
         node.get_value(),
-        node.get_type().to_string());
+        node.get_type().string()
+    );
 }
 
 void Printer::visit(FloatLiteral& node) {
@@ -386,7 +378,8 @@ void Printer::visit(FloatLiteral& node) {
         end.line,
         end.col,
         node.get_value(),
-        node.get_type().to_string());
+        node.get_type().string()
+    );
 }
 
 void Printer::visit(NullLiteral& node) {
@@ -400,7 +393,8 @@ void Printer::visit(NullLiteral& node) {
         start.col,
         end.line,
         end.col,
-        node.get_type().to_string());
+        node.get_type().string()
+    );
 }
 
 void Printer::visit(StringLiteral& node) {
@@ -415,7 +409,8 @@ void Printer::visit(StringLiteral& node) {
         end.line,
         end.col,
         node.get_value(),
-        node.get_type().to_string());
+        node.get_type().string()
+    );
 }
 
 void Printer::visit(BinaryOp& node) {
@@ -429,7 +424,8 @@ void Printer::visit(BinaryOp& node) {
         start.col,
         end.line,
         end.col,
-        node.get_type().to_string());
+        node.get_type().string()
+    );
 
     switch (node.get_operator()) {
         case BinaryOp::Assign:
@@ -496,8 +492,7 @@ void Printer::visit(BinaryOp& node) {
     m_out << '\n';
 
     ++m_indent;
-    node.get_lhs()->accept(*this);
-    node.get_rhs()->accept(*this);
+    VisitorBase::visit(node);
     --m_indent;
 }
 
@@ -512,7 +507,8 @@ void Printer::visit(UnaryOp& node) {
         start.col,
         end.line,
         end.col,
-        node.get_type().to_string());
+        node.get_type().string()
+    );
 
     switch (node.get_operator()) {
         case UnaryOp::Negate:
@@ -537,7 +533,7 @@ void Printer::visit(UnaryOp& node) {
     m_out << '\n';
 
     ++m_indent;
-    node.get_expr()->accept(*this);
+    VisitorBase::visit(node);
     --m_indent;
 }
 
@@ -553,10 +549,11 @@ void Printer::visit(AccessExpr& node) {
         end.line,
         end.col,
         node.get_name(),
-        node.get_type().to_string());
+        node.get_type().string()
+    );
 
     ++m_indent;
-    node.get_base()->accept(*this);
+    VisitorBase::visit(node);
     --m_indent;
 }
 
@@ -571,14 +568,11 @@ void Printer::visit(CallExpr& node) {
         start.col,
         end.line,
         end.col,
-        node.get_type().to_string());
+        node.get_type()->string()
+    );
 
     ++m_indent;
-
-    node.get_callee()->accept(*this);
-    for (Expr* arg : node.get_args())
-        arg->accept(*this);
-
+    VisitorBase::visit(node);
     --m_indent;
 }
 
@@ -593,10 +587,11 @@ void Printer::visit(CastExpr& node) {
         start.col,
         end.line,
         end.col,
-        node.get_type().to_string());
+        node.get_type().string()
+    );
 
     ++m_indent;
-    node.get_expr()->accept(*this);
+    VisitorBase::visit(node);
     --m_indent;
 }
 
@@ -611,10 +606,11 @@ void Printer::visit(ParenExpr& node) {
         start.col,
         end.line,
         end.col,
-        node.get_type().to_string());
+        node.get_type().string()
+    );
 
     ++m_indent;
-    node.get_expr()->accept(*this);
+    VisitorBase::visit(node);
     --m_indent;
 }
 
@@ -630,7 +626,8 @@ void Printer::visit(RefExpr& node) {
         end.line,
         end.col,
         node.get_name(),
-        node.get_type().to_string());
+        node.get_type().string()
+    );
 }
 
 void Printer::visit(SizeofExpr& node) {
@@ -644,8 +641,9 @@ void Printer::visit(SizeofExpr& node) {
         start.col,
         end.line,
         end.col,
-        node.get_target_type().to_string(),
-        node.get_type().to_string());
+        node.get_target_type().string(),
+        node.get_type().string()
+    );
 }
 
 void Printer::visit(SubscriptExpr& node) {
@@ -659,10 +657,10 @@ void Printer::visit(SubscriptExpr& node) {
         start.col,
         end.line,
         end.col,
-        node.get_type().to_string());
+        node.get_type().string()
+    );
 
     ++m_indent;
-    node.get_base()->accept(*this);
-    node.get_index()->accept(*this);
+    VisitorBase::visit(node);
     --m_indent;
 }

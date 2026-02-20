@@ -1,8 +1,0 @@
-$[public]
-main :: () -> s64 {
-    let x: s64 = 42;
-    let y: s64 = x + 21;
-    let z: s64 = x - 21;
-
-    ret x * y / z;
-}

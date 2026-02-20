@@ -1,15 +1,17 @@
 set(MACHINE_SOURCES
+    AMD64.cpp
     AsmWriter.cpp
-    InstSelector.cpp
-    MachFunction.cpp
+    CallsiteAnalysis.cpp
+    FunctionABI.cpp
+    LinearScan.cpp
     Machine.cpp
-    MachInst.cpp
-    MachLabel.cpp
-    MachOperand.cpp
-    Register.cpp
+    MachineFunction.cpp
+    MachineLabel.cpp
+    MachineObject.cpp
+    MachineOp.cpp
+    Printer.cpp
     RegisterAllocator.cpp
     RegisterAnalysis.cpp
-    Segment.cpp
 )
 
 add_library(Machine

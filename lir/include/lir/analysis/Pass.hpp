@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
@@ -12,12 +12,18 @@ namespace lir {
 
 class Pass {
 protected:
-    CFG& m_cfg;
+    CFG &m_cfg;
 
 public:
-    Pass(CFG& cfg) : m_cfg(cfg) {}
+    Pass(CFG &cfg) : m_cfg(cfg) {}
 
     virtual ~Pass() = default;
+
+    Pass(const Pass&) = delete;
+    void operator=(const Pass&) = delete;
+    
+    Pass(Pass&&) noexcept = delete;
+    void operator=(Pass&&) noexcept = delete;
 
     virtual void run() = 0;
 };

@@ -1,0 +1,164 @@
+//
+//  Copyright (c) 2025-2026 Nicholas Marino
+//  All rights reserved.
+//
+
+#ifndef LACE_PARSER_H_
+#define LACE_PARSER_H_
+
+//
+//  This header file declares the Parser class, which is used in tandem with the lexer to turn 
+//  source code into an abstract syntax tree.
+//
+
+#include "lace/lexer/Lexer.h"
+#include "lace/tree/AST.h"
+#include "lace/tree/Defn.h"
+#include "lace/tree/Expr.h"
+#include "lace/types/SourceLocation.h"
+
+namespace lace {
+
+/// Definition of a parser for a lace translation unit into a syntax tree.
+class Parser final {
+    using Tokens = std::vector<Token>;
+
+    std::string m_file;
+    Lexer m_lexer;
+    Tokens m_tokens = {};
+    AST* m_ast = nullptr;
+    AST::Context* m_context = nullptr;
+    Scope* m_scope = nullptr;
+
+    /// Returns the current token in use.
+    ///
+    /// Fails by assertion if no tokens have been lexed yet.
+    inline const Token& curr() const {
+        assert(!m_tokens.empty() && "no tokens have been lexed yet!");
+        return m_tokens.back();
+    }
+
+    /// Lex the next token.
+    inline void next() {
+        Token token;
+        m_lexer.lex(token);
+        m_tokens.push_back(token); 
+    }
+
+    /// Returns the current location in source, based on the current token.
+    inline SourceLocation loc() const { return curr().loc; }
+
+    /// Returns a source span beginning at |pos| and ending at the current
+    /// location.
+    inline SourceSpan since(SourceLocation pos) const { 
+        return SourceSpan(pos, curr().loc); 
+    }
+
+    /// Test if the kind of the current token matches with |kind|.
+    inline bool match(Token::Kind kind) const { return curr().kind == kind; }
+
+    /// Test if the current token is an identifier and has a value that matches
+    /// with |kw|.
+    inline bool match(const char* kw) const {
+        return curr().kind == Token::Identifier && curr().value == kw;
+    }
+
+    /// Expect the kind of the current token to match with |kind|. 
+    ///
+    /// If the token is a match, it will be consumed and the function will
+    /// return true. Otherwise, the routine returns false.
+    inline bool expect(Token::Kind kind) {
+        if (!match(kind))
+            return false;
+
+        next();
+        return true;
+    }
+
+    /// Expect the current token to be an identifier whose values matches with 
+    /// |kw|.
+    ///
+    /// If the token is a match, it will be consumed and the function will
+    /// return true. Otherwise, the routine returns false.
+    inline bool expect(const char* kw) {
+        if (!match(kw))
+            return false;
+
+        next();
+        return true;
+    }
+
+    /// Test if |ident| is a reserved identifier, i.e. conflicts with a keyword
+    /// in the language.
+    bool is_reserved(const std::string& ident) const;
+
+    /// Enter a new scope, with the current scope as the parent node. Returns
+    /// an unmanaged pointer to the new scope.
+    [[nodiscard]] inline Scope* enter_scope() {
+        m_scope = new Scope(m_scope);
+        return m_scope;
+    }
+
+    /// Exit the current scope, and move up to the parent node.
+    ///
+    /// If there is no parent scope, then the current scope just becomes null.
+    inline void exit_scope() { m_scope = m_scope->getParent(); }
+
+    /// Returns the equivelant unary operator for the given token |kind|.
+    UnaryOp::Operator get_unary_op(Token::Kind kind) const;
+
+    /// Returns the equivelant binary operator for the given token |kind|.
+    BinaryOp::Operator get_binary_op(Token::Kind kind) const;
+
+    /// Returns the integer precedence for the binary operator |op|.
+    int8_t get_op_precedence(BinaryOp::Operator op) const;
+
+    /// Parse a set of rune decorators and append them to |runes|. 
+    void parse_rune_decorators(std::vector<Rune*>& runes);
+
+    QualType parse_type_specifier();
+
+    Defn* parse_initial_definition();
+    Defn* parse_binding_definition(std::vector<Rune*> runes, const Token name);
+    Defn* parse_load_definition();
+    
+    Stmt* parse_initial_statement();
+    Stmt* parse_block_statement();
+    Stmt* parse_control_statement();
+    Stmt* parse_declarative_statement();
+    Stmt* parse_rune_statement();
+
+    Expr* parse_initial_expression();
+    Expr* parse_primary_expression();
+    Expr* parse_identifier_expression();
+    Expr* parse_prefix_operator();
+    Expr* parse_postfix_operator();
+    Expr* parse_binary_operator(Expr* base, int8_t precedence);
+
+    Expr* parse_boolean_literal();
+    Expr* parse_integer_literal();
+    Expr* parse_floating_point_literal();
+    Expr* parse_character_literal();
+    Expr* parse_null_pointer_literal();
+    Expr* parse_string_literal();
+
+    Expr* parse_type_cast();
+    Expr* parse_parentheses();
+    Expr* parse_sizeof_operator();
+    Expr* parse_named_reference();
+
+public:
+    /// Create a new parser instance to work on |source|. Optionally, a |path|
+    /// may be provided for better diagnostics i.e. reading in faulty code
+    /// from a file which contains |source|.
+    Parser(const std::string& source, const std::string& path = "");
+
+    /// Attempt to parse and return an abstract syntax tree from the source
+    /// this parser was constructed with.
+    [[nodiscard]] 
+    AST* parse();
+};
+
+} // namespace lace
+
+#endif // LACE_PARSER_H_

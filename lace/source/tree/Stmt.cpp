@@ -3,12 +3,11 @@
 //  All rights reserved.
 //
 
-#include "lace/tree/AST.hpp"
-#include "lace/tree/Defn.hpp"
-#include "lace/tree/Expr.hpp"
-#include "lace/tree/Scope.hpp"
-#include "lace/tree/Visitor.hpp"
-#include "lace/tree/Stmt.hpp"
+#include "lace/tree/AST.h"
+#include "lace/tree/Defn.h"
+#include "lace/tree/Expr.h"
+#include "lace/tree/VisitorBase.h"
+#include "lace/tree/Stmt.h"
 
 using namespace lace;
 
@@ -117,4 +116,13 @@ UntilStmt::~UntilStmt() {
 UntilStmt* UntilStmt::create(AST::Context& ctx, SourceSpan span, Expr* cond, 
                              Stmt* body) {
     return new UntilStmt(span, cond, body);
+}
+
+RuneStmt* RuneStmt::create(AST::Context& ctx, SourceSpan span, Rune* rune) {
+    return new RuneStmt(span, rune);
+}
+
+RuneStmt::~RuneStmt() {
+    delete m_rune;
+    m_rune = nullptr;
 }

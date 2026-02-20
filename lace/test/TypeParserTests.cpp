@@ -3,10 +3,10 @@
 //  All rights reserved.
 //
 
-#include "lace/parser/Parser.hpp"
-#include "lace/tree/AST.hpp"
-#include "lace/tree/Defn.hpp"
-#include "lace/tree/Type.hpp"
+#include "lace/parser/Parser.h"
+#include "lace/tree/AST.h"
+#include "lace/tree/Defn.h"
+#include "lace/tree/Type.h"
 
 #include "gtest/gtest.h"
 
@@ -38,11 +38,11 @@ TEST_F(TypeParserTests, BuiltinType) {
     EXPECT_NE(FD, nullptr);
 
     const QualType& return_type = FD->get_return_type();
-    EXPECT_EQ(return_type.to_string(), "s64");
+    EXPECT_EQ(return_type.string(), "s64");
 
-    const BuiltinType* BT = dynamic_cast<const BuiltinType*>(return_type.get_type());
+    const BuiltinType* BT = dynamic_cast<const BuiltinType*>(return_type.getType());
     EXPECT_NE(BT, nullptr);
-    EXPECT_EQ(BT->get_kind(), BuiltinType::Int64);
+    EXPECT_EQ(BT->kind(), BuiltinType::Kind::Int64);
 }
 
 TEST_F(TypeParserTests, PointerType) {
@@ -55,17 +55,17 @@ TEST_F(TypeParserTests, PointerType) {
     EXPECT_NE(FD, nullptr);
 
     const QualType& return_type = FD->get_return_type();
-    EXPECT_EQ(return_type.to_string(), "*bool");
+    EXPECT_EQ(return_type->string(), "*bool");
 
-    const PointerType* PT = dynamic_cast<const PointerType*>(return_type.get_type());
+    const PointerType* PT = dynamic_cast<const PointerType*>(return_type.getType());
     EXPECT_NE(PT, nullptr);
     
-    const QualType& pointee = PT->get_pointee();
-    EXPECT_EQ(pointee.to_string(), "bool");
+    const QualType& pointee = PT->pointee();
+    EXPECT_EQ(pointee->string(), "bool");
 
-    const BuiltinType* BT = dynamic_cast<const BuiltinType*>(pointee.get_type());
+    const BuiltinType* BT = dynamic_cast<const BuiltinType*>(pointee.getType());
     EXPECT_NE(BT, nullptr);
-    EXPECT_EQ(BT->get_kind(), BuiltinType::Bool);
+    EXPECT_EQ(BT->kind(), BuiltinType::Kind::Bool);
 }
 
 TEST_F(TypeParserTests, MutableType) {
@@ -78,12 +78,12 @@ TEST_F(TypeParserTests, MutableType) {
     EXPECT_NE(FD, nullptr);
 
     const QualType& return_type = FD->get_return_type();
-    EXPECT_TRUE(return_type.is_mut());
-    EXPECT_EQ(return_type.to_string(), "mut void");
+    EXPECT_TRUE(return_type.isMut());
+    EXPECT_EQ(return_type->string(), "mut void");
 
-    const BuiltinType* BT = dynamic_cast<const BuiltinType*>(return_type.get_type());
+    const BuiltinType* BT = dynamic_cast<const BuiltinType*>(return_type.getType());
     EXPECT_NE(BT, nullptr);
-    EXPECT_EQ(BT->get_kind(), BuiltinType::Void);
+    EXPECT_EQ(BT->kind(), BuiltinType::Kind::Void);
 }
 
 TEST_F(TypeParserTests, MutablePointerToVoidType) {
@@ -96,20 +96,20 @@ TEST_F(TypeParserTests, MutablePointerToVoidType) {
     EXPECT_NE(FD, nullptr);
 
     const QualType& return_type = FD->get_return_type();
-    EXPECT_TRUE(return_type.is_mut());
-    EXPECT_EQ(return_type.to_string(), "mut *void");
+    EXPECT_TRUE(return_type.isMut());
+    EXPECT_EQ(return_type->string(), "mut *void");
 
-    const PointerType* PT = dynamic_cast<const PointerType*>(return_type.get_type());
+    const PointerType* PT = dynamic_cast<const PointerType*>(return_type.getType());
     EXPECT_NE(PT, nullptr);
-    EXPECT_EQ(PT->to_string(), "*void");
+    EXPECT_EQ(PT->string(), "*void");
 
-    const QualType& pointee = PT->get_pointee();
-    EXPECT_FALSE(pointee.is_mut());
-    EXPECT_EQ(pointee.to_string(), "void");
+    const QualType& pointee = PT->pointee();
+    EXPECT_FALSE(pointee.isMut());
+    EXPECT_EQ(pointee.string(), "void");
 
-    const BuiltinType* BT = dynamic_cast<const BuiltinType*>(pointee.get_type());
+    const BuiltinType* BT = dynamic_cast<const BuiltinType*>(pointee.getType());
     EXPECT_NE(BT, nullptr);
-    EXPECT_EQ(BT->get_kind(), BuiltinType::Void);
+    EXPECT_EQ(BT->kind(), BuiltinType::Kind::Void);
 }
 
 TEST_F(TypeParserTests, PointerToMutableVoidType) {
@@ -122,20 +122,20 @@ TEST_F(TypeParserTests, PointerToMutableVoidType) {
     EXPECT_NE(FD, nullptr);
 
     const QualType& return_type = FD->get_return_type();
-    EXPECT_FALSE(return_type.is_mut());
-    EXPECT_EQ(return_type.to_string(), "*mut void");
+    EXPECT_FALSE(return_type.isMut());
+    EXPECT_EQ(return_type.string(), "*mut void");
 
-    const PointerType* PT = dynamic_cast<const PointerType*>(return_type.get_type());
+    const PointerType* PT = dynamic_cast<const PointerType*>(return_type.getType());
     EXPECT_NE(PT, nullptr);
-    EXPECT_EQ(PT->to_string(), "*mut void");
+    EXPECT_EQ(PT->string(), "*mut void");
 
-    const QualType& pointee = PT->get_pointee();
-    EXPECT_TRUE(pointee.is_mut());
-    EXPECT_EQ(pointee.to_string(), "mut void");
+    const QualType& pointee = PT->pointee();
+    EXPECT_TRUE(pointee.isMut());
+    EXPECT_EQ(pointee.string(), "mut void");
 
-    const BuiltinType* BT = dynamic_cast<const BuiltinType*>(pointee.get_type());
+    const BuiltinType* BT = dynamic_cast<const BuiltinType*>(pointee.getType());
     EXPECT_NE(BT, nullptr);
-    EXPECT_EQ(BT->get_kind(), BuiltinType::Void);
+    EXPECT_EQ(BT->kind(), BuiltinType::Kind::Void);
 }
 
 TEST_F(TypeParserTests, MutablePointerToMutableVoidType) {
@@ -148,20 +148,20 @@ TEST_F(TypeParserTests, MutablePointerToMutableVoidType) {
     EXPECT_NE(FD, nullptr);
 
     const QualType& return_type = FD->get_return_type();
-    EXPECT_TRUE(return_type.is_mut());
-    EXPECT_EQ(return_type.to_string(), "mut *mut void");
+    EXPECT_TRUE(return_type.isMut());
+    EXPECT_EQ(return_type.string(), "mut *mut void");
 
-    const PointerType* PT = dynamic_cast<const PointerType*>(return_type.get_type());
+    const PointerType* PT = dynamic_cast<const PointerType*>(return_type.getType());
     EXPECT_NE(PT, nullptr);
-    EXPECT_EQ(PT->to_string(), "*mut void");
+    EXPECT_EQ(PT->string(), "*mut void");
 
-    const QualType& pointee = PT->get_pointee();
-    EXPECT_TRUE(pointee.is_mut());
-    EXPECT_EQ(pointee.to_string(), "mut void");
+    const QualType& pointee = PT->pointee();
+    EXPECT_TRUE(pointee.isMut());
+    EXPECT_EQ(pointee.string(), "mut void");
 
-    const BuiltinType* BT = dynamic_cast<const BuiltinType*>(pointee.get_type());
+    const BuiltinType* BT = dynamic_cast<const BuiltinType*>(pointee.getType());
     EXPECT_NE(BT, nullptr);
-    EXPECT_EQ(BT->get_kind(), BuiltinType::Void);
+    EXPECT_EQ(BT->kind(), BuiltinType::Kind::Void);
 }
 
 } // namespace lace::test

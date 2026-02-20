@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
@@ -22,7 +22,7 @@ namespace lir {
 class Use;
 class User;
 
-/// The different policies for value printing.
+/// The different policies for printing values.
 enum class PrintPolicy {
     Def,
     Use,
@@ -34,29 +34,35 @@ public:
     using Uses = std::vector<Use*>;
 
 protected:
-    Type* m_type;
+    Type *m_type;
 
     /// The borrowed uses of this value. 
     Uses m_uses = {};
     
-    Value(Type* type) : m_type(type) {}
+    Value(Type *type) : m_type(type) {}
 
 public:
     virtual ~Value() = default;
 
-    void set_type(Type* type) { m_type = type; }
-    Type* get_type() const { return m_type; }
+    Value(const Value&) = delete;
+    void operator=(const Value&) = delete;
 
-    const Uses& uses() const { return m_uses; }
-    Uses& uses() { return m_uses; }
+    Value(Value&&) noexcept = delete;
+    void operator=(Value&&) noexcept = delete;
+
+    void set_type(Type *type) { m_type = type; }
+    Type *get_type() const { return m_type; }
+
+    const Uses &uses() const { return m_uses; }
+    Uses &uses() { return m_uses; }
 
     /// Returns the first use of this value, if it exists.
-    const Use* use_front() const { return m_uses.front(); }
-    Use* use_front() { return m_uses.front(); }
+    const Use *use_front() const { return m_uses.front(); }
+    Use *use_front() { return m_uses.front(); }
 
     /// Returns the latest use of this value, if it exists.
-    const Use* use_back() const { return m_uses.back(); }
-    Use* use_back() { return m_uses.back(); }
+    const Use *use_back() const { return m_uses.back(); }
+    Use *use_back() { return m_uses.back(); }
 
     /// Returns the number of times this value is used.
     uint32_t num_uses() const { return m_uses.size(); }
@@ -68,20 +74,20 @@ public:
     bool has_one_use() const { return m_uses.size() == 1; }
 
     /// Add |use| to the uses of this value.
-    void add_use(Use* use) { m_uses.push_back(use); }
+    void add_use(Use *use) { m_uses.push_back(use); }
 
     /// Removes the edge |use| from this value, if it exists.
-    void del_use(Use* use);
+    void del_use(Use *use);
 
     /// Replace all uses of this value with the given |value|.
-    void replace_all_uses_with(Value* value);
+    void replace_all_uses_with(Value *value);
 
     /// Returns true if this value is a constant.
     virtual bool is_constant() const { return false; }
 
-    /// Print this value in a reproducible plaintext format to |os|, with the
-    /// given printing |policy|.
-    virtual void print(std::ostream& os, PrintPolicy policy) const = 0;
+    /// Print this value in a reproducible plaintext format to |os|, following
+    /// the given printing |policy|.
+    virtual void print(std::ostream &os, PrintPolicy policy) const = 0;
 };
 
 } // namespace lir

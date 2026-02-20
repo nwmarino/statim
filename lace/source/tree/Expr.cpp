@@ -3,9 +3,9 @@
 //  All rights reserved.
 //
 
-#include "lace/tree/Defn.hpp"
-#include "lace/tree/Expr.hpp"
-#include "lace/tree/Type.hpp"
+#include "lace/tree/Defn.h"
+#include "lace/tree/Expr.h"
+#include "lace/tree/Type.h"
 
 #include <cassert>
 
@@ -14,12 +14,12 @@ using namespace lace;
 BoolLiteral* BoolLiteral::create(AST::Context& ctx, SourceSpan span, 
                                  bool value) {
     return new BoolLiteral(
-        span, BuiltinType::get(ctx, BuiltinType::Bool), value);
+        span, BuiltinType::get(ctx, BuiltinType::Kind::Bool), value);
 }
 
 CharLiteral* CharLiteral::create(AST::Context& ctx, SourceSpan span, char value) {
     return new CharLiteral(
-        span, BuiltinType::get(ctx, BuiltinType::Char), value);
+        span, BuiltinType::get(ctx, BuiltinType::Kind::Char), value);
 }
 
 IntegerLiteral* IntegerLiteral::create(AST::Context& ctx, SourceSpan span, 
@@ -41,7 +41,7 @@ StringLiteral* StringLiteral::create(AST::Context& ctx, SourceSpan span,
                                      const std::string& value) {
     return new StringLiteral(
         span, 
-        PointerType::get(ctx, BuiltinType::get(ctx, BuiltinType::Char)),
+        PointerType::get(ctx, BuiltinType::get(ctx, BuiltinType::Kind::Char)),
         value);
 }
 
@@ -142,7 +142,7 @@ bool RefExpr::is_lvalue() const {
 SizeofExpr* SizeofExpr::create(AST::Context& ctx, SourceSpan span, 
                                const QualType& target) {
     return new SizeofExpr(
-        span, BuiltinType::get(ctx, BuiltinType::UInt64), target);
+        span, BuiltinType::get(ctx, BuiltinType::Kind::UInt64), target);
 }
 
 SubscriptExpr::~SubscriptExpr() {

@@ -1,10 +1,10 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
-#include "lace/tree/Expr.hpp"
-#include "lace/tree/Rune.hpp"
+#include "lace/tree/Expr.h"
+#include "lace/tree/Rune.h"
 
 using namespace lace;
 

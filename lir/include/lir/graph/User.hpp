@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
@@ -25,14 +25,16 @@ protected:
     /// The operands of this user, or "use" edges, that model a use-def chain.
     Uses m_operands = {};
 
-    User(Type* type, const std::vector<Value*>& ops = {}) : Value(type) {
-        for (Value* const& v : ops)
-            if (v) m_operands.emplace_back(new Use(v, this));
+    User(Type *type, const std::vector<Value*> &ops = {}) : Value(type) {
+        for (Value *const &value : ops) {
+            if (value) 
+                m_operands.emplace_back(new Use(value, this));
+        }
     }
 
 public:
     ~User() {
-        for (Use*& use : m_operands) {
+        for (Use *&use : m_operands) {
             delete use;
             use = nullptr;
         }
@@ -40,24 +42,34 @@ public:
         m_operands.clear();
     }
 
-    const Uses& get_operand_list() const { return m_operands; }
-    Uses& get_operand_list() { return m_operands; }
+    User(const User&) = delete;
+    void operator=(const User&) = delete;
 
-    const Use* get_operand(uint32_t i) const {
+    User(User&&) noexcept = delete;
+    void operator=(User&&) noexcept = delete;
+
+    const Uses &get_operand_list() const { return m_operands; }
+    Uses &get_operand_list() { return m_operands; }
+
+    /// Returns the |i|-th operand of this user.
+    const Use *get_operand(uint32_t i) const {
         assert(i < num_operands() && "index out of bounds!");
         return m_operands[i];
     }
     
-    Use* get_operand(uint32_t i) {
+    Use *get_operand(uint32_t i) {
         assert(i < num_operands() && "index out of bounds!");
         return m_operands[i];
     }
 
+    /// Returns the number of operands this user has.
     uint32_t num_operands() const { return m_operands.size(); }
+
+    /// Test if this user has any operands.
     bool has_operands() const { return !m_operands.empty(); }
 
     /// Add the given |value| as a new operand to this user.
-    void add_operand(Value* value) {
+    void add_operand(Value *value) {
         m_operands.push_back(new Use(value, this));
     }
 };

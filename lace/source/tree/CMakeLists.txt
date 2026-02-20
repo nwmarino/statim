@@ -2,7 +2,6 @@ set(TREE_SOURCES
     AST.cpp
     Defn.cpp
     Expr.cpp
-    NameAnalysis.cpp
     Printer.cpp
     Rune.cpp
     Scope.cpp
@@ -10,6 +9,8 @@ set(TREE_SOURCES
     Stmt.cpp
     SymbolAnalysis.cpp
     Type.cpp
+    TypeResolution.cpp
+    VisitorBase.cpp
 )
 
 add_library(Tree

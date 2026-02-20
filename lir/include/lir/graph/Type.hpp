@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
@@ -7,8 +7,7 @@
 #define LOVELACE_IR_TYPE_H_
 
 //
-//  This header file declares the type system used in the agnostic intermediate
-//  representation (IR).
+//  This header file declares the type system used in the LIR.
 //
 
 #include <cassert>
@@ -49,20 +48,27 @@ protected:
 public:
     virtual ~Type() = default;
 
-    bool operator==(const Type& other) const { return m_id == other.m_id; }
+    Type(const Type&) = delete;
+    void operator=(const Type&) = delete;
+
+    Type(Type&&) noexcept = delete;
+    void operator=(Type&&) noexcept = delete;
+
+    bool operator==(const Type &other) const { return m_id == other.m_id; }
 
     operator std::string() const { return to_string(); }
 
+    /// Returns the class of this type, which may be used to discern the kind 
+    /// of type is.
     Class get_class() const { return m_cls; }
 
-    static VoidType* get_void_type(CFG& cfg);
-    static IntegerType* get_i1_type(CFG& cfg);
-    static IntegerType* get_i8_type(CFG& cfg);
-    static IntegerType* get_i16_type(CFG& cfg);
-    static IntegerType* get_i32_type(CFG& cfg);
-    static IntegerType* get_i64_type(CFG& cfg);
-    static FloatType* get_f32_type(CFG& cfg);
-    static FloatType* get_f64_type(CFG& cfg);
+    static VoidType *get_void(CFG &cfg);
+    static IntegerType *get_i8(CFG &cfg);
+    static IntegerType *get_i16(CFG &cfg);
+    static IntegerType *get_i32(CFG &cfg);
+    static IntegerType *get_i64(CFG &cfg);
+    static FloatType *get_f32(CFG &cfg);
+    static FloatType *get_f64(CFG &cfg);
 
     /// Test if this type is the void type.
     bool is_void_type() const { return m_cls == Void; }
@@ -95,82 +101,16 @@ public:
     virtual std::string to_string() const = 0;
 };
 
-/// Represents array types in the agnostic IR.
-class ArrayType final : public Type {
+/// Represents the void type, used for the abscence of a value.
+class VoidType final : public Type {
     friend class CFG;
 
-    Type* m_element;
-    const uint32_t m_size;
-    
-    ArrayType(Type* element, uint32_t size) 
-      : Type(Type::Array), m_element(element), m_size(size) {}
+    VoidType() : Type(Type::Void) {}
 
 public:
-    static ArrayType* get(CFG& cfg, Type* element, uint32_t size);
+    static VoidType *get(CFG &cfg);
 
-    std::string to_string() const override {
-        return '[' + std::to_string(m_size) + ']' + m_element->to_string();
-    }
-
-    Type* get_element_type() const { return m_element; }
-
-    uint32_t get_size() const { return m_size; }
-};
-
-/// Represents a floating point type of a given width in the agnostic IR.
-class FloatType final : public Type {
-    friend class CFG;
-
-    /// The width of this type in bits.
-    const uint32_t m_width;
-
-    FloatType(uint32_t width) : Type(Type::Float), m_width(width) {}
-
-public:
-    static FloatType* get(CFG& cfg, uint32_t width);
-
-    bool is_float_type(uint32_t width) const override { 
-        return m_width == width; 
-    }
-
-    uint32_t get_width() const { return m_width; }
-
-    std::string to_string() const override;
-};
-
-/// Represents the type defined by a function signature.
-class FunctionType final : public Type {
-    friend class CFG;
-
-public:
-    using Args = std::vector<Type*>;
-
-private:
-    Args m_args;
-    Type* m_ret;
-
-    FunctionType(const Args& args, Type* ret)
-      : Type(Type::Function), m_args(args), m_ret(ret) {}
-
-public:
-    static FunctionType* get(CFG& cfg, const Args& args, Type* ret);
-
-    std::string to_string() const override;
-
-    const Args& args() const { return m_args; }
-
-    Type* get_arg(uint32_t i) const {
-        assert(i <- num_args() && "index out of bounds!");
-        return m_args[i];
-    }
-
-    uint32_t num_args() const { return m_args.size(); }
-    bool has_args() const { return !m_args.empty(); }
-
-    Type* get_return_type() const { return m_ret; }
-
-    /// Test if this function type returns the void type, i.e. has no return.
-    bool is_void_return() const { return m_ret->is_void_type(); }
+    std::string to_string() const override { return "void"; }
 };
 
 /// Represents an integer type of a given width in the agnostic IR.
@@ -183,7 +123,7 @@ class IntegerType final : public Type {
     IntegerType(uint32_t width) : Type(Type::Integer), m_width(width) {}
 
 public:
-    static IntegerType* get(CFG& cfg, uint32_t width);
+    static IntegerType *get(CFG &cfg, uint32_t width);
 
     bool is_integer_type(uint32_t width) const override { 
         return m_width == width; 
@@ -194,22 +134,113 @@ public:
     uint32_t get_width() const { return m_width; }
 };
 
+/// Represents a floating point type of a given width in the agnostic IR.
+class FloatType final : public Type {
+    friend class CFG;
+
+    /// The width of this type in bits.
+    const uint32_t m_width;
+
+    FloatType(uint32_t width) : Type(Type::Float), m_width(width) {}
+
+public:
+    static FloatType *get(CFG &cfg, uint32_t width);
+
+    bool is_float_type(uint32_t width) const override { 
+        return m_width == width; 
+    }
+
+    uint32_t get_width() const { return m_width; }
+
+    std::string to_string() const override;
+};
+
+/// Represents array types in the agnostic IR.
+class ArrayType final : public Type {
+    friend class CFG;
+
+    Type *m_element;
+    const uint32_t m_size;
+    
+    ArrayType(Type *element, uint32_t size) 
+      : Type(Type::Array), m_element(element), m_size(size) {}
+
+public:
+    static ArrayType *get(CFG &cfg, Type *element, uint32_t size);
+
+    Type *get_element_type() const { return m_element; }
+
+    uint32_t get_size() const { return m_size; }
+
+    std::string to_string() const override {
+        return '[' + std::to_string(m_size) + ']' + m_element->to_string();
+    }
+};
+
 /// Represents a pointer type in the agnostic IR.
 class PointerType final : public Type {
     friend class CFG;
 
-    Type* m_pointee;
+    Type *m_pointee;
 
-    PointerType(Type* pointee) : Type(Type::Pointer), m_pointee(pointee) {}
+    PointerType(Type *pointee) : Type(Type::Pointer), m_pointee(pointee) {}
 
 public:
-    static PointerType* get(CFG& cfg, Type* pointee);
+    static PointerType *get(CFG &cfg, Type *pointee);
+
+    Type *get_pointee() const { return m_pointee; }
 
     std::string to_string() const override { 
         return '*' + m_pointee->to_string(); 
     }
+};
 
-    Type* get_pointee() const { return m_pointee; }
+/// Represents the type defined by a function signature.
+class FunctionType final : public Type {
+    friend class CFG;
+
+public:
+    using Params = std::vector<Type*>;
+
+private:
+    Params m_params;
+    Type *m_result;
+
+    FunctionType(const Params &params, Type *result)
+      : Type(Type::Function), m_params(params), m_result(result) {}
+
+public:
+    [[nodiscard]] static 
+    FunctionType *get(CFG &cfg, const Params &params, Type *result);
+
+    const Params &get_params() const { return m_params; }
+    Params &get_params() { return m_params; }
+
+    /// Returns the number of parameter types in this function type.
+    uint32_t num_params() const { return m_params.size(); }
+
+    /// Test if this function type has any parameter types.
+    bool has_params() const { return !m_params.empty(); }
+
+    /// Returns the |i|-th parameter type.
+    const Type *get_param(uint32_t i) const {
+        assert(i < num_params() && "index out of bounds!");
+        return m_params[i];
+    }
+
+    Type *get_param(uint32_t i) {
+        assert(i < num_params() && "index out of bounds!");
+        return m_params[i];
+    }
+
+    /// Returns the type that results from calls to functions of this type.
+    const Type *get_result() const { return m_result; }
+    Type *get_result() { return m_result; }
+
+    /// Test if functions of this type have a result.
+    bool has_result() const { return m_result && !m_result->is_void_type(); }
+
+    std::string to_string() const override;
 };
 
 /// Representation of explicitly defined, named aggregate types in the
@@ -224,47 +255,41 @@ private:
     std::string m_name;
     Fields m_fields;
 
-    StructType(const std::string& name, const Fields& fields)
+    StructType(const std::string &name, const Fields &fields)
       : Type(Type::Struct), m_name(name), m_fields(fields) {}
 
 public:
-    static StructType* get(CFG& cfg, const std::string& name);
-    static StructType* create(CFG& cfg, const std::string& name, 
-                              const Fields& fields);
+    static StructType *get(CFG &cfg, const std::string &name);
+    static StructType *create(CFG &cfg, const std::string &name, 
+                              const Fields &fields);
 
-    std::string to_string() const override { return m_name; }
+    const std::string &get_name() const { return m_name; }
 
-    const std::string& get_name() const { return m_name; }
+    const Fields &get_fields() const { return m_fields; }
+    Fields &get_fields() { return m_fields; }
 
-    const Fields& get_fields() const { return m_fields; }
-    Fields& get_fields() { return m_fields; }
-
-    Type* get_field(uint32_t i) const {
+    /// Returns the type of the field at position |i| of this structure.
+    Type *get_field(uint32_t i) const {
         assert(i < num_fields() && "index out of bounds!");
         return m_fields.at(i); 
     }
 
-    void append_field(Type* type) { m_fields.push_back(type); }
+    /// Add the given |type| as the last field of this structure.
+    void append_field(Type *type) { m_fields.push_back(type); }
 
-    void set_type(uint32_t i, Type* type) {
+    /// Set the type of the field at position |i| to |type|.
+    void set_type(uint32_t i, Type *type) {
         assert(i < num_fields() && "index out of bounds!");
         m_fields[i] = type;
     }
 
+    /// Returns the number of fields in this structure type.
     uint32_t num_fields() const { return m_fields.size(); }
+
+    /// Test if this structure has any fields in it.
     bool has_fields() const { return !m_fields.empty(); }
-};
 
-/// Represents the void type, used for the abscence of a value.
-class VoidType final : public Type {
-    friend class CFG;
-
-    VoidType() : Type(Type::Void) {}
-
-public:
-    static VoidType* get(CFG& cfg);
-
-    std::string to_string() const override { return "void"; }
+    std::string to_string() const override { return m_name; }
 };
 
 } // namespace lir

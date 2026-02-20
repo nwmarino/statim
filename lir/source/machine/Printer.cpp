@@ -1,177 +1,252 @@
 //
-// Copyright (c) 2025 Nick Marino
-// All rights reserved.
+//  Copyright (c) 2025-2026 Nicholas Marino
+//  All rights reserved.
 //
 
-#include "spbe/machine/MachBasicBlock.hpp"
-#include "spbe/machine/MachInstruction.hpp"
-#include "spbe/machine/MachOperand.hpp"
-#include "spbe/machine/MachOperand.hpp"
-#include "spbe/machine/MachFunction.hpp"
-#include "spbe/X64/X64.hpp"
-#include "spbe/X64/X64Printer.hpp"
+#include "lir/machine/AMD64.hpp"
+#include "lir/machine/FunctionABI.hpp"
+#include "lir/machine/MachineFunction.hpp"
+#include "lir/machine/MachineLabel.hpp"
+#include "lir/machine/MachineOp.hpp"
+#include "lir/machine/MachineOperand.hpp"
+#include "lir/machine/Printer.hpp"
 
-using namespace spbe;
+#include <format>
+#include <iomanip>
+#include <ostream>
 
-static const MachFunction* g_register_info = nullptr;
+using namespace lir;
 
-static void print_operand(std::ostream& os, const MachFunction& MF, 
-                          const MachOperand& MO) {
-    switch (MO.kind()) {
-    case MachOperand::MO_Register: {
-        if (MO.is_def()) {
-            if (MO.is_implicit())
-                os << "implicit-def ";
+Printer::Printer(const MachineObject &obj) 
+  : m_obj(obj), m_mach(obj.get_machine()) {}
 
-            if (MO.is_dead())
-                os << "dead ";
-        } else if (MO.is_use()) {
-            if (MO.is_implicit())
-                os << "implicit ";
-
-            if (MO.is_kill())
-                os << "killed ";
-        }
-
-        const FunctionRegisterInfo& regi = MF.get_register_info();
-        MachRegister reg = MO.get_reg();
-        if (reg.is_virtual()) {
-            MachRegister alloc = regi.vregs.at(reg.id()).alloc;
-            if (alloc != MachRegister::NoRegister)
-                reg = alloc;
-        }
-
-        if (reg.is_virtual()) {
-            os << 'v' << (reg.id() - MachRegister::VirtualBarrier) << 
-                ':' << MO.get_subreg();
-        } else {
-            os << "%" << x64::to_string(
-                static_cast<x64::Register>(reg.id()), MO.get_subreg());
-        }
-
-        break;
+void Printer::run(std::ostream &os) {
+    for (const auto &[name, global] : m_obj.get_globals()) {
+        print_data(os, *global);
+        os << '\n';
     }
-
-    case MachOperand::MO_Memory: {
-        os << '[';
-
-        MachRegister reg = MO.get_mem_base();
-        if (reg.is_virtual()) {
-            os << 'v' << (reg.id() - MachRegister::VirtualBarrier);
-        } else {
-            os << '%' << x64::to_string(
-                static_cast<x64::Register>(reg.id()), 64);
-        }
-
-        if (MO.get_mem_disp() != 0) {
-            if (MO.get_mem_disp() > 0)
-                os << '+';
-
-            os << MO.get_mem_disp();
-        }
-
-        os << ']';
-        break;
-    }
-
-    case MachOperand::MO_StackIdx:
-        os << "stack." << MO.get_stack_index();
-        break;
-
-    case MachOperand::MO_Immediate:
-        os << '$' << MO.get_imm();
-        break;
-
-    case MachOperand::MO_BasicBlock:
-        os << "bb" << MO.get_mmb()->position();
-        break;
-
-    case MachOperand::MO_ConstantIdx:
-        os << "const." << MO.get_constant_index();
-        break;
     
-    case MachOperand::MO_Symbol: 
-        os << MO.get_symbol();
-        break;
+    for (const auto &[name, func] : m_obj.get_functions()) {
+        print_function(os, *func);
+        os << '\n';
     }
 }
 
-static void print_inst(std::ostream& os, const MachFunction& MF,
-                       const MachInstruction& MI) {
-    os << "    ";
+void Printer::print_register(std::ostream &os, const MachineRegister &reg) {
+    if (reg.isImplicit()) {
+        os << "<impl-";
 
-    if (MI.num_explicit_defs() == 1) {
-        for (auto& MO : MI.operands()) {
-            if (MO.is_reg() && MO.is_explicit_def()) {
-                print_operand(os, MF, MO);
-                break;
+        if (reg.isUse()) {
+            os << "use> ";
+        } else if (reg.isDef()) {
+            os << "def> ";
+        }
+    }
+
+    if (reg.isExpired())
+        os << "expired ";
+
+    if (reg.reg().is_virtual()) {
+        os << "%v" << reg.reg().id() - Register::VIRTUAL_BARRIER;
+    } else {
+        // @Todo: Change cast for other archs.
+        os << '%' << to_string(static_cast<AMD64_Register>(reg.reg().id()), 0);
+    }
+
+    os << std::format(":{}", reg.subreg());
+}
+
+void Printer::print_operand(std::ostream &os, const MachineOperand &operand) {
+    switch (operand.kind()) {
+        case MachineOperand::Kind::Register:
+            print_register(os, operand.reg());
+            break;
+
+        case MachineOperand::Kind::Memory: {
+            const Memory &mem = operand.mem();
+        
+            os << std::format("<mem> ");
+            print_register(os, mem.base);
+
+            if (mem.offset >= 0)
+                os << '+';
+            
+            os << mem.offset;
+            break;
+        }
+
+        case MachineOperand::Kind::Immediate:
+            os << std::format("${}", operand.imm());
+            break;
+
+        case MachineOperand::Kind::Data:
+            os << std::format("<data {}>", operand.data()->name());
+            break;
+
+        case MachineOperand::Kind::Local:
+            os << std::format("<stack {}>", operand.local()->get_offset());
+            break;
+
+        case MachineOperand::Kind::Function:
+            os << operand.function()->get_name();
+            break;
+
+        case MachineOperand::Kind::Label:
+            os << std::format(".{}", operand.label()->position());
+            break;
+    }
+}
+
+void Printer::print_op(std::ostream &os, const MachineOp &op) {
+    if (op.has_comment())
+        os << std::format("\t> {}", op.get_comment());
+
+    os << '\t' << std::setfill('0') << std::setw(5) << op.get_pos() << ' ';
+
+    std::string opstr;
+    if (op.is_intrinsic()) switch (static_cast<Intrinsic>(op.op())) {
+        case Intrinsic::Husk:
+            opstr = "HUSK";
+            break;
+        case Intrinsic::Param:
+            opstr = "PARAM";
+            break;
+        case Intrinsic::Stack_Setup:
+            opstr = "STACK_SETUP";
+            break;
+        case Intrinsic::Stack_Reserve:
+            opstr = "STACK_RESERVE";
+            break;
+        case Intrinsic::Stack_Restore:
+            opstr = "STACK_RESTORE";
+            break;
+        case Intrinsic::Callsite_Set:
+            opstr = "CALLSITE_SET";
+            break;
+        case Intrinsic::Callsite_End:
+            opstr = "CALLSITE_END";
+            break;
+    } else {
+        opstr = to_string(static_cast<AMD64_Op>(op.op()));
+    }
+
+    if (!op.has_operands()) {
+        os << opstr << '\n';
+        return;
+    }
+
+    os << opstr << std::string(18 - opstr.size(), ' ');
+
+    for (uint32_t i = 0, e = op.num_operands(); i < e; ++i) {
+        print_operand(os, op.get_operand(i));
+        if (i + 1 != e)
+            os << ", ";
+    }
+
+    os << '\n';
+}
+
+void Printer::print_label(std::ostream &os, const MachineLabel &label) {
+    os << std::format(".{}:\n", label.position());
+
+    const MachineOp *curr = label.get_head();
+    while (curr) {
+        print_op(os, *curr);
+        curr = curr->get_next();
+    }
+}
+
+void Printer::print_function(std::ostream &os, const MachineFunction &func) {
+    os << std::format("{}:\n", func.get_name());
+
+    const FunctionABI &abi = func.abi();
+    if (abi.hasResult() || abi.numParams() > 0) {
+        // Assume stack ABI.
+        os << "<abi>\n";
+
+        auto printABILocation = [&os](const FunctionABI::Location& loc) -> void {
+            if (loc.kind == FunctionABI::Location::Kind::Register) {
+                os << std::format("%{}", to_string(static_cast<AMD64_Register>(loc.reg.id())));
+            } else if (loc.kind == FunctionABI::Location::Kind::Stack) {
+                os << std::format("stack+{}", loc.offset);
+            }
+        };
+
+        if (abi.hasResult()) {
+            os << "\t.rs ";
+            printABILocation(abi.getResultLocation());
+            os << '\n';
+        }
+
+        for (uint32_t i = 0; i < abi.numParams(); ++i) {
+            os << std::format("\t.p{} ", i + 1);
+            printABILocation(abi.getParamLocation(i));
+            os << '\n';
+        }
+    }
+
+    const ConstantPool &pool = func.get_pool();
+    if (!pool.empty()) {
+        os << "<pool>\n";
+
+        for (const MachineData *data : pool.get_constants()) {
+            os << std::format("\t.C{}:\n", data->name());
+            
+            for (const MachineConstant& constant : data->data()) {
+                os << "\t\t";
+                print_constant(os, constant);
+                os << '\n';
             }
         }
-
-        os << " = ";
     }
 
-    os << x64::to_string(static_cast<x64::Opcode>(MI.opcode())) << " ";
+    const StackFrame &frame = func.get_stack_frame();
+    if (!frame.empty()) {
+        os << "<stack>\n";
 
-    for (uint32_t idx = 0, e = MI.num_operands(); idx != e; ++idx) {
-        const MachOperand& mo = MI.get_operand(idx);
-        if (MI.num_explicit_defs() == 1) {
-            if (mo.is_reg() && mo.is_explicit_def())
-                continue;
-        }
-
-        print_operand(os, MF, mo);
-        if (idx + 1 != e) {
-            const MachOperand& next = MI.get_operand(idx + 1);
-            if (!next.is_reg() || !next.is_explicit_def())
-                os << ", ";
+        for (const MachineLocal *local : frame.get_locals()) {
+            os << std::format("\t:{} size {} [{}]\n", 
+                local->get_offset(), local->get_size(), local->get_align());
         }
     }
-}
 
-static void print_block(std::ostream& os, const MachFunction& MF,
-                        const MachBasicBlock& MBB) {
-    os << "bb" << MBB.position() << ":\n";
-
-    for (auto inst : MBB.insts()) {
-        print_inst(os, MF, inst);
-        os << '\n';
+    for (const MachineLabel *label : func.labels()) {
+        print_label(os, *label);
     }
 }
 
-static void print_function(std::ostream& os, const MachFunction& MF) {
-    g_register_info = &MF.get_register_info();
-
-    os << MF.get_name() << ":\n";
-
-    const FunctionStackInfo& stack = MF.get_stack_info();
-    for (uint32_t idx = 0, e = stack.num_entries(); idx != e; ++idx) {
-        const FunctionStackEntry& entry = stack.entries[idx];
-        os << "    stack." << idx << " offset: " << entry.offset << ", size: " << 
-            entry.size << ", align: " << entry.align << '\n';
+void Printer::print_constant(std::ostream &os, const MachineConstant &constant) {
+    switch (constant.kind()) {
+        case MachineConstant::Kind::Zero:
+            os << std::format("<zero> {}", constant.get_zeros());
+            break;
+        case MachineConstant::Kind::Int8:
+            os << std::format("<int8> {:#02x} ({})", constant.get_int(), constant.get_int());
+            break;
+        case MachineConstant::Kind::Int16:
+            os << std::format("<int8> {:#04x} ({})", constant.get_int(), constant.get_int());
+            break;
+        case MachineConstant::Kind::Int32:
+            os << std::format("<int8> {:#06x} ({})", constant.get_int(), constant.get_int());
+            break;
+        case MachineConstant::Kind::Int64:
+            os << std::format("<int8> {:#08x} ({})", constant.get_int(), constant.get_int());
+            break;
+        case MachineConstant::Kind::Float32:
+            os << std::format("<float32> {:#04x} ({:.5f})", static_cast<int64_t>(constant.get_fp()), constant.get_fp());
+            break;
+        case MachineConstant::Kind::Float64:
+            os << std::format("<float64> {:#08x} ({:.5f})", static_cast<int64_t>(constant.get_fp()), constant.get_fp());
+            break;
     }
-
-    const FunctionConstantPool& pool = MF.get_constant_pool();
-    for (uint32_t idx = 0, e = pool.num_entries(); idx != e; ++idx) {
-        const FunctionConstantPoolEntry& entry = pool.entries[idx];
-        os << "    const." << idx << ' ' << 
-            entry.constant->get_type()->to_string() << ' ';
-        entry.constant->print(os);
-        os << '\n';
-    }
-
-    if (stack.num_entries() > 0 || pool.num_entries() > 0 )
-        os << '\n';
-
-    for (auto curr = MF.front(); curr; curr = curr->next())
-        print_block(os, MF, *curr);
 }
 
-void x64::X64Printer::run(std::ostream& os) const {
-    g_register_info = nullptr;
+void Printer::print_data(std::ostream &os, const MachineData &data) {
+    os << std::format("{}:\n", data.name());
 
-    for (const auto& [name, function] : m_obj.functions()) {
-        print_function(os, *function);
+    for (const MachineConstant &constant : data.data()) {
+        os << '\t';
+        print_constant(os, constant);
         os << '\n';
     }
 }

@@ -1,27 +1,26 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
-#include "lace/core/Diagnostics.hpp"
-#include "lace/lexer/Lexer.hpp"
-#include "lace/lexer/Token.hpp"
+#include "lace/core/Diagnostics.h"
+#include "lace/lexer/Lexer.h"
+#include "lace/lexer/Token.h"
 
 using namespace lace;
 
 /// Test if |c| is an octal digit.
-static inline bool is_octal_digit(char c) {
+static inline bool isOctalDigit(char c) {
     return '0' <= c && c <= '7';
 }
 
 /// Test if |c| is a space or tab.
-static inline bool is_whitespace(char c) {
+static inline bool isWhitespace(char c) {
     return c == ' ' || c == '\t';
 }
 
-/// Test if |kind| is for a compound token i.e. a symbolic token containing 
-/// more than one symbol.
-static inline bool is_compound(Token::Kind kind) {
+/// Test if |kind| is for a compound token i.e. a symbolic token containing more than one symbol.
+static inline bool isCompoundToken(Token::Kind kind) {
     switch (kind) {
         case Token::EqEq:
         case Token::BangEq:
@@ -42,7 +41,7 @@ static inline bool is_compound(Token::Kind kind) {
 void Lexer::lex(Token& token) {
     token.value.clear();
 
-    if (is_eof()) {
+    if (isEof()) {
         token.kind = Token::EndOfFile;
         token.loc = m_loc;
         return;
@@ -50,10 +49,10 @@ void Lexer::lex(Token& token) {
 
     if (curr() == '\n') {
         ++m_cursor;
-        end_line();
+        endLine();
         return lex(token);
-    } else if (is_whitespace(curr())) {
-        while (is_whitespace(curr()))
+    } else if (isWhitespace(curr())) {
+        while (isWhitespace(curr()))
             move();
 
         return lex(token);
@@ -91,7 +90,7 @@ void Lexer::lex(Token& token) {
 
                 if (curr() == '\n') {
                     ++m_cursor;
-                    end_line();
+                    endLine();
                 }
 
                 return lex(token);
@@ -352,9 +351,9 @@ void Lexer::lex(Token& token) {
                         case '\"': 
                             token.value += '\"'; 
                             break;
-                        default: if (is_octal_digit(curr())) {
+                        default: if (isOctalDigit(curr())) {
                             int32_t oct_val = 0, digits = 0;
-                            while (digits < 3 && is_octal_digit(curr())) {
+                            while (digits < 3 && isOctalDigit(curr())) {
                                 oct_val = (oct_val << 3) + (curr() - '0');
                                 move();
                                 digits++;

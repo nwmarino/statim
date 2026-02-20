@@ -3,11 +3,11 @@
 //  All rights reserved.
 //
 
-#include "lace/parser/Parser.hpp"
-#include "lace/tree/AST.hpp"
-#include "lace/tree/Defn.hpp"
-#include "lace/tree/Expr.hpp"
-#include "lace/tree/Stmt.hpp"
+#include "lace/parser/Parser.h"
+#include "lace/tree/AST.h"
+#include "lace/tree/Defn.h"
+#include "lace/tree/Expr.h"
+#include "lace/tree/Stmt.h"
 
 #include "gtest/gtest.h"
 
@@ -106,7 +106,7 @@ TEST_F(ExprParserTests, FloatLiteral_TypeSuffixes) {
 
     const FloatLiteral* FL = dynamic_cast<const FloatLiteral*>(AS->get_expr());
     EXPECT_NE(FL, nullptr);
-    EXPECT_EQ(FL->get_type().to_string(), "f32");
+    EXPECT_EQ(FL->get_type().string(), "f32");
 
     AS = dynamic_cast<const AdapterStmt*>(BS->get_stmt(1));
     EXPECT_NE(AS, nullptr);
@@ -114,7 +114,7 @@ TEST_F(ExprParserTests, FloatLiteral_TypeSuffixes) {
 
     FL = dynamic_cast<const FloatLiteral*>(AS->get_expr());
     EXPECT_NE(FL, nullptr);
-    EXPECT_EQ(FL->get_type().to_string(), "f64");
+    EXPECT_EQ(FL->get_type().string(), "f64");
 }
 
 } // namespace stm::test

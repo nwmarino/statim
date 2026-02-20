@@ -1,14 +1,25 @@
-Box :: struct {
-    a: mut f32,
-    b: mut s64,
-    c: mut bool,
+vec3 :: struct {
+    x: mut f64,
+    y: mut f64,
+    z: mut f64,
 }
 
-$[public]
+vec3_new :: (x: f64, y: f64, z: f64) -> vec3 {
+    let vec: mut vec3;
+    vec.x = x;
+    vec.y = y;
+    vec.z = z;
+
+    ret vec;
+}
+
+vec3_secret :: (vec: vec3) -> f64 {
+    let res: f64 = vec.x + vec.y + vec.z;
+    ret res * res;
+}
+
+$public
 main :: () -> s64 {
-    let box: Box;
-    box.a = 1.17;
-    box.b = 42;
-    
-    ret box.b;
+    let vec: vec3 = vec3_new(1, 2, 5);
+    ret cast<s64>(vec3_secret(vec));
 }

@@ -1,15 +1,15 @@
-Runes
-- Assert
-- Abort
-- Syscall
-- Unreachable
-
+- Assertions
+- Desugaring IR pass to turn large immediates into separate const instructions
+- Carve out lexing, allowing for better parallelism
+- Print
+- Match statement
+- For statement
+- String, File packages
 - Aggregate initializers
 - Dynamic memory allocator
 - Per-field destruction
 - Defer statement
-- Line-by-line debugging symbols.
-- For Loops
+- Line-by-line debugging symbols
 - Format strings
 - Inline assembly
 - Custom enum types
