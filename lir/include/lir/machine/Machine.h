@@ -7,7 +7,6 @@
 #define LIR_MACHINE_H_
 
 #include "lir/graph/Type.h"
-#include "lir/machine/Register.h"
 
 namespace lir {
 

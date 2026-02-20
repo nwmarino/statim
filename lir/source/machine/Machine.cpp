@@ -1,10 +1,10 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
-#include "lir/machine/Machine.h"
 #include "lir/machine/AMD64.h"
+#include "lir/machine/Machine.h"
 
 #include <algorithm>
 #include <unordered_set>

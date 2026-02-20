@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
