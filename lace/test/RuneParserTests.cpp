@@ -11,17 +11,17 @@ namespace lace::test {
 
 class RuneParserTests : public ::testing::Test {
 protected:
-    AST* unit;
+    AST* ast;
 
     void SetUp() override {
-        unit = nullptr;
+        ast = nullptr;
     }
 
     void TearDown() override {
-        if (unit) { 
-            delete unit;
-            unit = nullptr;
-        }
+        if (ast) 
+            delete ast;
+
+        ast = nullptr;
     }
 };
 

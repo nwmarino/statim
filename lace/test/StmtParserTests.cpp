@@ -36,7 +36,7 @@ TEST_F(StmtParserTests, IfStatement_Positive) {
     ASSERT_TRUE(lexer.lex(stream));
 
     Parser parser(stream);
-    EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
+    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
     EXPECT_EQ(ast->num_defns(), 1);
 
@@ -70,7 +70,7 @@ TEST_F(StmtParserTests, IfElseStatement_Positive) {
     ASSERT_TRUE(lexer.lex(stream));
 
     Parser parser(stream);
-    EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
+    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
     EXPECT_EQ(ast->num_defns(), 1);
 
@@ -103,7 +103,7 @@ TEST_F(StmtParserTests, UntilStatement_Positive) {
     ASSERT_TRUE(lexer.lex(stream));
 
     Parser parser(stream);
-    EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
+    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
     EXPECT_EQ(ast->num_defns(), 1);
 
@@ -129,7 +129,7 @@ TEST_F(StmtParserTests, UntilStatementNoBody_Positive) {
     ASSERT_TRUE(lexer.lex(stream));
 
     Parser parser(stream);
-    EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
+    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
     EXPECT_EQ(ast->num_defns(), 1);
 
@@ -149,7 +149,7 @@ TEST_F(StmtParserTests, UntilStatementNoBody_Positive) {
 /*
 TEST_F(StmtParserTests, AsmStatement_Positive) {
     Parser parser("test :: () -> void { asm {\"movq ^0, %rax\n\" \"syscall\n\" : : \"r\" (x) : \"rax\"}; }");
-    EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
+    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
     EXPECT_EQ(ast->num_defns(), 1);
 

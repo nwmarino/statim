@@ -23,10 +23,10 @@ protected:
     }
 
     void TearDown() override {
-        if (ast) {
+        if (ast)
             delete ast;
-            ast = nullptr;
-        }
+            
+        ast = nullptr;
     }
 };
 
@@ -36,7 +36,7 @@ TEST_F(SymbolAnalysisTests, VariableRef_Positive) {
     ASSERT_TRUE(lexer.lex(stream));
 
     Parser parser(stream);
-    EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
+    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
     EXPECT_NO_FATAL_FAILURE(ast->accept(syma));
@@ -48,7 +48,7 @@ TEST_F(SymbolAnalysisTests, VariableRef_Negative) {
     ASSERT_TRUE(lexer.lex(stream));
 
     Parser parser(stream);
-    EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
+    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
     EXPECT_DEATH(ast->accept(syma), "");
@@ -60,7 +60,7 @@ TEST_F(SymbolAnalysisTests, CalleeRef_Positive) {
     ASSERT_TRUE(lexer.lex(stream));
 
     Parser parser(stream);
-    EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
+    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
     EXPECT_NO_FATAL_FAILURE(ast->accept(syma));
@@ -72,7 +72,7 @@ TEST_F(SymbolAnalysisTests, ParamRef_Positive) {
     ASSERT_TRUE(lexer.lex(stream));
 
     Parser parser(stream);
-    EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
+    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
     EXPECT_NO_FATAL_FAILURE(ast->accept(syma));

@@ -18,10 +18,10 @@ protected:
     }
 
     void TearDown() override {
-        if (ast) { 
+        if (ast)
             delete ast;
-            ast = nullptr;
-        }
+        
+        ast = nullptr;
     }
 };
 
