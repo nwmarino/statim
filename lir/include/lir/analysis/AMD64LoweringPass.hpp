@@ -109,7 +109,6 @@ private:
     void lower_load(const Load *L);
     void lower_store(const Store *S);
     void lower_access(const Access *A);
-    void lower_extract(const Extract *E);
     void lower_offptr(const Offptr *O);
     void lower_call(const Call *C);
     void lower_ret(const Ret *R);

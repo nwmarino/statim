@@ -60,9 +60,6 @@ public:
     /// Create a new structure access on the given |ptr| at the given |index|.
     Access *build_access(Type *type, Value *ptr, Value *index);
 
-    /// Create a new field extraction on the given |base| at the given |index|.
-    Extract *build_extract(Type *type, Value *base, int32_t index);
-
     /// Create a new pointer offset on the given |ptr| at the given |index|.
     Offptr *build_offptr(Type *type, Value *ptr, Value *index);
 

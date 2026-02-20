@@ -133,20 +133,6 @@ void Access::print(std::ostream &os, PrintPolicy policy) const {
 }
 
 //>==---------------------------------------------------------------------------
-//                          Extract Implementation
-//>==---------------------------------------------------------------------------
-
-void Extract::print(std::ostream &os, PrintPolicy policy) const {
-    if (policy == PrintPolicy::Use) {
-        os << std::format("%{}: {}", m_def, m_type->to_string());
-    } else if (policy == PrintPolicy::Def) {
-        os << std::format("%{} := extract <{}> ", m_def, get_type()->to_string());
-        get_base()->print(os, PrintPolicy::Use);
-        os << std::format(", {}\n", m_index);
-    }
-}
-
-//>==---------------------------------------------------------------------------
 //                          Offptr Implementation
 //>==---------------------------------------------------------------------------
 

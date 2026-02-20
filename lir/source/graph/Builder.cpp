@@ -105,18 +105,6 @@ Access *Builder::build_access(Type *type, Value *ptr, Value *index) {
     return inst;
 }
 
-Extract *Builder::build_extract(Type *type, Value *base, int32_t index) {
-    assert(type && "type cannot be null!");
-    assert(base && "base cannot be null!");
-    assert(index >= 0 && "index must be non-negative!");
-
-    Extract *inst = new Extract(type, nullptr, m_cfg.get_def_id(), base, index);
-    assert(inst);
-
-    insert(inst);
-    return inst;
-}
-
 Offptr *Builder::build_offptr(Type *type, Value *ptr, Value *index) {
     assert(type && "type cannot be null!");
     assert(ptr && "ptr cannot be null!");

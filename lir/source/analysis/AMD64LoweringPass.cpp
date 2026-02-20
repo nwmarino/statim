@@ -511,8 +511,6 @@ void AMD64LoweringPass::lower_inst(const Instruction *inst) {
         lower_store(S);
     } else if (auto A = dynamic_cast<const Access*>(inst)) {
         lower_access(A);
-    } else if (auto E = dynamic_cast<const Extract*>(inst)) {
-        lower_extract(E);
     } else if (auto O = dynamic_cast<const Offptr*>(inst)) {
         lower_offptr(O);
     } else if (auto C = dynamic_cast<const Call*>(inst)) {
@@ -663,11 +661,6 @@ void AMD64LoweringPass::lower_access(const Access* A) {
             .add_imm(offset)
             .add_reg(MR);
     }
-}
-
-void AMD64LoweringPass::lower_extract(const Extract *E) {
-    // @Todo: should be lowered into an access by mapping the base aggregate to an address.
-    assert(false && "Extract not implemented!");
 }
 
 void AMD64LoweringPass::lower_offptr(const Offptr *O) {

@@ -199,28 +199,6 @@ public:
     void print(std::ostream &os, PrintPolicy policy) const override;
 };
 
-/// An extract instruction extracts a field or element of some valued aggregate
-/// by a constant index.
-class Extract final : public Instruction {
-    friend class Builder;
-
-    int32_t m_index;
-
-    Extract(Type *type, BasicBlock *parent, uint32_t def, Value *base, 
-            int32_t index)
-      : Instruction(type, parent, def, { base }), m_index(index) {}
-
-public:
-    /// Returns the base aggregate value of this extraction.
-    const Value *get_base() const { return get_operand(0); }
-    Value *get_base() { return get_operand(0); }
-
-    /// Returns the index of this extraction.
-    int32_t get_index() const { return m_index; }
-
-    void print(std::ostream &os, PrintPolicy policy) const override;
-};
-
 /// An offptr instruction performs pointer arithmetic by adding an offset 
 /// to a base pointer based on a numeric index.
 class Offptr final : public Instruction {
