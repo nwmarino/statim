@@ -6,9 +6,9 @@
 #ifndef LIR_INSTRUCTION_H_
 #define LIR_INSTRUCTION_H_
 
-#include "lir/graph/Constant.hpp"
-#include "lir/graph/User.hpp"
-#include "lir/graph/Value.hpp"
+#include "lir/graph/Constant.h"
+#include "lir/graph/User.h"
+#include "lir/graph/Value.h"
 
 #include <cstdint>
 

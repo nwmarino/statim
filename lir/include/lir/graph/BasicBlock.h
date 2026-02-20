@@ -11,7 +11,7 @@
 //  a list of instructions within a function.
 //
 
-#include "lir/graph/Instruction.hpp"
+#include "lir/graph/Instruction.h"
 
 #include <cassert>
 #include <vector>

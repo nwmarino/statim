@@ -8,7 +8,7 @@
 #include "lace/tree/LIRCodegen.h"
 #include "lace/tree/Type.h"
 
-#include "lir/graph/Type.hpp"
+#include "lir/graph/Type.h"
 
 using namespace lace;
 

@@ -3,11 +3,11 @@
 //  All rights reserved.
 //
 
-#include "lir/graph/CFG.hpp"
-#include "lir/graph/Function.hpp"
-#include "lir/graph/Local.hpp"
-#include "lir/graph/Type.hpp"
-#include "lir/graph/Value.hpp"
+#include "lir/graph/CFG.h"
+#include "lir/graph/Function.h"
+#include "lir/graph/Local.h"
+#include "lir/graph/Type.h"
+#include "lir/graph/Value.h"
 
 #include <format>
 

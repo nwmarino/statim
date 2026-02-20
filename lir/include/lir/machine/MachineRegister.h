@@ -6,7 +6,7 @@
 #ifndef LIR_MACHINE_REGISTER_H_
 #define LIR_MACHINE_REGISTER_H_
 
-#include "lir/machine/Register.hpp"
+#include "lir/machine/Register.h"
 
 #include <cassert>
 

@@ -6,10 +6,10 @@
 #ifndef LOVELACE_IR_BUILDER_H_
 #define LOVELACE_IR_BUILDER_H_
 
-#include "lir/graph/BasicBlock.hpp"
-#include "lir/graph/Constant.hpp"
-#include "lir/graph/Instruction.hpp"
-#include "lir/graph/Type.hpp"
+#include "lir/graph/BasicBlock.h"
+#include "lir/graph/Constant.h"
+#include "lir/graph/Instruction.h"
+#include "lir/graph/Type.h"
 
 #include <cassert>
 

@@ -6,9 +6,9 @@
 #ifndef LIR_MACHINE_OBJECT_H_
 #define LIR_MACHINE_OBJECT_H_
 
-#include "lir/machine/Machine.hpp"
-#include "lir/machine/MachineData.hpp"
-#include "lir/machine/MachineOperand.hpp"
+#include "lir/machine/Machine.h"
+#include "lir/machine/MachineData.h"
+#include "lir/machine/MachineOperand.h"
 
 #include <string>
 #include <unordered_map>

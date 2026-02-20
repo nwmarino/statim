@@ -3,13 +3,13 @@
 //  All rights reserved.
 //
 
-#include "lir/analysis/SSARewritePass.hpp"
-#include "lir/graph/BasicBlock.hpp"
-#include "lir/graph/Builder.hpp"
-#include "lir/graph/CFG.hpp"
-#include "lir/graph/Constant.hpp"
-#include "lir/graph/Instruction.hpp"
-#include "lir/graph/Value.hpp"
+#include "lir/analysis/SSARewritePass.h"
+#include "lir/graph/BasicBlock.h"
+#include "lir/graph/Builder.h"
+#include "lir/graph/CFG.h"
+#include "lir/graph/Constant.h"
+#include "lir/graph/Instruction.h"
+#include "lir/graph/Value.h"
 
 #include <algorithm>
 #include <functional>

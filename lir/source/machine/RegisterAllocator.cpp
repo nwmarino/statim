@@ -3,8 +3,8 @@
 //  All rights reserved.
 //
 
-#include "lir/machine/AMD64.hpp"
-#include "lir/machine/Register.hpp"
+#include "lir/machine/AMD64.h"
+#include "lir/machine/Register.h"
 #include "lir/machine/RegisterAllocator.h"
 
 using namespace lir;

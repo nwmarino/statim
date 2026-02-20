@@ -6,9 +6,9 @@
 #ifndef LIR_AMD64_LOWERING_PASS_H_
 #define LIR_AMD64_LOWERING_PASS_H_
 
-#include "lir/analysis/LoweringPass.hpp"
-#include "lir/machine/AMD64.hpp"
-#include "lir/machine/MachineOp.hpp"
+#include "lir/analysis/LoweringPass.h"
+#include "lir/machine/AMD64.h"
+#include "lir/machine/MachineOp.h"
 
 #include <array>
 #include <unordered_map>

@@ -6,7 +6,7 @@
 #ifndef LOVELACE_IR_PARAMETER_H_
 #define LOVELACE_IR_PARAMETER_H_
 
-#include "lir/graph/Value.hpp"
+#include "lir/graph/Value.h"
 
 namespace lir {
 

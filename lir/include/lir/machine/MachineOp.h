@@ -6,8 +6,8 @@
 #ifndef LIR_MACHINE_OP_H_
 #define LIR_MACHINE_OP_H_
 
-#include "lir/machine/MachineOperand.hpp"
-#include "lir/machine/MachineRegister.hpp"
+#include "lir/machine/MachineOperand.h"
+#include "lir/machine/MachineRegister.h"
 
 #include <cstdint>
 #include <vector>

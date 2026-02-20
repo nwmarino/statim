@@ -3,8 +3,8 @@
 //  All rights reserved.
 //
 
-#include "lir/machine/Machine.hpp"
-#include "lir/machine/AMD64.hpp"
+#include "lir/machine/Machine.h"
+#include "lir/machine/AMD64.h"
 
 #include <algorithm>
 #include <unordered_set>

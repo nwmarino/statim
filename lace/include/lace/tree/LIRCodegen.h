@@ -17,12 +17,12 @@
 #include "lace/tree/Type.h"
 #include "lace/tree/VisitorBase.h"
 
-#include "lir/graph/BasicBlock.hpp"
-#include "lir/graph/Builder.hpp"
-#include "lir/graph/CFG.hpp"
-#include "lir/graph/Function.hpp"
-#include "lir/graph/Type.hpp"
-#include "lir/machine/Machine.hpp"
+#include "lir/graph/BasicBlock.h"
+#include "lir/graph/Builder.h"
+#include "lir/graph/CFG.h"
+#include "lir/graph/Function.h"
+#include "lir/graph/Type.h"
+#include "lir/machine/Machine.h"
 
 namespace lace {
 

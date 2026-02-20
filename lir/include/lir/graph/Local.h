@@ -6,7 +6,7 @@
 #ifndef LOVELACE_IR_LOCAL_H_
 #define LOVELACE_IR_LOCAL_H_
 
-#include "lir/graph/Value.hpp"
+#include "lir/graph/Value.h"
 
 #include <cstdint>
 

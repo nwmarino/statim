@@ -11,7 +11,7 @@
 //  the components that may make up the control-flow graph based IR.
 //
 
-#include "lir/graph/Type.hpp"
+#include "lir/graph/Type.h"
 
 #include <cstdint>
 #include <ostream>

@@ -6,7 +6,7 @@
 #ifndef LIR_MACHINE_LABEL_H_
 #define LIR_MACHINE_LABEL_H_
 
-#include "lir/machine/MachineOp.hpp"
+#include "lir/machine/MachineOp.h"
 
 namespace lir {
 

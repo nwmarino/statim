@@ -3,8 +3,8 @@
 //  All rights reserved.
 //
 
-#include "lir/graph/Use.hpp"
-#include "lir/graph/Value.hpp"
+#include "lir/graph/Use.h"
+#include "lir/graph/Value.h"
 
 #include <algorithm>
 

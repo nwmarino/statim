@@ -6,7 +6,7 @@
 #include "lir/machine/CallsiteAnalysis.h"
 #include "lir/machine/LinearScan.h"
 #include "lir/machine/RegisterAnalysis.h"
-#include "lir/machine/Register.hpp"
+#include "lir/machine/Register.h"
 #include "lir/machine/RegisterAllocator.h"
 
 #include <unordered_map>

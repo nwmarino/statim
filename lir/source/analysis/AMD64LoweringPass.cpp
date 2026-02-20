@@ -3,20 +3,20 @@
 //  All rights reserved.
 //
 
-#include "lir/analysis/AMD64LoweringPass.hpp"
-#include "lir/graph/Constant.hpp"
-#include "lir/graph/Function.hpp"
-#include "lir/graph/Global.hpp"
-#include "lir/graph/Instruction.hpp"
-#include "lir/graph/Type.hpp"
-#include "lir/machine/AMD64.hpp"
-#include "lir/machine/FunctionABI.hpp"
-#include "lir/machine/MachineConstant.hpp"
-#include "lir/machine/MachineFunction.hpp"
-#include "lir/machine/MachineOp.hpp"
-#include "lir/machine/MachineOperand.hpp"
-#include "lir/machine/MachineRegister.hpp"
-#include "lir/machine/Register.hpp"
+#include "lir/analysis/AMD64LoweringPass.h"
+#include "lir/graph/Constant.h"
+#include "lir/graph/Function.h"
+#include "lir/graph/Global.h"
+#include "lir/graph/Instruction.h"
+#include "lir/graph/Type.h"
+#include "lir/machine/AMD64.h"
+#include "lir/machine/FunctionABI.h"
+#include "lir/machine/MachineConstant.h"
+#include "lir/machine/MachineFunction.h"
+#include "lir/machine/MachineOp.h"
+#include "lir/machine/MachineOperand.h"
+#include "lir/machine/MachineRegister.h"
+#include "lir/machine/Register.h"
 
 #include <cstdint>
 #include <string>

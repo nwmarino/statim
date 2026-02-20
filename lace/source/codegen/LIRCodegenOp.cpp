@@ -7,9 +7,9 @@
 #include "lace/tree/LIRCodegen.h"
 #include "lace/tree/Type.h"
 
-#include "lir/graph/Constant.hpp"
-#include "lir/graph/Instruction.hpp"
-#include "lir/graph/Type.hpp"
+#include "lir/graph/Constant.h"
+#include "lir/graph/Instruction.h"
+#include "lir/graph/Type.h"
 
 using namespace lace;
 

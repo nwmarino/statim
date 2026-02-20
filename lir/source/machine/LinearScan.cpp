@@ -4,8 +4,8 @@
 //
 
 #include "lir/machine/LinearScan.h"
-#include "lir/machine/MachineOperand.hpp"
-#include "lir/machine/Register.hpp"
+#include "lir/machine/MachineOperand.h"
+#include "lir/machine/Register.h"
 
 using namespace lir;
 

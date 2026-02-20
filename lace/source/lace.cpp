@@ -15,10 +15,11 @@
 #include "lace/tree/SymbolAnalysis.h"
 #include "lace/tree/TypeResolution.h"
 
-#include "lir/analysis/AMD64LoweringPass.hpp"
+#include "lir/analysis/AMD64LoweringPass.h"
+#include "lir/analysis/SSARewritePass.h"
 #include "lir/machine/AsmWriter.h"
-#include "lir/machine/Machine.hpp"
-#include "lir/machine/Printer.hpp"
+#include "lir/machine/Machine.h"
+#include "lir/machine/Printer.h"
 #include "lir/machine/RegisterAnalysis.h"
 
 #include <chrono>

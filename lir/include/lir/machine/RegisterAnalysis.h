@@ -6,7 +6,7 @@
 #ifndef LIR_REGISTER_ANALYSIS_H_
 #define LIR_REGISTER_ANALYSIS_H_
 
-#include "lir/machine/MachineObject.hpp"
+#include "lir/machine/MachineObject.h"
 
 namespace lir {
     

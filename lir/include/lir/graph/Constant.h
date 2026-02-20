@@ -6,8 +6,8 @@
 #ifndef LOVELACE_IR_CONSTANT_H_
 #define LOVELACE_IR_CONSTANT_H_
 
-#include "lir/graph/Type.hpp"
-#include "lir/graph/User.hpp"
+#include "lir/graph/Type.h"
+#include "lir/graph/User.h"
 
 namespace lir {
 

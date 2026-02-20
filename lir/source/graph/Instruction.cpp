@@ -3,10 +3,10 @@
 //  All rights reserved.
 //
 
-#include "lir/graph/BasicBlock.hpp"
-#include "lir/graph/Constant.hpp"
-#include "lir/graph/Value.hpp"
-#include "lir/graph/Instruction.hpp"
+#include "lir/graph/BasicBlock.h"
+#include "lir/graph/Constant.h"
+#include "lir/graph/Value.h"
+#include "lir/graph/Instruction.h"
 
 #include <format>
 

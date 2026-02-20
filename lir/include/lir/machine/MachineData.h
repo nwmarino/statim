@@ -6,7 +6,7 @@
 #ifndef LIR_MACHINE_DATA_H_
 #define LIR_MACHINE_DATA_H_
 
-#include "lir/machine/MachineConstant.hpp"
+#include "lir/machine/MachineConstant.h"
 
 #include <string>
 #include <vector>

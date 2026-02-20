@@ -3,8 +3,8 @@
 //  All rights reserved.
 //
 
-#include "lir/machine/AMD64.hpp"
-#include "lir/machine/FunctionABI.hpp"
+#include "lir/machine/AMD64.h"
+#include "lir/machine/FunctionABI.h"
 
 using namespace lir;
 

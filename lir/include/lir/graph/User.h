@@ -11,8 +11,8 @@
 //  that may or may not make use of other values.
 //
 
-#include "lir/graph/Use.hpp"
-#include "lir/graph/Value.hpp"
+#include "lir/graph/Use.h"
+#include "lir/graph/Value.h"
 
 #include <cstdint>
 #include <vector>

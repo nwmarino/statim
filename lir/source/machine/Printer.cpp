@@ -3,13 +3,13 @@
 //  All rights reserved.
 //
 
-#include "lir/machine/AMD64.hpp"
-#include "lir/machine/FunctionABI.hpp"
-#include "lir/machine/MachineFunction.hpp"
-#include "lir/machine/MachineLabel.hpp"
-#include "lir/machine/MachineOp.hpp"
-#include "lir/machine/MachineOperand.hpp"
-#include "lir/machine/Printer.hpp"
+#include "lir/machine/AMD64.h"
+#include "lir/machine/FunctionABI.h"
+#include "lir/machine/MachineFunction.h"
+#include "lir/machine/MachineLabel.h"
+#include "lir/machine/MachineOp.h"
+#include "lir/machine/MachineOperand.h"
+#include "lir/machine/Printer.h"
 
 #include <format>
 #include <iomanip>

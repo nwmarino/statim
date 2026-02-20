@@ -11,7 +11,7 @@
 //  the IR.
 //
 
-#include "lir/graph/Value.hpp"
+#include "lir/graph/Value.h"
 
 namespace lir {
 

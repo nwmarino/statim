@@ -3,9 +3,9 @@
 //  All rights reserved.
 //
 
-#include "lir/graph/CFG.hpp"
-#include "lir/graph/Global.hpp"
-#include "lir/graph/Type.hpp"
+#include "lir/graph/CFG.h"
+#include "lir/graph/Global.h"
+#include "lir/graph/Type.h"
 
 #include <format>
 

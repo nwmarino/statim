@@ -3,8 +3,8 @@
 //  All rights reserved.
 //
 
-#include "lir/analysis/LoweringPass.hpp"
-#include "lir/machine/MachineFunction.hpp"
+#include "lir/analysis/LoweringPass.h"
+#include "lir/machine/MachineFunction.h"
 
 using namespace lir;
 

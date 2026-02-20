@@ -6,11 +6,11 @@
 #ifndef LIR_SSA_REWRITE_PASS_H_
 #define LIR_SSA_REWRITE_PASS_H_
 
-#include "lir/analysis/Pass.hpp"
-#include "lir/graph/BasicBlock.hpp"
-#include "lir/graph/Builder.hpp"
-#include "lir/graph/Instruction.hpp"
-#include "lir/graph/Local.hpp"
+#include "lir/analysis/Pass.h"
+#include "lir/graph/BasicBlock.h"
+#include "lir/graph/Builder.h"
+#include "lir/graph/Instruction.h"
+#include "lir/graph/Local.h"
 
 #include <unordered_map>
 #include <vector>

@@ -6,11 +6,12 @@
 #ifndef LOVELACE_IR_FUNCTION_H_
 #define LOVELACE_IR_FUNCTION_H_
 
-#include "lir/graph/BasicBlock.hpp"
-#include "lir/graph/Local.hpp"
-#include "lir/graph/Parameter.hpp"
-#include "lir/graph/Type.hpp"
-#include "lir/graph/Value.hpp"
+#include "lir/graph/BasicBlock.h"
+#include "lir/graph/Local.h"
+#include "lir/graph/BasicBlock.h"
+#include "lir/graph/Parameter.h"
+#include "lir/graph/Type.h"
+#include "lir/graph/Value.h"
 
 #include <cassert>
 #include <cstdint>
@@ -139,7 +140,7 @@ public:
     void remove_param(Parameter *param);
 
     /// Test if this function contains an aggregate return parameter.
-    Result hasAggregateReturn() const {
+    bool hasAggregateReturn() const {
         if (m_params.size() < 1)
             return false;
 

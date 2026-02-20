@@ -6,7 +6,7 @@
 #ifndef LOVELACE_IR_PASS_H_
 #define LOVELACE_IR_PASS_H_
 
-#include "lir/graph/CFG.hpp"
+#include "lir/graph/CFG.h"
 
 namespace lir {
 

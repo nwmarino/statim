@@ -3,8 +3,8 @@
 //  All rights reserved.
 //
 
-#include "lir/machine/MachineFunction.hpp"
-#include "lir/machine/MachineLabel.hpp"
+#include "lir/machine/MachineFunction.h"
+#include "lir/machine/MachineLabel.h"
 
 using namespace lir;
 

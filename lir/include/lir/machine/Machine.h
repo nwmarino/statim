@@ -6,8 +6,8 @@
 #ifndef LIR_MACHINE_H_
 #define LIR_MACHINE_H_
 
-#include "lir/graph/Type.hpp"
-#include "lir/machine/Register.hpp"
+#include "lir/graph/Type.h"
+#include "lir/machine/Register.h"
 
 namespace lir {
 

@@ -6,9 +6,9 @@
 #ifndef LIR_FUNCTION_ABI_H_
 #define LIR_FUNCTION_ABI_H_
 
-#include "lir/graph/Function.hpp"
-#include "lir/machine/Machine.hpp"
-#include "lir/machine/Register.hpp"
+#include "lir/graph/Function.h"
+#include "lir/machine/Machine.h"
+#include "lir/machine/Register.h"
 
 #include <cstdint>
 #include <optional>

@@ -6,12 +6,12 @@
 #ifndef LOVELACE_IR_CFG_H_
 #define LOVELACE_IR_CFG_H_
 
-#include "lir/graph/BasicBlock.hpp"
-#include "lir/graph/Constant.hpp"
-#include "lir/graph/Function.hpp"
-#include "lir/graph/Global.hpp"
-#include "lir/graph/Type.hpp"
-#include "lir/machine/Machine.hpp"
+#include "lir/graph/BasicBlock.h"
+#include "lir/graph/Constant.h"
+#include "lir/graph/Function.h"
+#include "lir/graph/Global.h"
+#include "lir/graph/Type.h"
+#include "lir/machine/Machine.h"
 
 #include <map>
 #include <ostream>

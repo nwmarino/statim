@@ -6,7 +6,7 @@
 #ifndef LOVELACE_IR_GLOBAL_H_
 #define LOVELACE_IR_GLOBAL_H_
 
-#include "lir/graph/Constant.hpp"
+#include "lir/graph/Constant.h"
 
 #include <cstdint>
 

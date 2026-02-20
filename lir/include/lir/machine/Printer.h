@@ -6,9 +6,9 @@
 #ifndef LIR_PRINTER_H_
 #define LIR_PRINTER_H_
 
-#include "lir/machine/Machine.hpp"
-#include "lir/machine/MachineObject.hpp"
-#include "lir/machine/MachineOp.hpp"
+#include "lir/machine/Machine.h"
+#include "lir/machine/MachineObject.h"
+#include "lir/machine/MachineOp.h"
 
 namespace lir {
 

@@ -6,9 +6,9 @@
 #ifndef LIR_MACHINE_FUNCTION_H_
 #define LIR_MACHINE_FUNCTION_H_
 
-#include "lir/machine/FunctionABI.hpp"
-#include "lir/machine/MachineData.hpp"
-#include "lir/machine/MachineLabel.hpp"
+#include "lir/machine/FunctionABI.h"
+#include "lir/machine/MachineData.h"
+#include "lir/machine/MachineLabel.h"
 
 #include <cstdint>
 #include <vector>

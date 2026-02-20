@@ -6,8 +6,8 @@
 #ifndef LOVELACE_IR_LOWERING_PASS_H_
 #define LOVELACE_IR_LOWERING_PASS_H_
 
-#include "lir/analysis/Pass.hpp"
-#include "lir/machine/MachineObject.hpp"
+#include "lir/analysis/Pass.h"
+#include "lir/machine/MachineObject.h"
 
 namespace lir {
 
