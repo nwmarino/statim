@@ -3,14 +3,9 @@
 *.s
 *.mir
 *.rmir
-arrays
-casting
 enums
-functions
 if
-integer_arithmetic
-pointer_arithmetic
-return_zero
-runes
+logic
+loops
+math
 structs
-until_loop
