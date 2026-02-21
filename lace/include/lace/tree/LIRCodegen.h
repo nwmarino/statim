@@ -3,8 +3,8 @@
 //  All rights reserved.
 //
 
-#ifndef LOVELACE_LIR_CODEGEN_H_
-#define LOVELACE_LIR_CODEGEN_H_
+#ifndef LACE_LIR_CODEGEN_H_
+#define LACE_LIR_CODEGEN_H_
 
 //
 //  This header file declares the LIRCodegen class, whom instances thereof 
@@ -47,12 +47,18 @@ public:
       : m_options(options), m_mach(cfg.get_machine()), m_ast(ast), m_cfg(cfg),
         m_builder(cfg) {}
 
+    LIRCodegen(const LIRCodegen&) = delete;
+    void operator=(const LIRCodegen&) = delete;
+
+    LIRCodegen(LIRCodegen&&) noexcept = delete;
+    void operator=(LIRCodegen&&) noexcept = delete;
+
     /// Run the code generation process.
     void run();
 
 private:
     /// Lower the given lace |type| to its LIR equivelant, where possible.
-    lir::Type* to_lir_type(const QualType& type);
+    lir::Type* to_lir_type(const Type* type);
 
     lir::Function* get_function(const std::string& name, lir::Type* result = nullptr,
                                 const std::vector<lir::Type*>& args = {});
@@ -64,27 +70,27 @@ private:
     ///
     /// Ultimately, the type of the returned value will be a 8-bit integer 
     /// representation a.k.a boolean.
-    lir::Value* inject_comparison(lir::Value *value);
+    lir::Value* inject_comparison(lir::Value* value);
 
     /// Generate an empty lowering for the given |defn|.
-    void codegen_initial_definition(const Defn *defn);
+    void codegen_initial_definition(const Defn* defn);
 
     /// Generate code for the body of the given |defn|. 
     /// Assumes that the definition has been lowered already, and exists by 
     /// name in the graph.
-    void codegen_lowered_definition(const Defn *defn);
+    void codegen_lowered_definition(const Defn* defn);
 
-    lir::Function* codegenInitialFunction(const FunctionDefn* defn);
-    lir::Function *codegen_lowered_function(const FunctionDefn *defn);
+    lir::Function* codegen_initial_function(const FunctionDefn* defn);
+    lir::Function* codegen_lowered_function(const FunctionDefn* defn);
 
-    lir::Global *codegen_initial_global(const VariableDefn *defn);
-    lir::Global *codegen_lowered_global(const VariableDefn *defn);
+    lir::Global* codegen_initial_global(const VariableDefn* defn);
+    lir::Global* codegen_lowered_global(const VariableDefn* defn);
 
-    lir::StructType *codegen_initial_structure(const StructDefn *defn);
-    lir::StructType *codegen_lowered_structure(const StructDefn *defn);
+    lir::StructType* codegen_initial_structure(const StructDefn* defn);
+    lir::StructType* codegen_lowered_structure(const StructDefn* defn);
 
     /// Generate a LIR local for the given local variable |defn|.
-    lir::Local *codegen_local_variable(const VariableDefn *defn);
+    lir::Local* codegen_local_variable(const VariableDefn* defn);
 
     /// Generate a value (rvalue) for the given |expr|.
     lir::Value* codegen_valued_expression(const Expr* expr);
@@ -180,4 +186,4 @@ private:
 
 } // namespace lace
 
-#endif // LOVELACE_LIR_CODEGEN_H_
+#endif // LACE_LIR_CODEGEN_H_

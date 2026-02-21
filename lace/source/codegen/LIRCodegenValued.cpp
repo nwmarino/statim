@@ -28,7 +28,7 @@ lir::Value* LIRCodegen::codegen_valued_expression(const Expr* expr) {
     } else if (auto string = dynamic_cast<const StringLiteral*>(expr)) {
         return codegen_literal_string(string);
     } else if (auto binary = dynamic_cast<const BinaryOp*>(expr)) {
-        switch (binary->get_operator()) 
+        switch (binary->op()) 
         {
         case BinaryOp::Assign:
             return codegen_assignment(binary);
@@ -62,7 +62,7 @@ lir::Value* LIRCodegen::codegen_valued_expression(const Expr* expr) {
             assert(false && "unknown binary operator!");
         }
     } else if (auto unary = dynamic_cast<const UnaryOp*>(expr)) {
-        switch (unary->get_operator()) 
+        switch (unary->op()) 
         {
         case UnaryOp::Negate:
             return codegen_negation(unary);
@@ -96,51 +96,49 @@ lir::Value* LIRCodegen::codegen_valued_expression(const Expr* expr) {
     return nullptr;
 }
 
-lir::Value *LIRCodegen::codegen_valued_access(const AccessExpr *expr) {
-    lir::Value *addr = codegen_addressed_access(expr);
+lir::Value* LIRCodegen::codegen_valued_access(const AccessExpr* expr) {
+    lir::Value* addr = codegen_addressed_access(expr);
     assert(addr);
 
-    return m_builder.build_load(to_lir_type(expr->get_type()), addr);
+    return m_builder.build_load(to_lir_type(expr->type()), addr);
 }
 
-lir::Value *LIRCodegen::codegen_valued_reference(const RefExpr *expr) {
-    assert(expr->get_defn());
+lir::Value* LIRCodegen::codegen_valued_reference(const RefExpr* expr) {
+    assert(expr->is_resolved());
 
-    switch (expr->get_defn()->get_kind()) {
-        case Defn::Parameter:
-        case Defn::Variable: {
-            lir::Value *addr = codegen_addressed_reference(expr);
-            assert(addr);
+    if (auto var = dynamic_cast<const VariableDefn*>(expr->defn())) {
+        lir::Value *addr = codegen_addressed_reference(expr);
+        assert(addr);
 
-            return m_builder.build_load(to_lir_type(expr->get_type()), addr);
-        }
-    
-        case Defn::Variant: {
-            auto var = static_cast<const VariantDefn*>(expr->get_defn());
-            return lir::Integer::get(
-                m_cfg, 
-                to_lir_type(expr->get_type()), 
-                var->get_value()
-            );
-        }
+        return m_builder.build_load(to_lir_type(expr->type()), addr);
+    } else if (auto param = dynamic_cast<const ParameterDefn*>(expr->defn())) {
+        lir::Value *addr = codegen_addressed_reference(expr);
+        assert(addr);
 
-        default:
-            assert(false && "unable to generate valued reference!");
+        return m_builder.build_load(to_lir_type(expr->type()), addr);
+    } else if (auto var = dynamic_cast<const VariantDefn*>(expr->defn())) {
+        return lir::Integer::get(
+            m_cfg, 
+            to_lir_type(expr->type()), 
+            var->get_value()
+        );
     }
+
+    return nullptr;
 }
 
-lir::Value *LIRCodegen::codegen_valued_subscript(const SubscriptExpr *expr) {
-    lir::Value *addr = codegen_addressed_subscript(expr);
+lir::Value* LIRCodegen::codegen_valued_subscript(const SubscriptExpr* expr) {
+    lir::Value* addr = codegen_addressed_subscript(expr);
     assert(addr);
 
-    return m_builder.build_load(to_lir_type(expr->get_type()), addr);
+    return m_builder.build_load(to_lir_type(expr->type()), addr);
 }
 
 lir::Value* LIRCodegen::codegen_valued_dereference(const UnaryOp* expr) {
     lir::Value* ptr = codegen_addressed_dereference(expr);
     assert(ptr);
 
-    return m_builder.build_load(to_lir_type(expr->get_type()), ptr);
+    return m_builder.build_load(to_lir_type(expr->type()), ptr);
 }
 
 lir::Value* LIRCodegen::codegen_literal_boolean(const BoolLiteral* expr) {
@@ -154,7 +152,7 @@ lir::Value* LIRCodegen::codegen_literal_boolean(const BoolLiteral* expr) {
 lir::Value* LIRCodegen::codegen_literal_integer(const IntegerLiteral* expr) {
     return lir::Integer::get(
         m_cfg,
-        to_lir_type(expr->get_type()),
+        to_lir_type(expr->type()),
         expr->get_value()
     );
 }
@@ -170,25 +168,25 @@ lir::Value* LIRCodegen::codegen_literal_character(const CharLiteral* expr) {
 lir::Value* LIRCodegen::codegen_literal_float(const FloatLiteral* expr) {
     return m_builder.build_const(lir::Float::get(
         m_cfg,
-        to_lir_type(expr->get_type()),
+        to_lir_type(expr->type()),
         static_cast<double>(expr->get_value())
     ));
 }
 
 lir::Value* LIRCodegen::codegen_literal_null(const NullLiteral* expr) {
-    return lir::Null::get(m_cfg, to_lir_type(expr->get_type()));
+    return lir::Null::get(m_cfg, to_lir_type(expr->type()));
 }
 
 lir::Value* LIRCodegen::codegen_literal_string(const StringLiteral* expr) {
-    return m_builder.build_string(lir::String::get(m_cfg, expr->get_value()));
+    return m_builder.build_string(lir::String::get(m_cfg, expr->value()));
 }
 
 lir::Value* LIRCodegen::codegen_type_cast(const CastExpr* expr) {
-    lir::Value* value = codegen_valued_expression(expr->get_expr());
+    lir::Value* value = codegen_valued_expression(expr->expr());
     assert(value);
 
     lir::Type* source = value->get_type();
-    lir::Type* dest = to_lir_type(expr->get_type());
+    lir::Type* dest = to_lir_type(expr->type());
 
     if (source->is_integer_type()) {
         if (dest->is_integer_type()) {
@@ -209,7 +207,7 @@ lir::Value* LIRCodegen::codegen_type_cast(const CastExpr* expr) {
                 return m_builder.build_itrunc(dest, value);
             }
             
-            if (expr->get_expr()->get_type()->isSignedInt()) {
+            if (expr->expr()->type()->is_signed_integer()) {
                 return m_builder.build_sext(dest, value);
             } else {
                 return m_builder.build_zext(dest, value);
@@ -220,7 +218,7 @@ lir::Value* LIRCodegen::codegen_type_cast(const CastExpr* expr) {
                 return m_builder.build_const(lir::Float::get(m_cfg, dest, integer->get_value()));
             }
 
-            if (expr->get_expr()->get_type()->isSignedInt()) {
+            if (expr->expr()->type()->is_signed_integer()) {
                 return m_builder.build_s2f(dest, value);
             } else {
                 return m_builder.build_u2f(dest, value);
@@ -242,7 +240,7 @@ lir::Value* LIRCodegen::codegen_type_cast(const CastExpr* expr) {
                 return lir::Integer::get(m_cfg, dest, fp->get_value());
             }
 
-            if (expr->get_type()->isSignedInt()) {
+            if (expr->type()->is_signed_integer()) {
                 return m_builder.build_f2s(dest, value);
             } else {
                 return m_builder.build_f2u(dest, value);
@@ -287,19 +285,18 @@ lir::Value* LIRCodegen::codegen_type_cast(const CastExpr* expr) {
         }
     }
     
-    log::fatal("unsupported type cast", 
-        log::Span(m_ast->get_file(), expr->get_span()));
+    log::fatal("unsupported type cast", log::Span(m_ast->get_file(), expr->get_span()));
 }
 
 lir::Value* LIRCodegen::codegen_function_call(const CallExpr* expr) {
-    lir::Value* callee = codegen_addressed_expression(expr->get_callee());
+    lir::Value* callee = codegen_addressed_expression(expr->callee());
     assert(callee);
 
     std::vector<lir::Value*> args = {};
     args.reserve(expr->num_args());
 
     lir::Value* aret = nullptr;
-    lir::Type* result_type = to_lir_type(expr->get_type());
+    lir::Type* result_type = to_lir_type(expr->type());
     if (!m_mach.is_scalar(result_type)) {
         if (m_state.place) {
             aret = m_state.place;
@@ -315,9 +312,9 @@ lir::Value* LIRCodegen::codegen_function_call(const CallExpr* expr) {
         args.push_back(aret);
     }
 
-    for (Expr* arg : expr->get_args()) {
+    for (Expr* arg : expr->args()) {
         lir::Value* value = nullptr;
-        lir::Type* type = to_lir_type(arg->get_type());
+        lir::Type* type = to_lir_type(arg->type());
 
         if (!m_mach.is_scalar(type)) {
             value = codegen_addressed_expression(arg);
@@ -340,13 +337,13 @@ lir::Value* LIRCodegen::codegen_function_call(const CallExpr* expr) {
 }
 
 lir::Value* LIRCodegen::codegen_parentheses(const ParenExpr* expr) {
-    return codegen_valued_expression(expr->get_expr());
+    return codegen_valued_expression(expr->expr());
 }
 
 lir::Value* LIRCodegen::codegen_sizeof(const SizeofExpr* expr) {
     return lir::Integer::get(
         m_cfg,
-        to_lir_type(expr->get_type()),
-        (m_mach.get_type_size(to_lir_type(expr->get_target_type())) / 8)
+        to_lir_type(expr->type()),
+        (m_mach.get_type_size(to_lir_type(expr->target())) / 8)
     );
 }

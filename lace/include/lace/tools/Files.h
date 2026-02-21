@@ -10,16 +10,13 @@
 //  This header file declares some useful tooling functions related to file I/O.
 //
 
-#include "lace/core/Common.h"
-
 #include <string>
 
 namespace lace {
 
 /// Read in the contents of the file at the given |path| to |contents.
 /// Returns the result of the operation.
-[[nodiscard]]
-Result readFile(const std::string& path, std::string& contents);
+[[nodiscard]] bool readFile(const std::string& path, std::string& contents);
 
 /// Returns the given |path| without its last file extension.
 std::string withoutExtension(const std::string& path);

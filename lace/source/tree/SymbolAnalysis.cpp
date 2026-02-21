@@ -17,38 +17,42 @@ using namespace lace;
 SymbolAnalysis::SymbolAnalysis(Options& options) : VisitorBase(options) {}
 
 void SymbolAnalysis::visit(VariableDefn& node) {
-    if (!resolveType(node.get_type())) {
-        log::error("unresolved type: " + node.get_type().string(), 
-            log::Span(m_ast->get_file(), node.get_span()));
-    }
+    const log::Span span = { m_ast->get_file(), node.get_span() };
+    Type* type = resolve_type(node.type());
+    if (!type)
+        log::error("unresolved type: " + node.type()->string(), span);
+    
+    node.set_type(type);
 
     VisitorBase::visit(node);
 }
 
 void SymbolAnalysis::visit(AccessExpr& node) {
     const log::Span span = log::Span(m_ast->get_file(), node.get_span());
-    const std::string& name = node.get_name();
+    const std::string& name = node.name();
 
     VisitorBase::visit(node);
 
-    // Check that the base type is a struct.
-    QualType base_type = node.get_base()->get_type();
-    if (base_type->isPointer())
-        base_type = static_cast<const PointerType*>(base_type.getType())->pointee();
+    // Check that the base type is a struct or a pointer to one.
+    Type* base_type = node.base()->type();
+    if (auto ptr = dynamic_cast<PointerType*>(base_type))
+        base_type = ptr->pointee();
 
-    if (!base_type->isStruct())
+    StructType* struct_type = dynamic_cast<StructType*>(base_type);
+    if (!struct_type)
         log::fatal("'.' base must be a struct or a pointer to one", span);
 
     // Resolve the struct definition from the base type.
-    const StructDefn* struct_defn = static_cast<const StructType*>(base_type.getType())->getDefn();
+    StructDefn* struct_defn = struct_type->defn();
+    assert(struct_defn);
 
     // Resolve the target field from the struct definition.
-    const FieldDefn* field = struct_defn->get_field(name);
+    FieldDefn* field = struct_defn->get_field(name);
     if (!field)
         log::fatal("field '" + name + "' does not exist", span);
 
     node.set_field(field);
-    node.set_type(field->get_type());
+    node.set_type(field->type());
 }
 
 void SymbolAnalysis::visit(CallExpr& node) {
@@ -60,15 +64,17 @@ void SymbolAnalysis::visit(CallExpr& node) {
 void SymbolAnalysis::visit(CastExpr& node) {
     VisitorBase::visit(node);
 
-    if (!resolveType(node.get_type())) {
-        log::fatal("unresolved type: " + node.get_type().string(), 
-            log::Span(m_ast->get_file(), node.get_span()));
-    }
+    const log::Span span = { m_ast->get_file(), node.get_span() };
+    Type* type = resolve_type(node.type());
+    if (!type)
+        log::error("unresolved type: " + node.type()->string(), span);
+    
+    node.set_type(type);
 }
 
 void SymbolAnalysis::visit(RefExpr& node) {
     const log::Span span = log::Span(m_ast->get_file(), node.get_span());
-    const std::string& name = node.get_name();
+    const std::string& name = node.name();
 
     NamedDefn* named_defn = m_scope->get(name);
     if (!named_defn)
@@ -79,35 +85,40 @@ void SymbolAnalysis::visit(RefExpr& node) {
         log::fatal("invalid reference: " + name, span);
 
     node.set_defn(value_defn);
-    node.set_type(value_defn->get_type());
+    node.set_type(value_defn->type());
 }
 
 void SymbolAnalysis::visit(SizeofExpr& node) {
-    if (!resolveType(node.get_target_type())) {
-        log::fatal("unresolved type: " + node.get_target_type().string(), 
-            log::Span(m_ast->get_file(), node.get_span()));
-    }
+    const log::Span span = { m_ast->get_file(), node.get_span() };
+    Type* type = resolve_type(node.target());
+    if (!type)
+        log::error("unresolved type: " + node.target()->string(), span);
+    
+    node.set_target(type);
 }
 
 void SymbolAnalysis::visit(StructInitExpr& node) {
-    const log::Span span = log::Span(m_ast->get_file(), node.get_span());
+    const log::Span span = { m_ast->get_file(), node.get_span() };
+    Type* type = resolve_type(node.type());
+    if (!type)
+        log::error("unresolved type: " + node.type()->string(), span);
     
-    if (!resolveType(node.get_type()))
-        log::fatal("unresolved type: " + node.get_type()->string(), span);
+    node.set_type(type);
 
     VisitorBase::visit(node);
 
     // Check that the base type is a struct.
-    const QualType base_type = node.get_type();
-    if (!base_type->isStruct())
+    StructType* struct_type = dynamic_cast<StructType*>(type);
+    if (!struct_type)
         log::fatal("'.' base must be a struct or a pointer to one", span);
 
     // Resolve the struct definition from the base type.
-    auto defn = (static_cast<const StructType*>(base_type.getType()))->getDefn();
+    StructDefn* struct_defn = struct_type->defn();
+    assert(struct_defn);
 
     // Ensure that each field referenced by the initializer exists in the struct.
     for (auto& [field, expr] : node.fields()) {
-        if (!defn->has_field(field))
+        if (!struct_defn->has_field(field))
             log::fatal("unknown field: " + field, span);
     }
 }

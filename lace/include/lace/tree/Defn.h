@@ -3,15 +3,14 @@
 //  All rights reserved.
 //
 
-#ifndef LOVELACE_DEFN_H_
-#define LOVELACE_DEFN_H_
+#ifndef LACE_DEFN_H_
+#define LACE_DEFN_H_
 
 //
 //  This header file declares a set of polymorphic classes for representing 
 //  language definitions in the abstract syntax tree.
 //
 
-#include "lace/core/Common.h"
 #include "lace/tree/AST.h"
 #include "lace/tree/Rune.h"
 #include "lace/tree/Type.h"
@@ -33,28 +32,11 @@ class Type;
 
 /// Base class for all definition types in the abstract syntax tree.
 class Defn {
-public:
-    /// The different kinds of definitions.
-    enum Kind : uint32_t {
-        Alias,
-        Enum,
-        Field,
-        Function,
-        Load,
-        Parameter,
-        Struct,
-        Variable,
-        Variant,
-    };
-
 protected:
-    /// The kind of definition this is.
-    const Kind m_kind;
-
     /// The span of source code that this definition covers.
     const SourceSpan m_span;
 
-    Defn(Kind kind, SourceSpan span) : m_kind(kind), m_span(span) {}
+    Defn(SourceSpan span) : m_span(span) {}
 
 public:
     virtual ~Defn() = default;
@@ -67,35 +49,6 @@ public:
 
     virtual void accept(VisitorBase& visitor) = 0;
 
-    Kind get_kind() const { return m_kind; }
-
-    /// Test if this is an alias definition.
-    bool is_alias() const { return m_kind == Alias; }
-
-    /// Test if this is an enum definition.
-    bool is_enum() const { return m_kind == Enum; }
-
-    /// Test if this is a field definition.
-    bool is_field() const { return m_kind == Field; }
-
-    /// Test if this is a function definition.
-    bool is_function() const { return m_kind == Function; }
-
-    /// Test if this is a load definition.
-    bool is_load() const { return m_kind == Load; }
-
-    /// Test if this is a parameter definition.
-    bool is_parameter() const { return m_kind == Parameter; }
-
-    /// Test if this is a struct definition.
-    bool is_struct() const { return m_kind == Struct; }
-
-    /// Test if this is a variable definition.
-    bool is_variable() const { return m_kind == Variable; }
-
-    /// Test if this is a variant definition.
-    bool is_variant() const { return m_kind == Variant; }
-
     SourceSpan get_span() const { return m_span; }
 };
 
@@ -104,7 +57,7 @@ class LoadDefn : public Defn {
     std::string m_path;
 
     LoadDefn(SourceSpan span, const std::string& path) 
-      : Defn(Defn::Load, span), m_path(path) {}
+      : Defn(span), m_path(path) {}
 
 public:
     [[nodiscard]]
@@ -121,20 +74,25 @@ public:
 
     void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
+    /// Set the target file path of this load to |path|.
     void set_path(const std::string& path) { m_path = path; }
-    const std::string& get_path() const { return m_path; }
-    std::string& get_path() { return m_path; }
+
+    /// Returns the file path which this load targets.
+    const std::string& path() const { return m_path; }
+    std::string& path() { return m_path; }
 };
 
 /// Base class for definitions with a name and potential rune set.
 class NamedDefn : public Defn {
+public:
+    using Runes = std::vector<Rune*>;
+
 protected:
     std::string m_name;
-    std::vector<Rune*> m_runes;
+    Runes m_runes;
 
-    NamedDefn(Defn::Kind kind, SourceSpan span, const std::string& name, 
-              const std::vector<Rune*>& runes)
-      : Defn(kind, span), m_name(name), m_runes(runes) {}
+    NamedDefn(SourceSpan span, const std::string& name, const Runes& runes)
+      : Defn(span), m_name(name), m_runes(runes) {}
 
 public:
     virtual ~NamedDefn() override;
@@ -145,64 +103,76 @@ public:
     NamedDefn(NamedDefn&&) noexcept = delete;
     void operator=(NamedDefn&&) noexcept = delete;
 
+    /// Sets the name of this definition to |name|.
     void set_name(const std::string& name) { m_name = name; }
-    const std::string& get_name() const { return m_name; }
-    std::string& get_name() { return m_name; }
 
-    const std::vector<Rune*>& get_runes() const { return m_runes; }
-    std::vector<Rune*>& get_runes() { return m_runes; }
+    /// Returns the name of this definition.
+    const std::string& name() const { return m_name; }
+    std::string& name() { return m_name; }
 
-    void addRune(Rune* rune) {
-        if (!hasRune(rune->getType()))
+    /// Returns the rune decorator list of this definiton.
+    const Runes& runes() const { return m_runes; }
+    Runes& runes() { return m_runes; }
+
+    /// Adds the given |rune| as a decorator to this definition, if it isn't
+    /// already in the list of active runes.
+    void add_rune(Rune* rune) {
+        if (!has_rune(rune->kind()))
             m_runes.push_back(rune);
     }
 
-    /// Returns the rune with the given |type| if this definition has one, and null otherwise.
-    const Rune* getRune(Rune::Type type) const {
+    /// Returns the rune with the given |kind| if this definition has one, and 
+    /// null otherwise.
+    const Rune* get_rune(Rune::Kind kind) const {
         for (Rune* rune : m_runes) {
-            if (rune->getType() == type)
+            if (rune->has_kind(kind))
                 return rune;
         }
 
         return nullptr;
     }
 
-    Rune* get_rune(Rune::Type type) {
-        return const_cast<Rune*>(static_cast<const NamedDefn*>(this)->get_rune(type));
+    Rune* get_rune(Rune::Kind kind) {
+        return const_cast<Rune*>(
+            static_cast<const NamedDefn*>(this)->get_rune(kind));
     }
 
+    /// Returns the |i|-th decorator rune of this definition.
     const Rune* get_rune(uint32_t i) const {
-        assert(i < num_runes() && "index out of bounds!");
+        assert(i < m_runes.size() && "index out of bounds!");
         return m_runes[i];
     }
 
     Rune* get_rune(uint32_t i) {
-        assert(i < num_runes() && "index out of bounds!");
+        assert(i < m_runes.size() && "index out of bounds!");
         return m_runes[i];
     }
     
-    /// Test if this definition has a rune of the given |type|.
-    Result hasRune(Rune::Type type) const {
+    /// Test if this definition has a rune of the given |kind|.
+    bool has_rune(Rune::Kind kind) const {
         for (Rune* rune : m_runes) {
-            if (rune->hasType(type))
+            if (rune->has_kind(kind))
                 return true;
         }
             
         return false;
     }
 
+    /// Returns the number of decorator runes this definition has.
     uint32_t num_runes() const { return m_runes.size(); }
+
+    /// Test if this definition has any decorator runes.
     bool has_runes() const { return !m_runes.empty(); }
 };
 
 /// Base class for all named definitions that are typed and produce a value.
 class ValueDefn : public NamedDefn {
 protected:
-    QualType m_type;
+    Type* m_type;
 
-    ValueDefn(Defn::Kind kind, SourceSpan span, const std::string& name, 
-              const std::vector<Rune*>& runes, const QualType& type)
-      : NamedDefn(kind, span, name, runes), m_type(type) {}
+    ValueDefn(SourceSpan span, const std::string& name, const Runes& runes, 
+              Type* type)
+      : NamedDefn(span, name, runes), m_type(type) {}
 
 public:
     virtual ~ValueDefn() = default;
@@ -213,9 +183,12 @@ public:
     ValueDefn(ValueDefn&&) noexcept = delete;
     void operator=(ValueDefn&&) noexcept = delete;
 
-    void set_type(const QualType& type) { m_type = type; }
-    const QualType& get_type() const { return m_type; }
-    QualType& get_type() { return m_type; }
+    /// Set the type of this definition to |type|.
+    void set_type(Type* type) { m_type = type; }
+
+    /// Returns the type of this definition.
+    const Type* type() const { return m_type; }
+    Type* type() { return m_type; }
 };
 
 /// Represents a variable definition, either local or global.
@@ -228,16 +201,15 @@ class VariableDefn final : public ValueDefn {
     // If this is a global variable.
     bool m_global;
 
-    VariableDefn(SourceSpan span, const std::string& name, const std::vector<Rune*>& runes, 
-                 const QualType& type, Expr* init, bool global)
-      : ValueDefn(Defn::Variable, span, name, runes, type), m_init(init), 
-        m_global(global) {}
+    VariableDefn(SourceSpan span, const std::string& name, const Runes& runes, 
+                 Type* type, Expr* init, bool global)
+      : ValueDefn(span, name, runes, type), m_init(init), m_global(global) {}
 
 public:
     [[nodiscard]]
     static VariableDefn* create(AST::Context& ctx, SourceSpan span, 
-                                const std::string& name, const std::vector<Rune*>& runes, 
-                                const QualType& type, Expr* init, bool global);
+                                const std::string& name, const Runes& runes, 
+                                Type* type, Expr* init, bool global);
 
     ~VariableDefn() override;
 
@@ -249,25 +221,29 @@ public:
 
     void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
-    const Expr* get_init() const { return m_init; }
-    Expr* get_init() { return m_init; }
+    /// Returns the initializing expression of this variable, if it has one,
+    /// and null otherwise.
+    const Expr* init() const { return m_init; }
+    Expr* init() { return m_init; }
 
+    /// Test if this variable has an initializing expression.
     bool has_init() const { return m_init != nullptr; }
 
+    /// Test if this variable is global i.e. top-level.
     bool is_global() const { return m_global; }
 };
 
 /// Represents a function parameter definition.
 class ParameterDefn final : public ValueDefn {
-    ParameterDefn(SourceSpan span, const std::string& name, const std::vector<Rune*>& runes,
-                  const QualType& type)
-      : ValueDefn(Defn::Parameter, span, name, runes, type) {}
-      
+    ParameterDefn(SourceSpan span, const std::string& name, const Runes& runes, 
+                  Type* type)
+      : ValueDefn(span, name, runes, type) {}
+
 public:
     [[nodiscard]]
     static ParameterDefn* create(AST::Context& ctx, SourceSpan span, 
-                                 const std::string& name, const std::vector<Rune*>& runes,
-                                 const QualType& type);
+                                 const std::string& name, const Runes& runes, 
+                                 Type* type);
 
     ~ParameterDefn() = default;
 
@@ -299,18 +275,18 @@ private:
     /// The body of the function, if it has one.
     BlockStmt* m_body;
 
-    FunctionDefn(SourceSpan span, const std::string& name, const std::vector<Rune*>& runes, 
-                 const QualType& type, Scope* scope, const Params& params, 
+    FunctionDefn(SourceSpan span, const std::string& name, const Runes& runes, 
+                 FunctionType* type, Scope* scope, const Params& params, 
                  BlockStmt* body)
-      : ValueDefn(Defn::Function, span, name, runes, type), m_scope(scope), 
-        m_params(params), m_body(body) {}
+      : ValueDefn(span, name, runes, type), m_scope(scope), m_params(params), 
+        m_body(body) {}
 
 public:
     [[nodiscard]]
     static FunctionDefn* create(AST::Context& ctx, SourceSpan span, 
-                                const std::string& name, const std::vector<Rune*>& runes, 
-                                const QualType& type, Scope* scope, 
-                                const Params& params, BlockStmt* body = nullptr);
+                                const std::string& name, const Runes& runes, 
+                                FunctionType* type, Scope* scope, const Params& params, 
+                                BlockStmt* body = nullptr);
 
     ~FunctionDefn() override;
 
@@ -322,53 +298,80 @@ public:
 
     void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
-    /// Test if this is the main function, i.e. a function named `main`.
-    bool is_main() const { return get_name() == "main"; }
+    /// Set the type of this definition to |type|.
+    void set_type(FunctionType* type) { m_type = type; }
 
-    const QualType& get_return_type() const {
-        return static_cast<const FunctionType*>(m_type.getType())->result();
+    /// Returns the type of this definition.
+    const FunctionType* type() const { return static_cast<const FunctionType*>(m_type); }
+    FunctionType* type() { return static_cast<FunctionType*>(m_type); }
+
+    /// Test if this is the main function i.e. a function named `main`.
+    bool is_main() const { return name() == "main"; }
+
+    /// Returns the type which this function results in.
+    const Type* get_return_type() const {
+        return static_cast<const FunctionType*>(m_type)->result();
     }
 
-    const Scope* get_scope() const { return m_scope; }
-    Scope* get_scope() { return m_scope; }
+    Type* get_return_type() {
+        return static_cast<FunctionType*>(m_type)->result();
+    }
 
+    /// Returns the scope tree of this function.
+    const Scope* scope() const { return m_scope; }
+    Scope* scope() { return m_scope; }
+
+    /// Set the parameter list of this function to |params|>
     void set_params(const Params& params) { m_params = params; }
-    const Params& get_params() const { return m_params; }
-    Params& get_params() { return m_params; }
 
+    /// Returns the parameter list of this function.
+    const Params& params() const { return m_params; }
+    Params& params() { return m_params; }
+
+    /// Returns the |i|-th parameter of this function.
     const ParameterDefn* get_param(uint32_t i) const {
-        assert(i < num_params() && "index out of bounds!");
+        assert(i < m_params.size() && "index out of bounds!");
         return m_params[i];
     }
 
     ParameterDefn* get_param(uint32_t i) {
-        assert(i < num_params() && "index out of bounds!");
+        assert(i < m_params.size() && "index out of bounds!");
         return m_params[i];
     }
 
+    /// Returns the number of parameters in this function.
     uint32_t num_params() const { return m_params.size(); }
+
+    /// Test if this function has any parameters.
     bool has_params() const { return !m_params.empty(); }
 
+    /// Set the body statement of this function to |body|.
     void set_body(BlockStmt* body) { m_body = body; }
-    const BlockStmt* get_body() const { return m_body; }
-    BlockStmt* get_body() { return m_body; }
 
+    /// Returns the body statement of this function.
+    const BlockStmt* body() const { return m_body; }
+    BlockStmt* body() { return m_body; }
+
+    /// Test if this statement has a body.
     bool has_body() const { return m_body != nullptr; }
+
+    /// Test if this function is empty i.e. does not have a body statement.
+    [[nodiscard]] bool empty() const { return m_body == nullptr; }
 };
 
 /// Represents a field definition within a structure.
 class FieldDefn final : public ValueDefn {
     uint32_t m_index;
 
-    FieldDefn(SourceSpan span, const std::string& name, const std::vector<Rune*>& runes, 
-              const QualType& type, uint32_t index)
-      : ValueDefn(Defn::Field, span, name, runes, type), m_index(index) {}
+    FieldDefn(SourceSpan span, const std::string& name, const Runes& runes, 
+              Type* type, uint32_t index)
+      : ValueDefn(span, name, runes, type), m_index(index) {}
 
 public:
     [[nodiscard]]
     static FieldDefn* create(AST::Context& ctx, SourceSpan span, 
-                             const std::string& name, const std::vector<Rune*>& runes, 
-                             const QualType& type, uint32_t index);
+                             const std::string& name, const Runes& runes, 
+                             Type* type, uint32_t index);
 
     ~FieldDefn() = default;
 
@@ -380,22 +383,23 @@ public:
 
     void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
+    /// Returns the index of this field in its parent structure.
     uint32_t get_index() const { return m_index; }
 };
 
 /// Represents an enum variant definition.
 class VariantDefn final : public ValueDefn {
-    const int64_t m_value;
+    int64_t m_value;
 
-    VariantDefn(SourceSpan span, const std::string& name, const std::vector<Rune*>& runes, 
-                const QualType& type, int64_t value)
-      : ValueDefn(Defn::Variant, span, name, runes, type), m_value(value) {}
+    VariantDefn(SourceSpan span, const std::string& name, const Runes& runes, 
+                Type* type, int64_t value)
+      : ValueDefn(span, name, runes, type), m_value(value) {}
 
 public:
     [[nodiscard]]
     static VariantDefn* create(AST::Context& ctx, SourceSpan span, 
-                               const std::string& name, const std::vector<Rune*>& runes, 
-                               const QualType& type, int64_t value);
+                               const std::string& name, const Runes& runes, 
+                               Type* type, int64_t value);
 
     ~VariantDefn() = default;
 
@@ -407,18 +411,19 @@ public:
 
     void accept(VisitorBase& visitor) override { visitor.visit(*this); }
     
+    /// Returns the numeric value of this enum variant.
     int64_t get_value() const { return m_value; }
 };
 
 /// Base class for all named definitions that define a new type.
 class TypeDefn : public NamedDefn {
 protected:
-    /// The type defined by this definition.
-    const Type* m_type;
+    /// The type which this definition defines.
+    Type* m_type;
 
-    TypeDefn(Defn::Kind kind, SourceSpan span, const std::string& name, 
-             const std::vector<Rune*>& runes, const Type* type)
-      : NamedDefn(kind, span, name, runes), m_type(type) {}
+    TypeDefn(SourceSpan span, const std::string& name, const Runes& runes, 
+             Type* type)
+      : NamedDefn(span, name, runes), m_type(type) {}
 
 public:
     virtual ~TypeDefn() = default;
@@ -429,21 +434,25 @@ public:
     TypeDefn(TypeDefn&&) noexcept = delete;
     void operator=(TypeDefn&&) noexcept = delete;
 
-    void set_type(const Type* type) { m_type = type; }
-    const Type* get_type() const { return m_type; }
+    /// Set the type which this definition defines to |type|.
+    void set_type(Type* type) { m_type = type; }
+
+    /// Returns the type which this definition defines.
+    const Type* type() const { return m_type; }
+    Type* type() { return m_type; }
 };
 
 /// Represents a type alias definition.
 class AliasDefn final : public TypeDefn {
-    AliasDefn(SourceSpan span, const std::string& name, const std::vector<Rune*>& runes, 
-              const Type* type)
-      : TypeDefn(Defn::Alias, span, name, runes, type) {}
+    AliasDefn(SourceSpan span, const std::string& name, const Runes& runes, 
+              Type* type)
+      : TypeDefn(span, name, runes, type) {}
 
 public:
     [[nodiscard]]
     static AliasDefn* create(AST::Context& ctx, SourceSpan span, 
-                             const std::string& name, const std::vector<Rune*>& runes, 
-                             const Type* type);
+                             const std::string& name, const Runes& runes, 
+                             Type* type);
 
     ~AliasDefn() = default;
 
@@ -454,25 +463,28 @@ public:
     void operator=(AliasDefn&&) noexcept = delete;
 
     void accept(VisitorBase& visitor) override { visitor.visit(*this); }
+
+    const AliasType* type() const { return static_cast<const AliasType*>(m_type); }
+    AliasType* type() { return static_cast<AliasType*>(m_type); }
 };
 
 /// Represents a structure type definition.
 class StructDefn final : public TypeDefn {
 public:
     using Fields = std::vector<FieldDefn*>;
-    
+
 private:
     Fields m_fields = {};
 
-    StructDefn(SourceSpan span, const std::string& name, const std::vector<Rune*>& runes, 
-               const Type* type)
-      : TypeDefn(Defn::Struct, span, name, runes, type) {}
+    StructDefn(SourceSpan span, const std::string& name, const Runes& runes, 
+               Type* type)
+      : TypeDefn(span, name, runes, type) {}
       
 public:
     [[nodiscard]]
     static StructDefn* create(AST::Context& ctx, SourceSpan span, 
-                              const std::string& name, const std::vector<Rune*>& runes, 
-                              const Type* type);
+                              const std::string& name, const Runes& runes, 
+                              Type* type);
 
     ~StructDefn() override;
 
@@ -484,24 +496,34 @@ public:
 
     void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
-    void set_fields(const Fields& fields) { m_fields = fields; }
-    const Fields& get_fields() const { return m_fields; }
-    Fields& get_fields() { return m_fields; }
+    const StructType* type() const { return static_cast<const StructType*>(m_type); }
+    StructType* type() { return static_cast<StructType*>(m_type); }
 
+    /// Set the field list of this structore to |fields|.
+    void set_fields(const Fields& fields) { m_fields = fields; }
+
+    /// Returns the field list of this structure.
+    const Fields& fields() const { return m_fields; }
+    Fields& fields() { return m_fields; }
+
+    /// Returns the |i|-th field in this structure.
     const FieldDefn* get_field(uint32_t i) const {
-        assert(i < num_fields() && "index out of bounds!");
+        assert(i < m_fields.size() && "index out of bounds!");
         return m_fields[i];
     }
 
     FieldDefn* get_field(uint32_t i) {
-        assert(i < num_fields() && "index out of bounds!");
+        assert(i < m_fields.size() && "index out of bounds!");
         return m_fields[i];
     }
 
+    /// Returns the field in this structure with the given |name| if it exists,
+    /// and null otherwise.
     const FieldDefn* get_field(const std::string& name) const {
-        for (const auto& field : m_fields)
-            if (field->get_name() == name)
+        for (const FieldDefn* field : m_fields) {
+            if (field->name() == name)
                 return field;
+        }
 
         return nullptr;
     }
@@ -516,8 +538,14 @@ public:
         return get_field(name) != nullptr;
     }
 
+    /// Returns the number of fields in this structure.
     uint32_t num_fields() const { return m_fields.size(); }
+
+    /// Test if this structure has any fields.
     bool has_fields() const { return !m_fields.empty(); }
+
+    /// Test if this structure is empty i.e. contains no fields.
+    [[nodiscard]] bool empty() const { return m_fields.empty(); }
 };
 
 /// Represents an enumeration type definition.
@@ -528,15 +556,15 @@ public:
 private:
     Variants m_variants = {};
 
-    EnumDefn(SourceSpan span, const std::string& name, const std::vector<Rune*>& runes, 
-             const Type* type)
-      : TypeDefn(Kind::Enum, span, name, runes, type) {}
+    EnumDefn(SourceSpan span, const std::string& name, const Runes& runes, 
+             Type* type)
+      : TypeDefn(span, name, runes, type) {}
 
 public:
     [[nodiscard]]
     static EnumDefn* create(AST::Context& ctx, SourceSpan span, 
-                            const std::string& name, const std::vector<Rune*>& runes, 
-                            const Type* type);
+                            const std::string& name, const Runes& runes, 
+                            Type* type);
 
     ~EnumDefn() override;
 
@@ -548,24 +576,37 @@ public:
 
     void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
-    void set_variants(const Variants& variants) { m_variants = variants; }
-    const Variants& get_variants() const { return m_variants; }
-    Variants& get_variants() { return m_variants; }
+    const EnumType* type() const { return static_cast<const EnumType*>(m_type); }
+    EnumType* type() { return static_cast<EnumType*>(m_type); }
 
+    /// Set the variant list of this enum to |variants|.
+    void set_variants(const Variants& variants) { m_variants = variants; }
+
+    /// Returns the variant list of this enum.
+    const Variants& variants() const { return m_variants; }
+    Variants& variants() { return m_variants; }
+
+    /// Returns the |i|-th variant in this enum.
     const VariantDefn* get_variant(uint32_t i) const {
-        assert(i < num_variants() && "index out of bounds!");
+        assert(i < m_variants.size() && "index out of bounds!");
         return m_variants[i];
     }
 
     VariantDefn* get_variant(uint32_t i) {
-        assert(i < num_variants() && "index out of bounds!");
+        assert(i < m_variants.size() && "index out of bounds!");
         return m_variants[i];
     }
 
+    /// Returns the number of variants in this enum.
     uint32_t num_variants() const { return m_variants.size(); }
+
+    /// Test if this enum has any variants.
     bool has_variants() const { return !m_variants.empty(); }
+
+    /// Test if this enum is empty i.e. contains no variants.
+    [[nodiscard]] bool empty() const { return m_variants.empty(); }
 };
 
 } // namespace lace
 
-#endif // LOVELACE_DEFN_H_
+#endif // LACE_DEFN_H_

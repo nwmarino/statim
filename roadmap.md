@@ -1,27 +1,18 @@
-- Assertions
-- Desugaring IR pass to turn large immediates into separate const instructions
-- Carve out lexing, allowing for better parallelism
-- Print
+- Move AST::Context out into standalone class.
+- Rename loads to uses/imports.
+
+- $assert
 - Match statement
 - For statement
-- String, File packages
-- Aggregate initializers
+- Strings
+- File I/O
 - Dynamic memory allocator
-- Per-field destruction
 - Defer statement
-- Line-by-line debugging symbols
 - Format strings
-- Inline assembly
-- Custom enum types
-- Unnamed enums
-- Enum flags
+- Function receivers
 - Unions
-- Ternary '?' operator
-  - TernaryExpr
-  - Select instruction
 - CTFE
 - Build system
-- Namespacing
 - Full DWARF symbols
-- Type polymorphism
+- Templates
 - Slices

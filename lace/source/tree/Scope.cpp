@@ -9,10 +9,10 @@
 using namespace lace;
 
 bool Scope::add(NamedDefn* defn) {
-    if (get(defn->get_name()))
+    if (get(defn->name()))
         return false;
 
-    m_defns.emplace(defn->get_name(), defn);
+    m_defns.emplace(defn->name(), defn);
     return true;
 }
 

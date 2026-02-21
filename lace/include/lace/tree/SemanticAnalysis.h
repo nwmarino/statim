@@ -3,8 +3,8 @@
 //  All rights reserved.
 //
 
-#ifndef LOVELACE_SEMANTIC_ANALYSIS_H_
-#define LOVELACE_SEMANTIC_ANALYSIS_H_
+#ifndef LACE_SEMANTIC_ANALYSIS_H_
+#define LACE_SEMANTIC_ANALYSIS_H_
 
 //
 //  This header file declares a syntax tree analysis pass that performs
@@ -40,9 +40,9 @@ class SemanticAnalysis final : public VisitorBase {
     };
     
     Loop m_loop = None;
-    FunctionDefn* m_function = nullptr;
+    FunctionDefn* m_func = nullptr;
 
-    TypeCheckResult type_check(const QualType& actual, const QualType& expected, 
+    TypeCheckResult type_check(const Type* actual, const Type* expected, 
                                TypeCheckMode mode = AllowImplicit) const;
 
 public:
@@ -71,4 +71,4 @@ public:
 
 } // namespace lace
 
-#endif // LOVELACE_SEMANTIC_ANALYSIS_H_
+#endif // LACE_SEMANTIC_ANALYSIS_H_

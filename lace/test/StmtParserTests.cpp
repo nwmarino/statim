@@ -44,7 +44,7 @@ TEST_F(StmtParserTests, IfStatement_Positive) {
     EXPECT_NE(FD, nullptr);
     EXPECT_TRUE(FD->has_body());
 
-    BlockStmt* BS = dynamic_cast<BlockStmt*>(FD->get_body());
+    BlockStmt* BS = dynamic_cast<BlockStmt*>(FD->body());
     EXPECT_NE(BS, nullptr);
     EXPECT_EQ(BS->num_stmts(), 1);
 
@@ -52,11 +52,11 @@ TEST_F(StmtParserTests, IfStatement_Positive) {
     EXPECT_NE(IS, nullptr);
     EXPECT_FALSE(IS->has_else());
 
-    IntegerLiteral* IL = dynamic_cast<IntegerLiteral*>(IS->get_cond());
+    IntegerLiteral* IL = dynamic_cast<IntegerLiteral*>(IS->condition());
     EXPECT_NE(IL, nullptr);
     EXPECT_EQ(IL->get_value(), 5);
 
-    BlockStmt* BS2 = dynamic_cast<BlockStmt*>(IS->get_then());
+    BlockStmt* BS2 = dynamic_cast<BlockStmt*>(IS->then_body());
     EXPECT_NE(BS2, nullptr);
     EXPECT_EQ(BS2->num_stmts(), 1);
 
@@ -78,7 +78,7 @@ TEST_F(StmtParserTests, IfElseStatement_Positive) {
     EXPECT_NE(FD, nullptr);
     EXPECT_TRUE(FD->has_body());
 
-    BlockStmt* BS = dynamic_cast<BlockStmt*>(FD->get_body());
+    BlockStmt* BS = dynamic_cast<BlockStmt*>(FD->body());
     EXPECT_NE(BS, nullptr);
     EXPECT_EQ(BS->num_stmts(), 1);
 
@@ -86,14 +86,14 @@ TEST_F(StmtParserTests, IfElseStatement_Positive) {
     EXPECT_NE(IS, nullptr);
     EXPECT_TRUE(IS->has_else());
 
-    IntegerLiteral* IL = dynamic_cast<IntegerLiteral*>(IS->get_cond());
+    IntegerLiteral* IL = dynamic_cast<IntegerLiteral*>(IS->condition());
     EXPECT_NE(IL, nullptr);
     EXPECT_EQ(IL->get_value(), 5);
 
-    RetStmt* RS = dynamic_cast<RetStmt*>(IS->get_then());
+    RetStmt* RS = dynamic_cast<RetStmt*>(IS->then_body());
     EXPECT_NE(RS, nullptr);
 
-    RetStmt* RS2 = dynamic_cast<RetStmt*>(IS->get_else());
+    RetStmt* RS2 = dynamic_cast<RetStmt*>(IS->else_body());
     EXPECT_NE(RS2, nullptr);
 }
 
@@ -111,7 +111,7 @@ TEST_F(StmtParserTests, UntilStatement_Positive) {
     EXPECT_NE(FD, nullptr);
     EXPECT_TRUE(FD->has_body());
 
-    BlockStmt* BS = dynamic_cast<BlockStmt*>(FD->get_body());
+    BlockStmt* BS = dynamic_cast<BlockStmt*>(FD->body());
     EXPECT_NE(BS, nullptr);
     EXPECT_EQ(BS->num_stmts(), 1);
 
@@ -119,7 +119,7 @@ TEST_F(StmtParserTests, UntilStatement_Positive) {
     EXPECT_NE(US, nullptr);
     EXPECT_TRUE(US->has_body());
 
-    RestartStmt* CS = dynamic_cast<RestartStmt*>(US->get_body());
+    RestartStmt* CS = dynamic_cast<RestartStmt*>(US->body());
     EXPECT_NE(CS, nullptr);
 }
 
@@ -137,7 +137,7 @@ TEST_F(StmtParserTests, UntilStatementNoBody_Positive) {
     EXPECT_NE(FD, nullptr);
     EXPECT_TRUE(FD->has_body());
 
-    BlockStmt* BS = dynamic_cast<BlockStmt*>(FD->get_body());
+    BlockStmt* BS = dynamic_cast<BlockStmt*>(FD->body());
     EXPECT_NE(BS, nullptr);
     EXPECT_EQ(BS->num_stmts(), 1);
 

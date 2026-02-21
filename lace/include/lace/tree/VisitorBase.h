@@ -6,7 +6,6 @@
 #ifndef LACE_VISITOR_BASE_H_
 #define LACE_VISITOR_BASE_H_
 
-#include "lace/core/Common.h"
 #include "lace/core/Options.h"
 #include "lace/tree/Scope.h"
 
@@ -52,7 +51,7 @@ class SizeofExpr;
 class SubscriptExpr;
 class StructInitExpr;
 
-class QualType;
+class Type;
 
 class VisitorBase {
 protected:
@@ -112,10 +111,12 @@ public:
     virtual void visit(StructInitExpr& node);
 
 protected:
-    /// Replace all deferred types composed in given |type| with fully resolved types.
-    /// If a component of |type| could not be resolved, then false is returned.
-    [[nodiscard]]
-    Result resolveType(const QualType& type) const;
+    /// Attempt to resolve any deferred types within the component(s) of the 
+    /// given |type|, and return a new, fully resolved type.
+    ///
+    /// If a component of the given |type| could not be resolved, then null is 
+    /// returned.
+    [[nodiscard]] Type* resolve_type(Type* type) const;
 };
 
 } // namespace lace

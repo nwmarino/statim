@@ -46,37 +46,13 @@ bool Parser::is_reserved(const std::string& ident) const {
     return keywords.contains(ident);
 }
 
-QualType Parser::parse_type_specifier() {
-    QualType type = {};
-
-    while (expect("mut")) {
-        if (type.isMut()) {
-            log::warn("duplicate 'mut' keyword", log::Location(m_file, loc()));
-        } else {
-            type.withMut();
-        }
-    }
+Type* Parser::parse_type_specifier() {
+    Type* type = nullptr;
     
     if (expect(Token::Star)) {
-        type.setType(PointerType::get(*m_context, parse_type_specifier()));
-        return type;
-    } else if (expect(Token::OpenBrack)) {
-        if (!match(Token::Integer))
-            log::fatal("expected integer after '['", log::Location(m_file, loc()));
-
-        int32_t size = std::stoi(curr().value);
-        if (size <= 0)
-            log::fatal("array size must be greater than 0", log::Location(m_file, loc()));
-
-        next();
-
-        if (!expect(Token::CloseBrack))
-            log::fatal("expected ']'", log::Location(m_file, loc()));
-
-        type.setType(ArrayType::get(*m_context, parse_type_specifier(), size));
-        return type;
+        return PointerType::get(*m_context, parse_type_specifier());
     } else if (match(Token::Identifier)) {
-        std::unordered_map<std::string, const Type*> types = {
+        std::unordered_map<std::string, Type*> types = {
             { "void", BuiltinType::get(*m_context, BuiltinType::Kind::Void) },
             { "bool", BuiltinType::get(*m_context, BuiltinType::Kind::Bool) },
             { "char", BuiltinType::get(*m_context, BuiltinType::Kind::Char) },
@@ -94,14 +70,15 @@ QualType Parser::parse_type_specifier() {
 
         auto it = types.find(curr().value);
         if (it != types.end()) {
-            type.setType(it->second);
+            type = it->second;
         } else {
-            type.setType(DeferredType::get(*m_context, curr().value));
+            type = DeferredType::get(*m_context, curr().value);
         }
 
         next();
-        return type;
     } else {
         log::fatal("expected type identifier", log::Location(m_file, loc()));
     }
+
+    return type;
 }

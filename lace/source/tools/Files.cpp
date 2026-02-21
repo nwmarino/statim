@@ -11,7 +11,7 @@
 
 using namespace lace;
 
-Result lace::readFile(const std::string& path, std::string& contents) {
+bool lace::readFile(const std::string& path, std::string& contents) {
     std::ifstream file(path, std::ios::ate);
     if (!file || !file.is_open()) {
         log::error("failed to open file: " + path);

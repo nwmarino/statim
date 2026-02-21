@@ -43,7 +43,7 @@ TEST_F(DefnParserTests, Functions_Empty) {
 
     auto F1 = dynamic_cast<const FunctionDefn*>(ast->get_defns()[0]);
     EXPECT_NE(F1, nullptr);
-    EXPECT_EQ(F1->get_name(), "test");
+    EXPECT_EQ(F1->name(), "test");
     EXPECT_FALSE(F1->has_runes());
     EXPECT_FALSE(F1->has_params());
     EXPECT_FALSE(F1->has_body());
@@ -61,10 +61,10 @@ TEST_F(DefnParserTests, Functions_NonEmpty) {
 
     auto F1 = dynamic_cast<const FunctionDefn*>(ast->get_defns()[0]);
     EXPECT_NE(F1, nullptr);
-    EXPECT_EQ(F1->get_name(), "test");
+    EXPECT_EQ(F1->name(), "test");
     EXPECT_TRUE(F1->has_body());
 
-    auto B1 = dynamic_cast<const BlockStmt*>(F1->get_body());
+    auto B1 = dynamic_cast<const BlockStmt*>(F1->body());
     EXPECT_NE(B1, nullptr);
     EXPECT_EQ(B1->num_stmts(), 1);
     
@@ -72,7 +72,7 @@ TEST_F(DefnParserTests, Functions_NonEmpty) {
     EXPECT_NE(R1, nullptr);
     EXPECT_TRUE(R1->has_expr());
 
-    auto I1 = dynamic_cast<const IntegerLiteral*>(R1->get_expr());
+    auto I1 = dynamic_cast<const IntegerLiteral*>(R1->expr());
     EXPECT_NE(I1, nullptr);
     EXPECT_EQ(I1->get_value(), 0);
 }
@@ -89,19 +89,19 @@ TEST_F(DefnParserTests, Functions_WithParameters) {
 
     auto F1 = dynamic_cast<const FunctionDefn*>(ast->get_defns()[0]);
     EXPECT_NE(F1, nullptr);
-    EXPECT_EQ(F1->get_name(), "test");
+    EXPECT_EQ(F1->name(), "test");
     EXPECT_TRUE(F1->has_params());
     EXPECT_EQ(F1->num_params(), 2);
 
     const ParameterDefn* P1 = F1->get_param(0);
     EXPECT_NE(P1, nullptr);
-    EXPECT_EQ(P1->get_name(), "a");
-    EXPECT_EQ(P1->get_type()->string(), "s64");
+    EXPECT_EQ(P1->name(), "a");
+    EXPECT_EQ(P1->type()->string(), "s64");
 
     const ParameterDefn* P2 = F1->get_param(1);
     EXPECT_NE(P2, nullptr);
-    EXPECT_EQ(P2->get_name(), "b");
-    EXPECT_EQ(P2->get_type().string(), "char");
+    EXPECT_EQ(P2->name(), "b");
+    EXPECT_EQ(P2->type()->string(), "char");
 }
 
 TEST_F(DefnParserTests, GlobalVariables_NoInitializer) {
@@ -116,8 +116,8 @@ TEST_F(DefnParserTests, GlobalVariables_NoInitializer) {
 
     auto V1 = dynamic_cast<const VariableDefn*>(ast->get_defns()[0]);
     EXPECT_NE(V1, nullptr);
-    EXPECT_EQ(V1->get_name(), "glob");
-    EXPECT_EQ(V1->get_type().string(), "s64");
+    EXPECT_EQ(V1->name(), "glob");
+    EXPECT_EQ(V1->type()->string(), "s64");
     EXPECT_FALSE(V1->has_init());
 }
 
@@ -133,11 +133,11 @@ TEST_F(DefnParserTests, GlobalVariables_WithInitializer) {
 
     auto V1 = dynamic_cast<const VariableDefn*>(ast->get_defns()[0]);
     EXPECT_NE(V1, nullptr);
-    EXPECT_EQ(V1->get_name(), "glob");
-    EXPECT_EQ(V1->get_type().string(), "s64");
+    EXPECT_EQ(V1->name(), "glob");
+    EXPECT_EQ(V1->type()->string(), "s64");
     EXPECT_TRUE(V1->has_init());
 
-    auto I1 = dynamic_cast<const IntegerLiteral*>(V1->get_init());
+    auto I1 = dynamic_cast<const IntegerLiteral*>(V1->init());
     EXPECT_NE(I1, nullptr);
     EXPECT_EQ(I1->get_value(), 5);
 }
@@ -154,30 +154,30 @@ TEST_F(DefnParserTests, Structs_NonEmpty) {
 
     auto S1 = dynamic_cast<const StructDefn*>(ast->get_defn(0));
     EXPECT_NE(S1, nullptr);
-    EXPECT_EQ(S1->get_name(), "Box");
+    EXPECT_EQ(S1->name(), "Box");
     EXPECT_EQ(S1->num_fields(), 3);
 
-    auto TY1 = dynamic_cast<const StructType*>(S1->get_type());
+    auto TY1 = dynamic_cast<const StructType*>(S1->type());
     EXPECT_NE(TY1, nullptr);
-    EXPECT_EQ(TY1->getDefn(), S1);
+    EXPECT_EQ(TY1->defn(), S1);
 
     const FieldDefn* F1 = S1->get_field("x");
     EXPECT_NE(F1, nullptr);
     EXPECT_EQ(F1, S1->get_field(0));
-    EXPECT_EQ(F1->get_name(), "x");
-    EXPECT_EQ(F1->get_type()->string(), "s32");
+    EXPECT_EQ(F1->name(), "x");
+    EXPECT_EQ(F1->type()->string(), "s32");
 
     const FieldDefn* F2 = S1->get_field("y");
     EXPECT_NE(F2, nullptr);
     EXPECT_EQ(F2, S1->get_field(1));
-    EXPECT_EQ(F2->get_name(), "y");
-    EXPECT_EQ(F2->get_type().string(), "f32");
+    EXPECT_EQ(F2->name(), "y");
+    EXPECT_EQ(F2->type()->string(), "f32");
 
     const FieldDefn* F3 = S1->get_field("z");
     EXPECT_NE(F3, nullptr);
     EXPECT_EQ(F3, S1->get_field(2));
-    EXPECT_EQ(F3->get_name(), "z");
-    EXPECT_EQ(F3->get_type().string(), "bool");
+    EXPECT_EQ(F3->name(), "z");
+    EXPECT_EQ(F3->type()->string(), "bool");
 }
 
 TEST_F(DefnParserTests, Enum) {
@@ -192,29 +192,29 @@ TEST_F(DefnParserTests, Enum) {
 
     auto E1 = dynamic_cast<EnumDefn*>(ast->get_defn(0));
     EXPECT_NE(E1, nullptr);
-    EXPECT_EQ(E1->get_name(), "Colors");
+    EXPECT_EQ(E1->name(), "Colors");
     EXPECT_EQ(E1->num_variants(), 3);
 
-    auto ETY = dynamic_cast<const EnumType*>(E1->get_type());
+    auto ETY = dynamic_cast<const EnumType*>(E1->type());
     EXPECT_NE(ETY, nullptr);
     EXPECT_EQ(ETY->string(), "Colors");
 
-    const QualType& underlying = ETY->underlying();
-    EXPECT_EQ(underlying.string(), "s64");
+    const Type* underlying = ETY->underlying();
+    EXPECT_EQ(underlying->string(), "s64");
 
     const VariantDefn* V1 = E1->get_variant(0);
     EXPECT_NE(V1, nullptr);
-    EXPECT_EQ(V1->get_name(), "Red");
+    EXPECT_EQ(V1->name(), "Red");
     EXPECT_EQ(V1->get_value(), 0);
 
     const VariantDefn* V2 = E1->get_variant(1);
     EXPECT_NE(V2, nullptr);
-    EXPECT_EQ(V2->get_name(), "Blue");
+    EXPECT_EQ(V2->name(), "Blue");
     EXPECT_EQ(V2->get_value(), 0);
 
     const VariantDefn* V3 = E1->get_variant(2);
     EXPECT_NE(V3, nullptr);
-    EXPECT_EQ(V3->get_name(), "Yellow");
+    EXPECT_EQ(V3->name(), "Yellow");
     EXPECT_EQ(V3->get_value(), -7);
 }
 

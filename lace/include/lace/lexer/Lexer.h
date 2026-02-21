@@ -12,7 +12,6 @@
 //  analysis.
 //
 
-#include "lace/core/Common.h"
 #include "lace/lexer/TokenStream.h"
 
 #include <cassert>
@@ -36,10 +35,10 @@ public:
 
     /// Lex the rest of the input source into the given token |stream|.
     /// Returns the result of the operation, i.e. if any errors were logged.
-    [[nodiscard]] Result lex(TokenStream& stream);
+    [[nodiscard]] bool lex(TokenStream& stream);
 
     /// Lex a new token.
-    [[nodiscard]] Result lex(Token& token);
+    [[nodiscard]] bool lex(Token& token);
 
     /// Test if the end of the source buffer has been reached.
     inline bool is_eof() const {

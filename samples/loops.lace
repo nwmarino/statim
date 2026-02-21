@@ -1,7 +1,7 @@
 $public
 main :: () -> s64 {
-    let i: mut s64 = 0;
-    let x: mut bool = false;
+    let i: s64 = 0;
+    let x: bool = false;
 
     until x == true {
         if i == 5 {

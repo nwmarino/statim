@@ -345,10 +345,10 @@ Expr* Parser::parse_literal_null() {
     const Token lit = curr();
     next();
 
-    const Type* p_void = PointerType::get(
-        *m_context, BuiltinType::get(*m_context, BuiltinType::Kind::Void));
-
-    return NullLiteral::create(*m_context, lit.loc, p_void);
+    return NullLiteral::create(*m_context, lit.loc, PointerType::get(
+        *m_context, 
+        BuiltinType::get(*m_context, BuiltinType::Kind::Void)
+    ));
 }
 
 Expr* Parser::parse_literal_string() {
@@ -365,7 +365,7 @@ Expr* Parser::parse_type_cast() {
     if (!expect(Token::Left))
         log::fatal("expected '<'", log::Span(m_file, since(start)));
 
-    QualType type = parse_type_specifier();
+    Type* type = parse_type_specifier();
 
     if (!expect(Token::Right))
         log::fatal("expected '>'", log::Span(m_file, since(start)));
@@ -406,7 +406,7 @@ Expr* Parser::parse_sizeof_operator() {
     if (!expect(Token::OpenParen))
         log::fatal("expected '('", log::Span(m_file, since(start)));
 
-    QualType type = parse_type_specifier();
+    Type* type = parse_type_specifier();
 
     const SourceLocation end = loc();
     if (!expect(Token::CloseParen))
@@ -430,7 +430,7 @@ Expr* Parser::parse_struct_initializer(uint64_t start) {
     m_stream.seek(start);
     const SourceLocation loc_start = loc();
 
-    QualType type = parse_type_specifier();
+    Type* type = parse_type_specifier();
 
     if (!expect(Token::OpenBrace))
         log::fatal("expected '{'", log::Span(m_file, since(loc_start)));

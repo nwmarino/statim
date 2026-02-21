@@ -60,84 +60,67 @@ void LIRCodegen::run() {
         codegen_lowered_definition(defn);
 }
 
-lir::Type* LIRCodegen::to_lir_type(const QualType& type) {
-    switch (type->getClass()) {
-        case Type::Class::Alias:
-            return to_lir_type(static_cast<const AliasType*>(type.getType())->underlying());
-        
-        case Type::Class::Array: {
-            auto array = static_cast<const ArrayType*>(type.getType());
-            return lir::ArrayType::get(m_cfg, to_lir_type(array->element()), array->size());
+lir::Type* LIRCodegen::to_lir_type(const Type* type) {
+    if (auto alias = dynamic_cast<const AliasType*>(type)) {
+        return to_lir_type(static_cast<const AliasType*>(type)->aliased());
+    } else if (auto builtin = dynamic_cast<const BuiltinType*>(type)) {
+        switch (builtin->kind()) 
+        {
+        case BuiltinType::Kind::Void:
+            return lir::Type::get_void(m_cfg);
+        case BuiltinType::Kind::Bool:
+        case BuiltinType::Kind::Char:
+        case BuiltinType::Kind::Int8:
+        case BuiltinType::Kind::UInt8:
+            return lir::Type::get_i8(m_cfg);
+        case BuiltinType::Kind::Int16:
+        case BuiltinType::Kind::UInt16:
+            return lir::Type::get_i16(m_cfg);
+        case BuiltinType::Kind::Int32:
+        case BuiltinType::Kind::UInt32:
+            return lir::Type::get_i32(m_cfg);
+        case BuiltinType::Kind::Int64:
+        case BuiltinType::Kind::UInt64:
+            return lir::Type::get_i64(m_cfg);
+        case BuiltinType::Kind::Float32:
+            return lir::Type::get_f32(m_cfg);
+        case BuiltinType::Kind::Float64:
+            return lir::Type::get_f64(m_cfg);
         }
 
-        case Type::Class::Builtin: {
-            auto builtin = static_cast<const BuiltinType*>(type.getType());
+        assert(false);
+    } else if (auto enumeration = dynamic_cast<const EnumType*>(type)) {
+        return to_lir_type(enumeration->underlying());
+    } else if (auto sig = dynamic_cast<const FunctionType*>(type)) {
+        std::vector<lir::Type*> args = {};
+        args.reserve(sig->num_params());
 
-            switch (builtin->kind()) {
-                case BuiltinType::Kind::Void:
-                    return lir::Type::get_void(m_cfg);
-                case BuiltinType::Kind::Bool:
-                case BuiltinType::Kind::Char:
-                case BuiltinType::Kind::Int8:
-                case BuiltinType::Kind::UInt8:
-                    return lir::Type::get_i8(m_cfg);
-                case BuiltinType::Kind::Int16:
-                case BuiltinType::Kind::UInt16:
-                    return lir::Type::get_i16(m_cfg);
-                case BuiltinType::Kind::Int32:
-                case BuiltinType::Kind::UInt32:
-                    return lir::Type::get_i32(m_cfg);
-                case BuiltinType::Kind::Int64:
-                case BuiltinType::Kind::UInt64:
-                    return lir::Type::get_i64(m_cfg);
-                case BuiltinType::Kind::Float32:
-                    return lir::Type::get_f32(m_cfg);
-                case BuiltinType::Kind::Float64:
-                    return lir::Type::get_f64(m_cfg);
-            }
-
-            __builtin_unreachable();
+        lir::Type* return_type = to_lir_type(sig->result());
+        if (!m_mach.is_scalar(return_type)) {
+            // If the return type is an aggregate, then it must be passed as the first argument
+            // via hidden pointer. The return type then becomes void.
+            args.push_back(lir::PointerType::get(m_cfg, return_type));
+            return_type = lir::VoidType::get(m_cfg);
         }
 
-        case Type::Class::Deferred:
-            assert(false && "cannot lower deferred type!");
-
-        case Type::Class::Enum:
-            return to_lir_type(static_cast<const EnumType*>(
-                type.getType())->underlying());
-
-        case Type::Class::Function: {
-            auto func_type = static_cast<const FunctionType*>(type.getType());
-            std::vector<lir::Type*> args = {};
-            args.reserve(func_type->numParams());
-
-            lir::Type* return_type = to_lir_type(func_type->result());
-            if (!m_mach.is_scalar(return_type)) {
-                // If the return type is an aggregate, then it must be passed as the first argument
-                // via hidden pointer. The return type then becomes void.
-                args.push_back(lir::PointerType::get(m_cfg, return_type));
-                return_type = lir::VoidType::get(m_cfg);
+        for (uint32_t i = 0; i < sig->num_params(); ++i) {
+            lir::Type* param_type = to_lir_type(sig->get_param(i));
+            if (m_mach.is_scalar(param_type)) {
+                args.push_back(param_type);
+            } else {
+                // If the parameter type is an aggregate, then it is passed via hidden pointer.
+                args.push_back(lir::PointerType::get(m_cfg, param_type));
             }
-
-            for (uint32_t i = 0; i < func_type->numParams(); ++i) {
-                lir::Type* param_type = to_lir_type(func_type->getParam(i));
-                if (m_mach.is_scalar(param_type)) {
-                    args.push_back(param_type);
-                } else {
-                    // If the parameter type is an aggregate, then it is passed via hidden pointer.
-                    args.push_back(lir::PointerType::get(m_cfg, param_type));
-                }
-            }
-
-            return lir::FunctionType::get(m_cfg, args, return_type);
         }
 
-        case Type::Class::Pointer:
-            return lir::PointerType::get(m_cfg, to_lir_type(static_cast<const PointerType*>(type.getType())->pointee()));
-
-        case Type::Class::Struct:
-            return lir::StructType::get(m_cfg, static_cast<const StructType*>(type.getType())->string());
+        return lir::FunctionType::get(m_cfg, args, return_type);
+    } else if (auto ptr = dynamic_cast<const PointerType*>(type)) {
+        return lir::PointerType::get(m_cfg, to_lir_type(ptr->pointee()));
+    } else if (auto structure = dynamic_cast<const StructType*>(type)) {
+        return lir::StructType::get(m_cfg, structure->string());
     }
+
+    assert(false && "failed to lower type!");
 }
 
 lir::Function* LIRCodegen::get_function(const std::string& name, lir::Type* result, 

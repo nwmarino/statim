@@ -21,9 +21,6 @@ AST::Context::~Context() {
     for (auto& [name, type] : m_aliases)
         delete type;
 
-    for (auto& type : m_arrays)
-        delete type;
-
     for (auto& type : m_builtins)
         delete type;
 
@@ -43,7 +40,6 @@ AST::Context::~Context() {
         delete type;
 
     m_aliases.clear();
-    m_arrays.clear();
     m_builtins.clear();
     m_deferred.clear();
     m_enums.clear();

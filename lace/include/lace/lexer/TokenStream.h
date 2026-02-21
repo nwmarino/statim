@@ -6,7 +6,6 @@
 #ifndef LACE_TOKEN_STREAM_H_
 #define LACE_TOKEN_STREAM_H_
 
-#include "lace/core/Common.h"
 #include "lace/lexer/Token.h"
 
 #include <algorithm>

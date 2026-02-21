@@ -51,7 +51,6 @@ public:
         friend class StructType;
 
         using AliasTypePool = std::unordered_map<std::string, AliasType*>;
-        using ArrayTypePool = std::vector<ArrayType*>;
         using BuiltinTypePool = std::vector<BuiltinType*>;
         using DeferredTypePool = std::vector<DeferredType*>;
         using EnumTypePool = std::unordered_map<std::string, EnumType*>;
@@ -60,7 +59,6 @@ public:
         using StructTypePool = std::unordered_map<std::string, StructType*>;
 
         AliasTypePool m_aliases = {};
-        ArrayTypePool m_arrays = {};
         BuiltinTypePool m_builtins = {};
         DeferredTypePool m_deferred = {};
         EnumTypePool m_enums = {};

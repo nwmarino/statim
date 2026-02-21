@@ -18,7 +18,6 @@
 #include "lace/tree/TypeResolution.h"
 
 #include "lir/analysis/AMD64LoweringPass.h"
-#include "lir/analysis/SSARewritePass.h"
 #include "lir/machine/AsmWriter.h"
 #include "lir/machine/Machine.h"
 #include "lir/machine/Printer.h"
@@ -93,7 +92,7 @@ void computeDependencies(const Asts& asts, Asts& ordering, DepTable& deps) {
                 continue;
 
             // Find the canonical path for the target file.
-            path target = parent / load->get_path();
+            path target = parent / load->path();
             target = weakly_canonical(target);
 
             auto it = g_files.find(target.string());
@@ -144,7 +143,7 @@ void resolveDependencies(Options& options, const Asts& asts, const DepTable& dep
         for (AST* dep : dep_list) {
             for (Defn* defn : dep->get_defns()) {
                 NamedDefn* symbol = dynamic_cast<NamedDefn*>(defn);
-                if (symbol && symbol->hasRune(Rune::Public))
+                if (symbol && symbol->has_rune(Rune::Kind::Public))
                     symbols.push_back(symbol);
             }
         }
@@ -154,7 +153,7 @@ void resolveDependencies(Options& options, const Asts& asts, const DepTable& dep
             bool res = scope->add(symbol);
             if (!res) {
                 log::fatal("name-wise conflict with an existing definition: " 
-                    + symbol->get_name(), log::Location(ast->get_file(), { 1, 1 }));
+                    + symbol->name(), log::Location(ast->get_file(), { 1, 1 }));
             }
 
             ast->get_loaded().push_back(symbol);

@@ -3,7 +3,6 @@
 //  All rights reserved.
 //
 
-#include "lace/core/Diagnostics.h"
 #include "lace/tree/AST.h"
 #include "lace/tree/Defn.h"
 #include "lace/tree/Expr.h"
@@ -16,9 +15,9 @@
 
 using namespace lace;
 
-lir::Value *LIRCodegen::codegen_addressed_expression(const Expr *expr) {
+lir::Value* LIRCodegen::codegen_addressed_expression(const Expr* expr) {
     if (auto unary = dynamic_cast<const UnaryOp*>(expr)) {
-        assert(unary->get_operator() == UnaryOp::Dereference &&
+        assert(unary->op() == UnaryOp::Dereference &&
             "cannot generate an address from non-dereference unary op!");
         
         return codegen_addressed_dereference(unary);
@@ -37,104 +36,83 @@ lir::Value *LIRCodegen::codegen_addressed_expression(const Expr *expr) {
     return nullptr;
 }
 
-lir::Value *LIRCodegen::codegen_addressed_access(const AccessExpr *expr) {
-    lir::Value *ptr = nullptr;
+lir::Value* LIRCodegen::codegen_addressed_access(const AccessExpr* expr) {
+    lir::Value* ptr = nullptr;
 
-    const Expr *base = expr->get_base();
-    if (base->get_type()->isClass(Type::Class::Pointer)) {
+    if (dynamic_cast<const PointerType*>(expr->base()->type())) {
         // If this access is functionally similar to C-style '->' access, then
         // we need to load the base to get at the underlying structure.
-        ptr = codegen_valued_expression(base);
-    } else if (base->get_type()->isClass(Type::Class::Struct)) {
-        ptr = codegen_addressed_expression(base);
+        ptr = codegen_valued_expression(expr->base());
+    } else if (dynamic_cast<const StructType*>(expr->base()->type())) {
+        ptr = codegen_addressed_expression(expr->base());
     } else {
-        log::fatal("bad type operand to '.': " + base->get_type().string(),
-            log::Span(m_ast->get_file(), expr->get_span()));
+        assert(false && "invalid type operand to field access!");
     }
 
     assert(ptr);
 
-    lir::Type *type = lir::PointerType::get(m_cfg, to_lir_type(expr->get_type()));
+    lir::Type* type = lir::PointerType::get(m_cfg, to_lir_type(expr->type()));
 
     return m_builder.build_access(type, ptr, lir::Integer::get(
-        m_cfg, lir::Type::get_i64(m_cfg), expr->get_field()->get_index()
+        m_cfg, lir::Type::get_i64(m_cfg), expr->field()->get_index()
     ));
 }
 
-lir::Value *LIRCodegen::codegen_addressed_reference(const RefExpr *expr) {
-    assert(expr->get_defn());
+lir::Value* LIRCodegen::codegen_addressed_reference(const RefExpr* expr) {
+    assert(expr->is_resolved());
 
-    switch (expr->get_defn()->get_kind()) {
-        case Defn::Function: {
-            lir::Function *func = m_cfg.get_function(expr->get_name());
-            assert(func && "function does not exist!");
+    if (auto func = dynamic_cast<const FunctionDefn*>(expr->defn())) {
+        lir::Function* fn = m_cfg.get_function(expr->name());
+        assert(fn && "function does not exist!");
 
-            return func;
-        }
+        return fn;
+    } else if (auto param = dynamic_cast<const ParameterDefn*>(expr->defn())) {
+        assert(m_func && "parameter reference outside a function!");
 
-        case Defn::Parameter: {
-            assert(m_func && "parameter reference outside a function!");
+        lir::Local* local = m_func->get_local(expr->name());
+        assert(local && "parameter does not exist!");
+        
+        return local;
+    } else if (auto var = dynamic_cast<const VariableDefn*>(expr->defn())) {
+        if (var->is_global()) {
+            lir::Global* global = m_cfg.get_global(expr->name());
+            assert(global && "global variable does not exist!");
 
-            lir::Local *local = m_func->get_local(expr->get_name());
-            assert(local && "parameter does not exist!");
-            
+            return global;
+        } else {
+            assert(m_func && "local reference not within a function!");
+
+            lir::Local* local = m_func->get_local(expr->name());
+            assert(local && "local variable does not exist!");
+
             return local;
         }
-
-        case Defn::Variable: {
-            auto var = static_cast<const VariableDefn*>(expr->get_defn());
-
-            if (var->is_global()) {
-                lir::Global *global = m_cfg.get_global(expr->get_name());
-                assert(global && "global variable does not exist!");
-
-                return global;
-            } else {
-                assert(m_func && "local reference not within a function!");
-
-                lir::Local *local = m_func->get_local(expr->get_name());
-                assert(local && "local variable does not exist!");
-
-                return local;
-            }
-        }
-
-        default:
-            assert(false && "unable to generate address reference!");
     }
+
+    return nullptr;
 }
 
-lir::Value *LIRCodegen::codegen_addressed_subscript(const SubscriptExpr *expr) {
-    lir::Value *ptr = nullptr;
-    const Expr *base = expr->get_base();
-
-    if (base->get_type()->isClass(Type::Class::Array)) {
-        ptr = codegen_addressed_expression(base);
-    } else if (base->get_type()->isClass(Type::Class::Pointer)) {
-        ptr = codegen_valued_expression(base);
+lir::Value* LIRCodegen::codegen_addressed_subscript(const SubscriptExpr* expr) {
+    lir::Value* ptr = nullptr;
+    if (dynamic_cast<const PointerType*>(expr->base()->type())) {
+        ptr = codegen_valued_expression(expr->base());
     } else {
-        log::fatal("invalid [] type operand: " + base->get_type().string(), 
-            log::Span(m_ast->get_file(), expr->get_span()));
+        assert(false && "invalid type operand to subscript!");
     }
 
-    lir::Value *index = codegen_valued_expression(expr->get_index());
+    lir::Value* index = codegen_valued_expression(expr->index());
     assert(ptr);
     assert(index);
 
-    lir::Type *type = lir::PointerType::get(
-        m_cfg, to_lir_type(expr->get_type()));
-
-    if (base->get_type()->isClass(Type::Class::Array)) {
-        // If the base is an array, we want to access an element, not 
-        // manipulate the address.
-        return m_builder.build_access(type, ptr, index);
-    } else {
-        return m_builder.build_offptr(type, ptr, index);
-    }
+    return m_builder.build_offptr(
+        lir::PointerType::get(m_cfg, to_lir_type(expr->type())), 
+        ptr,
+        index
+    );
 }
 
 lir::Value* LIRCodegen::codegen_addressed_dereference(const UnaryOp* expr) {
-    lir::Value* rvalue = codegen_valued_expression(expr->get_expr());
+    lir::Value* rvalue = codegen_valued_expression(expr->expr());
     assert(rvalue);
 
     return rvalue;
@@ -142,7 +120,7 @@ lir::Value* LIRCodegen::codegen_addressed_dereference(const UnaryOp* expr) {
 
 lir::Value* LIRCodegen::codegen_struct_init(const StructInitExpr* expr) {
     lir::Value* dest = nullptr;
-    lir::Type* type = to_lir_type(expr->get_type());
+    lir::Type* type = to_lir_type(expr->type());
 
     if (m_state.place) {
         dest = m_state.place;
@@ -155,14 +133,16 @@ lir::Value* LIRCodegen::codegen_struct_init(const StructInitExpr* expr) {
         );
     }
 
-    const StructDefn* defn = static_cast<const StructType*>(
-        expr->get_type().getType())->getDefn();
+    auto struct_type = dynamic_cast<const StructType*>(expr->type());
+    assert(struct_type);
+
+    const StructDefn* struct_defn = struct_type->defn();
 
     for (auto& [name, init] : expr->fields()) {
-        const FieldDefn* field = defn->get_field(name);
+        const FieldDefn* field = struct_defn->get_field(name);
         assert(field);
 
-        lir::Type* field_type = to_lir_type(field->get_type());
+        lir::Type* field_type = to_lir_type(field->type());
 
         lir::Value* ptr = m_builder.build_access(
             lir::PointerType::get(m_cfg, field_type), 

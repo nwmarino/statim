@@ -107,7 +107,7 @@ private:
     /// Exit the current scope, and move up to the parent node.
     ///
     /// If there is no parent scope, then the current scope just becomes null.
-    inline void exit_scope() { m_scope = m_scope->getParent(); }
+    inline void exit_scope() { m_scope = m_scope->parent(); }
 
     /// Returns the equivelant unary operator for the given token |kind|.
     UnaryOp::Operator get_unary_op(Token::Kind kind) const;
@@ -121,7 +121,7 @@ private:
     /// Parse a set of rune decorators and append them to |runes|. 
     void parse_rune_decorators(std::vector<Rune*>& runes);
 
-    QualType parse_type_specifier();
+    Type* parse_type_specifier();
 
     Defn* parse_initial_definition();
     Defn* parse_binding_definition(std::vector<Rune*> runes, const Token name);

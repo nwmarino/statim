@@ -42,10 +42,7 @@ TEST_F(TypeParserTests, BuiltinType) {
     FunctionDefn* FD = dynamic_cast<FunctionDefn*>(ast->get_defns()[0]);
     EXPECT_NE(FD, nullptr);
 
-    const QualType& return_type = FD->get_return_type();
-    EXPECT_EQ(return_type.string(), "s64");
-
-    const BuiltinType* BT = dynamic_cast<const BuiltinType*>(return_type.getType());
+    const BuiltinType* BT = dynamic_cast<const BuiltinType*>(FD->get_return_type());
     EXPECT_NE(BT, nullptr);
     EXPECT_EQ(BT->kind(), BuiltinType::Kind::Int64);
 }
@@ -63,16 +60,10 @@ TEST_F(TypeParserTests, PointerType) {
     FunctionDefn* FD = dynamic_cast<FunctionDefn*>(ast->get_defns()[0]);
     EXPECT_NE(FD, nullptr);
 
-    const QualType& return_type = FD->get_return_type();
-    EXPECT_EQ(return_type->string(), "*bool");
-
-    const PointerType* PT = dynamic_cast<const PointerType*>(return_type.getType());
+    const PointerType* PT = dynamic_cast<const PointerType*>(FD->get_return_type());
     EXPECT_NE(PT, nullptr);
-    
-    const QualType& pointee = PT->pointee();
-    EXPECT_EQ(pointee->string(), "bool");
 
-    const BuiltinType* BT = dynamic_cast<const BuiltinType*>(pointee.getType());
+    const BuiltinType* BT = dynamic_cast<const BuiltinType*>(PT->pointee());
     EXPECT_NE(BT, nullptr);
     EXPECT_EQ(BT->kind(), BuiltinType::Kind::Bool);
 }

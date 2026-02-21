@@ -118,7 +118,7 @@ Stmt* Parser::parse_declarative_statement() {
     if (!expect(Token::Colon))
         log::fatal("expected ':'", log::Span(m_file, since(loc())));
 
-    QualType type = parse_type_specifier();
+    Type* type = parse_type_specifier();
 
     SourceLocation end = loc();
     Expr* init = nullptr;
@@ -149,9 +149,9 @@ Stmt* Parser::parse_rune_statement() {
     const SourceLocation start = loc();
     next(); // '$'
 
-    static std::unordered_map<std::string, Rune::Type> runes = {
-        { "abort", Rune::Abort},
-        { "unreachable", Rune::Unreachable },
+    static std::unordered_map<std::string, Rune::Kind> runes = {
+        { "abort", Rune::Kind::Abort},
+        { "unreachable", Rune::Kind::Unreachable },
     };
 
     if (!match(Token::Identifier))
@@ -161,8 +161,8 @@ Stmt* Parser::parse_rune_statement() {
         log::fatal("unknown rune: " + curr().value, log::Span(m_file, loc()));
     
     const SourceLocation end = loc();
-    Rune::Type type = runes[curr().value];
+    Rune::Kind kind = runes[curr().value];
     next();
 
-    return RuneStmt::create(*m_context, SourceSpan(start, end), new Rune(type));
+    return RuneStmt::create(*m_context, SourceSpan(start, end), new Rune(kind));
 }

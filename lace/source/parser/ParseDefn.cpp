@@ -52,7 +52,7 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
                     log::Span(m_file, since(dbg_start)));
             }
 
-            QualType param_type = parse_type_specifier();
+            Type* param_type = parse_type_specifier();
 
             ParameterDefn* param = ParameterDefn::create(
                 *m_context, since(param_start), param_name, {}, param_type);
@@ -76,7 +76,7 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
                 log::Span(m_file, since(name.loc)));
         }
 
-        QualType ret_type = parse_type_specifier();
+        Type* ret_type = parse_type_specifier();
 
         BlockStmt* body = nullptr;
         SourceLocation end = loc();
@@ -90,10 +90,10 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
 
         exit_scope();
 
-        std::vector<QualType> param_types = {};
+        std::vector<Type*> param_types = {};
         param_types.reserve(params.size());
         for (ParameterDefn* param : params)
-            param_types.push_back(param->get_type());
+            param_types.push_back(param->type());
 
         FunctionDefn* defn = FunctionDefn::create(
             *m_context, 
@@ -127,7 +127,7 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
             if (!expect(Token::Colon))
                 log::fatal("expected ':'", log::Span(m_file, dbg_start));
 
-            QualType field_type = parse_type_specifier();
+            Type* field_type = parse_type_specifier();
 
             FieldDefn* field = FieldDefn::create(
                 *m_context, 
@@ -156,16 +156,17 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
             SourceSpan(name.loc, end), 
             name.value, 
             runes,
-            nullptr);
+            nullptr
+        );
 
-        const StructType* type = StructType::create(*m_context, defn);
+        StructType* type = StructType::create(*m_context, defn);
         
         defn->set_type(type);
         defn->set_fields(fields);
         m_scope->add(defn);
         return defn;
     } else if (expect("enum")) {
-        QualType underlying;
+        Type* underlying;
         if (match(Token::Identifier)) {
             underlying = parse_type_specifier();
         } else {
@@ -177,10 +178,10 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
             name.loc, 
             name.value, 
             runes,
-            underlying.getType()
+            underlying
         );
 
-        const EnumType* type = EnumType::create(*m_context, underlying, defn);
+        EnumType* type = EnumType::create(*m_context, underlying, defn);
         defn->set_type(type);
         
         if (!expect(Token::OpenBrace))
@@ -223,7 +224,8 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
                 variant_name.value, 
                 {},
                 type, 
-                value++);
+                value++
+            );
 
             m_scope->add(variant);
             variants.push_back(variant);
@@ -245,7 +247,7 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
         return defn;
     } else {
         // Assume global variable definition.
-        QualType type = parse_type_specifier();
+        Type* type = parse_type_specifier();
 
         Expr* init = nullptr;
         SourceLocation end = loc();
@@ -287,5 +289,8 @@ Defn* Parser::parse_load_definition() {
     while (expect(Token::Semi));
 
     return LoadDefn::create(
-        *m_context, SourceSpan(start, path.loc), path.value);
+        *m_context, 
+        SourceSpan { start, path.loc }, 
+        path.value
+    );
 }

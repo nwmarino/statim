@@ -1,7 +1,7 @@
 vec3 :: struct {
-    x: mut f64,
-    y: mut f64,
-    z: mut f64,
+    x: f64,
+    y: f64,
+    z: f64,
 }
 
 vec3_new :: (x: f64, y: f64, z: f64) -> vec3 {

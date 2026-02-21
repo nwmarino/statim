@@ -37,7 +37,7 @@ void Printer::visit(LoadDefn& node) {
         start.col, 
         end.line, 
         end.col, 
-        node.get_path()
+        node.path()
     );
 }
 
@@ -52,13 +52,13 @@ void Printer::visit(VariableDefn& node) {
         start.col, 
         end.line, 
         end.col, 
-        node.get_name(), 
-        node.get_type().string()
+        node.name(), 
+        node.type()->string()
     );
 
     if (node.has_init()) {
         ++m_indent;
-        node.get_init()->accept(*this);
+        node.init()->accept(*this);
         --m_indent;
     }
 }
@@ -74,8 +74,8 @@ void Printer::visit(ParameterDefn& node) {
         start.col,
         end.line,
         end.col,
-        node.get_name(),
-        node.get_type().string()
+        node.name(),
+        node.type()->string()
     );
 }
 
@@ -90,17 +90,17 @@ void Printer::visit(FunctionDefn& node) {
         start.col,
         end.line,
         end.col,
-        node.get_name(),
-        node.get_type().string()
+        node.name(),
+        node.type()->string()
     );
 
     ++m_indent;
 
-    for (ParameterDefn* param : node.get_params())
+    for (ParameterDefn* param : node.params())
         param->accept(*this);
 
     if (node.has_body())
-        node.get_body()->accept(*this);
+        node.body()->accept(*this);
 
     --m_indent;
 }
@@ -116,8 +116,8 @@ void Printer::visit(FieldDefn& node) {
         start.col,
         end.line,
         end.col,
-        node.get_name(),
-        node.get_type().string()
+        node.name(),
+        node.type()->string()
     );
 }
 
@@ -132,8 +132,8 @@ void Printer::visit(VariantDefn& node) {
         start.col,
         end.line,
         end.col,
-        node.get_name(),
-        node.get_type().string()
+        node.name(),
+        node.type()->string()
     );
 }
 
@@ -143,7 +143,7 @@ void Printer::visit(AliasDefn& node) {
     const SourceSpan span = node.get_span();
     const SourceLocation start = span.start, end = span.start;
 
-    const AliasType* type = dynamic_cast<const AliasType*>(node.get_type());
+    const AliasType* type = dynamic_cast<const AliasType*>(node.type());
     assert(type);
 
     m_out << std::format("Alias <{}:{}, {}:{}> {} '{}'\n",
@@ -151,8 +151,8 @@ void Printer::visit(AliasDefn& node) {
         start.col,
         end.line,
         end.col,
-        node.get_name(),
-        type->underlying().string()
+        node.name(),
+        type->aliased()->string()
     );
 }
 
@@ -167,12 +167,12 @@ void Printer::visit(StructDefn& node) {
         start.col,
         end.line,
         end.col,
-        node.get_name()
+        node.name()
     );
 
     ++m_indent;
 
-    for (FieldDefn* field : node.get_fields())
+    for (FieldDefn* field : node.fields())
         field->accept(*this);
 
     --m_indent;
@@ -189,12 +189,12 @@ void Printer::visit(EnumDefn& node) {
         start.col,
         end.line,
         end.col,
-        node.get_name()
+        node.name()
     );
 
     ++m_indent;
 
-    for (VariantDefn* variant : node.get_variants())
+    for (VariantDefn* variant : node.variants())
         variant->accept(*this);
 
     --m_indent;
@@ -330,7 +330,7 @@ void Printer::visit(BoolLiteral& node) {
         end.line,
         end.col,
         node.get_value(),
-        node.get_type().string()
+        node.type()->string()
     );
 }
 
@@ -346,7 +346,7 @@ void Printer::visit(CharLiteral& node) {
         end.line,
         end.col,
         node.get_value(),
-        node.get_type().string()
+        node.type()->string()
     );
 }
 
@@ -362,7 +362,7 @@ void Printer::visit(IntegerLiteral& node) {
         end.line,
         end.col,
         node.get_value(),
-        node.get_type().string()
+        node.type()->string()
     );
 }
 
@@ -378,7 +378,7 @@ void Printer::visit(FloatLiteral& node) {
         end.line,
         end.col,
         node.get_value(),
-        node.get_type().string()
+        node.type()->string()
     );
 }
 
@@ -393,7 +393,7 @@ void Printer::visit(NullLiteral& node) {
         start.col,
         end.line,
         end.col,
-        node.get_type().string()
+        node.type()->string()
     );
 }
 
@@ -408,8 +408,8 @@ void Printer::visit(StringLiteral& node) {
         start.col,
         end.line,
         end.col,
-        node.get_value(),
-        node.get_type().string()
+        node.value(),
+        node.type()->string()
     );
 }
 
@@ -424,69 +424,70 @@ void Printer::visit(BinaryOp& node) {
         start.col,
         end.line,
         end.col,
-        node.get_type().string()
+        node.type()->string()
     );
 
-    switch (node.get_operator()) {
-        case BinaryOp::Assign:
-            m_out << "=";
-            break;
-        case BinaryOp::Add:
-            m_out << "+";
-            break;
-        case BinaryOp::Sub:
-            m_out << "-";
-            break;
-        case BinaryOp::Mul:
-            m_out << "*";
-            break;
-        case BinaryOp::Div:
-            m_out << "/";
-            break;
-        case BinaryOp::Mod:
-            m_out << "%";
-            break;
-        case BinaryOp::And:
-            m_out << "&";
-            break;
-        case BinaryOp::Or:
-            m_out << "|";
-            break;
-        case BinaryOp::Xor:
-            m_out << "^";
-            break;
-        case BinaryOp::LShift:
-            m_out << "<<";
-            break;
-        case BinaryOp::RShift:
-            m_out << ">>";
-            break;
-        case BinaryOp::LogicAnd:
-            m_out << "&&";
-            break;
-        case BinaryOp::LogicOr:
-            m_out << "||";
-            break;
-        case BinaryOp::Eq:
-            m_out << "=";
-            break;
-        case BinaryOp::NEq:
-            m_out << "!=";
-            break;
-        case BinaryOp::Lt:
-            m_out << "<";
-            break;
-        case BinaryOp::LtEq:
-            m_out << "<=";
-            break;
-        case BinaryOp::Gt:
-            m_out << ">";
-            break;
-        case BinaryOp::GtEq:
-            m_out << ">=";
-            break;
-        default:
-            assert(false && "unknown binary operator!");
+    switch (node.op()) 
+    {
+    case BinaryOp::Assign:
+        m_out << "=";
+        break;
+    case BinaryOp::Add:
+        m_out << "+";
+        break;
+    case BinaryOp::Sub:
+        m_out << "-";
+        break;
+    case BinaryOp::Mul:
+        m_out << "*";
+        break;
+    case BinaryOp::Div:
+        m_out << "/";
+        break;
+    case BinaryOp::Mod:
+        m_out << "%";
+        break;
+    case BinaryOp::And:
+        m_out << "&";
+        break;
+    case BinaryOp::Or:
+        m_out << "|";
+        break;
+    case BinaryOp::Xor:
+        m_out << "^";
+        break;
+    case BinaryOp::LShift:
+        m_out << "<<";
+        break;
+    case BinaryOp::RShift:
+        m_out << ">>";
+        break;
+    case BinaryOp::LogicAnd:
+        m_out << "&&";
+        break;
+    case BinaryOp::LogicOr:
+        m_out << "||";
+        break;
+    case BinaryOp::Eq:
+        m_out << "=";
+        break;
+    case BinaryOp::NEq:
+        m_out << "!=";
+        break;
+    case BinaryOp::Lt:
+        m_out << "<";
+        break;
+    case BinaryOp::LtEq:
+        m_out << "<=";
+        break;
+    case BinaryOp::Gt:
+        m_out << ">";
+        break;
+    case BinaryOp::GtEq:
+        m_out << ">=";
+        break;
+    default:
+        assert(false && "unknown binary operator!");
     }
 
     m_out << '\n';
@@ -507,27 +508,28 @@ void Printer::visit(UnaryOp& node) {
         start.col,
         end.line,
         end.col,
-        node.get_type().string()
+        node.type()->string()
     );
 
-    switch (node.get_operator()) {
-        case UnaryOp::Negate:
-            m_out << "-";
-            break;
-        case UnaryOp::Not:
-            m_out << "~";
-            break;
-        case UnaryOp::LogicNot:
-            m_out << "!";
-            break;
-        case UnaryOp::AddressOf:
-            m_out << "&";
-            break;
-        case UnaryOp::Dereference:
-            m_out << "*";
-            break;
-        default:
-            assert(false && "unknown unary operator!");
+    switch (node.op()) 
+    {
+    case UnaryOp::Negate:
+        m_out << "-";
+        break;
+    case UnaryOp::Not:
+        m_out << "~";
+        break;
+    case UnaryOp::LogicNot:
+        m_out << "!";
+        break;
+    case UnaryOp::AddressOf:
+        m_out << "&";
+        break;
+    case UnaryOp::Dereference:
+        m_out << "*";
+        break;
+    default:
+        assert(false && "unknown unary operator!");
     }
 
     m_out << '\n';
@@ -548,8 +550,8 @@ void Printer::visit(AccessExpr& node) {
         start.col,
         end.line,
         end.col,
-        node.get_name(),
-        node.get_type().string()
+        node.name(),
+        node.type()->string()
     );
 
     ++m_indent;
@@ -568,7 +570,7 @@ void Printer::visit(CallExpr& node) {
         start.col,
         end.line,
         end.col,
-        node.get_type()->string()
+        node.type()->string()
     );
 
     ++m_indent;
@@ -587,7 +589,7 @@ void Printer::visit(CastExpr& node) {
         start.col,
         end.line,
         end.col,
-        node.get_type().string()
+        node.type()->string()
     );
 
     ++m_indent;
@@ -606,7 +608,7 @@ void Printer::visit(ParenExpr& node) {
         start.col,
         end.line,
         end.col,
-        node.get_type().string()
+        node.type()->string()
     );
 
     ++m_indent;
@@ -625,8 +627,8 @@ void Printer::visit(RefExpr& node) {
         start.col,
         end.line,
         end.col,
-        node.get_name(),
-        node.get_type().string()
+        node.name(),
+        node.type()->string()
     );
 }
 
@@ -641,8 +643,8 @@ void Printer::visit(SizeofExpr& node) {
         start.col,
         end.line,
         end.col,
-        node.get_target_type().string(),
-        node.get_type().string()
+        node.target()->string(),
+        node.type()->string()
     );
 }
 
@@ -657,7 +659,7 @@ void Printer::visit(SubscriptExpr& node) {
         start.col,
         end.line,
         end.col,
-        node.get_type().string()
+        node.type()->string()
     );
 
     ++m_indent;

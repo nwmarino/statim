@@ -3,8 +3,8 @@
 //  All rights reserved.
 //
 
-#ifndef LOVELACE_STMT_H_
-#define LOVELACE_STMT_H_
+#ifndef LACE_STMT_H_
+#define LACE_STMT_H_
 
 //
 //  This header file declares a set of polymorphic classes for representing 
@@ -26,27 +26,11 @@ class Scope;
 
 /// Base class for all statement nodes in the abstract syntax tree.
 class Stmt {
-public:
-    /// The different kinds of statements.
-    enum class Kind : uint32_t {
-        Adapter,
-        Block,
-        If,
-        Restart,
-        Ret,
-        Rune,
-        Stop,
-        Until,
-    };
-
 protected:
-    /// The kind of statement this is.
-    const Kind m_kind;
-
     /// The span of source code that this statement covers.
     const SourceSpan m_span;
 
-    Stmt(Kind kind, SourceSpan span) : m_kind(kind), m_span(span) {}
+    Stmt(SourceSpan span) : m_span(span) {}
 
 public:
     virtual ~Stmt() = default;
@@ -58,9 +42,8 @@ public:
     void operator=(Stmt&&) noexcept = delete;
 
     virtual void accept(VisitorBase& visitor) = 0;
-
-    Kind get_kind() const { return m_kind; }
     
+    /// Returns the span of source code which this statement covers.
     SourceSpan get_span() const { return m_span; }
 };
 
@@ -68,23 +51,23 @@ public:
 class AdapterStmt final : public Stmt {
 public:
     /// The different flavors of adaptiveness.
-    enum Flavor : uint32_t {
+    enum class Kind : uint32_t {
         Definitive,
         Expressive,  
     };
 
 private:
-    Flavor m_flavor;
+    Kind m_kind;
     union {
         Defn* m_defn;
         Expr* m_expr;
     };
 
     AdapterStmt(SourceSpan span, Defn* defn) 
-      : Stmt(Stmt::Kind::Adapter, span), m_flavor(Definitive), m_defn(defn) {}
+      : Stmt(span), m_kind(Kind::Definitive), m_defn(defn) {}
 
     AdapterStmt(SourceSpan span, Expr* expr) 
-      : Stmt(Stmt::Kind::Adapter, span), m_flavor(Expressive), m_expr(expr) {}
+      : Stmt(span), m_kind(Kind::Expressive), m_expr(expr) {}
 
 public:
     [[nodiscard]]
@@ -105,21 +88,38 @@ public:
         visitor.visit(*this); 
     }
 
-    Flavor get_flavor() const { return m_flavor; }
+    /// Returns the kind of adapter this is.
+    Kind kind() const { return m_kind; }
 
     /// Test if this is a definitive adapter statement, i.e. nests a
     /// definition.
-    bool is_definitive() const { return m_flavor == Definitive; }
+    bool is_definitive() const { return m_kind == Kind::Definitive; }
 
     /// Test if this is an expressive adapter statement, i.e. nests an
     /// expression.
-    bool is_expressive() const { return m_flavor == Expressive; }
+    bool is_expressive() const { return m_kind == Kind::Expressive; }
 
-    const Defn* get_defn() const { return m_defn; }
-    Defn* get_defn() { return m_defn; }
+    /// Returns the definition of this adapter statement.
+    const Defn* defn() const { 
+        assert(is_definitive() && "invalid adapter!");
+        return m_defn;
+    }
 
-    const Expr* get_expr() const { return m_expr; }
-    Expr* get_expr() { return m_expr; }
+    Defn* defn() {
+        assert(is_definitive() && "invalid adapter!");
+        return m_defn;
+    }
+
+    /// Returns the expression of this adapter statement.
+    const Expr* expr() const { 
+        assert(is_expressive() && "invalid adapter!");
+        return m_expr; 
+    }
+
+    Expr* expr() { 
+        assert(is_expressive() && "invalid adapter!");
+        return m_expr; 
+    }
 };
 
 /// Represents a series of statements enclosed by curly braces `{, }`.
@@ -132,7 +132,7 @@ private:
     Stmts m_stmts;
 
     BlockStmt(SourceSpan span, Scope* scope, const Stmts& stmts)
-      : Stmt(Stmt::Kind::Block, span), m_scope(scope), m_stmts(stmts) {}
+      : Stmt(span), m_scope(scope), m_stmts(stmts) {}
 
 public:
     [[nodiscard]]
@@ -149,35 +149,46 @@ public:
 
     void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
-    const Scope* get_scope() const { return m_scope; }
-    Scope* get_scope() { return m_scope; }
+    /// Returns the scope tree of this statement.
+    const Scope* scope() const { return m_scope; }
+    Scope* scope() { return m_scope; }
 
+    /// Set the statement list of this block to |stmts|.
     void set_stmts(const Stmts& stmts) { m_stmts = stmts; }
-    const Stmts& get_stmts() const { return m_stmts; }
-    Stmts& get_stmts() { return m_stmts; }
 
+    /// Returns the statement list of this block.
+    const Stmts& stmts() const { return m_stmts; }
+    Stmts& stmts() { return m_stmts; }
+
+    /// Returns the |i|-th statement in this block.
     const Stmt* get_stmt(uint32_t i) const {
-        assert(i < num_stmts() && "index out of bounds!");
+        assert(i < m_stmts.size() && "index out of bounds!");
         return m_stmts[i];
     }
 
     Stmt* get_stmt(uint32_t i) {
-        assert(i < num_stmts() && "index out of bounds!");
+        assert(i < m_stmts.size() && "index out of bounds!");
         return m_stmts[i];
     }
 
+    /// Returns the number of statement in this block.
     uint32_t num_stmts() const { return m_stmts.size(); }
+
+    /// Test if this block has any statements.
     bool has_stmts() const { return !m_stmts.empty(); }
+
+    /// Test if this block is empty i.e. contains no statements.
+    [[nodiscard]] bool empty() const { return m_stmts.empty(); }
 };
 
-/// Represents an `if` statement.
+/// Represents an 'if' statement.
 class IfStmt final : public Stmt {
     Expr* m_cond;
     Stmt* m_then;
     Stmt* m_else;
 
     IfStmt(SourceSpan span, Expr* cond, Stmt* then, Stmt* els)
-      : Stmt(Stmt::Kind::If, span), m_cond(cond), m_then(then), m_else(els) {}
+      : Stmt(span), m_cond(cond), m_then(then), m_else(els) {}
 
 public:
     [[nodiscard]]
@@ -194,21 +205,26 @@ public:
 
     void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
-    const Expr* get_cond() const { return m_cond; }
-    Expr* get_cond() { return m_cond; }
+    /// Returns the condition expression of this statement.
+    const Expr* condition() const { return m_cond; }
+    Expr* condition() { return m_cond; }
 
-    const Stmt* get_then() const { return m_then; }
-    Stmt* get_then() { return m_then; }
+    /// Returns the 'then' clause of this statement.
+    const Stmt* then_body() const { return m_then; }
+    Stmt* then_body() { return m_then; }
 
-    const Stmt* get_else() const { return m_else; }
-    Stmt* get_else() { return m_else; }
+    /// Returns the 'else' clause of this statement, if it has one, and null
+    /// otherwise.
+    const Stmt* else_body() const { return m_else; }
+    Stmt* else_body() { return m_else; }
 
+    /// Test if this statement includes an 'else' clause.
     bool has_else() const { return m_else != nullptr; }
 };
 
-/// Represents a `restart` statement.
+/// Represents a 'restart' statement.
 class RestartStmt final : public Stmt {
-    RestartStmt(SourceSpan span) : Stmt(Stmt::Kind::Restart, span) {}
+    RestartStmt(SourceSpan span) : Stmt(span) {}
 
 public:
     [[nodiscard]]
@@ -225,15 +241,14 @@ public:
     void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 };
 
-/// Represents a `ret` statement.
+/// Represents a 'ret' statement.
 class RetStmt final : public Stmt {
     friend class SemanticAnalysis;
 
     /// The return expression, if there is one.
     Expr* m_expr;
 
-    RetStmt(SourceSpan span, Expr* expr) 
-      : Stmt(Stmt::Kind::Ret, span), m_expr(expr) {}
+    RetStmt(SourceSpan span, Expr* expr) : Stmt(span), m_expr(expr) {}
 
 public:
     [[nodiscard]]
@@ -249,15 +264,17 @@ public:
 
     void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
-    const Expr* get_expr() const { return m_expr; }
-    Expr* get_expr() { return m_expr; }
+    /// Returns the expression which this statement returns with.
+    const Expr* expr() const { return m_expr; }
+    Expr* expr() { return m_expr; }
 
+    /// Test if this statement contains an expression.
     bool has_expr() const { return m_expr != nullptr; }
 };
 
-/// Represents a `stop` statement.
+/// Represents a 'stop' statement.
 class StopStmt final : public Stmt {
-    StopStmt(SourceSpan span) : Stmt(Stmt::Kind::Stop, span) {}
+    StopStmt(SourceSpan span) : Stmt(span) {}
 
 public:
     [[nodiscard]]
@@ -274,13 +291,13 @@ public:
     void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 };
 
-/// Represents a `until` statement.
+/// Represents a 'until' statement.
 class UntilStmt final : public Stmt {
     Expr* m_cond;
     Stmt* m_body;
 
     UntilStmt(SourceSpan span, Expr* cond, Stmt* body)
-      : Stmt(Stmt::Kind::Until, span), m_cond(cond), m_body(body) {}
+      : Stmt(span), m_cond(cond), m_body(body) {}
 
 public:
     [[nodiscard]]
@@ -297,25 +314,27 @@ public:
 
     void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
-    const Expr* get_cond() const { return m_cond; }
-    Expr* get_cond() { return m_cond; }
+    /// Returns the condition expression of this statement.
+    const Expr* condition() const { return m_cond; }
+    Expr* condition() { return m_cond; }
 
-    const Stmt* get_body() const { return m_body; }
-    Stmt* get_body() { return m_body; }
+    /// Returns the body of this statement if it has one, and null otherwise.
+    const Stmt* body() const { return m_body; }
+    Stmt* body() { return m_body; }
 
+    /// Test if this statement has a body.
     bool has_body() const { return m_body != nullptr; }
 };
 
-/// Represents a statement that encapsulates a rune.
+/// Represents a statement which encapsulates a rune.
 class RuneStmt final : public Stmt {
     Rune* m_rune;
 
-    RuneStmt(SourceSpan span, Rune* rune)
-      : Stmt(Stmt::Kind::Rune, span), m_rune(rune) {}
+    RuneStmt(SourceSpan span, Rune* rune) : Stmt(span), m_rune(rune) {}
 
 public:
-    [[nodiscard]] static RuneStmt* create(AST::Context& ctx, SourceSpan span, 
-                                          Rune* rune);
+    [[nodiscard]] 
+    static RuneStmt* create(AST::Context& ctx, SourceSpan span, Rune* rune);
 
     ~RuneStmt() override;
 
@@ -327,10 +346,11 @@ public:
 
     void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
-    const Rune* get_rune() const { return m_rune; }
-    Rune* get_rune() { return m_rune; }
+    /// Returns the rune which this statement encapsulates.
+    const Rune* rune() const { return m_rune; }
+    Rune* rune() { return m_rune; }
 };
 
 } // namespace lace
 
-#endif // LOVELACE_STMT_H_
+#endif // LACE_STMT_H_

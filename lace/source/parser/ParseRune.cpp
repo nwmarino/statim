@@ -12,10 +12,10 @@ void Parser::parse_rune_decorators(std::vector<Rune*>& runes) {
     if (!expect(Token::Sign))
         return;
 
-    static std::unordered_map<std::string, Rune::Type> table = {
-        { "intrinsic", Rune::Intrinsic },
-        { "public", Rune::Public },
-        { "private", Rune::Private },
+    static std::unordered_map<std::string, Rune::Kind> table = {
+        { "intrinsic", Rune::Kind::Intrinsic },
+        { "public", Rune::Kind::Public },
+        { "private", Rune::Kind::Private },
     };
 
     if (expect(Token::OpenBrack)) {

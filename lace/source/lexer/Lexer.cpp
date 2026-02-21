@@ -43,7 +43,7 @@ static inline bool is_compound_token(Token::Kind kind) {
 Lexer::Lexer(const std::string& source, const std::string& filename)
   : m_source(source), m_filename(filename) {}
 
-Result Lexer::lex(TokenStream& stream) {
+bool Lexer::lex(TokenStream& stream) {
     while (!is_eof()) {
         Token token;
         if (!lex(token))
@@ -55,7 +55,7 @@ Result Lexer::lex(TokenStream& stream) {
     return true;
 }
 
-Result Lexer::lex(Token& token) {
+bool Lexer::lex(Token& token) {
     token.value.clear();
 
     if (is_eof()) {

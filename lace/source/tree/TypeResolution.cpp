@@ -13,39 +13,47 @@ using namespace lace;
 TypeResolution::TypeResolution(Options& options) : VisitorBase(options) {}
 
 void TypeResolution::visit(VariableDefn& node) {
-    if (!resolveType(node.get_type())) {
-        log::error("unresolved type: " + node.get_type().string(), 
-            log::Span(m_ast->get_file(), node.get_span()));
-    }
+    const log::Span span = { m_ast->get_file(), node.get_span() };
+    Type* type = resolve_type(node.type());
+    if (!type)
+        log::error("unresolved type: " + node.type()->string(), span);
+
+    node.set_type(type);
 }
 
 void TypeResolution::visit(FunctionDefn& node) {
-    if (!resolveType(node.get_type())) {
-        log::fatal("unresolved type: " + node.get_type().string(), 
-            log::Span(m_ast->get_file(), node.get_span().start));
-    }
+    const log::Span span = { m_ast->get_file(), node.get_span() };
+    Type* type = resolve_type(node.type());
+    if (!type)
+        log::error("unresolved type: " + node.type()->string(), span);
+    
+    FunctionType* sig = dynamic_cast<FunctionType*>(type);
+    assert(sig);
 
-    // The function's type has been resolved at this point, but the types of the parameters may be
-    // outdated.
+    node.set_type(sig);
 
-    auto type = dynamic_cast<const FunctionType*>(node.get_type().getType());
-    assert(type);
+    // The function's type has been resolved at this point, but the types of 
+    // the parameter definitions may be outdated.
 
     // For each function parameter, propogate its type to the same one as in the function type.
     for (uint32_t i = 0, e = node.num_params(); i < e; ++i)
-        node.get_params()[i]->set_type(type->getParam(i));
+        node.params()[i]->set_type(sig->get_param(i));
 }
 
 void TypeResolution::visit(FieldDefn& node) {
-    if (!resolveType(node.get_type())) {
-        log::fatal("unresolved type: " + node.get_type().string(), 
-            log::Span(m_ast->get_file(), node.get_span()));
-    }
+    const log::Span span = { m_ast->get_file(), node.get_span() };
+    Type* type = resolve_type(node.type());
+    if (!type)
+        log::error("unresolved type: " + node.type()->string(), span);
+    
+    node.set_type(type);
 }
 
 void TypeResolution::visit(VariantDefn& node) {
-    if (!resolveType(node.get_type())) {
-        log::fatal("unresolved type: " + node.get_type().string(), 
-            log::Span(m_ast->get_file(), node.get_span()));
-    }
+    const log::Span span = { m_ast->get_file(), node.get_span() };
+    Type* type = resolve_type(node.type());
+    if (!type)
+        log::error("unresolved type: " + node.type()->string(), span);
+    
+    node.set_type(type);
 }

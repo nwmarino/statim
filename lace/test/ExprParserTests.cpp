@@ -44,15 +44,15 @@ TEST_F(ExprParserTests, StructInitExpr) {
     EXPECT_NE(F, nullptr);
     EXPECT_TRUE(F->has_body());
 
-    auto B = dynamic_cast<BlockStmt*>(F->get_body());
+    auto B = dynamic_cast<BlockStmt*>(F->body());
     EXPECT_NE(B, nullptr);
     EXPECT_EQ(B->num_stmts(), 1);
 
     auto A = dynamic_cast<const AdapterStmt*>(B->get_stmt(0));
     EXPECT_NE(A, nullptr);
-    EXPECT_EQ(A->get_flavor(), AdapterStmt::Flavor::Expressive);
+    EXPECT_TRUE(A->is_expressive());
 
-    auto SI = dynamic_cast<const StructInitExpr*>(A->get_expr());
+    auto SI = dynamic_cast<const StructInitExpr*>(A->expr());
     EXPECT_NE(SI, nullptr);
     EXPECT_FALSE(SI->empty());
     EXPECT_EQ(SI->num_fields(), 3);
