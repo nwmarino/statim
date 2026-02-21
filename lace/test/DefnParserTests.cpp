@@ -41,7 +41,7 @@ TEST_F(DefnParserTests, Functions_Empty) {
 
     EXPECT_EQ(ast->num_defns(), 1);
 
-    auto F1 = dynamic_cast<const FunctionDefn*>(ast->get_defns()[0]);
+    auto F1 = dynamic_cast<const FunctionDefn*>(ast->get_defn(0));
     EXPECT_NE(F1, nullptr);
     EXPECT_EQ(F1->name(), "test");
     EXPECT_FALSE(F1->has_runes());
@@ -59,7 +59,7 @@ TEST_F(DefnParserTests, Functions_NonEmpty) {
 
     EXPECT_EQ(ast->num_defns(), 1);
 
-    auto F1 = dynamic_cast<const FunctionDefn*>(ast->get_defns()[0]);
+    auto F1 = dynamic_cast<const FunctionDefn*>(ast->get_defn(0));
     EXPECT_NE(F1, nullptr);
     EXPECT_EQ(F1->name(), "test");
     EXPECT_TRUE(F1->has_body());
@@ -87,7 +87,7 @@ TEST_F(DefnParserTests, Functions_WithParameters) {
 
     EXPECT_EQ(ast->num_defns(), 1);
 
-    auto F1 = dynamic_cast<const FunctionDefn*>(ast->get_defns()[0]);
+    auto F1 = dynamic_cast<const FunctionDefn*>(ast->get_defn(0));
     EXPECT_NE(F1, nullptr);
     EXPECT_EQ(F1->name(), "test");
     EXPECT_TRUE(F1->has_params());
@@ -114,7 +114,7 @@ TEST_F(DefnParserTests, GlobalVariables_NoInitializer) {
 
     EXPECT_EQ(ast->num_defns(), 1);
 
-    auto V1 = dynamic_cast<const VariableDefn*>(ast->get_defns()[0]);
+    auto V1 = dynamic_cast<const VariableDefn*>(ast->get_defn(0));
     EXPECT_NE(V1, nullptr);
     EXPECT_EQ(V1->name(), "glob");
     EXPECT_EQ(V1->type()->string(), "s64");
@@ -131,7 +131,7 @@ TEST_F(DefnParserTests, GlobalVariables_WithInitializer) {
 
     EXPECT_EQ(ast->num_defns(), 1);
 
-    auto V1 = dynamic_cast<const VariableDefn*>(ast->get_defns()[0]);
+    auto V1 = dynamic_cast<const VariableDefn*>(ast->get_defn(0));
     EXPECT_NE(V1, nullptr);
     EXPECT_EQ(V1->name(), "glob");
     EXPECT_EQ(V1->type()->string(), "s64");

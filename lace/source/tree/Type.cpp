@@ -15,19 +15,19 @@ using namespace lace;
 //                          AliasType Implementation
 //>==---------------------------------------------------------------------------
 
-AliasType* AliasType::create(AST::Context& ctx, Type* aliased, AliasDefn* defn) {
+AliasType* AliasType::create(AST& ast, Type* aliased, AliasDefn* defn) {
     assert(defn && "defn cannot be null!");
     
     AliasType* type = new AliasType(aliased, defn);
     assert(type);
 
-    ctx.m_aliases.emplace(defn->name(), type);
+    ast.m_types.aliases.emplace(defn->name(), type);
     return type;
 }
 
-AliasType* AliasType::get(AST::Context& ctx, const std::string &name) {
-    auto it = ctx.m_aliases.find(name);
-    if (it != ctx.m_aliases.end())
+AliasType* AliasType::get(AST& ast, const std::string &name) {
+    auto it = ast.m_types.aliases.find(name);
+    if (it != ast.m_types.aliases.end())
         return it->second;
 
     return nullptr;
@@ -49,8 +49,8 @@ bool AliasType::can_cast(const Type* other, bool implicit) const {
 //                          BuiltinType Implementation
 //>==---------------------------------------------------------------------------
 
-BuiltinType* BuiltinType::get(AST::Context &ctx, Kind kind) {
-    return ctx.m_builtins[static_cast<uint32_t>(kind)];
+BuiltinType* BuiltinType::get(AST& ast, Kind kind) {
+    return ast.m_types.builtins[static_cast<uint32_t>(kind)];
 }
 
 std::string BuiltinType::string() const {
@@ -118,11 +118,11 @@ bool BuiltinType::can_cast(const Type* other, bool implicit) const {
     }
 }
 
-DeferredType* DeferredType::get(AST::Context& ctx, const std::string& name) {
+DeferredType* DeferredType::get(AST& ast, const std::string& name) {
     DeferredType* type = new DeferredType(name);
     assert(type);
 
-    ctx.m_deferred.push_back(type);
+    ast.m_types.deferred.push_back(type);
     return type;
 }
 
@@ -130,23 +130,23 @@ DeferredType* DeferredType::get(AST::Context& ctx, const std::string& name) {
 //                          EnumType Implementation
 //>==---------------------------------------------------------------------------
 
-EnumType* EnumType::create(AST::Context& ctx, Type* underlying, EnumDefn* defn) {
+EnumType* EnumType::create(AST& ast, Type* underlying, EnumDefn* defn) {
     assert(defn && "definition cannot be null!");
 
-    auto it = ctx.m_enums.find(defn->name());
-    if (it != ctx.m_enums.end())
+    auto it = ast.m_types.enums.find(defn->name());
+    if (it != ast.m_types.enums.end())
         return nullptr;
 
     EnumType* type = new EnumType(underlying, defn);
     assert(type);
 
-    ctx.m_enums.emplace(defn->name(), type);
+    ast.m_types.enums.emplace(defn->name(), type);
     return type;
 }
 
-EnumType* EnumType::get(AST::Context& ctx, const std::string& name) {
-    auto it = ctx.m_enums.find(name);
-    if (it != ctx.m_enums.end())
+EnumType* EnumType::get(AST& ast, const std::string& name) {
+    auto it = ast.m_types.enums.find(name);
+    if (it != ast.m_types.enums.end())
         return it->second;
 
     return nullptr;
@@ -168,12 +168,12 @@ bool EnumType::can_cast(const Type* other, bool implicit) const {
 //                          FunctionType Implementation
 //>==---------------------------------------------------------------------------
 
-FunctionType* FunctionType::get(AST::Context& ctx, Type* result, 
+FunctionType* FunctionType::get(AST& ast, Type* result, 
                                 const std::vector<Type*>& params) {
     FunctionType* type = new FunctionType(result, params);
     assert(type);
     
-    ctx.m_functions.push_back(type);
+    ast.m_types.functions.push_back(type);
     return type;
 }
 
@@ -192,11 +192,11 @@ std::string FunctionType::string() const {
 //                          PointerType Implementation
 //>==---------------------------------------------------------------------------
 
-PointerType* PointerType::get(AST::Context& ctx, Type* pointee) {
+PointerType* PointerType::get(AST& ast, Type* pointee) {
     PointerType* type = new PointerType(pointee);
     assert(type);
 
-    ctx.m_pointers.push_back(type);
+    ast.m_types.pointers.push_back(type);
     return type;
 }
 
@@ -235,23 +235,23 @@ bool PointerType::can_cast(const Type* other, bool implicit) const {
 //                          StructType Implementation
 //>==---------------------------------------------------------------------------
 
-StructType* StructType::create(AST::Context& ctx, StructDefn* defn) {
+StructType* StructType::create(AST& ast, StructDefn* defn) {
     assert(defn && "definition cannot be null!");
     
-    auto it = ctx.m_structs.find(defn->name());
-    if (it != ctx.m_structs.end())
+    auto it = ast.m_types.structs.find(defn->name());
+    if (it != ast.m_types.structs.end())
         return nullptr;
 
     StructType* type = new StructType(defn);
     assert(type);
 
-    ctx.m_structs.emplace(defn->name(), type);
+    ast.m_types.structs.emplace(defn->name(), type);
     return type;
 }
 
-StructType* StructType::get(AST::Context& ctx, const std::string& name) {
-    auto it = ctx.m_structs.find(name);
-    if (it != ctx.m_structs.end())
+StructType* StructType::get(AST& ast, const std::string& name) {
+    auto it = ast.m_types.structs.find(name);
+    if (it != ast.m_types.structs.end())
         return it->second;
 
     return nullptr;

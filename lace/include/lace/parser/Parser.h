@@ -24,7 +24,6 @@ class Parser final {
     TokenStream& m_stream;
     std::string m_file;
     AST* m_ast = nullptr;
-    AST::Context* m_context = nullptr;
     Scope* m_scope = nullptr;
     bool m_allow_inits = true;
 

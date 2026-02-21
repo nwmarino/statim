@@ -13,9 +13,9 @@ using namespace lace;
 
 void VisitorBase::visit(AST& node) {
     m_ast = &node;
-    m_scope = node.get_scope();
+    m_scope = node.scope();
 
-    for (Defn* defn : node.get_defns())
+    for (Defn* defn : node.defns())
         defn->accept(*this);
 }
 
@@ -219,7 +219,7 @@ Type* VisitorBase::resolve_type(Type* type) const {
             params.push_back(res);
         }
 
-        return FunctionType::get(m_ast->get_context(), result, params);
+        return FunctionType::get(*m_ast, result, params);
     } else if (auto ptr = dynamic_cast<PointerType*>(type)) {
         Type* pointee = resolve_type(ptr->pointee());
         if (pointee != ptr->pointee())

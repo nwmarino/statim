@@ -12,7 +12,7 @@ using namespace lace;
 //                          LoadDefn Implementation
 //>==---------------------------------------------------------------------------
 
-LoadDefn* LoadDefn::create(AST::Context& ctx, SourceSpan span, 
+LoadDefn* LoadDefn::create(AST& ast, SourceSpan span, 
                            const std::string& path) {
     return new LoadDefn(span, path);
 }
@@ -34,7 +34,7 @@ NamedDefn::~NamedDefn() {
 //                          VariableDefn Implementation
 //>==---------------------------------------------------------------------------
 
-VariableDefn* VariableDefn::create(AST::Context& ctx, SourceSpan span, 
+VariableDefn* VariableDefn::create(AST& ast, SourceSpan span, 
                                    const std::string& name, const Runes& runes, 
                                    Type* type, Expr* init, bool global) {
     return new VariableDefn(span, name, runes, type, init, global);
@@ -51,7 +51,7 @@ VariableDefn::~VariableDefn() {
 //                          ParameterDefn Implementation
 //>==---------------------------------------------------------------------------
 
-ParameterDefn* ParameterDefn::create(AST::Context& ctx, SourceSpan span, 
+ParameterDefn* ParameterDefn::create(AST& ast, SourceSpan span, 
                                      const std::string& name, 
                                      const Runes& runes, Type* type) {
     return new ParameterDefn(span, name, runes, type);
@@ -61,7 +61,7 @@ ParameterDefn* ParameterDefn::create(AST::Context& ctx, SourceSpan span,
 //                          FunctionDefn Implementation
 //>==---------------------------------------------------------------------------
 
-FunctionDefn* FunctionDefn::create(AST::Context& ctx, SourceSpan span, 
+FunctionDefn* FunctionDefn::create(AST& ast, SourceSpan span, 
                                    const std::string& name, const Runes& runes, 
                                    FunctionType* type, Scope* scope, 
                                    const Params& params, BlockStmt* body) {
@@ -91,7 +91,7 @@ FunctionDefn::~FunctionDefn() {
 //                          FieldDefn Implementation
 //>==---------------------------------------------------------------------------
 
-FieldDefn* FieldDefn::create(AST::Context& ctx, SourceSpan span, 
+FieldDefn* FieldDefn::create(AST& ast, SourceSpan span, 
                              const std::string& name, const Runes& runes, 
                              Type* type, uint32_t index) {
     return new FieldDefn(span, name, runes, type, index);
@@ -101,7 +101,7 @@ FieldDefn* FieldDefn::create(AST::Context& ctx, SourceSpan span,
 //                          VariantDefn Implementation
 //>==---------------------------------------------------------------------------
 
-VariantDefn* VariantDefn::create(AST::Context& ctx, SourceSpan span, 
+VariantDefn* VariantDefn::create(AST& ast, SourceSpan span, 
                                  const std::string& name, const Runes& runes, 
                                  Type* type, int64_t value) {
     return new VariantDefn(span, name, runes, type, value);
@@ -111,7 +111,7 @@ VariantDefn* VariantDefn::create(AST::Context& ctx, SourceSpan span,
 //                          AliasDefn Implementation
 //>==---------------------------------------------------------------------------
 
-AliasDefn* AliasDefn::create(AST::Context& ctx, SourceSpan span, 
+AliasDefn* AliasDefn::create(AST& ast, SourceSpan span, 
                              const std::string& name, const Runes& runes, 
                              Type* type) {
     return new AliasDefn(span, name, runes, type);
@@ -121,7 +121,7 @@ AliasDefn* AliasDefn::create(AST::Context& ctx, SourceSpan span,
 //                          StructDefn Implementation
 //>==---------------------------------------------------------------------------
 
-StructDefn* StructDefn::create(AST::Context& ctx, SourceSpan span, 
+StructDefn* StructDefn::create(AST& ast, SourceSpan span, 
                                const std::string& name, const Runes& runes, 
                                Type* type) {
     return new StructDefn(span, name, runes, type);
@@ -140,7 +140,7 @@ StructDefn::~StructDefn() {
 //                          EnumDefn Implementation
 //>==---------------------------------------------------------------------------
 
-EnumDefn* EnumDefn::create(AST::Context& ctx, SourceSpan span, 
+EnumDefn* EnumDefn::create(AST& ast, SourceSpan span, 
                            const std::string& name, const Runes& runes, 
                            Type* type) {
     return new EnumDefn(span, name, runes, type);

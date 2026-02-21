@@ -86,7 +86,7 @@ class BoolLiteral final : public Expr {
 
 public:
     [[nodiscard]]
-    static BoolLiteral* create(AST::Context& ctx, SourceSpan span, bool value);
+    static BoolLiteral* create(AST& ast, SourceSpan span, bool value);
 
     ~BoolLiteral() = default;
 
@@ -113,7 +113,7 @@ class CharLiteral final : public Expr {
 
 public:
     [[nodiscard]]
-    static CharLiteral* create(AST::Context& ctx, SourceSpan span, char value);
+    static CharLiteral* create(AST& ast, SourceSpan span, char value);
 
     ~CharLiteral() = default;
     
@@ -140,7 +140,7 @@ class IntegerLiteral final : public Expr {
 
 public:
     [[nodiscard]]
-    static IntegerLiteral* create(AST::Context& ctx, SourceSpan span, 
+    static IntegerLiteral* create(AST& ast, SourceSpan span, 
                                   Type* type, int64_t value);
 
     ~IntegerLiteral() = default;
@@ -168,7 +168,7 @@ class FloatLiteral final : public Expr {
 
 public:
     [[nodiscard]]
-    static FloatLiteral* create(AST::Context& ctx, SourceSpan span, Type* type, 
+    static FloatLiteral* create(AST& ast, SourceSpan span, Type* type, 
                                 double value);
 
     ~FloatLiteral() = default;
@@ -193,7 +193,7 @@ class NullLiteral final : public Expr {
 
 public:
     [[nodiscard]]
-    static NullLiteral* create(AST::Context& ctx, SourceSpan span, Type* type);
+    static NullLiteral* create(AST& ast, SourceSpan span, Type* type);
 
     ~NullLiteral() = default;
 
@@ -217,7 +217,7 @@ class StringLiteral final : public Expr {
 
 public:
     [[nodiscard]]
-    static StringLiteral* create(AST::Context& ctx, SourceSpan span, 
+    static StringLiteral* create(AST& ast, SourceSpan span, 
                                  const std::string& value);
 
     ~StringLiteral() = default;
@@ -301,7 +301,7 @@ private:
 
 public:
     [[nodiscard]]
-    static BinaryOp* create(AST::Context& ctx, SourceSpan span, Operator op, 
+    static BinaryOp* create(AST& ast, SourceSpan span, Operator op, 
                             Expr* lhs, Expr* rhs);
 
     ~BinaryOp() override;
@@ -366,7 +366,7 @@ private:
 
 public:
     [[nodiscard]]
-    static UnaryOp* create(AST::Context& ctx, SourceSpan span, Operator op, 
+    static UnaryOp* create(AST& ast, SourceSpan span, Operator op, 
                            bool prefix, Expr* expr);
 
     ~UnaryOp() override;
@@ -416,7 +416,7 @@ class AccessExpr final : public Expr {
 
 public:
     [[nodiscard]]
-    static AccessExpr* create(AST::Context& ctx, SourceSpan span, Expr* base, 
+    static AccessExpr* create(AST& ast, SourceSpan span, Expr* base, 
                               const std::string& name);
 
     ~AccessExpr() override;
@@ -466,7 +466,7 @@ private:
 
 public:
     [[nodiscard]]
-    static CallExpr* create(AST::Context& ctx, SourceSpan span, Expr* callee, 
+    static CallExpr* create(AST& ast, SourceSpan span, Expr* callee, 
                             const Args& args);
 
     ~CallExpr() override;
@@ -514,7 +514,7 @@ class CastExpr final : public Expr {
 
 public:
     [[nodiscard]]
-    static CastExpr* create(AST::Context& ctx, SourceSpan span, Type* type, 
+    static CastExpr* create(AST& ast, SourceSpan span, Type* type, 
                             Expr* expr);
 
     ~CastExpr() override;
@@ -543,7 +543,7 @@ class ParenExpr final : public Expr {
 
 public:
     [[nodiscard]]
-    static ParenExpr* create(AST::Context& ctx, SourceSpan span, Expr* expr);
+    static ParenExpr* create(AST& ast, SourceSpan span, Expr* expr);
 
     ~ParenExpr() override;
 
@@ -574,7 +574,7 @@ public:
 
 public:
     [[nodiscard]]
-    static RefExpr* create(AST::Context& ctx, SourceSpan span, 
+    static RefExpr* create(AST& ast, SourceSpan span, 
                            const std::string& name, ValueDefn* defn);
 
     ~RefExpr() = default;
@@ -614,7 +614,7 @@ class SizeofExpr final : public Expr {
 
 public:
     [[nodiscard]]
-    static SizeofExpr* create(AST::Context& ctx, SourceSpan span, Type* target);
+    static SizeofExpr* create(AST& ast, SourceSpan span, Type* target);
 
     ~SizeofExpr() = default;
     
@@ -646,7 +646,7 @@ class SubscriptExpr final : public Expr {
 
 public:
     [[nodiscard]]
-    static SubscriptExpr* create(AST::Context& ctx, SourceSpan span, Expr* base, 
+    static SubscriptExpr* create(AST& ast, SourceSpan span, Expr* base, 
                                  Expr* index);
 
     ~SubscriptExpr() override;
@@ -683,7 +683,7 @@ private:
 
 public:
     [[nodiscard]]
-    static StructInitExpr* create(AST::Context& ctx, SourceSpan span, 
+    static StructInitExpr* create(AST& ast, SourceSpan span, 
                                   Type* type, const Fields& fields);
 
     ~StructInitExpr() override;

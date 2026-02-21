@@ -21,7 +21,7 @@ void LIRCodegen::run() {
     std::vector<Defn*> defns = {};
     std::vector<TypeDefn*> types = {};
 
-    for (Defn* defn : m_ast->get_loaded()) {
+    for (Defn* defn : m_ast->imports()) {
         auto type_defn = dynamic_cast<TypeDefn*>(defn);
         if (type_defn) {
             types.push_back(type_defn);
@@ -30,7 +30,7 @@ void LIRCodegen::run() {
         }
     }
 
-    for (Defn* defn : m_ast->get_defns()) {
+    for (Defn* defn : m_ast->defns()) {
         auto type_defn = dynamic_cast<TypeDefn*>(defn);
         if (type_defn) {
             types.push_back(type_defn);

@@ -167,7 +167,7 @@ Expr* Parser::parse_prefix_operator() {
         if (!base)
             log::fatal("expected expression", log::Span(m_file, since(start)));
 
-        return UnaryOp::create(*m_context, since(start), op, true, base);
+        return UnaryOp::create(*m_ast, since(start), op, true, base);
     } else {
         return parse_postfix_operator();
     }
@@ -185,7 +185,7 @@ Expr* Parser::parse_postfix_operator() {
         if (UnaryOp::is_postfix(op)) {
             // Ordinary postfix operator -> UnaryOp recurse.
             next();
-            expr = UnaryOp::create(*m_context, since(start), op, false, expr);
+            expr = UnaryOp::create(*m_ast, since(start), op, false, expr);
         } else if (match(Token::OpenBrack)) {
             // '[]' operator -> SubscriptExpr.
             next(); // '['
@@ -196,7 +196,7 @@ Expr* Parser::parse_postfix_operator() {
             if (!expect(Token::CloseBrack))
                 log::fatal("expected ']'", log::Span(m_file, since(start)));
 
-            expr = SubscriptExpr::create(*m_context, since(start), expr, index);
+            expr = SubscriptExpr::create(*m_ast, since(start), expr, index);
         } else if (match(Token::OpenParen)) {
             // '(...' operator -> CallExpr.
             next(); // '('
@@ -223,7 +223,7 @@ Expr* Parser::parse_postfix_operator() {
 
             args.shrink_to_fit();
 
-            expr = CallExpr::create(*m_context, since(start), expr, args);
+            expr = CallExpr::create(*m_ast, since(start), expr, args);
         } else if (match(Token::Dot)) {
             // '.' operator -> AccessExpr.
             next(); // '.'
@@ -234,7 +234,7 @@ Expr* Parser::parse_postfix_operator() {
             const std::string field = curr().value;
             next();
 
-            expr = AccessExpr::create(*m_context, since(start), expr, field);
+            expr = AccessExpr::create(*m_ast, since(start), expr, field);
         } else {
             break;
         }
@@ -267,7 +267,7 @@ Expr* Parser::parse_binary_operator(Expr* base, int8_t precedence) {
         }
 
         base = BinaryOp::create(
-            *m_context, 
+            *m_ast, 
             since(base->get_span().start), 
             op, 
             base, 
@@ -282,7 +282,7 @@ Expr* Parser::parse_literal_bool() {
     const Token lit = curr();
     next();
 
-    return BoolLiteral::create(*m_context, lit.loc, lit.value == "true");
+    return BoolLiteral::create(*m_ast, lit.loc, lit.value == "true");
 }
 
 Expr* Parser::parse_literal_int() {
@@ -309,9 +309,9 @@ Expr* Parser::parse_literal_int() {
     }
 
     return IntegerLiteral::create(
-        *m_context, 
+        *m_ast, 
         lit.loc, 
-        BuiltinType::get(*m_context, kind), 
+        BuiltinType::get(*m_ast, kind), 
         std::stoll(lit.value));
 }
 
@@ -327,9 +327,9 @@ Expr* Parser::parse_literal_float() {
     }
 
     return FloatLiteral::create(
-        *m_context, 
+        *m_ast, 
         lit.loc, 
-        BuiltinType::get(*m_context, kind), 
+        BuiltinType::get(*m_ast, kind), 
         std::stod(lit.value)
     );
 }
@@ -338,16 +338,16 @@ Expr* Parser::parse_literal_char() {
     const Token lit = curr();
     next();
 
-    return CharLiteral::create(*m_context, lit.loc, lit.value[0]);
+    return CharLiteral::create(*m_ast, lit.loc, lit.value[0]);
 }
 
 Expr* Parser::parse_literal_null() {
     const Token lit = curr();
     next();
 
-    return NullLiteral::create(*m_context, lit.loc, PointerType::get(
-        *m_context, 
-        BuiltinType::get(*m_context, BuiltinType::Kind::Void)
+    return NullLiteral::create(*m_ast, lit.loc, PointerType::get(
+        *m_ast, 
+        BuiltinType::get(*m_ast, BuiltinType::Kind::Void)
     ));
 }
 
@@ -355,7 +355,7 @@ Expr* Parser::parse_literal_string() {
     const Token lit = curr();
     next();
 
-    return StringLiteral::create(*m_context, lit.loc, lit.value);
+    return StringLiteral::create(*m_ast, lit.loc, lit.value);
 }
 
 Expr* Parser::parse_type_cast() {
@@ -381,7 +381,7 @@ Expr* Parser::parse_type_cast() {
         log::fatal("expected ')'", log::Span(m_file, since(start)));
 
     return CastExpr::create(
-        *m_context, SourceSpan(start, expr->get_span().end), type, expr);
+        *m_ast, SourceSpan(start, expr->get_span().end), type, expr);
 }
 
 Expr* Parser::parse_parentheses() {
@@ -396,7 +396,7 @@ Expr* Parser::parse_parentheses() {
     if (!expect(Token::CloseParen))
         log::fatal("expected ')'", log::Span(m_file, since(start)));
 
-    return ParenExpr::create(*m_context, SourceSpan(start, end), expr);
+    return ParenExpr::create(*m_ast, SourceSpan(start, end), expr);
 }
 
 Expr* Parser::parse_sizeof_operator() {
@@ -412,7 +412,7 @@ Expr* Parser::parse_sizeof_operator() {
     if (!expect(Token::CloseParen))
         log::fatal("expected ')'", log::Span(m_file, since(start)));
 
-    return SizeofExpr::create(*m_context, SourceSpan(start, end), type);
+    return SizeofExpr::create(*m_ast, SourceSpan(start, end), type);
 }
 
 Expr* Parser::parse_named_reference() {
@@ -423,7 +423,7 @@ Expr* Parser::parse_named_reference() {
         return parse_struct_initializer(position);
 
     const Token& id = m_stream.get(position);
-    return RefExpr::create(*m_context, since(id.loc), id.value, nullptr);
+    return RefExpr::create(*m_ast, since(id.loc), id.value, nullptr);
 }
 
 Expr* Parser::parse_struct_initializer(uint64_t start) {
@@ -467,7 +467,7 @@ Expr* Parser::parse_struct_initializer(uint64_t start) {
     next(); // '}'
 
     return StructInitExpr::create(
-        *m_context, 
+        *m_ast, 
         SourceSpan { loc_start, loc_end }, 
         type, 
         fields

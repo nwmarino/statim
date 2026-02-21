@@ -15,11 +15,11 @@ using namespace lace;
 //                          BoolLiteral Implementation
 //>==---------------------------------------------------------------------------
 
-BoolLiteral* BoolLiteral::create(AST::Context& ctx, SourceSpan span, 
+BoolLiteral* BoolLiteral::create(AST& ast, SourceSpan span, 
                                  bool value) {
     return new BoolLiteral(
         span, 
-        BuiltinType::get(ctx, BuiltinType::Kind::Bool), 
+        BuiltinType::get(ast, BuiltinType::Kind::Bool), 
         value
     );
 }
@@ -28,11 +28,11 @@ BoolLiteral* BoolLiteral::create(AST::Context& ctx, SourceSpan span,
 //                          CharLiteral Implementation
 //>==---------------------------------------------------------------------------
 
-CharLiteral* CharLiteral::create(AST::Context& ctx, SourceSpan span, 
+CharLiteral* CharLiteral::create(AST& ast, SourceSpan span, 
                                  char value) {
     return new CharLiteral(
         span, 
-        BuiltinType::get(ctx, BuiltinType::Kind::Char), 
+        BuiltinType::get(ast, BuiltinType::Kind::Char), 
         value
     );
 }
@@ -41,7 +41,7 @@ CharLiteral* CharLiteral::create(AST::Context& ctx, SourceSpan span,
 //                          IntegerLiteral Implementation
 //>==---------------------------------------------------------------------------
 
-IntegerLiteral* IntegerLiteral::create(AST::Context& ctx, SourceSpan span, 
+IntegerLiteral* IntegerLiteral::create(AST& ast, SourceSpan span, 
                                        Type* type, int64_t value) {
     return new IntegerLiteral(span, type, value);
 }
@@ -50,7 +50,7 @@ IntegerLiteral* IntegerLiteral::create(AST::Context& ctx, SourceSpan span,
 //                          FloatLiteral Implementation
 //>==---------------------------------------------------------------------------
 
-FloatLiteral* FloatLiteral::create(AST::Context& ctx, SourceSpan span, 
+FloatLiteral* FloatLiteral::create(AST& ast, SourceSpan span, 
                                    Type* type, double value) {
     return new FloatLiteral(span, type, value);
 }
@@ -59,7 +59,7 @@ FloatLiteral* FloatLiteral::create(AST::Context& ctx, SourceSpan span,
 //                          NullLiteral Implementation
 //>==---------------------------------------------------------------------------
 
-NullLiteral* NullLiteral::create(AST::Context& ctx, SourceSpan span, 
+NullLiteral* NullLiteral::create(AST& ast, SourceSpan span, 
                                  Type* type) {
     return new NullLiteral(span, type);
 }
@@ -68,11 +68,11 @@ NullLiteral* NullLiteral::create(AST::Context& ctx, SourceSpan span,
 //                          StringLiteral Implementation
 //>==---------------------------------------------------------------------------
 
-StringLiteral* StringLiteral::create(AST::Context& ctx, SourceSpan span, 
+StringLiteral* StringLiteral::create(AST& ast, SourceSpan span, 
                                      const std::string& value) {
     return new StringLiteral(
         span, 
-        PointerType::get(ctx, BuiltinType::get(ctx, BuiltinType::Kind::Char)),
+        PointerType::get(ast, BuiltinType::get(ast, BuiltinType::Kind::Char)),
         value
     );
 }
@@ -81,7 +81,7 @@ StringLiteral* StringLiteral::create(AST::Context& ctx, SourceSpan span,
 //                          BinaryOp Implementation
 //>==---------------------------------------------------------------------------
 
-BinaryOp* BinaryOp::create(AST::Context& ctx, SourceSpan span, Operator op, 
+BinaryOp* BinaryOp::create(AST& ast, SourceSpan span, Operator op, 
                            Expr* lhs, Expr* rhs) {
     assert(op != Unknown && "invalid operator!");
     assert(lhs && "lhs cannot be null!");
@@ -104,7 +104,7 @@ BinaryOp::~BinaryOp() {
 //                          UnaryOp Implementation
 //>==---------------------------------------------------------------------------
 
-UnaryOp* UnaryOp::create(AST::Context& ctx, SourceSpan span, Operator op, 
+UnaryOp* UnaryOp::create(AST& ast, SourceSpan span, Operator op, 
                          bool prefix, Expr* expr) {
     assert(op != Unknown && "invalid operator!");
     assert(expr && "expr cannot be null!");
@@ -122,7 +122,7 @@ UnaryOp::~UnaryOp() {
 //                          AccessExpr Implementation
 //>==---------------------------------------------------------------------------
 
-AccessExpr* AccessExpr::create(AST::Context& ctx, SourceSpan span, Expr* base, 
+AccessExpr* AccessExpr::create(AST& ast, SourceSpan span, Expr* base, 
                                const std::string& name) {
     assert(base && "base cannot be null!");
     return new AccessExpr(
@@ -145,7 +145,7 @@ AccessExpr::~AccessExpr() {
 //                          CallExpr Implementation
 //>==---------------------------------------------------------------------------
 
-CallExpr* CallExpr::create(AST::Context& ctx, SourceSpan span, Expr* callee, 
+CallExpr* CallExpr::create(AST& ast, SourceSpan span, Expr* callee, 
                            const Args& args) {
     assert(callee && "callee cannot be null!");
     return new CallExpr(
@@ -174,7 +174,7 @@ CallExpr::~CallExpr() {
 //                          CastExpr Implementation
 //>==---------------------------------------------------------------------------
 
-CastExpr* CastExpr::create(AST::Context& ctx, SourceSpan span, Type* type, 
+CastExpr* CastExpr::create(AST& ast, SourceSpan span, Type* type, 
                            Expr* expr) {
     assert(expr && "expr cannot be null!");
     return new CastExpr(span, type, expr);
@@ -191,7 +191,7 @@ CastExpr::~CastExpr() {
 //                          ParenExpr Implementation
 //>==---------------------------------------------------------------------------
 
-ParenExpr* ParenExpr::create(AST::Context& ctx, SourceSpan span, Expr* expr) {
+ParenExpr* ParenExpr::create(AST& ast, SourceSpan span, Expr* expr) {
     assert(expr && "expr cannot be null!");
     return new ParenExpr(span, expr->type(), expr);
 }
@@ -207,7 +207,7 @@ ParenExpr::~ParenExpr() {
 //                          ParenExpr Implementation
 //>==---------------------------------------------------------------------------
 
-RefExpr* RefExpr::create(AST::Context& ctx, SourceSpan span, 
+RefExpr* RefExpr::create(AST& ast, SourceSpan span, 
                          const std::string& name, ValueDefn* defn) {
     return new RefExpr(span, defn ? defn->type() : nullptr, name, defn);
 }
@@ -223,11 +223,11 @@ bool RefExpr::is_lvalue() const {
 //                          SizeofExpr Implementation
 //>==---------------------------------------------------------------------------
 
-SizeofExpr* SizeofExpr::create(AST::Context& ctx, SourceSpan span, 
+SizeofExpr* SizeofExpr::create(AST& ast, SourceSpan span, 
                                Type* target) {
     return new SizeofExpr(
         span, 
-        BuiltinType::get(ctx, BuiltinType::Kind::UInt64), 
+        BuiltinType::get(ast, BuiltinType::Kind::UInt64), 
         target
     );
 }
@@ -236,7 +236,7 @@ SizeofExpr* SizeofExpr::create(AST::Context& ctx, SourceSpan span,
 //                          SubscriptExpr Implementation
 //>==---------------------------------------------------------------------------
 
-SubscriptExpr* SubscriptExpr::create(AST::Context& ctx, SourceSpan span, 
+SubscriptExpr* SubscriptExpr::create(AST& ast, SourceSpan span, 
                                      Expr* base, Expr* index) {
     assert(base && "base cannot be null!");
     assert(index && "index cannot be null!");
@@ -259,7 +259,7 @@ SubscriptExpr::~SubscriptExpr() {
 //                          StructInitExpr Implementation
 //>==---------------------------------------------------------------------------
 
-StructInitExpr* StructInitExpr::create(AST::Context& ctx, SourceSpan span, 
+StructInitExpr* StructInitExpr::create(AST& ast, SourceSpan span, 
                                        Type* type, const Fields& fields) {
     return new StructInitExpr(span, type, fields);
 }

@@ -40,7 +40,7 @@ TEST_F(StmtParserTests, IfStatement_Positive) {
 
     EXPECT_EQ(ast->num_defns(), 1);
 
-    FunctionDefn* FD = dynamic_cast<FunctionDefn*>(ast->get_defns()[0]);
+    FunctionDefn* FD = dynamic_cast<FunctionDefn*>(ast->get_defn(0));
     EXPECT_NE(FD, nullptr);
     EXPECT_TRUE(FD->has_body());
 
@@ -74,7 +74,7 @@ TEST_F(StmtParserTests, IfElseStatement_Positive) {
 
     EXPECT_EQ(ast->num_defns(), 1);
 
-    FunctionDefn* FD = dynamic_cast<FunctionDefn*>(ast->get_defns()[0]);
+    FunctionDefn* FD = dynamic_cast<FunctionDefn*>(ast->get_defn(0));
     EXPECT_NE(FD, nullptr);
     EXPECT_TRUE(FD->has_body());
 
@@ -107,7 +107,7 @@ TEST_F(StmtParserTests, UntilStatement_Positive) {
 
     EXPECT_EQ(ast->num_defns(), 1);
 
-    FunctionDefn* FD = dynamic_cast<FunctionDefn*>(ast->get_defns()[0]);
+    FunctionDefn* FD = dynamic_cast<FunctionDefn*>(ast->get_defn(0));
     EXPECT_NE(FD, nullptr);
     EXPECT_TRUE(FD->has_body());
 
@@ -133,7 +133,7 @@ TEST_F(StmtParserTests, UntilStatementNoBody_Positive) {
 
     EXPECT_EQ(ast->num_defns(), 1);
 
-    FunctionDefn* FD = dynamic_cast<FunctionDefn*>(ast->get_defns()[0]);
+    FunctionDefn* FD = dynamic_cast<FunctionDefn*>(ast->get_defn(0));
     EXPECT_NE(FD, nullptr);
     EXPECT_TRUE(FD->has_body());
 

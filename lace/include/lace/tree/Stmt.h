@@ -71,10 +71,10 @@ private:
 
 public:
     [[nodiscard]]
-    static AdapterStmt* create(AST::Context& ctx, Defn* defn);
+    static AdapterStmt* create(AST& ast, Defn* defn);
     
     [[nodiscard]]
-    static AdapterStmt* create(AST::Context& ctx, Expr* expr);
+    static AdapterStmt* create(AST& ast, Expr* expr);
 
     ~AdapterStmt() override;
 
@@ -136,7 +136,7 @@ private:
 
 public:
     [[nodiscard]]
-    static BlockStmt* create(AST::Context& ctx, SourceSpan span, Scope* scope,
+    static BlockStmt* create(AST& ast, SourceSpan span, Scope* scope,
                              const Stmts& stmts);
 
     ~BlockStmt() override;
@@ -192,7 +192,7 @@ class IfStmt final : public Stmt {
 
 public:
     [[nodiscard]]
-    static IfStmt* create(AST::Context& ctx, SourceSpan span, Expr* cond, 
+    static IfStmt* create(AST& ast, SourceSpan span, Expr* cond, 
                           Stmt* then, Stmt* els);
 
     ~IfStmt() override;
@@ -228,7 +228,7 @@ class RestartStmt final : public Stmt {
 
 public:
     [[nodiscard]]
-    static RestartStmt* create(AST::Context& ctx, SourceSpan span);
+    static RestartStmt* create(AST& ast, SourceSpan span);
 
     ~RestartStmt() = default;
 
@@ -252,7 +252,7 @@ class RetStmt final : public Stmt {
 
 public:
     [[nodiscard]]
-    static RetStmt* create(AST::Context& ctx, SourceSpan span, Expr* expr);
+    static RetStmt* create(AST& ast, SourceSpan span, Expr* expr);
 
     ~RetStmt() override;
 
@@ -278,7 +278,7 @@ class StopStmt final : public Stmt {
 
 public:
     [[nodiscard]]
-    static StopStmt* create(AST::Context& ctx, SourceSpan span);
+    static StopStmt* create(AST& ast, SourceSpan span);
     
     ~StopStmt() = default;
 
@@ -301,7 +301,7 @@ class UntilStmt final : public Stmt {
 
 public:
     [[nodiscard]]
-    static UntilStmt* create(AST::Context& ctx, SourceSpan span, Expr* cond, 
+    static UntilStmt* create(AST& ast, SourceSpan span, Expr* cond, 
                              Stmt* body);
 
     ~UntilStmt() override;
@@ -334,7 +334,7 @@ class RuneStmt final : public Stmt {
 
 public:
     [[nodiscard]] 
-    static RuneStmt* create(AST::Context& ctx, SourceSpan span, Rune* rune);
+    static RuneStmt* create(AST& ast, SourceSpan span, Rune* rune);
 
     ~RuneStmt() override;
 

@@ -19,15 +19,14 @@ Parser::Parser(TokenStream& stream, const std::string& file)
 
 AST* Parser::parse() {
     m_ast = AST::create(m_file);
-    m_context = &m_ast->get_context();
-    m_scope = m_ast->get_scope();
+    m_scope = m_ast->scope();
 
     while (!m_stream.complete()) {
         Defn* defn = parse_initial_definition();
         if (!defn)
             log::fatal("expected definition", log::Location(m_file, loc()));
 
-        m_ast->get_defns().push_back(defn);
+        m_ast->defns().push_back(defn);
     }
 
     return m_ast;
@@ -50,29 +49,29 @@ Type* Parser::parse_type_specifier() {
     Type* type = nullptr;
     
     if (expect(Token::Star)) {
-        return PointerType::get(*m_context, parse_type_specifier());
+        return PointerType::get(*m_ast, parse_type_specifier());
     } else if (match(Token::Identifier)) {
         std::unordered_map<std::string, Type*> types = {
-            { "void", BuiltinType::get(*m_context, BuiltinType::Kind::Void) },
-            { "bool", BuiltinType::get(*m_context, BuiltinType::Kind::Bool) },
-            { "char", BuiltinType::get(*m_context, BuiltinType::Kind::Char) },
-            { "s8", BuiltinType::get(*m_context, BuiltinType::Kind::Int8) },
-            { "s16", BuiltinType::get(*m_context, BuiltinType::Kind::Int16) },
-            { "s32", BuiltinType::get(*m_context, BuiltinType::Kind::Int32) },
-            { "s64", BuiltinType::get(*m_context, BuiltinType::Kind::Int64) },
-            { "u8", BuiltinType::get(*m_context, BuiltinType::Kind::UInt8) },
-            { "u16", BuiltinType::get(*m_context, BuiltinType::Kind::UInt16) },
-            { "u32", BuiltinType::get(*m_context, BuiltinType::Kind::UInt32) },
-            { "u64", BuiltinType::get(*m_context, BuiltinType::Kind::UInt64) },
-            { "f32", BuiltinType::get(*m_context, BuiltinType::Kind::Float32) },
-            { "f64", BuiltinType::get(*m_context, BuiltinType::Kind::Float64) },
+            { "void", BuiltinType::get(*m_ast, BuiltinType::Kind::Void) },
+            { "bool", BuiltinType::get(*m_ast, BuiltinType::Kind::Bool) },
+            { "char", BuiltinType::get(*m_ast, BuiltinType::Kind::Char) },
+            { "s8", BuiltinType::get(*m_ast, BuiltinType::Kind::Int8) },
+            { "s16", BuiltinType::get(*m_ast, BuiltinType::Kind::Int16) },
+            { "s32", BuiltinType::get(*m_ast, BuiltinType::Kind::Int32) },
+            { "s64", BuiltinType::get(*m_ast, BuiltinType::Kind::Int64) },
+            { "u8", BuiltinType::get(*m_ast, BuiltinType::Kind::UInt8) },
+            { "u16", BuiltinType::get(*m_ast, BuiltinType::Kind::UInt16) },
+            { "u32", BuiltinType::get(*m_ast, BuiltinType::Kind::UInt32) },
+            { "u64", BuiltinType::get(*m_ast, BuiltinType::Kind::UInt64) },
+            { "f32", BuiltinType::get(*m_ast, BuiltinType::Kind::Float32) },
+            { "f64", BuiltinType::get(*m_ast, BuiltinType::Kind::Float64) },
         };
 
         auto it = types.find(curr().value);
         if (it != types.end()) {
             type = it->second;
         } else {
-            type = DeferredType::get(*m_context, curr().value);
+            type = DeferredType::get(*m_ast, curr().value);
         }
 
         next();

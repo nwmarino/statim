@@ -76,7 +76,7 @@ void SemanticAnalysis::visit(VariableDefn& node) {
                 + ", but expected " + expected->string(), span);
         } else if (res == TypeCheckResult::Cast) {
             node.m_init = CastExpr::create(
-                m_ast->get_context(), 
+                *m_ast, 
                 init->get_span(), 
                 node.type(), 
                 init
@@ -95,7 +95,7 @@ void SemanticAnalysis::visit(FunctionDefn& node) {
             log::error("'main' must be marked with $public", span);
 
         const Type* result = node.get_return_type();
-        const Type* s64 = BuiltinType::get(m_ast->get_context(), BuiltinType::Kind::Int64);
+        const Type* s64 = BuiltinType::get(*m_ast, BuiltinType::Kind::Int64);
         if (!result->compare(s64))
             log::error("'main' must return 's64'", span);
     }
@@ -149,7 +149,7 @@ void SemanticAnalysis::visit(RetStmt& node) {
         log::fatal("return type mismatch; got " + actual->string(), span);
     } else if (res == TypeCheckResult::Cast) {
         node.m_expr = CastExpr::create(
-            m_ast->get_context(), 
+            *m_ast, 
             expr->get_span(), 
             m_func->get_return_type(), 
             expr
@@ -205,13 +205,13 @@ void SemanticAnalysis::visit(BinaryOp& node) {
         log::fatal("operand type mismatch; got " + rhs_type->string(), span);
     } else if (res == TypeCheckResult::Cast) {
         node.m_rhs = CastExpr::create(
-            m_ast->get_context(), rhs->get_span(), lhs->type(), rhs);
+            *m_ast, rhs->get_span(), lhs->type(), rhs);
     }
 
     // Set the resulting type of the operator to a 'bool' if the operator is
     // a boolean comparison.
     if (BinaryOp::is_comparison(op)) {
-        node.set_type(BuiltinType::get(m_ast->get_context(), BuiltinType::Kind::Bool));
+        node.set_type(BuiltinType::get(*m_ast, BuiltinType::Kind::Bool));
         return;
     } else {
         // Default the type of the operator to the LHS type.
@@ -261,7 +261,7 @@ void SemanticAnalysis::visit(UnaryOp& node) {
         if (!node.expr()->is_lvalue())
             log::fatal("'&' base must be an lvalue", span);
 
-        node.set_type(PointerType::get(m_ast->get_context(), node.type()));
+        node.set_type(PointerType::get(*m_ast, node.type()));
         break;
     }
 
@@ -356,7 +356,7 @@ void SemanticAnalysis::visit(CallExpr& node) {
             log::fatal("argument type mismatch; got " + actual->string(), span);
         } else if (res == TypeCheckResult::Cast) {
             node.m_args[i] = CastExpr::create(
-                m_ast->get_context(), 
+                *m_ast, 
                 arg->get_span(), 
                 sig->get_param(i), 
                 arg
@@ -384,7 +384,7 @@ void SemanticAnalysis::visit(StructInitExpr& node) {
             log::fatal("argument type mismatch, got " + expr->type()->string(), span);
         } else if (res == TypeCheckResult::Cast) {
             node.fields()[field_name] = CastExpr::create(
-                m_ast->get_context(), 
+                *m_ast, 
                 expr->get_span(), 
                 field->type(), 
                 expr

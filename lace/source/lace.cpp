@@ -87,7 +87,7 @@ void computeDependencies(const Asts& asts, Asts& ordering, DepTable& deps) {
     for (AST* ast : asts) {
         path parent = absolute(ast->get_file()).parent_path();
     
-        for (Defn* defn : ast->get_defns()) {
+        for (Defn* defn : ast->defns()) {
             LoadDefn* load = dynamic_cast<LoadDefn*>(defn);
             if (!load)
                 continue;
@@ -142,14 +142,14 @@ void resolveDependencies(Options& options, const Asts& asts, const DepTable& dep
 
         // For each dependency, fetch all of its public, named definitions.
         for (AST* dep : dep_list) {
-            for (Defn* defn : dep->get_defns()) {
+            for (Defn* defn : dep->defns()) {
                 NamedDefn* symbol = dynamic_cast<NamedDefn*>(defn);
                 if (symbol && symbol->has_rune(Rune::Kind::Public))
                     symbols.push_back(symbol);
             }
         }
 
-        Scope* scope = ast->get_scope();
+        Scope* scope = ast->scope();
         for (NamedDefn* symbol : symbols) {
             bool res = scope->add(symbol);
             if (!res) {
@@ -157,7 +157,7 @@ void resolveDependencies(Options& options, const Asts& asts, const DepTable& dep
                     + symbol->name(), log::Location(ast->get_file(), { 1, 1 }));
             }
 
-            ast->get_loaded().push_back(symbol);
+            ast->imports().push_back(symbol);
         }
 
         const Timestamp time_namea_start = get_time();
@@ -304,6 +304,8 @@ int32_t main(int32_t argc, char* argv[]) {
             options.verbose = true;
         } else if (arg == "-g") {
             options.debug = true;
+        } else if (arg == "-l") {
+            options.link = true;
         } else if (arg == "-v") {
             log::note("version: " + std::to_string(LACE_VERSION_MAJOR) + "." + 
                 std::to_string(LACE_VERSION_MINOR));

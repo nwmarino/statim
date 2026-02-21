@@ -39,7 +39,7 @@ TEST_F(TypeParserTests, BuiltinType) {
 
     EXPECT_EQ(ast->num_defns(), 1);
 
-    FunctionDefn* FD = dynamic_cast<FunctionDefn*>(ast->get_defns()[0]);
+    FunctionDefn* FD = dynamic_cast<FunctionDefn*>(ast->get_defn(0));
     EXPECT_NE(FD, nullptr);
 
     const BuiltinType* BT = dynamic_cast<const BuiltinType*>(FD->get_return_type());
@@ -57,7 +57,7 @@ TEST_F(TypeParserTests, PointerType) {
 
     EXPECT_EQ(ast->num_defns(), 1);
 
-    FunctionDefn* FD = dynamic_cast<FunctionDefn*>(ast->get_defns()[0]);
+    FunctionDefn* FD = dynamic_cast<FunctionDefn*>(ast->get_defn(0));
     EXPECT_NE(FD, nullptr);
 
     const PointerType* PT = dynamic_cast<const PointerType*>(FD->get_return_type());

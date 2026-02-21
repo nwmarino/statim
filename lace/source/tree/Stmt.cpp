@@ -15,11 +15,11 @@ using namespace lace;
 //                          AdapterStmt Implementation
 //>==---------------------------------------------------------------------------
 
-AdapterStmt* AdapterStmt::create(AST::Context& ctx, Defn* defn) {
+AdapterStmt* AdapterStmt::create(AST& ast, Defn* defn) {
     return new AdapterStmt(defn->get_span(), defn);
 }
 
-AdapterStmt* AdapterStmt::create(AST::Context& ctx, Expr* expr) {
+AdapterStmt* AdapterStmt::create(AST& ast, Expr* expr) {
     return new AdapterStmt(expr->get_span(), expr);
 }
 
@@ -45,7 +45,7 @@ AdapterStmt::~AdapterStmt() {
 //                          BlockStmt Implementation
 //>==---------------------------------------------------------------------------
 
-BlockStmt* BlockStmt::create(AST::Context& ctx, SourceSpan span, Scope* scope, 
+BlockStmt* BlockStmt::create(AST& ast, SourceSpan span, Scope* scope, 
                              const Stmts& stmts) {
     return new BlockStmt(span, scope, stmts);
 }
@@ -64,7 +64,7 @@ BlockStmt::~BlockStmt() {
 //                          IfStmt Implementation
 //>==---------------------------------------------------------------------------
 
-IfStmt* IfStmt::create(AST::Context& ctx, SourceSpan span, Expr* cond, 
+IfStmt* IfStmt::create(AST& ast, SourceSpan span, Expr* cond, 
                        Stmt* then, Stmt* els) {
     return new IfStmt(span, cond, then, els);
 }
@@ -86,7 +86,7 @@ IfStmt::~IfStmt() {
 //                          RestartStmt Implementation
 //>==---------------------------------------------------------------------------
 
-RestartStmt* RestartStmt::create(AST::Context& ctx, SourceSpan span) {
+RestartStmt* RestartStmt::create(AST& ast, SourceSpan span) {
     return new RestartStmt(span);
 }
 
@@ -94,7 +94,7 @@ RestartStmt* RestartStmt::create(AST::Context& ctx, SourceSpan span) {
 //                          RetStmt Implementation
 //>==---------------------------------------------------------------------------
 
-RetStmt* RetStmt::create(AST::Context& ctx, SourceSpan span, Expr* expr) {
+RetStmt* RetStmt::create(AST& ast, SourceSpan span, Expr* expr) {
     return new RetStmt(span, expr);
 }
 
@@ -109,7 +109,7 @@ RetStmt::~RetStmt() {
 //                          StopStmt Implementation
 //>==--------------------------------------------------------------------------
 
-StopStmt* StopStmt::create(AST::Context& ctx, SourceSpan span) {
+StopStmt* StopStmt::create(AST& ast, SourceSpan span) {
     return new StopStmt(span);
 }
 
@@ -117,7 +117,7 @@ StopStmt* StopStmt::create(AST::Context& ctx, SourceSpan span) {
 //                          UntilStmt Implementation
 //>==---------------------------------------------------------------------------
 
-UntilStmt* UntilStmt::create(AST::Context& ctx, SourceSpan span, Expr* cond, 
+UntilStmt* UntilStmt::create(AST& ast, SourceSpan span, Expr* cond, 
                              Stmt* body) {
     return new UntilStmt(span, cond, body);
 }
@@ -136,7 +136,7 @@ UntilStmt::~UntilStmt() {
 //                          RuneStmt Implementation
 //>==---------------------------------------------------------------------------
 
-RuneStmt* RuneStmt::create(AST::Context& ctx, SourceSpan span, Rune* rune) {
+RuneStmt* RuneStmt::create(AST& ast, SourceSpan span, Rune* rune) {
     return new RuneStmt(span, rune);
 }
 

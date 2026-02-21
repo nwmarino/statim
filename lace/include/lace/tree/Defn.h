@@ -61,7 +61,7 @@ class LoadDefn : public Defn {
 
 public:
     [[nodiscard]]
-    static LoadDefn* create(AST::Context& ctx, SourceSpan span, 
+    static LoadDefn* create(AST& ast, SourceSpan span, 
                             const std::string& path);
 
     ~LoadDefn() = default;
@@ -207,7 +207,7 @@ class VariableDefn final : public ValueDefn {
 
 public:
     [[nodiscard]]
-    static VariableDefn* create(AST::Context& ctx, SourceSpan span, 
+    static VariableDefn* create(AST& ast, SourceSpan span, 
                                 const std::string& name, const Runes& runes, 
                                 Type* type, Expr* init, bool global);
 
@@ -241,7 +241,7 @@ class ParameterDefn final : public ValueDefn {
 
 public:
     [[nodiscard]]
-    static ParameterDefn* create(AST::Context& ctx, SourceSpan span, 
+    static ParameterDefn* create(AST& ast, SourceSpan span, 
                                  const std::string& name, const Runes& runes, 
                                  Type* type);
 
@@ -283,7 +283,7 @@ private:
 
 public:
     [[nodiscard]]
-    static FunctionDefn* create(AST::Context& ctx, SourceSpan span, 
+    static FunctionDefn* create(AST& ast, SourceSpan span, 
                                 const std::string& name, const Runes& runes, 
                                 FunctionType* type, Scope* scope, const Params& params, 
                                 BlockStmt* body = nullptr);
@@ -369,7 +369,7 @@ class FieldDefn final : public ValueDefn {
 
 public:
     [[nodiscard]]
-    static FieldDefn* create(AST::Context& ctx, SourceSpan span, 
+    static FieldDefn* create(AST& ast, SourceSpan span, 
                              const std::string& name, const Runes& runes, 
                              Type* type, uint32_t index);
 
@@ -397,7 +397,7 @@ class VariantDefn final : public ValueDefn {
 
 public:
     [[nodiscard]]
-    static VariantDefn* create(AST::Context& ctx, SourceSpan span, 
+    static VariantDefn* create(AST& ast, SourceSpan span, 
                                const std::string& name, const Runes& runes, 
                                Type* type, int64_t value);
 
@@ -450,7 +450,7 @@ class AliasDefn final : public TypeDefn {
 
 public:
     [[nodiscard]]
-    static AliasDefn* create(AST::Context& ctx, SourceSpan span, 
+    static AliasDefn* create(AST& ast, SourceSpan span, 
                              const std::string& name, const Runes& runes, 
                              Type* type);
 
@@ -482,7 +482,7 @@ private:
       
 public:
     [[nodiscard]]
-    static StructDefn* create(AST::Context& ctx, SourceSpan span, 
+    static StructDefn* create(AST& ast, SourceSpan span, 
                               const std::string& name, const Runes& runes, 
                               Type* type);
 
@@ -562,7 +562,7 @@ private:
 
 public:
     [[nodiscard]]
-    static EnumDefn* create(AST::Context& ctx, SourceSpan span, 
+    static EnumDefn* create(AST& ast, SourceSpan span, 
                             const std::string& name, const Runes& runes, 
                             Type* type);
 

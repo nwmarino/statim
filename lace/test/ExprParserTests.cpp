@@ -40,7 +40,7 @@ TEST_F(ExprParserTests, StructInitExpr) {
 
     EXPECT_EQ(ast->num_defns(), 1);
 
-    auto F = dynamic_cast<FunctionDefn*>(ast->get_defns()[0]);
+    auto F = dynamic_cast<FunctionDefn*>(ast->get_defn(0));
     EXPECT_NE(F, nullptr);
     EXPECT_TRUE(F->has_body());
 

@@ -49,16 +49,16 @@ Stmt* Parser::parse_block_statement() {
     SourceLocation end = loc();
     next(); // '}'
 
-    return BlockStmt::create(*m_context, SourceSpan(start, end), scope, stmts);
+    return BlockStmt::create(*m_ast, SourceSpan(start, end), scope, stmts);
 }
 
 Stmt* Parser::parse_control_statement() {
     const Token ctrl = curr();
     
     if (expect("stop")) {
-        return StopStmt::create(*m_context, since(ctrl.loc));
+        return StopStmt::create(*m_ast, since(ctrl.loc));
     } else if (expect("restart")) {
-        return RestartStmt::create(*m_context, since(ctrl.loc));
+        return RestartStmt::create(*m_ast, since(ctrl.loc));
     } else if (expect("ret")) {
         Expr* expr = nullptr;
         if (!expect(Token::Semi)) {
@@ -67,7 +67,7 @@ Stmt* Parser::parse_control_statement() {
                 log::fatal("expected ';'", log::Span(m_file, since(loc())));
         }
 
-        return RetStmt::create(*m_context, since(ctrl.loc), expr);
+        return RetStmt::create(*m_ast, since(ctrl.loc), expr);
     } else if (expect("if")) {
         m_allow_inits = false;
 
@@ -86,7 +86,7 @@ Stmt* Parser::parse_control_statement() {
         }
 
         return IfStmt::create(
-            *m_context, since(ctrl.loc), cond, then_body, else_body);
+            *m_ast, since(ctrl.loc), cond, then_body, else_body);
     } else if (expect("until")) {
         m_allow_inits = false;
         Expr* cond = parse_initial_expression();
@@ -102,13 +102,13 @@ Stmt* Parser::parse_control_statement() {
                 log::fatal("expected 'until' body", log::Span(m_file, since(loc())));
         }
 
-        return UntilStmt::create(*m_context, since(ctrl.loc), cond, body);
+        return UntilStmt::create(*m_ast, since(ctrl.loc), cond, body);
     } else {
         Expr* expr = parse_initial_expression();
         if (!expr)
             log::fatal("expected statement", log::Span(m_file, since(loc())));
 
-        return AdapterStmt::create(*m_context, expr);
+        return AdapterStmt::create(*m_ast, expr);
     }
 }
 
@@ -140,7 +140,7 @@ Stmt* Parser::parse_declarative_statement() {
     }
 
     VariableDefn* var = VariableDefn::create(
-        *m_context, 
+        *m_ast, 
         SourceSpan(start, end), 
         name, 
         {}, // runes
@@ -149,7 +149,7 @@ Stmt* Parser::parse_declarative_statement() {
         false);
 
     m_scope->add(var);
-    return AdapterStmt::create(*m_context, var);
+    return AdapterStmt::create(*m_ast, var);
 }
 
 Stmt* Parser::parse_rune_statement() {
@@ -171,5 +171,5 @@ Stmt* Parser::parse_rune_statement() {
     Rune::Kind kind = runes[curr().value];
     next();
 
-    return RuneStmt::create(*m_context, SourceSpan(start, end), new Rune(kind));
+    return RuneStmt::create(*m_ast, SourceSpan(start, end), new Rune(kind));
 }

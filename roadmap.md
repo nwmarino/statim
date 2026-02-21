@@ -1,6 +1,3 @@
-- Move AST::Context out into standalone class.
-- Rename loads to uses/imports.
-
 - $assert
 - Match statement
 - For statement
