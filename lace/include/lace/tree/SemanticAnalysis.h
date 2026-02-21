@@ -66,6 +66,7 @@ public:
     void visit(ParenExpr& node) override;
     void visit(RefExpr& node) override;
     void visit(SubscriptExpr& node) override;
+    void visit(StructInitExpr& node) override;
 };
 
 } // namespace lace

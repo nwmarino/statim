@@ -160,6 +160,7 @@ private:
     lir::Value* codegen_function_call(const CallExpr* expr);
     lir::Value* codegen_parentheses(const ParenExpr* expr);
     lir::Value* codegen_sizeof(const SizeofExpr* expr);
+    lir::Value* codegen_struct_init(const StructInitExpr* expr);
 
     /// Generate code for an arbitrary |stmt|.
     void codegen_statement(const Stmt *stmt);

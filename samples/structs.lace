@@ -5,12 +5,11 @@ vec3 :: struct {
 }
 
 vec3_new :: (x: f64, y: f64, z: f64) -> vec3 {
-    let vec: mut vec3;
-    vec.x = x;
-    vec.y = y;
-    vec.z = z;
-
-    ret vec;
+    ret vec3 {
+        x: x,
+        y: y,
+        z: z,
+    };
 }
 
 vec3_secret :: (vec: vec3) -> f64 {

@@ -181,7 +181,8 @@ void VisitorBase::visit(SubscriptExpr& node) {
 }
 
 void VisitorBase::visit(StructInitExpr& node) {
-
+    for (auto& [field, expr] : node.fields())
+        expr->accept(*this);
 }
 
 Result VisitorBase::resolveType(const QualType& type) const {

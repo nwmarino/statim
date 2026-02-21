@@ -278,6 +278,7 @@ int32_t main(int32_t argc, char *argv[]) {
     log::direct(std::cout);
 
     std::vector<InputFile> files = {
+        InputFile("/home/lovelace/samples/structs.lace"),
     };
 
     for (int32_t i = 1; i < argc; ++i) {

@@ -11,6 +11,7 @@
 #include "lace/tree/Type.h"
 
 #include "lir/graph/Function.h"
+#include "lir/graph/Local.h"
 #include "lir/graph/Type.h"
 
 using namespace lace;
@@ -29,6 +30,8 @@ lir::Value *LIRCodegen::codegen_addressed_expression(const Expr *expr) {
         return codegen_addressed_subscript(subscript);
     } else if (auto call = dynamic_cast<const CallExpr*>(expr)) {
         return codegen_function_call(call);
+    } else if (auto init = dynamic_cast<const StructInitExpr*>(expr)) {
+        return codegen_struct_init(init);
     }
 
     return nullptr;
@@ -130,9 +133,67 @@ lir::Value *LIRCodegen::codegen_addressed_subscript(const SubscriptExpr *expr) {
     }
 }
 
-lir::Value *LIRCodegen::codegen_addressed_dereference(const UnaryOp *expr) {
-    lir::Value *rvalue = codegen_valued_expression(expr->get_expr());
+lir::Value* LIRCodegen::codegen_addressed_dereference(const UnaryOp* expr) {
+    lir::Value* rvalue = codegen_valued_expression(expr->get_expr());
     assert(rvalue);
 
     return rvalue;
+}
+
+lir::Value* LIRCodegen::codegen_struct_init(const StructInitExpr* expr) {
+    lir::Value* dest = nullptr;
+    lir::Type* type = to_lir_type(expr->get_type());
+
+    if (m_state.place) {
+        dest = m_state.place;
+    } else {
+        dest = lir::Local::create(
+            m_cfg, 
+            type, 
+            std::to_string(m_cfg.get_def_id()),
+            m_func
+        );
+    }
+
+    const StructDefn* defn = static_cast<const StructType*>(
+        expr->get_type().getType())->getDefn();
+
+    for (auto& [name, init] : expr->fields()) {
+        const FieldDefn* field = defn->get_field(name);
+        assert(field);
+
+        lir::Type* field_type = to_lir_type(field->get_type());
+
+        lir::Value* ptr = m_builder.build_access(
+            lir::PointerType::get(m_cfg, field_type), 
+            dest, 
+            lir::Integer::get(m_cfg, lir::IntegerType::get(m_cfg, 64), field->get_index())
+        );
+
+        if (m_mach.is_scalar(field_type)) {
+            lir::Value* value = codegen_valued_expression(init);
+            assert(value);
+
+            m_builder.build_store(value, ptr);
+        } else {
+            lir::Value* prev_place = m_state.place;
+            
+            m_state.place = ptr;
+
+            lir::Value* value = codegen_addressed_expression(init);
+            if (value != ptr) {
+                lir::Function* copy = getIntrinsicCopy();
+
+                m_builder.build_call(copy, {
+                    ptr,
+                    value,
+                    lir::Integer::get(m_cfg, lir::IntegerType::get(m_cfg, 64), m_mach.get_type_size(field_type) / 8)
+                });
+            }
+
+            m_state.place = prev_place;
+        }
+    }
+
+    return dest;
 }

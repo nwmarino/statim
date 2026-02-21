@@ -60,9 +60,10 @@ void SymbolAnalysis::visit(CallExpr& node) {
 void SymbolAnalysis::visit(CastExpr& node) {
     VisitorBase::visit(node);
 
-    if (!resolveType(node.get_type()))
+    if (!resolveType(node.get_type())) {
         log::fatal("unresolved type: " + node.get_type().string(), 
             log::Span(m_ast->get_file(), node.get_span()));
+    }
 }
 
 void SymbolAnalysis::visit(RefExpr& node) {
@@ -85,5 +86,28 @@ void SymbolAnalysis::visit(SizeofExpr& node) {
     if (!resolveType(node.get_target_type())) {
         log::fatal("unresolved type: " + node.get_target_type().string(), 
             log::Span(m_ast->get_file(), node.get_span()));
+    }
+}
+
+void SymbolAnalysis::visit(StructInitExpr& node) {
+    const log::Span span = log::Span(m_ast->get_file(), node.get_span());
+    
+    if (!resolveType(node.get_type()))
+        log::fatal("unresolved type: " + node.get_type()->string(), span);
+
+    VisitorBase::visit(node);
+
+    // Check that the base type is a struct.
+    const QualType base_type = node.get_type();
+    if (!base_type->isStruct())
+        log::fatal("'.' base must be a struct or a pointer to one", span);
+
+    // Resolve the struct definition from the base type.
+    auto defn = (static_cast<const StructType*>(base_type.getType()))->getDefn();
+
+    // Ensure that each field referenced by the initializer exists in the struct.
+    for (auto& [field, expr] : node.fields()) {
+        if (!defn->has_field(field))
+            log::fatal("unknown field: " + field, span);
     }
 }

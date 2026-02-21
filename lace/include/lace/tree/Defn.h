@@ -511,6 +511,11 @@ public:
             static_cast<const StructDefn*>(this)->get_field(name));
     }
 
+    /// Test if this structure has a field with the given |name|.
+    bool has_field(const std::string& name) const {
+        return get_field(name) != nullptr;
+    }
+
     uint32_t num_fields() const { return m_fields.size(); }
     bool has_fields() const { return !m_fields.empty(); }
 };

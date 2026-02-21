@@ -360,7 +360,6 @@ void SemanticAnalysis::visit(CallExpr& node) {
     const log::Span span = log::Span(m_ast->get_file(), node.get_span());
     const QualType& callee_type = callee->get_type();
     const FunctionType* FT = dynamic_cast<const FunctionType*>(callee_type.getType());
-
     if (!FT)
         log::fatal("function call target is not a function", span);
 
@@ -381,10 +380,39 @@ void SemanticAnalysis::visit(CallExpr& node) {
 
         TypeCheckResult TC = type_check(actual, expected);
         if (TC == TypeCheckResult::Mismatch) {
-            log::fatal("argument type mismatch; got " + actual->string(), span);
+            log::fatal("argument type mismatch; got " + actual.string(), span);
         } else if (TC == TypeCheckResult::Cast) {
             node.m_args[i] = CastExpr::create(
                 m_ast->get_context(), arg->get_span(), expected, arg);
+        }
+    }
+}
+
+void SemanticAnalysis::visit(StructInitExpr& node) {
+    VisitorBase::visit(node);
+
+    const log::Span span = log::Span(m_ast->get_file(), node.get_span());
+
+    const QualType base_type = node.get_type();
+    assert(base_type->isStruct());
+
+    StructDefn* defn = const_cast<StructDefn*>(
+        static_cast<const StructType*>(base_type.getType())->getDefn());
+
+    for (auto& [field_name, expr] : node.fields()) {
+        FieldDefn* field = defn->get_field(field_name);
+        assert(field);
+
+        TypeCheckResult res = type_check(expr->get_type(), field->get_type());
+        if (res == TypeCheckResult::Mismatch) {
+            log::fatal("argument type mismatch, got " + expr->get_type().string(), span);
+        } else if (res == TypeCheckResult::Cast) {
+            node.fields()[field_name] = CastExpr::create(
+                m_ast->get_context(), 
+                expr->get_span(), 
+                field->get_type(), 
+                expr
+            );
         }
     }
 }
