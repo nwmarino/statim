@@ -30,7 +30,9 @@ struct Options final {
     uint32_t threads;   //< (-j) Number of threads to use. 
 
     bool debug;         //< (-g) If debugging symbols should be added.
+    bool link;          //< (-l) If the compiler should link.
     bool multithread;   //< (-st) If multithreading should be used.
+    bool stl;           //< (-stl/-no-stl) If the STL should be linked.
     bool verbose;       //< (-b) If extra notes should be logged.
     bool version;       //< (-v) If the version should be printed.
 

@@ -226,6 +226,8 @@ void SemanticAnalysis::visit(BinaryOp& node) {
 void SemanticAnalysis::visit(UnaryOp& node) {
     VisitorBase::visit(node);
 
+    node.set_type(node.expr()->type());
+
     const log::Span span = { m_ast->get_file(), node.get_span() };
     const Type* type = node.type();
 
@@ -249,8 +251,8 @@ void SemanticAnalysis::visit(UnaryOp& node) {
 
     case UnaryOp::LogicNot:
         // Check operator type compatibility (scalar only).
-        if (!type->is_integer() || !type->is_floating_point() || !dynamic_cast<const PointerType*>(type))
-            log::fatal("!' operator incompatible with " + type->string(), span);
+        if (!type->is_integer() && !type->is_floating_point() && !dynamic_cast<const PointerType*>(type))
+            log::fatal("'!' operator incompatible with " + type->string(), span);
 
         node.set_type(node.type());
         break;

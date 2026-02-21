@@ -419,7 +419,7 @@ Expr* Parser::parse_named_reference() {
     uint64_t position = m_stream.position();
     next();
 
-    if (match(Token::OpenBrace))
+    if (m_allow_inits && match(Token::OpenBrace))
         return parse_struct_initializer(position);
 
     const Token& id = m_stream.get(position);

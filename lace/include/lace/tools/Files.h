@@ -16,16 +16,16 @@ namespace lace {
 
 /// Read in the contents of the file at the given |path| to |contents.
 /// Returns the result of the operation.
-[[nodiscard]] bool readFile(const std::string& path, std::string& contents);
+[[nodiscard]] bool read_file(const std::string& path, std::string& contents);
 
 /// Returns the given |path| without its last file extension.
-std::string withoutExtension(const std::string& path);
+std::string without_extension(const std::string& path);
 
 /// Returns the given |path| with only the `.s` file extension.
-std::string withAssemblyExtension(const std::string& path);
+std::string with_assembly_extension(const std::string& path);
 
 /// Returns the givn |path| with only the `.o` file extension.
-std::string withObjectExtension(const std::string& path);
+std::string with_object_extension(const std::string& path);
 
 } // namespace lace
 

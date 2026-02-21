@@ -58,6 +58,7 @@ struct InputFile final {
 
 /// A mapping between the absolute path of an input file and its parsed AST.
 static FileTable g_files = {};
+static std::string g_STL = "/home/lovelace/stl";
 
 static inline Timestamp get_time() {
     return high_resolution_clock::now();
@@ -253,21 +254,38 @@ void drive_lir_backend(const Options &options, const Asts &asts) {
         writer.run(as);
         as.close();
 
-        /*
-        std::string assembler = "as " + ast->get_file() + ".s -o " + ast->get_file() + ".o";
+        const std::string assembler = std::format(
+            "as {}.s -o {}.o", 
+            ast->get_file(), 
+            ast->get_file()
+        );
+
         std::system(assembler.c_str());
-        */
+    }
+
+    if (options.link) {
+        std::string linker = std::format("ld -o {} ", options.output);
+
+        for (AST* ast : asts)
+            linker += std::format("{}.o ", ast->get_file());
+        
+        if (options.stl)
+            linker += std::format("{}/rt.o", g_STL);
+
+        std::system(linker.c_str());
     }
 }
 
-int32_t main(int32_t argc, char *argv[]) {
+int32_t main(int32_t argc, char* argv[]) {
     Options options = {};
     options.output = "main";
     options.opt = Options::OptLevel::Default;
     options.threads = 1;
 
     options.debug = true;
+    options.link = true;
     options.multithread = true;
+    options.stl = true;
     options.verbose = true;
     options.version = true;
     options.dump_ast = true;
@@ -277,7 +295,6 @@ int32_t main(int32_t argc, char *argv[]) {
     log::direct(std::cout);
 
     std::vector<InputFile> files = {
-        InputFile("/home/lovelace/samples/structs.lace"),
     };
 
     for (int32_t i = 1; i < argc; ++i) {
@@ -298,6 +315,10 @@ int32_t main(int32_t argc, char *argv[]) {
             options.opt = Options::OptLevel::Space;
         } else if (arg == "-st") {
             options.multithread = false;
+        } else if (arg == "-stl") {
+            options.stl = true;
+        } else if (arg == "-no-stl") {
+            options.stl = false;
         } else if (arg == "-dump-ast") {
             options.dump_ast = true;
         } else if (arg == "-dump-lir") {
@@ -376,7 +397,7 @@ int32_t main(int32_t argc, char *argv[]) {
                 Timestamp parse_start = get_time();
 
                 std::string contents;
-                if (!readFile(f.file, contents))
+                if (!read_file(f.file, contents))
                     log::flush();
 
                 TokenStream stream;
@@ -405,7 +426,7 @@ int32_t main(int32_t argc, char *argv[]) {
         Timestamp parse_start = get_time();
 
         std::string contents;
-        if (!readFile(f.file, contents))
+        if (!read_file(f.file, contents))
             log::flush();
 
         TokenStream stream;

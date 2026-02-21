@@ -11,7 +11,7 @@
 
 using namespace lace;
 
-bool lace::readFile(const std::string& path, std::string& contents) {
+bool lace::read_file(const std::string& path, std::string& contents) {
     std::ifstream file(path, std::ios::ate);
     if (!file || !file.is_open()) {
         log::error("failed to open file: " + path);
@@ -31,7 +31,7 @@ bool lace::readFile(const std::string& path, std::string& contents) {
     return true;
 }
 
-std::string lace::withoutExtension(const std::string& path) {
+std::string lace::without_extension(const std::string& path) {
     std::size_t first = path.find_last_of('.');
     if (first == std::string::npos)
         return path;
@@ -39,10 +39,10 @@ std::string lace::withoutExtension(const std::string& path) {
     return path.substr(0, first);
 }
 
-std::string lace::withAssemblyExtension(const std::string& path) {
-    return withoutExtension(path) + ".s";
+std::string lace::with_assembly_extension(const std::string& path) {
+    return without_extension(path) + ".s";
 }
 
-std::string lace::withObjectExtension(const std::string& path) {
-    return withoutExtension(path) + ".o";
+std::string lace::with_object_extension(const std::string& path) {
+    return without_extension(path) + ".o";
 }

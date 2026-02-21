@@ -1,13 +1,11 @@
 #!/bin/bash
 
-cd ../std/
+cd /home/lovelace/stl
 as rt.s -o rt.o
-cd ../samples/
+cd /home/lovelace/samples
 
 for file in *.lace; do
     if [[ -f "$file" ]]; then
-        ./../lace/lace "$file"
-        as "$file".s -o "$file".o
-        ld "$file".o ../std/rt.o -o "${file%.lace}"
+        /home/lovelace/lace/lace -stl "$file" -o "${file%.lace}"
     fi
 done

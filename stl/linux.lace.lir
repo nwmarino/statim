@@ -1,0 +1,9 @@
+brk :: pub (i64) -> *void;
+
+close :: pub (i64) -> i64;
+
+exit :: pub (i64);
+
+open :: pub (*i8, i64, i64) -> i64;
+
+write :: pub (i64, *i8, i64) -> i64;

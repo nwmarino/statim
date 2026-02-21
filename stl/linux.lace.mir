@@ -1,0 +1,28 @@
+write:
+<abi>
+	.rs %rax
+	.p1 stack+0
+	.p2 stack+8
+	.p3 stack+16
+
+open:
+<abi>
+	.rs %rax
+	.p1 stack+0
+	.p2 stack+8
+	.p3 stack+16
+
+exit:
+<abi>
+	.p1 stack+0
+
+close:
+<abi>
+	.rs %rax
+	.p1 stack+0
+
+brk:
+<abi>
+	.rs %rax
+	.p1 stack+0
+

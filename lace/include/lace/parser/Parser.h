@@ -26,6 +26,7 @@ class Parser final {
     AST* m_ast = nullptr;
     AST::Context* m_context = nullptr;
     Scope* m_scope = nullptr;
+    bool m_allow_inits = true;
 
 public:
     /// Create a new parser instance to work on |source|. 

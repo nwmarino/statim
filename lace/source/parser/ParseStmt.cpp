@@ -69,8 +69,12 @@ Stmt* Parser::parse_control_statement() {
 
         return RetStmt::create(*m_context, since(ctrl.loc), expr);
     } else if (expect("if")) {
+        m_allow_inits = false;
+
         Expr* cond = parse_initial_expression();
         assert(cond && "unable to parse 'if' condition!");
+
+        m_allow_inits = true;
 
         Stmt* then_body = parse_initial_statement();
         assert(then_body && "unable to parse 'if' then body!");
@@ -84,9 +88,12 @@ Stmt* Parser::parse_control_statement() {
         return IfStmt::create(
             *m_context, since(ctrl.loc), cond, then_body, else_body);
     } else if (expect("until")) {
+        m_allow_inits = false;
         Expr* cond = parse_initial_expression();
         if (!cond)
             log::fatal("expected 'until' condition", log::Span(m_file, since(loc())));
+
+        m_allow_inits = true;
 
         Stmt* body = nullptr;
         if (!match(Token::Semi)) {
