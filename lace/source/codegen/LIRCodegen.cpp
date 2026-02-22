@@ -10,51 +10,41 @@
 
 #include "lir/graph/Type.h"
 
+#include <set>
+
 using namespace lace;
 
 void LIRCodegen::run() {
-    // Definitions which were imported by a load should only be partially
-    // defined i.e. lowered, except for types, which should always be fully
-    // defined.
-
-    std::vector<Defn*> partials = {};
-    std::vector<Defn*> defns = {};
-    std::vector<TypeDefn*> types = {};
-
-    for (Defn* defn : m_ast->imports()) {
-        auto type_defn = dynamic_cast<TypeDefn*>(defn);
-        if (type_defn) {
-            types.push_back(type_defn);
-        } else {
-            partials.push_back(defn);
-        }
-    }
-
+    // Defined types are lowered first, as full type information needs to be
+    // available before the lowering of other definitions.
+    std::set<TypeDefn*> types = {};
     for (Defn* defn : m_ast->defns()) {
-        auto type_defn = dynamic_cast<TypeDefn*>(defn);
-        if (type_defn) {
-            types.push_back(type_defn);
-        } else {
-            defns.push_back(defn);
-        }
+        auto type = dynamic_cast<TypeDefn*>(defn);
+        if (!type)
+            continue;
+
+        // Types are only initially defined first. For example, if the field of 
+        // a structure references another structure that hasn't been lowered
+        // yet, then it will be unresolved.
+        codegen_initial_definition(type);
+        types.insert(type);
     }
 
-    // Lower all type definitions, but don't fill them out incase their fields
-    // use a type not defined yet.
-    for (TypeDefn* type_defn : types)
-        codegen_initial_definition(type_defn);
-    
-    // Fill out all type definitions, now that all type information is 
-    // available.
-    for (TypeDefn* type_defn : types)
-        codegen_lowered_definition(type_defn);
+    for (TypeDefn* type : types)
+        codegen_lowered_definition(type);
 
-    // Lower all imported definitions. This is the last time we touch them.
-    for (Defn* defn : partials)
+    std::set<Defn*> defns = {};
+    for (Defn* defn : m_ast->defns()) {
+        // Skip type definitions since they've been lowered by now.
+        if (dynamic_cast<TypeDefn*>(defn))
+            continue;
+
         codegen_initial_definition(defn);
 
-    for (Defn* defn : defns)
-        codegen_initial_definition(defn);
+        // Only record non-imported definitions to be fully lowered.
+        if (defn->origin() == m_ast)
+            defns.insert(defn);
+    }
 
     for (Defn* defn : defns)
         codegen_lowered_definition(defn);

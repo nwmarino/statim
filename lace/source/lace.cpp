@@ -157,7 +157,7 @@ void resolveDependencies(Options& options, const Asts& asts, const DepTable& dep
                     + symbol->name(), log::Location(ast->get_file(), { 1, 1 }));
             }
 
-            ast->imports().push_back(symbol);
+            ast->defns().push_back(symbol);
         }
 
         const Timestamp time_namea_start = get_time();

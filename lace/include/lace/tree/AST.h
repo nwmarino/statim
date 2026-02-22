@@ -49,7 +49,6 @@ class AST final {
 
     std::string m_file;
     std::vector<Defn*> m_defns = {};
-    std::vector<Defn*> m_imports = {};
     Scope* m_scope = nullptr;
 
     struct {
@@ -103,16 +102,6 @@ public:
 
     /// Test if this syntax tree has any definitions.
     bool has_defns() const { return !m_defns.empty(); }
-
-    /// Returns the definition which this syntax tree imports.
-    const std::vector<Defn*>& imports() const { return m_imports; }
-    std::vector<Defn*>& imports() { return m_imports; }
-
-    /// Returns the number of definitions which this syntax tree imports.
-    uint32_t num_imports() const { return m_imports.size(); }
-
-    /// Test if this syntax tree imports any definitions.
-    bool has_imports() const { return !m_imports.empty(); }
 
     /// Returns the global scope of this syntax tree.
     const Scope* scope() const { return m_scope; }

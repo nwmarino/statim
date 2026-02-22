@@ -69,7 +69,7 @@ AST::~AST() {
     m_scope = nullptr;
 
     for (Defn* defn : m_defns) {
-        if (defn)
+        if (defn && defn->origin() == this)
             delete defn;
     }
 
