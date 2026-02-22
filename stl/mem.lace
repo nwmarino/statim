@@ -1,20 +1,20 @@
 load "linux.lace";
 
 Metadata :: struct {
-    size: mut u64,
-    next: mut *Metadata,
-    free: mut bool,
+    size: u64,
+    next: *Metadata,
+    free: bool,
 }
 
-border :: mut *void = null;
-head :: mut *Metadata = null;
+border :: *void = null;
+head :: *Metadata = null;
 
 $public
-mem_copy :: (dst: *mut void, src: *mut void, n: mut u64) -> void {
-    let d: *mut char = dst;
-    let s: *mut char = src;
+mem_copy :: (dst: *void, src: *void, n: u64) -> void {
+    let d: *char = dst;
+    let s: *char = src;
 
-    let i: mut u64 = 0;
+    let i: u64 = 0;
     until i > n {
         d[i] = s[i];
         i = i + 1;
@@ -23,8 +23,8 @@ mem_copy :: (dst: *mut void, src: *mut void, n: mut u64) -> void {
 
 $public
 mem_alloc :: (size: u64) -> *void {
-    let block: mut *Metadata = null;
-    let align: mut u64 = size;
+    let block: *Metadata = null;
+    let align: u64 = size;
 
     if size % 16 != 0 {
         align = align + 16 - (size % 16);
@@ -38,7 +38,7 @@ mem_alloc :: (size: u64) -> *void {
 
         head = block;
     } else {
-        let last: mut *Metadata = head;
+        let last: *Metadata = head;
         block = find_free_space(&last, align);
 
         if block {
@@ -60,7 +60,7 @@ mem_free :: (p: *void) -> void {
         ret;
     }
 
-    let block: mut *Metadata = get_block_pointer(p);
+    let block: *Metadata = get_block_pointer(p);
     block.free = true;
     
     if block.next {
@@ -77,12 +77,12 @@ mem_realloc :: (p: *void, size: u64) -> *void {
         ret mem_alloc(size);
     }
 
-    let block: mut *Metadata = get_block_pointer(p);
+    let block: *Metadata = get_block_pointer(p);
     if block.size >= size {
         ret p;
     }
 
-    let new_p: mut *void = mem_alloc(size);
+    let new_p: *void = mem_alloc(size);
     if !new_p {
         ret null;
     }

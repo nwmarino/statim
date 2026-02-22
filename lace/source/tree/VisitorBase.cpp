@@ -49,6 +49,14 @@ void VisitorBase::visit(ParameterDefn& node) {
 
 }
 
+void VisitorBase::visit(SpaceDefn& node) {
+    for (NamedDefn* defn : node.defns()) {
+        // Only pass over definitions defined in the same file.
+        if (defn->origin() == node.origin())
+            defn->accept(*this);
+    }
+}
+
 void VisitorBase::visit(StructDefn& node) {
     for (FieldDefn* field : node.fields())
         field->accept(*this);

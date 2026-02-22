@@ -14,7 +14,7 @@ using namespace lace;
 
 LoadDefn* LoadDefn::create(AST& ast, SourceSpan span, 
                            const std::string& path) {
-    return new LoadDefn(span, path);
+    return new LoadDefn(&ast, span, path);
 }
 
 //>==---------------------------------------------------------------------------
@@ -31,13 +31,38 @@ NamedDefn::~NamedDefn() {
 }
 
 //>==---------------------------------------------------------------------------
+//                          SpaceDefn Implementation
+//>==---------------------------------------------------------------------------
+
+SpaceDefn* SpaceDefn::create(AST& ast, SourceSpan span, const std::string& name,
+                             const Runes& runes, Scope* scope,
+                             const std::vector<NamedDefn*>& defns) {
+    return new SpaceDefn(&ast, span, name, runes, scope, defns);
+}
+
+SpaceDefn::~SpaceDefn() {
+    if (m_scope)
+        delete m_scope;
+
+    m_scope = nullptr;
+
+    for (NamedDefn* defn : m_defns) {
+        // Only delete definitions defined in the same file.
+        if (defn && defn->origin() == m_origin)
+            delete defn;
+    }
+
+    m_defns.clear();
+}
+
+//>==---------------------------------------------------------------------------
 //                          VariableDefn Implementation
 //>==---------------------------------------------------------------------------
 
 VariableDefn* VariableDefn::create(AST& ast, SourceSpan span, 
                                    const std::string& name, const Runes& runes, 
                                    Type* type, Expr* init, bool global) {
-    return new VariableDefn(span, name, runes, type, init, global);
+    return new VariableDefn(&ast, span, name, runes, type, init, global);
 }
 
 VariableDefn::~VariableDefn() {
@@ -54,7 +79,7 @@ VariableDefn::~VariableDefn() {
 ParameterDefn* ParameterDefn::create(AST& ast, SourceSpan span, 
                                      const std::string& name, 
                                      const Runes& runes, Type* type) {
-    return new ParameterDefn(span, name, runes, type);
+    return new ParameterDefn(&ast, span, name, runes, type);
 }
 
 //>==---------------------------------------------------------------------------
@@ -65,7 +90,7 @@ FunctionDefn* FunctionDefn::create(AST& ast, SourceSpan span,
                                    const std::string& name, const Runes& runes, 
                                    FunctionType* type, Scope* scope, 
                                    const Params& params, BlockStmt* body) {
-    return new FunctionDefn(span, name, runes, type, scope, params, body);
+    return new FunctionDefn(&ast, span, name, runes, type, scope, params, body);
 }
 
 FunctionDefn::~FunctionDefn() {
@@ -94,7 +119,7 @@ FunctionDefn::~FunctionDefn() {
 FieldDefn* FieldDefn::create(AST& ast, SourceSpan span, 
                              const std::string& name, const Runes& runes, 
                              Type* type, uint32_t index) {
-    return new FieldDefn(span, name, runes, type, index);
+    return new FieldDefn(&ast, span, name, runes, type, index);
 }
 
 //>==---------------------------------------------------------------------------
@@ -104,7 +129,7 @@ FieldDefn* FieldDefn::create(AST& ast, SourceSpan span,
 VariantDefn* VariantDefn::create(AST& ast, SourceSpan span, 
                                  const std::string& name, const Runes& runes, 
                                  Type* type, int64_t value) {
-    return new VariantDefn(span, name, runes, type, value);
+    return new VariantDefn(&ast, span, name, runes, type, value);
 }
 
 //>==---------------------------------------------------------------------------
@@ -114,7 +139,7 @@ VariantDefn* VariantDefn::create(AST& ast, SourceSpan span,
 AliasDefn* AliasDefn::create(AST& ast, SourceSpan span, 
                              const std::string& name, const Runes& runes, 
                              Type* type) {
-    return new AliasDefn(span, name, runes, type);
+    return new AliasDefn(&ast, span, name, runes, type);
 }
 
 //>==---------------------------------------------------------------------------
@@ -124,7 +149,7 @@ AliasDefn* AliasDefn::create(AST& ast, SourceSpan span,
 StructDefn* StructDefn::create(AST& ast, SourceSpan span, 
                                const std::string& name, const Runes& runes, 
                                Type* type) {
-    return new StructDefn(span, name, runes, type);
+    return new StructDefn(&ast, span, name, runes, type);
 }
 
 StructDefn::~StructDefn() {
@@ -143,7 +168,7 @@ StructDefn::~StructDefn() {
 EnumDefn* EnumDefn::create(AST& ast, SourceSpan span, 
                            const std::string& name, const Runes& runes, 
                            Type* type) {
-    return new EnumDefn(span, name, runes, type);
+    return new EnumDefn(&ast, span, name, runes, type);
 }
 
 EnumDefn::~EnumDefn() {

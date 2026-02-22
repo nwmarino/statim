@@ -4,6 +4,7 @@
 
 ## lace
 - Add new `StructInitExpr` for struct initializer expressions.
+- Add new `SpaceDefn` for namespace definitions.
 - Update parser and tests to use new `TokenStream` construct.
 - Removed `mut` qualifier and type mutability contracts.
 - Simplified type system to use raw instances of `Type`, and removed `QualType`.

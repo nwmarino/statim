@@ -19,6 +19,7 @@ class FieldDefn;
 class FunctionDefn;
 class LoadDefn;
 class ParameterDefn;
+class SpaceDefn;
 class StructDefn;
 class VariableDefn;
 class VariantDefn;
@@ -78,6 +79,7 @@ public:
     virtual void visit(FunctionDefn& node);
     virtual void visit(LoadDefn& node);
     virtual void visit(ParameterDefn& node);
+    virtual void visit(SpaceDefn& node);
     virtual void visit(StructDefn& node);
     virtual void visit(VariableDefn& node);
     virtual void visit(VariantDefn& node);

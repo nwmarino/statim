@@ -12,4 +12,3 @@
 - Build system
 - Full DWARF symbols
 - Templates
-- Slices
