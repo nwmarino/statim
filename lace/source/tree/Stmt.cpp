@@ -16,7 +16,7 @@ using namespace lace;
 //>==---------------------------------------------------------------------------
 
 AdapterStmt* AdapterStmt::create(AST& ast, Defn* defn) {
-    return new AdapterStmt(defn->get_span(), defn);
+    return new AdapterStmt(defn->span(), defn);
 }
 
 AdapterStmt* AdapterStmt::create(AST& ast, Expr* expr) {

@@ -37,7 +37,7 @@ protected:
     AST* m_origin;
 
     /// The span of source code that this definition covers.
-    const SourceSpan m_span;
+    SourceSpan m_span;
 
     Defn(AST* origin, SourceSpan span) : m_origin(origin), m_span(span) {}
 
@@ -56,11 +56,16 @@ public:
     const AST* origin() const { return m_origin; }
     AST* origin() { return m_origin; }
 
-    SourceSpan get_span() const { return m_span; }
+    /// Set the span of source code which this definition covers to |defn|.
+    void set_span(SourceSpan span) { m_span = span; }
+
+    /// Returns the span of source code which this definition covers.
+    const SourceSpan& span() const { return m_span; }
+    SourceSpan& span() { return m_span; }
 };
 
 /// Represents a top-level load definition.
-class LoadDefn : public Defn {
+class LoadDefn final : public Defn {
     std::string m_path;
 
     LoadDefn(AST* origin, SourceSpan span, const std::string& path) 
@@ -68,8 +73,7 @@ class LoadDefn : public Defn {
 
 public:
     [[nodiscard]]
-    static LoadDefn* create(AST& ast, SourceSpan span, 
-                            const std::string& path);
+    static LoadDefn* create(AST& ast, SourceSpan span, const std::string& path);
 
     ~LoadDefn() = default;
 

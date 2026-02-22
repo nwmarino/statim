@@ -102,7 +102,7 @@ void computeDependencies(const Asts& asts, Asts& ordering, DepTable& deps) {
                 load->set_path(target.string());
             } else {
                 log::fatal("unresolved file: " + target.string(), 
-                    log::Span(ast->get_file(), load->get_span()));
+                    log::Span(ast->get_file(), load->span()));
             }
         }
     }

@@ -113,6 +113,22 @@ lir::Type* LIRCodegen::to_lir_type(const Type* type) {
     assert(false && "failed to lower type!");
 }
 
+void LIRCodegen::enter_namespace(const SpaceDefn* space) {
+    m_namespaces.push_back(space);
+}
+
+void LIRCodegen::exit_namespace() {
+    m_namespaces.pop_back();
+}
+
+std::string LIRCodegen::get_namespace_prefix() const {
+    std::string res = "";
+    for (const SpaceDefn* space : m_namespaces)
+        res += space->name() + '.';
+
+    return res;
+}
+
 lir::Function* LIRCodegen::get_function(const std::string& name, lir::Type* result, 
                                         const std::vector<lir::Type*>& args) {
     lir::Function* func = m_cfg.get_function(name);

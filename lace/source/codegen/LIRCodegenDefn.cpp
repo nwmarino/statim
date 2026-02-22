@@ -16,7 +16,9 @@
 using namespace lace;
 
 void LIRCodegen::codegen_initial_definition(const Defn* defn) {
-    if (auto func = dynamic_cast<const FunctionDefn*>(defn)) {
+    if (auto space = dynamic_cast<const SpaceDefn*>(defn)) {
+        codegen_initial_namespace(space);
+    } else if (auto func = dynamic_cast<const FunctionDefn*>(defn)) {
         codegen_initial_function(func);
     } else if (auto structure = dynamic_cast<const StructDefn*>(defn)) {
         codegen_initial_structure(structure);
@@ -26,13 +28,33 @@ void LIRCodegen::codegen_initial_definition(const Defn* defn) {
 }
 
 void LIRCodegen::codegen_lowered_definition(const Defn* defn) {
-    if (auto func = dynamic_cast<const FunctionDefn*>(defn)) {
+    if (auto space = dynamic_cast<const SpaceDefn*>(defn)) {
+        codegen_lowered_namespace(space);
+    } else if (auto func = dynamic_cast<const FunctionDefn*>(defn)) {
         codegen_lowered_function(func);
     } else if (auto structure = dynamic_cast<const StructDefn*>(defn)) {
         codegen_lowered_structure(structure);
     } else if (auto var = dynamic_cast<const VariableDefn*>(defn)) {
         codegen_lowered_global(var);
     }
+}
+
+void LIRCodegen::codegen_initial_namespace(const SpaceDefn* defn) {
+    enter_namespace(defn);
+
+    for (uint32_t i = 0; i < defn->num_defns(); ++i)
+        codegen_initial_definition(defn->defns()[i]);
+
+    exit_namespace();
+}
+
+void LIRCodegen::codegen_lowered_namespace(const SpaceDefn* defn) {
+    enter_namespace(defn);
+
+    for (uint32_t i = 0; i < defn->num_defns(); ++i)
+        codegen_lowered_definition(defn->defns()[i]);
+
+    exit_namespace();
 }
 
 lir::Function* LIRCodegen::codegen_initial_function(const FunctionDefn* defn) {
@@ -79,13 +101,13 @@ lir::Function* LIRCodegen::codegen_initial_function(const FunctionDefn* defn) {
         m_cfg, 
         linkage, 
         func_type,
-        defn->name(), 
+        get_namespace_prefix() + defn->name(), 
         params
     );
 }
 
 lir::Function* LIRCodegen::codegen_lowered_function(const FunctionDefn* defn) {
-    lir::Function* func = m_cfg.get_function(defn->name());
+    lir::Function* func = m_cfg.get_function(get_namespace_prefix() + defn->name());
     assert(func && "function does not exist!");
 
     // Skip functions without bodies.
@@ -144,7 +166,7 @@ lir::Function* LIRCodegen::codegen_lowered_function(const FunctionDefn* defn) {
             m_builder.build_ret();
         } else {
             log::warn("non-void function does not always return a value", 
-                log::Span(m_cfg.get_filename(), defn->get_span()));
+                log::Span(m_cfg.get_filename(), defn->span()));
         }
     }
 

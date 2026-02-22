@@ -17,7 +17,7 @@ using namespace lace;
 SymbolAnalysis::SymbolAnalysis(Options& options) : VisitorBase(options) {}
 
 void SymbolAnalysis::visit(VariableDefn& node) {
-    const log::Span span = { m_ast->get_file(), node.get_span() };
+    const log::Span span = { m_ast->get_file(), node.span() };
     Type* type = resolve_type(node.type());
     if (!type)
         log::error("unresolved type: " + node.type()->string(), span);

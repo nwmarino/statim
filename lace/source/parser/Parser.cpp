@@ -23,10 +23,11 @@ AST* Parser::parse() {
 
     while (!m_stream.complete()) {
         Defn* defn = parse_initial_definition();
-        if (!defn)
-            log::fatal("expected definition", log::Location(m_file, loc()));
+        //if (!defn)
+        //    log::fatal("expected definition", log::Location(m_file, loc()));
 
-        m_ast->defns().push_back(defn);
+        if (defn)
+            m_ast->defns().push_back(defn);
     }
 
     return m_ast;

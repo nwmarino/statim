@@ -245,6 +245,59 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
         defn->set_variants(variants);
         m_scope->add(defn);
         return defn;
+    } else if (expect("space")) {
+        if (!expect(Token::OpenBrace))
+            log::fatal("expected '{'", log::Span(m_file, since(loc())));
+
+        bool merge = false;
+        SpaceDefn* space = nullptr;
+        Scope* scope = nullptr;
+        if (NamedDefn* defn = m_scope->get(name.value)) {
+            space = dynamic_cast<SpaceDefn*>(defn);
+            if (space) {
+                scope = space->scope();
+                merge = true;
+            }
+        }
+
+        if (!merge) {
+            scope = enter_scope();
+            space = SpaceDefn::create(
+                *m_ast, 
+                name.loc, 
+                name.value, 
+                runes, 
+                scope, 
+                {}
+            );
+        }
+
+        while (!match(Token::CloseBrace)) {
+            Defn* defn = parse_initial_definition();
+            if (!defn)
+                log::fatal("expected definition", log::Span(m_file, since(loc())));
+            
+            NamedDefn* named = dynamic_cast<NamedDefn*>(defn);
+            if (!named)
+                log::fatal("expected named definition", log::Span(m_file, since(loc())));
+
+            space->defns().push_back(named);
+        }
+
+        exit_scope();
+
+        if (!merge) {
+            space->set_span({ name.loc, loc() });
+            m_scope->add(space);
+        }
+
+        next(); // '}'
+
+        if (merge) {
+            return nullptr;
+        } else {
+            return space;
+        }
     } else {
         // Assume global variable definition.
         Type* type = parse_type_specifier();
@@ -267,7 +320,8 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
             runes,
             type, 
             init, 
-            true);
+            true
+        );
 
         m_scope->add(var);
         return var;

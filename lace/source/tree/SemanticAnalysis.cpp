@@ -63,7 +63,7 @@ void SemanticAnalysis::visit(VariableDefn& node) {
         Expr* init = node.init();
         init->accept(*this);
 
-        const log::Span span = { m_ast->get_file(), node.get_span() };
+        const log::Span span = { m_ast->get_file(), node.span() };
         if (node.is_global() && !init->is_constant())
             log::fatal("globals cannot be initialized with non-constants", span);
 
@@ -88,7 +88,7 @@ void SemanticAnalysis::visit(VariableDefn& node) {
 void SemanticAnalysis::visit(FunctionDefn& node) {
     m_func = &node;
 
-    const log::Span span = { m_ast->get_file(), node.get_span() };
+    const log::Span span = { m_ast->get_file(), node.span() };
 
     if (node.is_main()) {
         if (!node.has_rune(Rune::Kind::Public))

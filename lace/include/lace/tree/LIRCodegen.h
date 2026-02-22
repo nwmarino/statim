@@ -37,6 +37,8 @@ class LIRCodegen final {
     const lir::Machine& m_mach;
 
     const AST* m_ast;
+    std::vector<const SpaceDefn*> m_namespaces = {};
+
     lir::CFG& m_cfg;
     lir::Builder m_builder;
     lir::Function* m_func = nullptr;
@@ -60,6 +62,14 @@ private:
     /// Lower the given lace |type| to its LIR equivelant, where possible.
     lir::Type* to_lir_type(const Type* type);
 
+    /// Enter the given name |space|.
+    void enter_namespace(const SpaceDefn* space);
+
+    /// Exit the current namespace, and move up one level.
+    void exit_namespace();
+
+    std::string get_namespace_prefix() const;
+
     lir::Function* get_function(const std::string& name, lir::Type* result = nullptr,
                                 const std::vector<lir::Type*>& args = {});
 
@@ -79,6 +89,9 @@ private:
     /// Assumes that the definition has been lowered already, and exists by 
     /// name in the graph.
     void codegen_lowered_definition(const Defn* defn);
+
+    void codegen_initial_namespace(const SpaceDefn* defn);
+    void codegen_lowered_namespace(const SpaceDefn* defn);
 
     lir::Function* codegen_initial_function(const FunctionDefn* defn);
     lir::Function* codegen_lowered_function(const FunctionDefn* defn);

@@ -13,7 +13,7 @@ using namespace lace;
 TypeResolution::TypeResolution(Options& options) : VisitorBase(options) {}
 
 void TypeResolution::visit(VariableDefn& node) {
-    const log::Span span = { m_ast->get_file(), node.get_span() };
+    const log::Span span = { m_ast->get_file(), node.span() };
     Type* type = resolve_type(node.type());
     if (!type)
         log::error("unresolved type: " + node.type()->string(), span);
@@ -22,7 +22,7 @@ void TypeResolution::visit(VariableDefn& node) {
 }
 
 void TypeResolution::visit(FunctionDefn& node) {
-    const log::Span span = { m_ast->get_file(), node.get_span() };
+    const log::Span span = { m_ast->get_file(), node.span() };
     Type* type = resolve_type(node.type());
     if (!type)
         log::error("unresolved type: " + node.type()->string(), span);
@@ -41,7 +41,7 @@ void TypeResolution::visit(FunctionDefn& node) {
 }
 
 void TypeResolution::visit(FieldDefn& node) {
-    const log::Span span = { m_ast->get_file(), node.get_span() };
+    const log::Span span = { m_ast->get_file(), node.span() };
     Type* type = resolve_type(node.type());
     if (!type)
         log::error("unresolved type: " + node.type()->string(), span);
@@ -50,7 +50,7 @@ void TypeResolution::visit(FieldDefn& node) {
 }
 
 void TypeResolution::visit(VariantDefn& node) {
-    const log::Span span = { m_ast->get_file(), node.get_span() };
+    const log::Span span = { m_ast->get_file(), node.span() };
     Type* type = resolve_type(node.type());
     if (!type)
         log::error("unresolved type: " + node.type()->string(), span);

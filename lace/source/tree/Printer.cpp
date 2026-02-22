@@ -8,6 +8,8 @@
 #include "lace/tree/Printer.h"
 #include "lace/tree/Stmt.h"
 #include "lace/tree/VisitorBase.h"
+#include "lace/types/SourceLocation.h"
+#include "lace/types/SourceSpan.h"
 
 #include <format>
 #include <ostream>
@@ -29,7 +31,7 @@ void Printer::visit(AST& node) {
 void Printer::visit(LoadDefn& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.end;
 
     m_out << std::format("Load <{}:{}, {}:{}> \"{}\"\n", 
@@ -41,10 +43,30 @@ void Printer::visit(LoadDefn& node) {
     );
 }
 
+void Printer::visit(SpaceDefn& node) {
+    print_indent();
+
+    const SourceSpan span = node.span();
+    const SourceLocation start = span.start, end = span.end;
+
+    m_out << std::format("Space <{}:{}, {}:{}> '{}'\n", 
+        start.line, 
+        start.col, 
+        end.line, 
+        end.col, 
+        node.name()
+    );
+    
+    ++m_indent;
+    for (NamedDefn* defn : node.defns())
+        defn->accept(*this);
+    --m_indent;
+}
+
 void Printer::visit(VariableDefn& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Variable <{}:{}, {}:{}> {} '{}'\n", 
@@ -66,7 +88,7 @@ void Printer::visit(VariableDefn& node) {
 void Printer::visit(ParameterDefn& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
     
     m_out << std::format("Parameter <{}:{}, {}:{}> {} '{}'\n",
@@ -82,7 +104,7 @@ void Printer::visit(ParameterDefn& node) {
 void Printer::visit(FunctionDefn& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Function <{}:{}, {}:{}> {} '{}'\n",
@@ -108,7 +130,7 @@ void Printer::visit(FunctionDefn& node) {
 void Printer::visit(FieldDefn& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Field <{}:{}, {}:{}> {} '{}'\n",
@@ -124,7 +146,7 @@ void Printer::visit(FieldDefn& node) {
 void Printer::visit(VariantDefn& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Variant <{}:{}, {}:{}> {} '{}'\n",
@@ -140,7 +162,7 @@ void Printer::visit(VariantDefn& node) {
 void Printer::visit(AliasDefn& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     const AliasType* type = dynamic_cast<const AliasType*>(node.type());
@@ -159,7 +181,7 @@ void Printer::visit(AliasDefn& node) {
 void Printer::visit(StructDefn& node) {
     print_indent();
     
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Struct <{}:{}, {}:{}> {}\n",
@@ -181,7 +203,7 @@ void Printer::visit(StructDefn& node) {
 void Printer::visit(EnumDefn& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Enum <{}:{}, {}:{}> {}\n",
@@ -665,4 +687,27 @@ void Printer::visit(SubscriptExpr& node) {
     ++m_indent;
     VisitorBase::visit(node);
     --m_indent;
+}
+
+void Printer::visit(StructInitExpr& node) {
+    print_indent();
+
+    const SourceSpan span = node.get_span();
+    const SourceLocation start = span.start, end = span.end;
+
+    m_out << std::format("StructInit <{}:{}, {}:{}> '{}'\n",
+        start.line,
+        start.col,
+        end.line,
+        end.col,
+        node.type()->string()
+    );
+
+    ++m_indent;
+    for (const auto& [name, expr] : node.fields()) {
+        m_out << std::format("FieldInit {} '{}'\n", name, expr->type()->string());
+        ++m_indent;
+        expr->accept(*this);
+        --m_indent;
+    }
 }
