@@ -62,7 +62,7 @@ lir::Value* LIRCodegen::codegen_addressed_reference(const RefExpr* expr) {
     assert(expr->is_resolved());
 
     if (auto func = dynamic_cast<const FunctionDefn*>(expr->defn())) {
-        lir::Function* fn = m_cfg.get_function(expr->name());
+        lir::Function* fn = m_cfg.get_function(get_namespace_prefix() + expr->name());
         assert(fn && "function does not exist!");
 
         return fn;

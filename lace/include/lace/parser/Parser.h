@@ -99,8 +99,14 @@ private:
 
     /// Enter a new scope, with the current scope as the parent node. Returns
     /// an unmanaged pointer to the new scope.
-    [[nodiscard]] inline Scope* enter_scope() {
-        m_scope = new Scope(m_scope);
+    Scope* enter_scope() {
+        Scope* scope = new Scope(m_scope);
+        assert(scope && "failed to create new scope!");
+
+        if (m_scope)
+            m_scope->children().push_back(scope);
+        
+        m_scope = scope;
         return m_scope;
     }
 

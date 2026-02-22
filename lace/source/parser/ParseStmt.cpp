@@ -146,9 +146,14 @@ Stmt* Parser::parse_declarative_statement() {
         {}, // runes
         type, 
         init,
-        false);
+        false
+    );
 
-    m_scope->add(var);
+    if (!m_scope->add(var)) {
+        log::fatal("name already exists in scope: " + name, 
+            log::Span(m_file, since(loc())));
+    }
+
     return AdapterStmt::create(*m_ast, var);
 }
 

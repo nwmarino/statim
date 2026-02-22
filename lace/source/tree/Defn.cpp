@@ -41,8 +41,8 @@ SpaceDefn* SpaceDefn::create(AST& ast, SourceSpan span, const std::string& name,
 }
 
 SpaceDefn::~SpaceDefn() {
-    if (m_scope)
-        delete m_scope;
+    //if (m_scope)
+    //    delete m_scope;
 
     m_scope = nullptr;
 
@@ -94,8 +94,8 @@ FunctionDefn* FunctionDefn::create(AST& ast, SourceSpan span,
 }
 
 FunctionDefn::~FunctionDefn() {
-    if (m_scope)
-        delete m_scope;
+    //if (m_scope)
+    //    delete m_scope;
     
     m_scope = nullptr;
 

@@ -57,8 +57,12 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
             ParameterDefn* param = ParameterDefn::create(
                 *m_ast, since(param_start), param_name, {}, param_type);
 
-            if (param_name != "_")
-                m_scope->add(param);
+            if (param_name != "_") {
+                if (!m_scope->add(param)) {
+                    log::fatal("name already exists in scope: " + param->name(),
+                        log::Span(m_file, since(dbg_start)));
+                }
+            }
             
             params.push_back(param);
 
@@ -163,7 +167,12 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
         
         defn->set_type(type);
         defn->set_fields(fields);
-        m_scope->add(defn);
+
+        if (!m_scope->add(defn)) {
+            log::fatal("name already exists in scope: " + defn->name(),
+                log::Span(m_file, since(name.loc)));
+        }
+
         return defn;
     } else if (expect("enum")) {
         Type* underlying;
@@ -227,7 +236,11 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
                 value++
             );
 
-            m_scope->add(variant);
+            if (!m_scope->add(variant)) {
+                log::fatal("name already exists in scope: " + variant->name(), 
+                    log::Span(m_file, since(loc())));
+            }
+            
             variants.push_back(variant);
 
             if (match(Token::CloseBrace)) {
@@ -243,35 +256,31 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
         variants.shrink_to_fit();
 
         defn->set_variants(variants);
-        m_scope->add(defn);
+
+        if (!m_scope->add(defn)) {
+            log::fatal("name already exists in scope: " + defn->name(),
+                log::Span(m_file, since(loc())));
+        }
+
         return defn;
     } else if (expect("space")) {
         if (!expect(Token::OpenBrace))
             log::fatal("expected '{'", log::Span(m_file, since(loc())));
-
-        bool merge = false;
-        SpaceDefn* space = nullptr;
-        Scope* scope = nullptr;
+        
         if (NamedDefn* defn = m_scope->get(name.value)) {
-            space = dynamic_cast<SpaceDefn*>(defn);
-            if (space) {
-                scope = space->scope();
-                merge = true;
+            if (SpaceDefn* nspace = dynamic_cast<SpaceDefn*>(defn)) {
+                // @Todo: PROVE this is always true, or change it.
+                assert(nspace->scope()->parent() == m_scope);
+
+                m_scope = nspace->scope();
+            } else {
+                enter_scope();
             }
+        } else {
+            enter_scope();
         }
 
-        if (!merge) {
-            scope = enter_scope();
-            space = SpaceDefn::create(
-                *m_ast, 
-                name.loc, 
-                name.value, 
-                runes, 
-                scope, 
-                {}
-            );
-        }
-
+        std::vector<NamedDefn*> defns = {};
         while (!match(Token::CloseBrace)) {
             Defn* defn = parse_initial_definition();
             if (!defn)
@@ -281,23 +290,24 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
             if (!named)
                 log::fatal("expected named definition", log::Span(m_file, since(loc())));
 
-            space->defns().push_back(named);
+            defns.push_back(named);
         }
+
+        SpaceDefn* space = SpaceDefn::create(
+            *m_ast, 
+            SourceSpan { name.loc, loc() }, 
+            name.value, 
+            runes, 
+            m_scope, 
+            defns
+        );
 
         exit_scope();
 
-        if (!merge) {
-            space->set_span({ name.loc, loc() });
-            m_scope->add(space);
-        }
-
         next(); // '}'
 
-        if (merge) {
-            return nullptr;
-        } else {
-            return space;
-        }
+        bool _ = m_scope->add(space);
+        return space;
     } else {
         // Assume global variable definition.
         Type* type = parse_type_specifier();
@@ -323,7 +333,11 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
             true
         );
 
-        m_scope->add(var);
+        if (!m_scope->add(var)) {
+            log::fatal("name already exists in scope: " + var->name(), 
+                log::Span(m_file, since(name.loc)));
+        }
+
         return var;
     }
 

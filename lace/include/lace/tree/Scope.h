@@ -15,8 +15,10 @@
 //  the source code, and are used during analysis passes.
 //
 
+#include <cstdint>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace lace {
 
@@ -28,12 +30,13 @@ public:
 
 private:
     Scope* m_parent;
+    std::vector<Scope*> m_children = {};
     DefnTable m_defns = {};
 
 public:
     Scope(Scope* parent = nullptr) : m_parent(parent) {}
 
-    ~Scope() = default;
+    ~Scope();
 
     Scope(const Scope&) = delete;
     void operator=(const Scope&) = delete;
@@ -48,10 +51,20 @@ public:
     /// Test if this scope tree has a parent.
     bool has_parent() const { return m_parent != nullptr; }
 
+    /// Returns the child scopes of this scope.
+    const std::vector<Scope*>& children() const { return m_children; }
+    std::vector<Scope*>& children() { return m_children; }
+
+    /// Returns the number of child scopes this scope has.
+    uint32_t num_children() const { return m_children.size(); }
+
+    /// Test if this scope has any child nodes.
+    bool has_children() const { return !m_children.empty(); }
+
     /// Add the given |defn| to this scope. 
     /// If it conflicts name-wise with another definition, then the attempt 
     /// returns false.
-    bool add(NamedDefn* defn);
+    [[nodiscard]] bool add(NamedDefn* defn);
 
     /// Returns the definition in this scope with the given |name| if one 
     /// exists, and null otherwise.

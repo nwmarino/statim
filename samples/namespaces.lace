@@ -1,31 +1,35 @@
 utils :: space {
-    max :: (x: s64, y: s64) -> s64 {
-        if x >= y {
-            ret x;
-        } else {
-            ret y;
-        }
+    
+max :: (x: s64, y: s64) -> s64 {
+    if x >= y {
+        ret x;
+    } else {
+        ret y;
+    }
+}
+
+min :: (x: s64, y: s64) -> s64 {
+    if x <= y {
+        ret x;
+    } else {
+        ret y;
     }
 
-    min :: (x: s64, y: s64) -> s64 {
-        if x <= y {
-            ret x;
-        } else {
-            ret y;
-        }
-    }
+}
 
 extras :: space {
-    foo :: () -> s64 {
-        ret 0;
-    }
 
-    bar :: () -> s64 {
-        ret 1;
-    }
+foo :: () -> s64 {
+    ret 0;
 }
 
+bar :: () -> s64 {
+    ret zoo();
 }
+
+} // space extras
+
+} // space utils
 
 $public
 main :: () -> s64 {
@@ -34,7 +38,17 @@ main :: () -> s64 {
 }
 
 utils :: space {
-    fadd :: (x: f64, y: f64) -> f64 {
-        ret x + y;
-    }
+
+fadd :: (x: f64, y: f64) -> f64 {
+    ret x + y;
 }
+
+extras :: space {
+
+zoo :: () -> s64 {
+    ret foo();
+}
+
+} // space extras
+
+} // space utils

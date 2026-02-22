@@ -8,6 +8,13 @@
 
 using namespace lace;
 
+Scope::~Scope() {
+    for (Scope* scope : m_children)
+        delete scope;
+
+    m_children.clear();
+}
+
 bool Scope::add(NamedDefn* defn) {
     if (get(defn->name()))
         return false;
