@@ -17,7 +17,7 @@ void TypeResolution::visit(VariableDefn& node) {
     const log::Span span = { m_ast->get_file(), node.span() };
     Type* type = resolve_type(node.type());
     if (!type)
-        log::error("unresolved type: " + node.type()->string(), span);
+        log::fatal("unresolved type: " + node.type()->string(), span);
 
     node.set_type(type);
 }
@@ -25,9 +25,11 @@ void TypeResolution::visit(VariableDefn& node) {
 void TypeResolution::visit(FunctionDefn& node) {
     const log::Span span = { m_ast->get_file(), node.span() };
 
+    m_scope = node.scope();
+
     Type* type = resolve_type(node.type());
     if (!type)
-        log::error("unresolved type: " + node.type()->string(), span);
+        log::fatal("unresolved type: " + node.type()->string(), span);
     
     FunctionType* sig = dynamic_cast<FunctionType*>(type);
     assert(sig);
@@ -40,6 +42,9 @@ void TypeResolution::visit(FunctionDefn& node) {
     uint32_t i = 0;
 
     if (node.has_receiver()) {
+        assert(sig->num_params() >= 1);
+        node.receiver()->set_type(sig->get_param(0));
+
         // This function is a method to some structure. We must try and resolve
         // that structure and add this is as a method.
         Type* receiver_type = node.get_receiver_type();
@@ -57,9 +62,6 @@ void TypeResolution::visit(FunctionDefn& node) {
             log::fatal("method " + node.name() + " already exists", span);
         
         struct_defn->methods().push_back(&node);
-
-        assert(sig->num_params() >= 1);
-        node.receiver()->set_type(sig->get_param(0));
         i = 1;
     }
 
@@ -67,13 +69,15 @@ void TypeResolution::visit(FunctionDefn& node) {
         ParameterDefn* param = node.get_param(i);
         param->set_type(sig->get_param(i));
     }
+
+    m_scope = m_scope->parent();
 }
 
 void TypeResolution::visit(FieldDefn& node) {
     const log::Span span = { m_ast->get_file(), node.span() };
     Type* type = resolve_type(node.type());
     if (!type)
-        log::error("unresolved type: " + node.type()->string(), span);
+        log::fatal("unresolved type: " + node.type()->string(), span);
     
     node.set_type(type);
 }
@@ -82,7 +86,7 @@ void TypeResolution::visit(VariantDefn& node) {
     const log::Span span = { m_ast->get_file(), node.span() };
     Type* type = resolve_type(node.type());
     if (!type)
-        log::error("unresolved type: " + node.type()->string(), span);
+        log::fatal("unresolved type: " + node.type()->string(), span);
     
     node.set_type(type);
 }

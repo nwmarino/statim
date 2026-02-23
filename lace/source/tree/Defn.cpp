@@ -42,9 +42,6 @@ SpaceDefn* SpaceDefn::create(AST& ast, SourceSpan span, const std::string& name,
 }
 
 SpaceDefn::~SpaceDefn() {
-    //if (m_scope)
-    //    delete m_scope;
-
     m_scope = nullptr;
 
     for (NamedDefn* defn : m_defns) {
@@ -106,9 +103,6 @@ FunctionDefn* FunctionDefn::create(AST& ast, SourceSpan span,
 }
 
 FunctionDefn::~FunctionDefn() {
-    //if (m_scope)
-    //    delete m_scope;
-    
     m_scope = nullptr;
 
     for (ParameterDefn* param : m_params) {

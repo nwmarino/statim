@@ -57,6 +57,7 @@ void VisitorBase::visit(ParameterDefn& node) {
 
 void VisitorBase::visit(SpaceDefn& node) {
     m_namespaces.push_back(&node);
+    m_scope = node.scope();
 
     for (NamedDefn* defn : node.defns()) {
         // Only pass over definitions defined in the same file.
@@ -64,6 +65,7 @@ void VisitorBase::visit(SpaceDefn& node) {
             defn->accept(*this);
     }
 
+    m_scope = m_scope->parent();
     m_namespaces.pop_back();
 }
 
@@ -240,6 +242,9 @@ Type* VisitorBase::resolve_type(Type* type) const {
         return FunctionType::get(*m_ast, result, params);
     } else if (auto ptr = dynamic_cast<PointerType*>(type)) {
         Type* pointee = resolve_type(ptr->pointee());
+        if (!pointee)
+            return nullptr;
+
         if (pointee != ptr->pointee())
             ptr->set_pointee(pointee);
 

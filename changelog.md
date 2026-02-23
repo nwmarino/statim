@@ -2,8 +2,10 @@
 
 ## General
 - Add structure initializers `{ ... }`.
-- Add namespaces `... :: space { ... }`.
-- Add namespace specifiers `...::...`
+- Add namespaces `... '::' space { ... }`.
+- Add namespace specifiers `... '::' ...`
+- Add pointer receiver functions `... (...) '::' (...) '->' ... { ... }`
+- Add pointer receiver calls `... '.' ... (...)`
 - Remove the `mut` keyword and qualified types.
 
 ## lace

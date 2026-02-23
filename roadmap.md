@@ -1,4 +1,4 @@
-- Methods
+- Default field inits.
 - Strings
 - $print
 - File I/O
