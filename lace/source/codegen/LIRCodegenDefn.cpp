@@ -204,7 +204,7 @@ lir::Global* LIRCodegen::codegen_initial_global(const VariableDefn* defn) {
         to_lir_type(defn->type()), 
         linkage, 
         defn->name(),
-        false
+        true // mutable
     );
 
     m_globals.emplace(defn, global);

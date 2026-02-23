@@ -652,6 +652,13 @@ void Printer::visit(RefExpr& node) {
         node.name(),
         node.type()->string()
     );
+
+    if (node.has_specs()) {
+        m_indent++;
+        for (const Specifier& spec : node.specs())
+            m_out << std::format("Specifier {}\n", spec.name);
+        m_indent--;
+    }
 }
 
 void Printer::visit(SizeofExpr& node) {
@@ -668,26 +675,6 @@ void Printer::visit(SizeofExpr& node) {
         node.target()->string(),
         node.type()->string()
     );
-}
-
-void Printer::visit(SpecifierExpr& node) {
-    print_indent();
-
-    const SourceSpan span = node.get_span();
-    const SourceLocation start = span.start, end = span.end;
-
-    m_out << std::format("Specifier <{}:{}, {}:{}> {} '{}'\n",
-        start.line,
-        start.col,
-        end.line,
-        end.col,
-        node.name(),
-        node.type()->string()
-    );
-
-    ++m_indent;
-    node.expr()->accept(*this);
-    --m_indent;
 }
 
 void Printer::visit(StructInitExpr& node) {

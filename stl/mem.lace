@@ -9,12 +9,80 @@ Metadata :: struct {
 border :: *void = null;
 head :: *Metadata = null;
 
-$public
-mem_copy :: (dst: *void, src: *void, n: u64) -> void {
-    let d: *char = dst;
-    let s: *char = src;
+update_border :: () -> *void {
+    border = brk(0);
+    ret border;
+}
 
+get_block_pointer :: (ptr: *void) -> *Metadata {
+    ret cast<*Metadata>(ptr) - 1;
+}
+
+extend_heap :: (inc: u64) -> *void {
+    if !border {
+        update_border();
+        if !border {
+            ret cast<*void>(-1);
+        }
+    }
+
+    if inc == 0 {
+        ret border;
+    }
+
+    let old_border: *void = border;
+    let new_border: *void = cast<*char>(border) + inc;
+
+    if brk(new_border) == old_border {
+        ret cast<*void>(-1);
+    }
+
+    border = new_border;
+    ret border;
+}
+
+find_free_space :: (last: **Metadata, size: u64) -> *Metadata {
+    let curr: *Metadata = border;
+    until !curr {
+        if curr.free && curr.size >= size {
+            stop;
+        }
+
+        *last = curr;
+        curr = curr.next;
+    }
+
+    ret curr;
+}
+
+request_space :: (last: *Metadata, size: u64) -> *Metadata {
+    let total_size: u64 = size + sizeof(Metadata);
+    let block: *Metadata = null;
+    let mem: *void = null;
+    let border_meta: *Metadata = cast<*Metadata>(extend_heap(0));
+
+    block = cast<*Metadata>(border_meta);
+    mem = extend_heap(total_size);
+
+    if last {
+        last.next = block;
+    }
+
+    block.size = size;
+    block.next = null;
+    block.free = false;
+    ret block;
+}
+
+$public
+stl :: space {
+
+$public
+copy :: (dst: *void, src: *void, n: u64) -> void {
+    let d: *char = cast<*char>(dst);
+    let s: *char = cast<*char>(src);
     let i: u64 = 0;
+
     until i > n {
         d[i] = s[i];
         i = i + 1;
@@ -22,7 +90,7 @@ mem_copy :: (dst: *void, src: *void, n: u64) -> void {
 }
 
 $public
-mem_alloc :: (size: u64) -> *void {
+alloc :: (size: u64) -> *void {
     let block: *Metadata = null;
     let align: u64 = size;
 
@@ -55,12 +123,12 @@ mem_alloc :: (size: u64) -> *void {
 }
 
 $public
-mem_free :: (p: *void) -> void {
-    if !p {
+free :: (ptr: *void) -> void {
+    if !ptr {
         ret;
     }
 
-    let block: *Metadata = get_block_pointer(p);
+    let block: *Metadata = get_block_pointer(ptr);
     block.free = true;
     
     if block.next {
@@ -72,87 +140,24 @@ mem_free :: (p: *void) -> void {
 }
 
 $public
-mem_realloc :: (p: *void, size: u64) -> *void {
-    if !p {
-        ret mem_alloc(size);
+realloc :: (ptr: *void, size: u64) -> *void {
+    if !ptr {
+        ret alloc(size);
     }
 
-    let block: *Metadata = get_block_pointer(p);
+    let block: *Metadata = get_block_pointer(ptr);
     if block.size >= size {
-        ret p;
+        ret ptr;
     }
 
-    let new_p: *void = mem_alloc(size);
-    if !new_p {
+    let new: *void = alloc(size);
+    if !new {
         ret null;
     }
 
-    mem_copy(new_p, p, block.size);
-    mem_free(p);
-    ret new_p;
+    copy(new, ptr, block.size);
+    free(ptr);
+    ret new;
 }
 
-update_border :: () -> *void {
-    border = brk(0);
-    ret border;
-}
-
-get_block_pointer :: (p: *void) -> *Metadata {
-    ret cast<*Metadata>(p) - 1;
-}
-
-extend_heap :: (inc: u64) -> *void {
-    if !border {
-        update_border();
-        if !border {
-            ret cast<*void>(-1);
-        }
-    }
-
-    if inc == 0 {
-        ret border;
-    }
-
-    let old_border: mut *void = border;
-    let new_border: mut *void = cast<*char>(border) + inc;
-
-    if brk(new_border) == old_border {
-        ret cast<*void>(-1);
-    }
-
-    border = new_border;
-    ret border;
-}
-
-find_free_space :: (last: *mut *Metadata, size: u64) -> *Metadata {
-    let curr: mut *Metadata = border;
-    until !curr {
-        if curr.free && curr.size >= size {
-            stop;
-        }
-
-        *last = curr;
-        curr = curr.next;
-    }
-
-    ret curr;
-}
-
-request_space :: (last: mut *Metadata, size: u64) -> *Metadata {
-    let total_size: u64 = size + sizeof(Metadata);
-    let block: mut *Metadata = null;
-    let mem: mut *void = null;
-    let border_meta: *Metadata = cast<*Metadata>(extend_heap(0));
-
-    block = cast<*Metadata>(border_meta);
-    mem = extend_heap(total_size);
-
-    if last {
-        last.next = block;
-    }
-
-    block.size = size;
-    block.next = null;
-    block.free = false;
-    ret block;
-}
+} // space stl

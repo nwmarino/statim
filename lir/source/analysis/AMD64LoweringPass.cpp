@@ -187,7 +187,7 @@ void AMD64LoweringPass::run() {
         // Empty functions should not be lowered, they should either be resolved at link time or 
         // with some library.
         //if (func->empty())
-       //     continue;
+        //    continue;
 
         FunctionABI abi = FunctionABI(m_mach, func);
 
@@ -248,7 +248,8 @@ uint8_t AMD64LoweringPass::get_subreg_byte(const Type *type) const {
     assert(type && "type cannot be null!");
     assert(m_mach.is_scalar(type) && "type must be scalar!");
 
-    switch (m_mach.get_type_size(type)) {
+    const uint32_t bits = m_mach.get_type_size(type);
+    switch (bits) {
         case 8:
             return 1;
         case 16:

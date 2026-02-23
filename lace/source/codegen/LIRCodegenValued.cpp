@@ -82,8 +82,6 @@ lir::Value* LIRCodegen::codegen_valued_expression(const Expr* expr) {
         return codegen_valued_access(access);
     } else if (auto ref = dynamic_cast<const RefExpr*>(expr)) {
         return codegen_valued_reference(ref);
-    } else if (auto spec = dynamic_cast<const SpecifierExpr*>(expr)) {
-        return codegen_valued_specifier(spec);
     } else if (auto subscript = dynamic_cast<const SubscriptExpr*>(expr)) {
         return codegen_valued_subscript(subscript);
     } else if (auto call = dynamic_cast<const CallExpr*>(expr)) {
@@ -128,12 +126,6 @@ lir::Value* LIRCodegen::codegen_valued_reference(const RefExpr* expr) {
     }
 
     return nullptr;
-}
-
-lir::Value* LIRCodegen::codegen_valued_specifier(const SpecifierExpr* expr) {
-    assert(expr->is_resolved());
-
-    return codegen_valued_expression(expr->expr());
 }
 
 lir::Value* LIRCodegen::codegen_valued_subscript(const SubscriptExpr* expr) {

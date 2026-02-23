@@ -19,16 +19,4 @@ max :: (x: s64, y: s64) -> s64 {
     }
 }
 
-extras :: space {
-
-Box :: struct {
-    x: u64,
-}
-
-bar :: () -> s64 {
-    ret 42;
-}
-
-} // space extras
-
 } // space stl

@@ -9,6 +9,7 @@
 #include "lace/tree/VisitorBase.h"
 
 #include <cassert>
+#include <vector>
 
 using namespace lace;
 
@@ -205,12 +206,13 @@ ParenExpr::~ParenExpr() {
 }
 
 //>==---------------------------------------------------------------------------
-//                          ParenExpr Implementation
+//                          RefExpr Implementation
 //>==---------------------------------------------------------------------------
 
 RefExpr* RefExpr::create(AST& ast, SourceSpan span, 
-                         const std::string& name, ValueDefn* defn) {
-    return new RefExpr(span, defn ? defn->type() : nullptr, name, defn);
+                         const std::string& name, 
+                         const std::vector<Specifier>& specs, ValueDefn* defn) {
+    return new RefExpr(span, defn ? defn->type() : nullptr, name, specs, defn);
 }
 
 bool RefExpr::is_lvalue() const {
@@ -231,25 +233,6 @@ SizeofExpr* SizeofExpr::create(AST& ast, SourceSpan span,
         BuiltinType::get(ast, BuiltinType::Kind::UInt64), 
         target
     );
-}
-
-//>==---------------------------------------------------------------------------
-//                          SpecifierExpr Implementation
-//>==---------------------------------------------------------------------------
-
-
-SpecifierExpr* SpecifierExpr::create(AST& ast, SourceSpan span, Type* type, 
-                                     const std::string& name, Expr* expr) {
-    assert(expr && "expr cannot be null!");
-    return new SpecifierExpr(span, type, name, expr);
-}
-
-SpecifierExpr::~SpecifierExpr() {
-    if (m_expr)
-        delete m_expr;
-
-    m_expr = nullptr;
-    m_space = nullptr;
 }
 
 //>==---------------------------------------------------------------------------

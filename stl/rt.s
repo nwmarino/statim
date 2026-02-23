@@ -72,20 +72,27 @@ __unreachable:
     .global exit
     .type   exit, @function
 exit:
+    pushq	%rbp
+	movq	%rsp, %rbp
     movq    16(%rbp), %rdi
     movq    $60, %rax
     syscall
+    ud2
 
 # open :: (*char, s64, s64) -> s64
     .text
     .global open
     .type   open, @function
 open: 
+    pushq	%rbp
+	movq	%rsp, %rbp
     movq    16(%rbp), %rdi
     movq    24(%rbp), %rsi
     movq    32(%rbp), %rdx
     movq    $2, %rax
     syscall
+    movq	%rbp, %rsp
+	popq	%rbp
     retq
 
 # close :: (s64) -> s64
@@ -93,9 +100,13 @@ open:
     .global close
     .type   close, @function
 close:
+    pushq	%rbp
+	movq	%rsp, %rbp
     movq    16(%rbp), %rdi
     movq    $3, %rax
     syscall
+    movq	%rbp, %rsp
+	popq	%rbp
     retq
 
 # read :: (s64, *char, s64) -> s64
@@ -103,11 +114,15 @@ close:
     .global read
     .type   read, @function
 read:
+    pushq	%rbp
+	movq	%rsp, %rbp
     movq    16(%rbp), %rdi
     movq    24(%rbp), %rsi
     movq    32(%rbp), %rdx
     movq    $0, %rax
     syscall
+    movq	%rbp, %rsp
+	popq	%rbp
     retq
 
 # write :: (s64, *mut char, s64) -> s64
@@ -115,11 +130,15 @@ read:
     .global write
     .type   write, @function
 write:
+    pushq	%rbp
+	movq	%rsp, %rbp
     movq    16(%rbp), %rdi
     movq    24(%rbp), %rsi
     movq    32(%rbp), %rdx
     movq    $1, %rax
     syscall
+    movq	%rbp, %rsp
+	popq	%rbp
     retq
 
 # brk :: (u64) -> *void
@@ -127,7 +146,11 @@ write:
     .global brk
     .type   brk, @function
 brk:
+    pushq	%rbp
+	movq	%rsp, %rbp
     movq    16(%rbp), %rdi
     movq    $12, %rax
     syscall
+    movq	%rbp, %rsp
+	popq	%rbp
     retq

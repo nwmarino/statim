@@ -76,6 +76,17 @@ void SymbolAnalysis::visit(RefExpr& node) {
     const log::Span span = log::Span(m_ast->get_file(), node.get_span());
     const std::string& name = node.name();
 
+    Scope* prev_scope = m_scope;
+
+    for (Specifier& spec : node.specs()) {
+        SpaceDefn* nspace = m_scope->get_namespace(spec.name);
+        if (!nspace)
+            log::fatal("unknown namespace: " + spec.name, span);
+
+        spec.nspace = nspace;
+        m_scope = nspace->scope();
+    }
+
     NamedDefn* named_defn = m_scope->get(name);
     if (!named_defn)
         log::fatal("unresolved reference: " + name, span);
@@ -86,6 +97,8 @@ void SymbolAnalysis::visit(RefExpr& node) {
 
     node.set_defn(value_defn);
     node.set_type(value_defn->type());
+
+    m_scope = prev_scope;
 }
 
 void SymbolAnalysis::visit(SizeofExpr& node) {
@@ -95,30 +108,6 @@ void SymbolAnalysis::visit(SizeofExpr& node) {
         log::fatal("unresolved type: " + node.target()->string(), span);
     
     node.set_target(type);
-}
-
-void SymbolAnalysis::visit(SpecifierExpr& node) {
-    const log::Span span = { m_ast->get_file(), node.get_span() };
-
-    NamedDefn* defn = m_scope->get(node.name());
-    if (!defn) {
-        log::fatal("unresolved name: " + node.name(), span);
-    }
-
-    SpaceDefn* nspace = dynamic_cast<SpaceDefn*>(defn);
-    if (!nspace) {
-        log::fatal("expected namespace specifier: " + node.name(), span);
-    }
-
-    node.set_space(nspace);
-
-    Scope* prev_scope = m_scope;
-    m_scope = nspace->scope();
-
-    VisitorBase::visit(node);
-
-    m_scope = prev_scope;
-    node.set_type(node.expr()->type());
 }
 
 void SymbolAnalysis::visit(StructInitExpr& node) {

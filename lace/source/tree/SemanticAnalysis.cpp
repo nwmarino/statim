@@ -349,12 +349,6 @@ void SemanticAnalysis::visit(CallExpr& node) {
     }
 }
 
-void SemanticAnalysis::visit(SpecifierExpr& node) {
-    VisitorBase::visit(node);
-
-    node.set_type(node.expr()->type());
-}
-
 void SemanticAnalysis::visit(StructInitExpr& node) {
     VisitorBase::visit(node);
 

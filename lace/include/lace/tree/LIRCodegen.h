@@ -125,9 +125,6 @@ private:
     lir::Value* codegen_addressed_reference(const RefExpr* expr);
     lir::Value* codegen_valued_reference(const RefExpr* expr);
 
-    lir::Value* codegen_addressed_specifier(const SpecifierExpr* expr);
-    lir::Value* codegen_valued_specifier(const SpecifierExpr* expr);
-
     lir::Value* codegen_addressed_subscript(const SubscriptExpr* expr);
     lir::Value* codegen_valued_subscript(const SubscriptExpr* expr);
 

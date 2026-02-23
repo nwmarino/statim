@@ -11,6 +11,7 @@
 //  expressions in the syntax tree.
 //
 
+#include "lace/tree/Defn.h"
 #include "lace/tree/Stmt.h"
 #include "lace/tree/Type.h"
 #include "lace/tree/VisitorBase.h"
@@ -562,20 +563,28 @@ public:
     Expr* expr() { return m_expr; }
 };
 
+struct Specifier final {
+    std::string name;
+    SpaceDefn* nspace;
+};
+
 /// Represents a named definition reference expression.
 class RefExpr final : public Expr {
     std::string m_name;
+    std::vector<Specifier> m_specs;
     ValueDefn* m_defn;
 
 public:
     RefExpr(SourceSpan span, Type* type, const std::string& name, 
-            ValueDefn* defn)
-      : Expr(span, type), m_name(name), m_defn(defn) {}
+            const std::vector<Specifier>& specs, ValueDefn* defn)
+      : Expr(span, type), m_name(name), m_specs(specs), m_defn(defn) {}
 
 public:
     [[nodiscard]]
     static RefExpr* create(AST& ast, SourceSpan span, 
-                           const std::string& name, ValueDefn* defn);
+                           const std::string& name,
+                           const std::vector<Specifier>& specs, 
+                           ValueDefn* defn);
 
     ~RefExpr() = default;
     
@@ -592,6 +601,16 @@ public:
     /// Returns the name of the definition which this expression references.
     const std::string& name() const { return m_name; }
     std::string& name() { return m_name; }
+
+    /// Returns the list of namespace specifiers this reference has.
+    const std::vector<Specifier>& specs() const { return m_specs; }
+    std::vector<Specifier>& specs() { return m_specs; }
+
+    /// Returns the number of namespace specifiers this reference has.
+    uint32_t num_specs() const { return m_specs.size(); }
+
+    /// Test if this reference has any namespace specifiers.
+    bool has_specs() const { return !m_specs.empty(); }
 
     /// Set the definition which this expression references to |defn|.
     void set_defn(ValueDefn* defn) { m_defn = defn; }
@@ -634,51 +653,6 @@ public:
     /// Returns the type which this expression is to result in the size of.
     const Type* target() const { return m_target; }
     Type* target() { return m_target; }
-};
-
-/// Represents a namespace-specified expression, e.g. `...::...`
-class SpecifierExpr final : public Expr {
-    std::string m_name;
-    Expr* m_expr;
-    SpaceDefn* m_space;
-
-    SpecifierExpr(SourceSpan span, Type* type, const std::string& name, 
-                  Expr* expr)
-      : Expr(span, type), m_name(name), m_expr(expr) {}
-
-public:
-    [[nodiscard]]
-    static SpecifierExpr* create(AST& ast, SourceSpan span, Type* type, 
-                                 const std::string& name, Expr* expr);
-
-    ~SpecifierExpr() override;
-
-    SpecifierExpr(const SpecifierExpr&) = delete;
-    void operator=(const SpecifierExpr&) = delete;
-
-    SpecifierExpr(SpecifierExpr&&) noexcept = delete;
-    void operator=(SpecifierExpr&&) noexcept = delete;
-    
-    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
-
-    bool is_constant() const override { return m_expr->is_constant(); }
-
-    const std::string& name() const { return m_name; }
-    std::string& name() { return m_name; }
-
-    /// Returns the nested expression of this specifier.
-    const Expr* expr() const { return m_expr; }
-    Expr* expr() { return m_expr; }
-
-    /// Set the namespace this specifier specifies to |space|.
-    void set_space(SpaceDefn* space) { m_space = space; }
-
-    /// Returns the resolved namespace definition this specifier refers to.
-    const SpaceDefn* space() const { return m_space; }
-    SpaceDefn* space() { return m_space; }
-
-    /// Test if the namespace this specifier refers to has been resolved.
-    bool is_resolved() const { return m_space != nullptr; }
 };
 
 /// Represents a structure initialization expression `... { ... }`.

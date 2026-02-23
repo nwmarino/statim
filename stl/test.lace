@@ -1,21 +1,15 @@
-load "math.lace";
-
-stl :: space {
-    foo :: () -> s64 {
-        ret 42;
-    }
-
-extras :: space {
-
-    bar :: () -> s64 {
-        ret foo() + 5;
-    }
-
-} // space extras
-
-} // space stl
+load "mem.lace";
 
 $public
 main :: () -> s64 {
-    ret stl::max(stl::foo(), 14);
+    let ptr: *s64 = stl::alloc(sizeof(s64));
+    if !ptr {
+        ret 1;
+    }
+
+    *ptr = 42;
+    let x: s64 = *ptr;
+    stl::free(ptr);
+
+    ret x;
 }

@@ -7,10 +7,12 @@
 #include "lace/parser/Parser.h"
 #include "lace/tree/Expr.h"
 #include "lace/tree/Type.h"
+#include "lace/types/SourceLocation.h"
 
 #include <cassert>
 #include <map>
 #include <string>
+#include <vector>
 
 using namespace lace;
 
@@ -419,40 +421,33 @@ Expr* Parser::parse_named_reference() {
     uint64_t position = m_stream.position();
     next();
 
-    if (match(Token::Path)) {
-        return parse_namespace_specifier(position);
-    } else if (m_allow_inits && match(Token::OpenBrace)) {
+    if (m_allow_inits && match(Token::OpenBrace)) {
         return parse_struct_initializer(position);
     }
 
-    const Token& id = m_stream.get(position);
-    return RefExpr::create(*m_ast, since(id.loc), id.value, nullptr);
-}
-
-Expr* Parser::parse_namespace_specifier(uint64_t start) {
-    m_stream.seek(start);
-    const SourceLocation loc_start = loc();
-
-    assert(match(Token::Identifier));
+    m_stream.seek(position);
+    SourceLocation loc_start = loc();
     std::string name = curr().value;
     next(); // id
 
-    assert(expect(Token::Path));
+    std::vector<Specifier> specs = {};
+    while (true) {
+        if (!expect(Token::Path))
+            break;
 
-    if (!match(Token::Identifier))
-        log::fatal("expected identifier", log::Span(m_file, since(loc_start)));
+        specs.push_back(Specifier {
+            name,
+            nullptr,
+        });
 
-    Expr* expr = parse_initial_expression();
-    if (!expr)
-        log::fatal("expected expression", log::Span(m_file, since(loc_start)));
+        if (!match(Token::Identifier))
+            log::fatal("expected identifier", log::Span(m_file, since(loc())));
 
-    return SpecifierExpr::create(
-        *m_ast, 
-        SourceSpan { loc_start, expr->get_span().end }, 
-        nullptr, 
-        name, 
-        expr
-    );
+        name = curr().value;
+        next(); // id
+    }
+
+    return RefExpr::create(*m_ast, since(loc_start), name, specs, nullptr);
 }
 
 Expr* Parser::parse_struct_initializer(uint64_t start) {

@@ -188,10 +188,6 @@ void VisitorBase::visit(SizeofExpr& node) {
 
 }
 
-void VisitorBase::visit(SpecifierExpr& node) {
-    node.expr()->accept(*this);
-}
-
 void VisitorBase::visit(StructInitExpr& node) {
     for (auto& [field, expr] : node.fields())
         expr->accept(*this);

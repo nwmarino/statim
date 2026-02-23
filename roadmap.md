@@ -1,14 +1,13 @@
-- $assert
+- Methods
+- Strings
+- $print
+- File I/O
+- $write
 - Match statement
 - For statement
-- Strings
-- File I/O
-- Dynamic memory allocator
 - Defer statement
-- Format strings
-- Function receivers
-- Unions
+- Union definition
+- Templates
 - CTFE
 - Build system
 - Full DWARF symbols
-- Templates

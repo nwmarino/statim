@@ -50,7 +50,6 @@ class CastExpr;
 class ParenExpr;
 class RefExpr;
 class SizeofExpr;
-class SpecifierExpr;
 class StructInitExpr;
 class SubscriptExpr;
 
@@ -112,7 +111,6 @@ public:
     virtual void visit(ParenExpr& node);
     virtual void visit(RefExpr& node);
     virtual void visit(SizeofExpr& node);
-    virtual void visit(SpecifierExpr& node);
     virtual void visit(StructInitExpr& node);
     virtual void visit(SubscriptExpr& node);
 
