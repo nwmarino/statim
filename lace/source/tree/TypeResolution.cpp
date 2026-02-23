@@ -6,6 +6,7 @@
 #include "lace/core/Diagnostics.h"
 #include "lace/tree/AST.h"
 #include "lace/tree/Defn.h"
+#include "lace/tree/Type.h"
 #include "lace/tree/TypeResolution.h"
 
 using namespace lace;
@@ -39,6 +40,24 @@ void TypeResolution::visit(FunctionDefn& node) {
     uint32_t i = 0;
 
     if (node.has_receiver()) {
+        // This function is a method to some structure. We must try and resolve
+        // that structure and add this is as a method.
+        Type* receiver_type = node.get_receiver_type();
+        assert(receiver_type);
+
+        StructType* struct_type = dynamic_cast<StructType*>(receiver_type);
+        if (!struct_type)
+            log::fatal("cannot define a receiver for non-struct", span);
+
+        StructDefn* struct_defn = struct_type->defn();
+        assert(struct_defn);
+
+        // Check that a method with the same name doesn't already exist.
+        if (struct_defn->has_method(node.name()))
+            log::fatal("method " + node.name() + " already exists", span);
+        
+        struct_defn->methods().push_back(&node);
+
         assert(sig->num_params() >= 1);
         node.receiver()->set_type(sig->get_param(0));
         i = 1;

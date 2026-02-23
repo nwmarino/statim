@@ -52,10 +52,23 @@ lir::Value* LIRCodegen::codegen_addressed_access(const AccessExpr* expr) {
     assert(ptr);
 
     lir::Type* type = lir::PointerType::get(m_cfg, to_lir_type(expr->type()));
+    
+    assert(expr->is_resolved());
 
-    return m_builder.build_access(type, ptr, lir::Integer::get(
-        m_cfg, lir::Type::get_i64(m_cfg), expr->field()->get_index()
-    ));
+    if (auto field = dynamic_cast<const FieldDefn*>(expr->field())) {
+        return m_builder.build_access(type, ptr, lir::Integer::get(
+            m_cfg, 
+            lir::Type::get_i64(m_cfg), 
+            field->get_index()
+        ));
+    } else if (auto method = dynamic_cast<const FunctionDefn*>(expr->field())) {
+        lir::Function* func = m_funcs.at(method);
+        assert(func);
+
+        return func;
+    }
+
+    assert(false && "invalid access field type!");
 }
 
 lir::Value* LIRCodegen::codegen_addressed_reference(const RefExpr* expr) {

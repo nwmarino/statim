@@ -35,7 +35,7 @@ void SymbolAnalysis::visit(AccessExpr& node) {
 
     // Check that the base type is a struct or a pointer to one.
     Type* base_type = node.base()->type();
-    if (auto ptr = dynamic_cast<PointerType*>(base_type))
+    if (PointerType* ptr = dynamic_cast<PointerType*>(base_type))
         base_type = ptr->pointee();
 
     StructType* struct_type = dynamic_cast<StructType*>(base_type);
@@ -48,17 +48,41 @@ void SymbolAnalysis::visit(AccessExpr& node) {
 
     // Resolve the target field from the struct definition.
     FieldDefn* field = struct_defn->get_field(name);
-    if (!field)
-        log::fatal("field '" + name + "' does not exist", span);
+    if (field) {
+        node.set_field(field);
+        node.set_type(field->type());
+        return;
+    }
 
-    node.set_field(field);
-    node.set_type(field->type());
+    // No field with |name| exists, so we defer to looking for a method.
+    FunctionDefn* method = struct_defn->get_method(name);
+    if (method) {
+        node.set_field(method);
+        node.set_type(method->type());
+        return;
+    }
+
+    // No field or method with the given |name| exists, so we stop.
+    log::fatal("no field or method '" + name + "' exists", span);
 }
 
 void SymbolAnalysis::visit(CallExpr& node) {
     VisitorBase::visit(node);
 
-    // @Todo: maybe propogate function return type here.
+    const log::Span span = log::Span(m_ast->get_file(), node.get_span());
+
+    // If the callee of this call is a field access, then it is likely a call
+    // to a function with a receiver.
+    if (AccessExpr* access = dynamic_cast<AccessExpr*>(node.callee()))
+        node.set_receiver(access->base());
+
+    assert(node.callee()->type());
+
+    FunctionType* type = dynamic_cast<FunctionType*>(node.callee()->type());
+    if (!type)
+        log::fatal("expected function", span);
+
+    node.set_type(type->result());
 }
 
 void SymbolAnalysis::visit(CastExpr& node) {

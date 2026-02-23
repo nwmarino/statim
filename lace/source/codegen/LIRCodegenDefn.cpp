@@ -115,11 +115,18 @@ lir::Function* LIRCodegen::codegen_initial_function(const FunctionDefn* defn) {
     auto func_type = dynamic_cast<lir::FunctionType*>(to_lir_type(defn->type()));
     assert(func_type);
 
+    std::string name = get_namespace_prefix();
+
+    if (defn->has_receiver())
+        name += defn->get_receiver_type()->string() + '.';
+
+    name += defn->name();
+
     lir::Function* func = lir::Function::create(
         m_cfg, 
         linkage, 
         func_type,
-        get_namespace_prefix() + defn->name(), 
+        name,
         params
     );
 

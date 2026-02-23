@@ -693,6 +693,7 @@ void Printer::visit(StructInitExpr& node) {
 
     ++m_indent;
     for (const auto& [name, expr] : node.fields()) {
+        print_indent();
         m_out << std::format("FieldInit {} '{}'\n", name, expr->type()->string());
         ++m_indent;
         expr->accept(*this);

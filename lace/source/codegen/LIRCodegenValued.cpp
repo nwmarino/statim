@@ -313,6 +313,17 @@ lir::Value* LIRCodegen::codegen_function_call(const CallExpr* expr) {
         args.push_back(aret);
     }
 
+    if (expr->has_receiver()) {
+        lir::Value* receiver;
+        if (dynamic_cast<const PointerType*>(expr->receiver()->type())) {
+            receiver = codegen_valued_expression(expr->receiver());
+        } else if (dynamic_cast<const StructType*>(expr->receiver()->type())) {
+            receiver = codegen_addressed_expression(expr->receiver());
+        }
+
+        args.push_back(receiver);
+    }
+
     for (Expr* arg : expr->args()) {
         lir::Value* value = nullptr;
         lir::Type* type = to_lir_type(arg->type());

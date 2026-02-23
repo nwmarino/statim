@@ -154,7 +154,8 @@ CallExpr* CallExpr::create(AST& ast, SourceSpan span, Expr* callee,
         span, 
         callee->type(), 
         callee, 
-        args
+        args,
+        nullptr
     );
 }
 
@@ -163,6 +164,7 @@ CallExpr::~CallExpr() {
         delete m_callee;
     
     m_callee = nullptr;
+    m_receiver = nullptr;
     
     for (Expr* arg : m_args) {
         if (arg)

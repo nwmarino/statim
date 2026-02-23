@@ -409,10 +409,10 @@ class AccessExpr final : public Expr {
     std::string m_name;
 
     /// The field to access.
-    FieldDefn* m_field;
+    ValueDefn* m_field;
 
     AccessExpr(SourceSpan span, Type* type, Expr* base, const std::string& name, 
-               FieldDefn* field)
+               ValueDefn* field)
       : Expr(span, type), m_base(base), m_name(name), m_field(field) {}
 
 public:
@@ -441,11 +441,11 @@ public:
     std::string& name() { return m_name; }
 
     /// Set the field that this expression accesses to |field|.
-    void set_field(FieldDefn* field) { m_field = field; }
+    void set_field(ValueDefn* field) { m_field = field; }
 
     /// Returns the field which this expression accesses.
-    const FieldDefn* field() const { return m_field; }
-    FieldDefn* field() { return m_field; }
+    const ValueDefn* field() const { return m_field; }
+    ValueDefn* field() { return m_field; }
 
     /// Test if the field which this expression accesses has been resolved.
     bool is_resolved() const { return m_field != nullptr; }
@@ -460,10 +460,12 @@ public:
 
 private:
     Expr* m_callee;
+    Expr* m_receiver;
     Args m_args;
 
-    CallExpr(SourceSpan span, Type* type, Expr* callee, const Args& args)
-      : Expr(span, type), m_callee(callee), m_args(args) {}
+    CallExpr(SourceSpan span, Type* type, Expr* callee, const Args& args, 
+             Expr* receiver)
+      : Expr(span, type), m_callee(callee), m_receiver(receiver), m_args(args) {}
 
 public:
     [[nodiscard]]
@@ -483,6 +485,16 @@ public:
     /// Returns the callee function of this call.
     const Expr* callee() const { return m_callee; }
     Expr* callee() { return m_callee; }
+
+    /// Set the receiver expression of this call to |expr|.
+    void set_receiver(Expr* expr) { m_receiver = expr; }
+
+    /// Returns the receiver expression of this call, if it has one.
+    const Expr* receiver() const { return m_receiver; }
+    Expr* receiver() { return m_receiver; }
+
+    /// Test if this call expression has a receiver expression.
+    bool has_receiver() const { return m_receiver != nullptr; }
 
     /// Returns the argument list of this function call.
     const Args& args() const { return m_args; }

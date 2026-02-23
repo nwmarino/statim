@@ -552,9 +552,11 @@ public:
 class StructDefn final : public TypeDefn {
 public:
     using Fields = std::vector<FieldDefn*>;
+    using Methods = std::vector<FunctionDefn*>;
 
 private:
     Fields m_fields = {};
+    Methods m_methods = {};
 
     StructDefn(AST* origin, SourceSpan span, const std::string& name, 
                const Runes& runes, Type* type)
@@ -626,6 +628,40 @@ public:
 
     /// Test if this structure is empty i.e. contains no fields.
     [[nodiscard]] bool empty() const { return m_fields.empty(); }
+
+    /// Set the method list of this structure to |methods|.
+    void set_methods(const Methods& methods) { m_methods = methods; }
+
+    /// Returns the method list of this structure.
+    const Methods& methods() const { return m_methods; }
+    Methods& methods() { return m_methods; }
+
+    /// Returns the method of this structure with the given |name| if it 
+    /// exists, and null otherwise.
+    const FunctionDefn* get_method(const std::string& name) const {
+        for (const FunctionDefn* method : m_methods) {
+            if (method->name() == name)
+                return method;
+        }
+
+        return nullptr;
+    }
+
+    FunctionDefn* get_method(const std::string& name) {
+        return const_cast<FunctionDefn*>(
+            static_cast<const StructDefn*>(this)->get_method(name));
+    }
+
+    /// Test if this structure has a method with the given |name|.
+    bool has_method(const std::string& name) const {
+        return get_method(name) != nullptr;
+    }
+
+    /// Returns the number of methods this structure has.
+    uint32_t num_methods() const { return m_methods.size(); }
+    
+    // Test if this structure has any methods.
+    bool has_methods() const { return !m_methods.empty(); }
 };
 
 /// Represents an enumeration type definition.

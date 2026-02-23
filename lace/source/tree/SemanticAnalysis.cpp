@@ -296,7 +296,7 @@ void SemanticAnalysis::visit(ParenExpr& node) {
 void SemanticAnalysis::visit(AccessExpr& node) {
     VisitorBase::visit(node);
 
-    FieldDefn* field = node.field();
+    ValueDefn* field = node.field();
     assert(field);
 
     node.set_type(field->type());
@@ -321,9 +321,43 @@ void SemanticAnalysis::visit(CallExpr& node) {
 
     node.set_type(sig->result());
 
-    if (node.num_args() != sig->num_params())
-        log::fatal("argument count mismatch, expected " + 
-            std::to_string(sig->num_params()), span);
+    // Check that the number of call arguments are the same as the number of
+    // expected parameters.
+    uint32_t num_args = node.num_args();
+    uint32_t num_params = sig->num_params();
+
+    // If the call has a receiver, i.e. is a method call, so there is 
+    // technically an extra argument.
+    if (node.has_receiver())
+        num_args += 1;
+
+    if (num_args != num_params)
+        log::fatal("argument count mismatch, expected " + std::to_string(num_params), span);
+
+    if (node.has_receiver()) {
+        // Check that the receiver has the same type as the first argument.
+        Expr* receiver = node.receiver();
+        assert(receiver);
+
+        Type* expected = sig->get_param(0);
+        assert(dynamic_cast<PointerType*>(expected));
+
+        // The type of the receiver must either be 'expected' or '*expected'.
+        TypeCheckResult res = type_check(receiver->type(), expected);
+        if (res != Match) {
+            // The receiver on the function is always a pointer ex. *T, but the
+            // receiver on the call didn't match. If the call receiver had type
+            // T, then we can wrap it in a pointer and double check.
+
+            PointerType* ptr = PointerType::get(*m_ast, receiver->type());
+
+            res = type_check(ptr, expected);
+            if (res != Match) {
+                log::fatal("receiver type mismatch; got '" 
+                    + receiver->type()->string(), span);
+            }
+        }
+    }
 
     // Pass over each argument and compare its type to the functions expected
     // parameter type.
@@ -331,8 +365,14 @@ void SemanticAnalysis::visit(CallExpr& node) {
         Expr* arg = node.get_arg(i);
         arg->accept(*this);
 
-        const Type* actual = arg->type();
-        const Type* expected = sig->get_param(i);
+        Type* actual = arg->type();
+        Type* expected;
+
+        if (node.has_receiver()) {
+            expected = sig->get_param(i + 1);
+        } else {
+            expected = sig->get_param(i);
+        }
 
         TypeCheckResult res = type_check(actual, expected);
         if (res == TypeCheckResult::Mismatch) {
@@ -341,7 +381,7 @@ void SemanticAnalysis::visit(CallExpr& node) {
             node.m_args[i] = CastExpr::create(
                 *m_ast, 
                 arg->get_span(), 
-                sig->get_param(i), 
+                expected, 
                 arg
             );
         }

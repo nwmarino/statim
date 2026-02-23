@@ -173,7 +173,8 @@ Defn* Parser::parse_function_definition(std::vector<Rune*> runes, uint64_t start
         body
     );
 
-    if (!m_scope->add(defn))
+    // Only add the function to global scope if it doesn't have a receiver.
+    if (!receiver && !m_scope->add(defn))
         log::fatal("name already exists: " + defn->name(), lspan);
     
     return defn;

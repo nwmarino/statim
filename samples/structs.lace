@@ -13,8 +13,7 @@ vec3_new :: (x: f64, y: f64, z: f64) -> vec3 {
 }
 
 vec3_secret :: (vec: vec3) -> f64 {
-    //let res: f64 = vec.sum();
-    let res: f64 = 5.0;
+    let res: f64 = vec.sum();
     ret res * res;
 }
 
