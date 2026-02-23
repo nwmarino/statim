@@ -8,6 +8,7 @@
 
 #include "lace/core/Options.h"
 #include "lace/tree/Scope.h"
+#include <vector>
 
 namespace lace {
 
@@ -49,8 +50,9 @@ class CastExpr;
 class ParenExpr;
 class RefExpr;
 class SizeofExpr;
-class SubscriptExpr;
+class SpecifierExpr;
 class StructInitExpr;
+class SubscriptExpr;
 
 class Type;
 
@@ -59,6 +61,7 @@ protected:
     Options& m_options;
     AST* m_ast = nullptr;
     Scope* m_scope = nullptr;
+    std::vector<SpaceDefn*> m_namespaces = {};
 
     VisitorBase(Options& options) : m_options(options) {}
 
@@ -109,8 +112,9 @@ public:
     virtual void visit(ParenExpr& node);
     virtual void visit(RefExpr& node);
     virtual void visit(SizeofExpr& node);
-    virtual void visit(SubscriptExpr& node);
+    virtual void visit(SpecifierExpr& node);
     virtual void visit(StructInitExpr& node);
+    virtual void visit(SubscriptExpr& node);
 
 protected:
     /// Attempt to resolve any deferred types within the component(s) of the 

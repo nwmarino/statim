@@ -97,6 +97,30 @@ void SymbolAnalysis::visit(SizeofExpr& node) {
     node.set_target(type);
 }
 
+void SymbolAnalysis::visit(SpecifierExpr& node) {
+    const log::Span span = { m_ast->get_file(), node.get_span() };
+
+    NamedDefn* defn = m_scope->get(node.name());
+    if (!defn) {
+        log::error("unresolved name: " + node.name(), span);
+    }
+
+    SpaceDefn* nspace = dynamic_cast<SpaceDefn*>(defn);
+    if (!nspace) {
+        log::error("expected namespace specifier: " + node.name(), span);
+    }
+
+    node.set_space(nspace);
+
+    Scope* prev_scope = m_scope;
+    m_scope = nspace->scope();
+
+    VisitorBase::visit(node);
+
+    m_scope = prev_scope;
+    node.set_type(node.expr()->type());
+}
+
 void SymbolAnalysis::visit(StructInitExpr& node) {
     const log::Span span = { m_ast->get_file(), node.get_span() };
     Type* type = resolve_type(node.type());

@@ -670,22 +670,23 @@ void Printer::visit(SizeofExpr& node) {
     );
 }
 
-void Printer::visit(SubscriptExpr& node) {
+void Printer::visit(SpecifierExpr& node) {
     print_indent();
 
     const SourceSpan span = node.get_span();
-    const SourceLocation start = span.start, end = span.start;
+    const SourceLocation start = span.start, end = span.end;
 
-    m_out << std::format("Subscript <{}:{}, {}:{}> '{}'\n",
+    m_out << std::format("Specifier <{}:{}, {}:{}> {} '{}'\n",
         start.line,
         start.col,
         end.line,
         end.col,
+        node.name(),
         node.type()->string()
     );
 
     ++m_indent;
-    VisitorBase::visit(node);
+    node.expr()->accept(*this);
     --m_indent;
 }
 
@@ -710,4 +711,23 @@ void Printer::visit(StructInitExpr& node) {
         expr->accept(*this);
         --m_indent;
     }
+}
+
+void Printer::visit(SubscriptExpr& node) {
+    print_indent();
+
+    const SourceSpan span = node.get_span();
+    const SourceLocation start = span.start, end = span.start;
+
+    m_out << std::format("Subscript <{}:{}, {}:{}> '{}'\n",
+        start.line,
+        start.col,
+        end.line,
+        end.col,
+        node.type()->string()
+    );
+
+    ++m_indent;
+    VisitorBase::visit(node);
+    --m_indent;
 }

@@ -157,6 +157,7 @@ private:
     Expr* parse_parentheses();
     Expr* parse_sizeof_operator();
     Expr* parse_named_reference();
+    Expr* parse_namespace_specifier(uint64_t start);
     Expr* parse_struct_initializer(uint64_t start);
 };
 

@@ -6,6 +6,7 @@
 #include "lace/tree/Defn.h"
 #include "lace/tree/Expr.h"
 #include "lace/tree/Type.h"
+#include "lace/tree/VisitorBase.h"
 
 #include <cassert>
 
@@ -233,6 +234,43 @@ SizeofExpr* SizeofExpr::create(AST& ast, SourceSpan span,
 }
 
 //>==---------------------------------------------------------------------------
+//                          SpecifierExpr Implementation
+//>==---------------------------------------------------------------------------
+
+
+SpecifierExpr* SpecifierExpr::create(AST& ast, SourceSpan span, Type* type, 
+                                     const std::string& name, Expr* expr) {
+    assert(expr && "expr cannot be null!");
+    return new SpecifierExpr(span, type, name, expr);
+}
+
+SpecifierExpr::~SpecifierExpr() {
+    if (m_expr)
+        delete m_expr;
+
+    m_expr = nullptr;
+    m_space = nullptr;
+}
+
+//>==---------------------------------------------------------------------------
+//                          StructInitExpr Implementation
+//>==---------------------------------------------------------------------------
+
+StructInitExpr* StructInitExpr::create(AST& ast, SourceSpan span, 
+                                       Type* type, const Fields& fields) {
+    return new StructInitExpr(span, type, fields);
+}
+
+StructInitExpr::~StructInitExpr() {
+    for (const auto& [field, expr] : m_fields) {
+        if (expr)
+            delete expr;
+    }
+
+    m_fields.clear();
+}
+
+//>==---------------------------------------------------------------------------
 //                          SubscriptExpr Implementation
 //>==---------------------------------------------------------------------------
 
@@ -253,22 +291,4 @@ SubscriptExpr::~SubscriptExpr() {
         delete m_index;
     
     m_index = nullptr;
-}
-
-//>==---------------------------------------------------------------------------
-//                          StructInitExpr Implementation
-//>==---------------------------------------------------------------------------
-
-StructInitExpr* StructInitExpr::create(AST& ast, SourceSpan span, 
-                                       Type* type, const Fields& fields) {
-    return new StructInitExpr(span, type, fields);
-}
-
-StructInitExpr::~StructInitExpr() {
-    for (const auto& [field, expr] : m_fields) {
-        if (expr)
-            delete expr;
-    }
-
-    m_fields.clear();
 }

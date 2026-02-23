@@ -1,5 +1,5 @@
 utils :: space {
-    
+
 max :: (x: s64, y: s64) -> s64 {
     if x >= y {
         ret x;
@@ -14,17 +14,16 @@ min :: (x: s64, y: s64) -> s64 {
     } else {
         ret y;
     }
-
 }
 
 extras :: space {
 
 foo :: () -> s64 {
-    ret 0;
+    ret max(1, 42);
 }
 
 bar :: () -> s64 {
-    ret zoo();
+    ret utils::extras::zoo();
 }
 
 } // space extras
@@ -33,8 +32,7 @@ bar :: () -> s64 {
 
 $public
 main :: () -> s64 {
-    //ret utils::max(42, 16);
-    ret 0;
+    ret utils::extras::bar();
 }
 
 utils :: space {

@@ -32,6 +32,8 @@ public:
 
     void visit(SizeofExpr& node) override;
 
+    void visit(SpecifierExpr& node) override;
+
     void visit(StructInitExpr& node) override;
 };
 

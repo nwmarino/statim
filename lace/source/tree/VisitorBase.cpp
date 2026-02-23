@@ -50,11 +50,15 @@ void VisitorBase::visit(ParameterDefn& node) {
 }
 
 void VisitorBase::visit(SpaceDefn& node) {
+    m_namespaces.push_back(&node);
+
     for (NamedDefn* defn : node.defns()) {
         // Only pass over definitions defined in the same file.
         if (defn->origin() == node.origin())
             defn->accept(*this);
     }
+
+    m_namespaces.pop_back();
 }
 
 void VisitorBase::visit(StructDefn& node) {
@@ -184,14 +188,18 @@ void VisitorBase::visit(SizeofExpr& node) {
 
 }
 
-void VisitorBase::visit(SubscriptExpr& node) {
-    node.base()->accept(*this);
-    node.index()->accept(*this);
+void VisitorBase::visit(SpecifierExpr& node) {
+    node.expr()->accept(*this);
 }
 
 void VisitorBase::visit(StructInitExpr& node) {
     for (auto& [field, expr] : node.fields())
         expr->accept(*this);
+}
+
+void VisitorBase::visit(SubscriptExpr& node) {
+    node.base()->accept(*this);
+    node.index()->accept(*this);
 }
 
 Type* VisitorBase::resolve_type(Type* type) const {

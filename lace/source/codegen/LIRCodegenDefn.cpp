@@ -58,6 +58,8 @@ void LIRCodegen::codegen_lowered_namespace(const SpaceDefn* defn) {
 }
 
 lir::Function* LIRCodegen::codegen_initial_function(const FunctionDefn* defn) {
+    assert(!m_funcs.contains(defn));
+
     auto linkage = lir::Function::LinkageType::Private;
     if (defn->has_rune(Rune::Kind::Public))
         linkage = lir::Function::LinkageType::Public;
@@ -97,18 +99,25 @@ lir::Function* LIRCodegen::codegen_initial_function(const FunctionDefn* defn) {
     lir::FunctionType* func_type = dynamic_cast<lir::FunctionType*>(to_lir_type(defn->type()));
     assert(func_type);
 
-    return lir::Function::create(
+    lir::Function* func = lir::Function::create(
         m_cfg, 
         linkage, 
         func_type,
         get_namespace_prefix() + defn->name(), 
         params
     );
+
+    m_funcs.emplace(defn, func);
+    return func;
 }
 
 lir::Function* LIRCodegen::codegen_lowered_function(const FunctionDefn* defn) {
-    lir::Function* func = m_cfg.get_function(get_namespace_prefix() + defn->name());
-    assert(func && "function does not exist!");
+    assert(m_funcs.contains(defn) && "function not lowered!");
+
+    lir::Function* func = m_funcs.at(defn);
+
+    // Assert that the function was added to the parent graph.
+    assert(m_cfg.get_function(func->get_name()));
 
     // Skip functions without bodies.
     if (!defn->has_body())
@@ -176,22 +185,31 @@ lir::Function* LIRCodegen::codegen_lowered_function(const FunctionDefn* defn) {
 }
 
 lir::Global* LIRCodegen::codegen_initial_global(const VariableDefn* defn) {
+    assert(!m_globals.contains(defn));
+
     auto linkage = lir::Global::LinkageType::Private;
     if (defn->has_rune(Rune::Kind::Public))
         linkage = lir::Global::LinkageType::Public;
 
-    return lir::Global::create(
+    lir::Global* global = lir::Global::create(
         m_cfg, 
         to_lir_type(defn->type()), 
         linkage, 
         defn->name(),
         false
     );
+
+    m_globals.emplace(defn, global);
+    return global;
 }
 
 lir::Global* LIRCodegen::codegen_lowered_global(const VariableDefn* defn) {
-    lir::Global* global = m_cfg.get_global(defn->name());
-    assert(global);
+    assert(m_globals.contains(defn) && "function not lowered!");
+
+    lir::Global* global = m_globals.at(defn);
+
+    // Assert that the function was added to the parent graph.
+    assert(m_cfg.get_global(global->get_name()));
 
     if (!defn->has_init())
         return global;
@@ -207,12 +225,20 @@ lir::Global* LIRCodegen::codegen_lowered_global(const VariableDefn* defn) {
 }
 
 lir::StructType* LIRCodegen::codegen_initial_structure(const StructDefn* defn) {
-    return lir::StructType::create(m_cfg, defn->name(), {});
+    assert(!m_structs.contains(defn));
+
+    lir::StructType* structure = lir::StructType::create(m_cfg, defn->name(), {});
+
+    m_structs.emplace(defn, structure);
+    return structure;
 }
 
 lir::StructType* LIRCodegen::codegen_lowered_structure(const StructDefn* defn) {
-    lir::StructType* type = lir::StructType::get(m_cfg, defn->name());
-    assert(type && "type does not exist!");
+    assert(m_structs.contains(defn));
+    
+    lir::StructType* type = m_structs.at(defn);
+    
+    assert(lir::StructType::get(m_cfg, type->get_name()));
 
     for (const FieldDefn* field : defn->fields())
         type->append_field(to_lir_type(field->type()));

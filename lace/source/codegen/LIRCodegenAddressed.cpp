@@ -3,12 +3,12 @@
 //  All rights reserved.
 //
 
-#include "lace/tree/AST.h"
 #include "lace/tree/Defn.h"
 #include "lace/tree/Expr.h"
 #include "lace/tree/LIRCodegen.h"
 #include "lace/tree/Type.h"
 
+#include "lace/tree/VisitorBase.h"
 #include "lir/graph/Function.h"
 #include "lir/graph/Local.h"
 #include "lir/graph/Type.h"
@@ -25,6 +25,8 @@ lir::Value* LIRCodegen::codegen_addressed_expression(const Expr* expr) {
         return codegen_addressed_access(access);
     } else if (auto ref = dynamic_cast<const RefExpr*>(expr)) {
         return codegen_addressed_reference(ref);
+    } else if (auto spec = dynamic_cast<const SpecifierExpr*>(expr)) {
+        return codegen_addressed_specifier(spec);
     } else if (auto subscript = dynamic_cast<const SubscriptExpr*>(expr)) {
         return codegen_addressed_subscript(subscript);
     } else if (auto call = dynamic_cast<const CallExpr*>(expr)) {
@@ -61,24 +63,20 @@ lir::Value* LIRCodegen::codegen_addressed_access(const AccessExpr* expr) {
 lir::Value* LIRCodegen::codegen_addressed_reference(const RefExpr* expr) {
     assert(expr->is_resolved());
 
-    if (auto func = dynamic_cast<const FunctionDefn*>(expr->defn())) {
-        lir::Function* fn = m_cfg.get_function(get_namespace_prefix() + expr->name());
-        assert(fn && "function does not exist!");
-
-        return fn;
-    } else if (auto param = dynamic_cast<const ParameterDefn*>(expr->defn())) {
+    if (auto func_defn = dynamic_cast<const FunctionDefn*>(expr->defn())) {
+        assert(m_funcs.contains(func_defn));
+        return m_funcs.at(func_defn);
+    } else if (auto param_defn = dynamic_cast<const ParameterDefn*>(expr->defn())) {
         assert(m_func && "parameter reference outside a function!");
 
         lir::Local* local = m_func->get_local(expr->name());
         assert(local && "parameter does not exist!");
         
         return local;
-    } else if (auto var = dynamic_cast<const VariableDefn*>(expr->defn())) {
-        if (var->is_global()) {
-            lir::Global* global = m_cfg.get_global(expr->name());
-            assert(global && "global variable does not exist!");
-
-            return global;
+    } else if (auto var_defn = dynamic_cast<const VariableDefn*>(expr->defn())) {
+        if (var_defn->is_global()) {
+            assert(m_globals.contains(var_defn));
+            return m_globals.at(var_defn);
         } else {
             assert(m_func && "local reference not within a function!");
 
@@ -90,6 +88,12 @@ lir::Value* LIRCodegen::codegen_addressed_reference(const RefExpr* expr) {
     }
 
     return nullptr;
+}
+
+lir::Value* LIRCodegen::codegen_addressed_specifier(const SpecifierExpr* expr) {
+    assert(expr->is_resolved());
+
+    return codegen_addressed_expression(expr->expr());
 }
 
 lir::Value* LIRCodegen::codegen_addressed_subscript(const SubscriptExpr* expr) {

@@ -107,9 +107,14 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
             FunctionType::get(*m_ast, ret_type, param_types), 
             scope, 
             params, 
-            body);
+            body
+        );
 
-        m_scope->add(defn);
+        if (!m_scope->add(defn)) {
+            log::fatal("name already exists in scope: " + defn->name(), 
+                log::Span(m_file, defn->span()));
+        }
+        
         return defn;
     } else if (expect("struct")) {
         if (!expect(Token::OpenBrace))
@@ -267,12 +272,14 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
         if (!expect(Token::OpenBrace))
             log::fatal("expected '{'", log::Span(m_file, since(loc())));
         
+        SpaceDefn* existing = nullptr;
         if (NamedDefn* defn = m_scope->get(name.value)) {
-            if (SpaceDefn* nspace = dynamic_cast<SpaceDefn*>(defn)) {
+            existing = dynamic_cast<SpaceDefn*>(defn);
+            if (existing) {
                 // @Todo: PROVE this is always true, or change it.
-                assert(nspace->scope()->parent() == m_scope);
+                assert(existing->scope()->parent() == m_scope);
 
-                m_scope = nspace->scope();
+                m_scope = existing->scope();
             } else {
                 enter_scope();
             }
@@ -306,7 +313,14 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
 
         next(); // '}'
 
-        bool _ = m_scope->add(space);
+        if (existing)
+            return space;
+
+        if (!m_scope->add(space)) {
+            log::fatal("name already exists in scope: " + space->name(), 
+                log::Span(m_file, space->span()));
+        }
+
         return space;
     } else {
         // Assume global variable definition.

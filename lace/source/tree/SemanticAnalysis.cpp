@@ -303,22 +303,6 @@ void SemanticAnalysis::visit(AccessExpr& node) {
     node.set_type(field->type());
 }
 
-void SemanticAnalysis::visit(SubscriptExpr& node) {
-    VisitorBase::visit(node);
-
-    const log::Span span = { m_ast->get_file(), node.get_span() };
-
-    Expr* base = node.base();
-    Expr* index = node.index();
-
-    if (auto ptr = dynamic_cast<PointerType*>(base->type())) {
-        node.set_type(ptr->pointee());
-    } else {
-        log::fatal("invalid argument type to '[]' operator: " 
-            + base->type()->string(), span);
-    }
-}
-
 void SemanticAnalysis::visit(RefExpr& node) {
     ValueDefn* defn = node.defn();
     assert(defn);
@@ -365,6 +349,12 @@ void SemanticAnalysis::visit(CallExpr& node) {
     }
 }
 
+void SemanticAnalysis::visit(SpecifierExpr& node) {
+    VisitorBase::visit(node);
+
+    node.set_type(node.expr()->type());
+}
+
 void SemanticAnalysis::visit(StructInitExpr& node) {
     VisitorBase::visit(node);
 
@@ -390,5 +380,21 @@ void SemanticAnalysis::visit(StructInitExpr& node) {
                 expr
             );
         }
+    }
+}
+
+void SemanticAnalysis::visit(SubscriptExpr& node) {
+    VisitorBase::visit(node);
+
+    const log::Span span = { m_ast->get_file(), node.get_span() };
+
+    Expr* base = node.base();
+    Expr* index = node.index();
+
+    if (auto ptr = dynamic_cast<PointerType*>(base->type())) {
+        node.set_type(ptr->pointee());
+    } else {
+        log::fatal("invalid argument type to '[]' operator: " 
+            + base->type()->string(), span);
     }
 }

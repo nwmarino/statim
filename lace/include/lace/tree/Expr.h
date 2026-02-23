@@ -636,38 +636,49 @@ public:
     Type* target() { return m_target; }
 };
 
-/// Represents a subscript `[]` expression.
-class SubscriptExpr final : public Expr {
-    Expr* m_base;
-    Expr* m_index;
+/// Represents a namespace-specified expression, e.g. `...::...`
+class SpecifierExpr final : public Expr {
+    std::string m_name;
+    Expr* m_expr;
+    SpaceDefn* m_space;
 
-    SubscriptExpr(SourceSpan span, Type* type, Expr* base, Expr* index)
-      : Expr(span, type), m_base(base), m_index(index) {}
+    SpecifierExpr(SourceSpan span, Type* type, const std::string& name, 
+                  Expr* expr)
+      : Expr(span, type), m_name(name), m_expr(expr) {}
 
 public:
     [[nodiscard]]
-    static SubscriptExpr* create(AST& ast, SourceSpan span, Expr* base, 
-                                 Expr* index);
+    static SpecifierExpr* create(AST& ast, SourceSpan span, Type* type, 
+                                 const std::string& name, Expr* expr);
 
-    ~SubscriptExpr() override;
+    ~SpecifierExpr() override;
+
+    SpecifierExpr(const SpecifierExpr&) = delete;
+    void operator=(const SpecifierExpr&) = delete;
+
+    SpecifierExpr(SpecifierExpr&&) noexcept = delete;
+    void operator=(SpecifierExpr&&) noexcept = delete;
     
-    SubscriptExpr(const SubscriptExpr&) = delete;
-    void operator=(const SubscriptExpr&) = delete;
-
-    SubscriptExpr(SubscriptExpr&&) noexcept = delete;
-    void operator=(SubscriptExpr&&) noexcept = delete;
-
     void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
-    bool is_lvalue() const override { return true; }
+    bool is_constant() const override { return m_expr->is_constant(); }
 
-    /// Returns the base expression of this subscript.
-    const Expr* base() const { return m_base; }
-    Expr* base() { return m_base; }
+    const std::string& name() const { return m_name; }
+    std::string& name() { return m_name; }
 
-    /// Returns the index expression of this subscript.
-    const Expr* index() const { return m_index; }
-    Expr* index() { return m_index; }
+    /// Returns the nested expression of this specifier.
+    const Expr* expr() const { return m_expr; }
+    Expr* expr() { return m_expr; }
+
+    /// Set the namespace this specifier specifies to |space|.
+    void set_space(SpaceDefn* space) { m_space = space; }
+
+    /// Returns the resolved namespace definition this specifier refers to.
+    const SpaceDefn* space() const { return m_space; }
+    SpaceDefn* space() { return m_space; }
+
+    /// Test if the namespace this specifier refers to has been resolved.
+    bool is_resolved() const { return m_space != nullptr; }
 };
 
 /// Represents a structure initialization expression `... { ... }`.
@@ -726,6 +737,40 @@ public:
 
     /// Test if this initializer expression contains any fields.
     [[nodiscard]] bool empty() const { return m_fields.empty(); } 
+};
+
+/// Represents a subscript `[]` expression.
+class SubscriptExpr final : public Expr {
+    Expr* m_base;
+    Expr* m_index;
+
+    SubscriptExpr(SourceSpan span, Type* type, Expr* base, Expr* index)
+      : Expr(span, type), m_base(base), m_index(index) {}
+
+public:
+    [[nodiscard]]
+    static SubscriptExpr* create(AST& ast, SourceSpan span, Expr* base, 
+                                 Expr* index);
+
+    ~SubscriptExpr() override;
+    
+    SubscriptExpr(const SubscriptExpr&) = delete;
+    void operator=(const SubscriptExpr&) = delete;
+
+    SubscriptExpr(SubscriptExpr&&) noexcept = delete;
+    void operator=(SubscriptExpr&&) noexcept = delete;
+
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
+
+    bool is_lvalue() const override { return true; }
+
+    /// Returns the base expression of this subscript.
+    const Expr* base() const { return m_base; }
+    Expr* base() { return m_base; }
+
+    /// Returns the index expression of this subscript.
+    const Expr* index() const { return m_index; }
+    Expr* index() { return m_index; }
 };
 
 } // namespace lace

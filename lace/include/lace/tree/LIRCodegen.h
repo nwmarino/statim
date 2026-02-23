@@ -23,6 +23,7 @@
 #include "lir/graph/Function.h"
 #include "lir/graph/Type.h"
 #include "lir/machine/Machine.h"
+#include <unordered_map>
 
 namespace lace {
 
@@ -37,7 +38,14 @@ class LIRCodegen final {
     const lir::Machine& m_mach;
 
     const AST* m_ast;
+
+    /// The current stack of namespaces for which the current location in
+    /// source resides.
     std::vector<const SpaceDefn*> m_namespaces = {};
+
+    std::unordered_map<const StructDefn*, lir::StructType*> m_structs = {};
+    std::unordered_map<const VariableDefn*, lir::Global*> m_globals = {};
+    std::unordered_map<const FunctionDefn*, lir::Function*> m_funcs = {};
 
     lir::CFG& m_cfg;
     lir::Builder m_builder;
@@ -116,6 +124,9 @@ private:
 
     lir::Value* codegen_addressed_reference(const RefExpr* expr);
     lir::Value* codegen_valued_reference(const RefExpr* expr);
+
+    lir::Value* codegen_addressed_specifier(const SpecifierExpr* expr);
+    lir::Value* codegen_valued_specifier(const SpecifierExpr* expr);
 
     lir::Value* codegen_addressed_subscript(const SubscriptExpr* expr);
     lir::Value* codegen_valued_subscript(const SubscriptExpr* expr);
