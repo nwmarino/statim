@@ -11,6 +11,7 @@
 #include "lace/parser/Parser.h"
 #include "lace/tools/Files.h"
 #include "lace/tree/AST.h"
+#include "lace/tree/Defn.h"
 #include "lace/tree/LIRCodegen.h"
 #include "lace/tree/Printer.h"
 #include "lace/tree/SemanticAnalysis.h"
@@ -132,9 +133,42 @@ void computeDependencies(const Asts& asts, Asts& ordering, DepTable& deps) {
         dfs(ast);
 }
 
+void merge_namespace(AST* ast, Scope* dest, SpaceDefn* incoming) {
+    // Check for an existing namespace in the |dest| scope with the same name.
+    SpaceDefn* existing = dest->get_namespace(incoming->name());
+    if (!existing) {
+        // If an existing namespace does not exist, just try to add the 
+        // namespace as is.
+        if (!dest->add(incoming)) {
+            log::fatal("name-wise conflict during load: " + incoming->name(), 
+                log::Location(ast->get_file(), { 1, 1 }));
+        }
+        
+        return;
+    }
+
+    // An existing namespace with the same name as |incoming| exists.
+    // So, we must recursively merge all definitions in |incoming| with 
+    // whatever may exist in the |dest| scope.
+
+    for (auto& [name, defn] : incoming->scope()->defns()) {
+        // Skip private definitions.
+        if (!defn->has_rune(Rune::Kind::Public))
+            continue;
+
+        if (SpaceDefn* nspace = dynamic_cast<SpaceDefn*>(defn)) {
+            // If we have to import a nested namespace, then merge it too.
+            merge_namespace(ast, existing->scope(), nspace);
+        } else if (!existing->scope()->add(defn)) {
+            log::fatal("name-wise conflict during load: " + existing->name(),
+                log::Location(ast->get_file(), { 1, 1 }));
+        }
+    }
+}
+
 /// Resolve the dependent symbols for each tree in |asts|, based on their
-/// dependencies defined in |deps|. Assumes that |asts| contains syntax 
-/// trees in their dependency order.
+/// dependencies defined in |deps|. 
+/// Assumes that |asts| contains syntax trees in their dependency order.
 void resolveDependencies(Options& options, const Asts& asts, const DepTable& deps) {
     for (AST* ast : asts) {
         Asts dep_list = deps.at(ast);
@@ -151,10 +185,14 @@ void resolveDependencies(Options& options, const Asts& asts, const DepTable& dep
 
         Scope* scope = ast->scope();
         for (NamedDefn* symbol : symbols) {
-            bool res = scope->add(symbol);
-            if (!res) {
-                log::fatal("name-wise conflict with an existing definition: " 
-                    + symbol->name(), log::Location(ast->get_file(), { 1, 1 }));
+            if (SpaceDefn* nspace = dynamic_cast<SpaceDefn*>(symbol)) {
+                merge_namespace(ast, ast->scope(), nspace);
+            } else {
+                bool res = scope->add(symbol);
+                if (!res) {
+                    log::fatal("name-wise conflict with an existing definition: " 
+                        + symbol->name(), log::Location(ast->get_file(), { 1, 1 }));
+                }
             }
 
             ast->defns().push_back(symbol);
@@ -295,7 +333,8 @@ int32_t main(int32_t argc, char* argv[]) {
     log::direct(std::cout);
 
     std::vector<InputFile> files = {
-        InputFile("/home/lovelace/samples/namespaces.lace"),
+        InputFile("/home/lovelace/stl/test.lace"),
+        InputFile("/home/lovelace/stl/math.lace"),
     };
 
     for (int32_t i = 1; i < argc; ++i) {

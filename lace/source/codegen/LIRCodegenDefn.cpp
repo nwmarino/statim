@@ -42,8 +42,12 @@ void LIRCodegen::codegen_lowered_definition(const Defn* defn) {
 void LIRCodegen::codegen_initial_namespace(const SpaceDefn* defn) {
     enter_namespace(defn);
 
-    for (uint32_t i = 0; i < defn->num_defns(); ++i)
-        codegen_initial_definition(defn->defns()[i]);
+    for (NamedDefn* named_defn : defn->defns()) {
+        if (named_defn->origin() != m_ast && !named_defn->has_rune(Rune::Kind::Public))
+            continue;
+
+        codegen_initial_definition(named_defn);
+    }
 
     exit_namespace();
 }
@@ -51,8 +55,12 @@ void LIRCodegen::codegen_initial_namespace(const SpaceDefn* defn) {
 void LIRCodegen::codegen_lowered_namespace(const SpaceDefn* defn) {
     enter_namespace(defn);
 
-    for (uint32_t i = 0; i < defn->num_defns(); ++i)
-        codegen_lowered_definition(defn->defns()[i]);
+    for (NamedDefn* named_defn : defn->defns()) {
+        if (named_defn->origin() != m_ast)
+            continue;
+
+        codegen_lowered_definition(named_defn);
+    }
 
     exit_namespace();
 }

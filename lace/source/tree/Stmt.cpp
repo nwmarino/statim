@@ -51,8 +51,8 @@ BlockStmt* BlockStmt::create(AST& ast, SourceSpan span, Scope* scope,
 }
 
 BlockStmt::~BlockStmt() {
-    delete m_scope;
-    m_scope = nullptr;
+    //delete m_scope;
+    //m_scope = nullptr;
 
     for (Stmt* stmt : m_stmts)
         delete stmt;

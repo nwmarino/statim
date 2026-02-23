@@ -1,0 +1,21 @@
+load "math.lace";
+
+stl :: space {
+    foo :: () -> s64 {
+        ret 42;
+    }
+
+extras :: space {
+
+    bar :: () -> s64 {
+        ret foo() + 5;
+    }
+
+} // space extras
+
+} // space stl
+
+$public
+main :: () -> s64 {
+    ret stl::max(stl::foo(), 14);
+}

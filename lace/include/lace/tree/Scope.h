@@ -23,6 +23,7 @@
 namespace lace {
 
 class NamedDefn;
+class SpaceDefn;
 
 class Scope final {
 public:
@@ -61,6 +62,10 @@ public:
     /// Test if this scope has any child nodes.
     bool has_children() const { return !m_children.empty(); }
 
+    /// Returns the table of definitions in this scope.
+    const std::unordered_map<std::string, NamedDefn*>& defns() const { return m_defns; }
+    std::unordered_map<std::string, NamedDefn*>& defns() { return m_defns; }
+
     /// Add the given |defn| to this scope. 
     /// If it conflicts name-wise with another definition, then the attempt 
     /// returns false.
@@ -69,6 +74,12 @@ public:
     /// Returns the definition in this scope with the given |name| if one 
     /// exists, and null otherwise.
     NamedDefn* get(const std::string& name) const;
+
+    /// Returns the namespace definition in this scope with the given |name| if
+    /// one exists, and null otherwise.
+    /// If a definition with the given |name| exists, but is not a namespace, 
+    /// null is still returned.
+    SpaceDefn* get_namespace(const std::string& name) const;
 };
 
 } // namespace lace

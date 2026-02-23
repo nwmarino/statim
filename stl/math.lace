@@ -1,0 +1,34 @@
+$public
+stl :: space {
+
+$public
+min :: (x: s64, y: s64) -> s64 {
+    if x <= y {
+        ret x;
+    } else {
+        ret y;
+    }
+}
+
+$public
+max :: (x: s64, y: s64) -> s64 {
+    if x >= y {
+        ret x;
+    } else {
+        ret y;
+    }
+}
+
+extras :: space {
+
+Box :: struct {
+    x: u64,
+}
+
+bar :: () -> s64 {
+    ret 42;
+}
+
+} // space extras
+
+} // space stl

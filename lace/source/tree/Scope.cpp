@@ -33,3 +33,19 @@ NamedDefn* Scope::get(const std::string& name) const {
 
     return nullptr;
 }
+
+SpaceDefn* Scope::get_namespace(const std::string& name) const {
+    auto it = m_defns.find(name);
+    if (it != m_defns.end()) {
+        NamedDefn* defn = it->second;
+        if (SpaceDefn* nspace = dynamic_cast<SpaceDefn*>(defn))
+            return nspace;
+
+        return nullptr;
+    }
+
+    if (m_parent)
+        return m_parent->get_namespace(name);
+
+    return nullptr;
+}

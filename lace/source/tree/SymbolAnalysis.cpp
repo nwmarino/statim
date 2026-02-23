@@ -20,7 +20,7 @@ void SymbolAnalysis::visit(VariableDefn& node) {
     const log::Span span = { m_ast->get_file(), node.span() };
     Type* type = resolve_type(node.type());
     if (!type)
-        log::error("unresolved type: " + node.type()->string(), span);
+        log::fatal("unresolved type: " + node.type()->string(), span);
     
     node.set_type(type);
 
@@ -67,7 +67,7 @@ void SymbolAnalysis::visit(CastExpr& node) {
     const log::Span span = { m_ast->get_file(), node.get_span() };
     Type* type = resolve_type(node.type());
     if (!type)
-        log::error("unresolved type: " + node.type()->string(), span);
+        log::fatal("unresolved type: " + node.type()->string(), span);
     
     node.set_type(type);
 }
@@ -92,7 +92,7 @@ void SymbolAnalysis::visit(SizeofExpr& node) {
     const log::Span span = { m_ast->get_file(), node.get_span() };
     Type* type = resolve_type(node.target());
     if (!type)
-        log::error("unresolved type: " + node.target()->string(), span);
+        log::fatal("unresolved type: " + node.target()->string(), span);
     
     node.set_target(type);
 }
@@ -102,12 +102,12 @@ void SymbolAnalysis::visit(SpecifierExpr& node) {
 
     NamedDefn* defn = m_scope->get(node.name());
     if (!defn) {
-        log::error("unresolved name: " + node.name(), span);
+        log::fatal("unresolved name: " + node.name(), span);
     }
 
     SpaceDefn* nspace = dynamic_cast<SpaceDefn*>(defn);
     if (!nspace) {
-        log::error("expected namespace specifier: " + node.name(), span);
+        log::fatal("expected namespace specifier: " + node.name(), span);
     }
 
     node.set_space(nspace);
@@ -125,7 +125,7 @@ void SymbolAnalysis::visit(StructInitExpr& node) {
     const log::Span span = { m_ast->get_file(), node.get_span() };
     Type* type = resolve_type(node.type());
     if (!type)
-        log::error("unresolved type: " + node.type()->string(), span);
+        log::fatal("unresolved type: " + node.type()->string(), span);
     
     node.set_type(type);
 

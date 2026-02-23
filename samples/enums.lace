@@ -11,5 +11,8 @@ main :: () -> s64 {
     let yellow: Colors = Yellow;
     let green: Colors = Green;
 
+    cast<Colors>(5);
+    sizeof(Colors);
+
     ret yellow + green; // should be 42 + 16 = 58
 }
