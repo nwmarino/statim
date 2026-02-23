@@ -5,6 +5,7 @@
 
 #include "lace/tree/Defn.h"
 #include "lace/tree/Expr.h"
+#include "lace/tree/Type.h"
 
 using namespace lace;
 
@@ -89,8 +90,19 @@ ParameterDefn* ParameterDefn::create(AST& ast, SourceSpan span,
 FunctionDefn* FunctionDefn::create(AST& ast, SourceSpan span, 
                                    const std::string& name, const Runes& runes, 
                                    FunctionType* type, Scope* scope, 
-                                   const Params& params, BlockStmt* body) {
-    return new FunctionDefn(&ast, span, name, runes, type, scope, params, body);
+                                   ParameterDefn* receiver, const Params& params, 
+                                   BlockStmt* body) {
+    return new FunctionDefn(
+        &ast, 
+        span, 
+        name, 
+        runes, 
+        type, 
+        scope, 
+        receiver, 
+        params,
+        body
+    );
 }
 
 FunctionDefn::~FunctionDefn() {
@@ -110,6 +122,19 @@ FunctionDefn::~FunctionDefn() {
         delete m_body;
         
     m_body = nullptr;
+}
+
+const Type* FunctionDefn::get_receiver_type() const {
+    if (!has_receiver())
+        return nullptr;
+
+    Type* type = m_receiver->type();
+    assert(type);
+
+    auto ptr = dynamic_cast<PointerType*>(type);
+    assert(ptr);
+
+    return ptr->pointee();
 }
 
 //>==---------------------------------------------------------------------------

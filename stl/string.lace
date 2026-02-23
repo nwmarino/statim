@@ -1,5 +1,9 @@
 load "mem.lace";
 
+stl :: space {
+    
+}
+
 $[public, intrinsic]
 string :: struct {
     data: mut *mut char,

@@ -100,8 +100,7 @@ void SemanticAnalysis::visit(FunctionDefn& node) {
             log::error("'main' must return 's64'", span);
     }
     
-    if (node.has_body())
-        node.body()->accept(*this);
+    VisitorBase::visit(node);
 
     m_func = nullptr;
 }

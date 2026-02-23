@@ -35,6 +35,12 @@ void VisitorBase::visit(FieldDefn& node) {
 void VisitorBase::visit(FunctionDefn& node) {
     m_scope = node.scope();
 
+    if (node.has_receiver())
+        node.receiver()->accept(*this);
+
+    for (ParameterDefn* param : node.params())
+        param->accept(*this);
+
     if (node.has_body())
         node.body()->accept(*this);
 

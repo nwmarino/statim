@@ -11,6 +11,7 @@
 #include "lir/graph/Constant.h"
 #include "lir/graph/Function.h"
 #include "lir/graph/BasicBlock.h"
+#include "lir/graph/Parameter.h"
 #include "lir/graph/Type.h"
 
 using namespace lace;
@@ -85,6 +86,13 @@ lir::Function* LIRCodegen::codegen_initial_function(const FunctionDefn* defn) {
         ));
     }
 
+    if (const ParameterDefn* receiver = defn->receiver()) {
+        params.push_back(lir::Parameter::create(
+            to_lir_type(receiver->type()), 
+            receiver->name()
+        ));
+    }
+
     for (const ParameterDefn* param : defn->params()) {
         auto trait = lir::Parameter::Trait::None;
 
@@ -104,7 +112,7 @@ lir::Function* LIRCodegen::codegen_initial_function(const FunctionDefn* defn) {
         params.push_back(lir::Parameter::create(type, name, trait));
     }
 
-    lir::FunctionType* func_type = dynamic_cast<lir::FunctionType*>(to_lir_type(defn->type()));
+    auto func_type = dynamic_cast<lir::FunctionType*>(to_lir_type(defn->type()));
     assert(func_type);
 
     lir::Function* func = lir::Function::create(

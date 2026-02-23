@@ -130,6 +130,9 @@ private:
     Type* parse_type_specifier();
 
     Defn* parse_initial_definition();
+    
+    Defn* parse_function_definition(std::vector<Rune*> runes, uint64_t start);
+
     Defn* parse_binding_definition(std::vector<Rune*> runes, const Token name);
     Defn* parse_load_definition();
     

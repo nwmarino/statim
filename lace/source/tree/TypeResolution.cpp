@@ -23,6 +23,7 @@ void TypeResolution::visit(VariableDefn& node) {
 
 void TypeResolution::visit(FunctionDefn& node) {
     const log::Span span = { m_ast->get_file(), node.span() };
+
     Type* type = resolve_type(node.type());
     if (!type)
         log::error("unresolved type: " + node.type()->string(), span);
@@ -35,9 +36,18 @@ void TypeResolution::visit(FunctionDefn& node) {
     // The function's type has been resolved at this point, but the types of 
     // the parameter definitions may be outdated.
 
-    // For each function parameter, propogate its type to the same one as in the function type.
-    for (uint32_t i = 0, e = node.num_params(); i < e; ++i)
-        node.params()[i]->set_type(sig->get_param(i));
+    uint32_t i = 0;
+
+    if (node.has_receiver()) {
+        assert(sig->num_params() >= 1);
+        node.receiver()->set_type(sig->get_param(0));
+        i = 1;
+    }
+
+    for (const uint32_t e = node.num_params(); i < e; ++i) {
+        ParameterDefn* param = node.get_param(i);
+        param->set_type(sig->get_param(i));
+    }
 }
 
 void TypeResolution::visit(FieldDefn& node) {

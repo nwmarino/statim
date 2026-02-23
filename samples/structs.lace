@@ -13,8 +13,14 @@ vec3_new :: (x: f64, y: f64, z: f64) -> vec3 {
 }
 
 vec3_secret :: (vec: vec3) -> f64 {
-    let res: f64 = vec.x + vec.y + vec.z;
+    //let res: f64 = vec.sum();
+    let res: f64 = 5.0;
     ret res * res;
+}
+
+// Create a method for |vec3| by defining a function with a pointer receiver.
+sum (vec: *vec3) :: () -> f64 {
+    ret vec.x + vec.y + vec.z; 
 }
 
 $public

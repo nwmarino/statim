@@ -325,6 +325,12 @@ private:
     /// function i.e. named parameters.
     Scope* m_scope;
 
+    /// The pointer receiver of this function, if it has one.
+    ///
+    /// Pointer receivers allow functions to be recognized as methods for a
+    /// given type. They are effectively specialized parameters.
+    ParameterDefn* m_receiver;
+
     /// The list of parameters for this function.
     Params m_params;
 
@@ -333,15 +339,17 @@ private:
 
     FunctionDefn(AST* origin, SourceSpan span, const std::string& name, 
                  const Runes& runes, FunctionType* type, Scope* scope, 
-                 const Params& params, BlockStmt* body)
+                 ParameterDefn* receiver, const Params& params, 
+                 BlockStmt* body)
       : ValueDefn(origin, span, name, runes, type), m_scope(scope), 
-        m_params(params), m_body(body) {}
+        m_receiver(receiver), m_params(params), m_body(body) {}
 
 public:
     [[nodiscard]]
     static FunctionDefn* create(AST& ast, SourceSpan span, 
                                 const std::string& name, const Runes& runes, 
-                                FunctionType* type, Scope* scope, const Params& params, 
+                                FunctionType* type, Scope* scope, 
+                                ParameterDefn* receiver, const Params& params, 
                                 BlockStmt* body = nullptr);
 
     ~FunctionDefn() override;
@@ -377,7 +385,23 @@ public:
     const Scope* scope() const { return m_scope; }
     Scope* scope() { return m_scope; }
 
-    /// Set the parameter list of this function to |params|>
+    /// Returns the receiver of this function, if it has one.
+    const ParameterDefn* receiver() const { return m_receiver; }
+    ParameterDefn* receiver() { return m_receiver; }
+
+    /// Test if this function has a receiver.
+    bool has_receiver() const { return m_receiver != nullptr; }
+
+    /// Returns the value type of the receiver which this function acts as a
+    /// method for.
+    /// If this function does not have a receiver, null is returned.
+    const Type* get_receiver_type() const;
+    Type* get_receiver_type() {
+        return const_cast<Type*>(
+            static_cast<const FunctionDefn*>(this)->get_receiver_type());
+    }
+
+    /// Set the parameter list of this function to |params|.
     void set_params(const Params& params) { m_params = params; }
 
     /// Returns the parameter list of this function.
