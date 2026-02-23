@@ -110,6 +110,8 @@ private:
     /// The locals of this stack frame.
     Locals m_locals = {};
 
+    uint32_t m_extra = 0;
+
 public:
     StackFrame(MachineFunction* parent) : m_parent(parent) {}
 
@@ -136,6 +138,12 @@ public:
 
     /// Test if this stack frame is empty i.e. contains no locals.
     bool empty() const { return m_locals.empty(); }
+
+    /// Set the extra space this stack frame will allocate for to |bytes|.
+    void set_extra(uint32_t bytes) { m_extra = bytes; }
+
+    /// Returns the number of extra bytes this stack frame will allocate for.
+    uint32_t extra() const { return m_extra; }
 
     /// Returns the aligned size to reserve for this stack frame, in bytes.
     uint32_t size() const;

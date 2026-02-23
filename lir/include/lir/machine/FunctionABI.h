@@ -22,6 +22,7 @@ public:
         enum class Kind : uint32_t { Register, Stack };
         
         Kind kind;
+        uint32_t size;
         union {
             Register reg;
             int32_t offset;

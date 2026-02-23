@@ -67,11 +67,13 @@ StackFrame::~StackFrame() {
 }
 
 uint32_t StackFrame::size() const {
+    uint32_t res = align_to(m_extra, 16);
+
     if (empty())
-        return 0;
+        return res;
 
     const MachineLocal* back = m_locals.back();
-    return align_to(back->get_offset() + back->get_size(), 16);
+    return res + align_to(back->get_offset() + back->get_size(), 16);
 }
 
 //>==---------------------------------------------------------------------------

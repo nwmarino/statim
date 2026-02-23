@@ -707,9 +707,12 @@ void AMD64LoweringPass::lower_call(const Call* C) {
     assert(MF && "Call callee does not exist!");
 
     const FunctionABI& abi = MF->abi();
+    uint32_t sp_buffer = 0;
 
     for (uint32_t i = 0; i < C->num_args(); ++i) {
         const FunctionABI::Location& loc = abi.getParamLocation(i);
+        sp_buffer += loc.size;
+
         const Value* arg_val = C->get_arg(i);
         const MachineOperand arg_op = to_operand(arg_val);
         
@@ -743,6 +746,9 @@ void AMD64LoweringPass::lower_call(const Call* C) {
                 .add_mem(MachineRegister(RSP, 8), loc.offset);
         }
     }
+
+    StackFrame& frame = m_func->get_stack_frame();
+    frame.set_extra(std::max(frame.extra(), sp_buffer));
 
     if (abi.hasResult()) {
         // The result register needs to implicitly defined by the call.
