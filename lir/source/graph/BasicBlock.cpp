@@ -3,9 +3,9 @@
 //  All rights reserved.
 //
 
-#include "lir/graph/BasicBlock.hpp"
-#include "lir/graph/Function.hpp"
-#include "lir/graph/Instruction.hpp"
+#include "lir/graph/BasicBlock.h"
+#include "lir/graph/Function.h"
+#include "lir/graph/Instruction.h"
 
 #include <format>
 

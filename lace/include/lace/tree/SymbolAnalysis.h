@@ -31,6 +31,8 @@ public:
     void visit(RefExpr& node) override;
 
     void visit(SizeofExpr& node) override;
+
+    void visit(StructInitExpr& node) override;
 };
 
 } // namespace lace

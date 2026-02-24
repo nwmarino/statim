@@ -10,143 +10,136 @@
 #include "lace/tree/LIRCodegen.h"
 #include "lace/tree/Type.h"
 
-#include "lir/graph/Type.hpp"
+#include "lace/tree/VisitorBase.h"
+#include "lir/graph/Type.h"
 
 using namespace lace;
 
-lir::Value *LIRCodegen::codegen_valued_expression(const Expr *expr) {
-    switch (expr->get_kind()) {
-        case Expr::Bool:
-            return codegen_literal_boolean(static_cast<const BoolLiteral*>(expr));
-        case Expr::Char:
-            return codegen_literal_character(static_cast<const CharLiteral*>(expr));
-        case Expr::Integer:
-            return codegen_literal_integer(static_cast<const IntegerLiteral*>(expr));
-        case Expr::Float:
-            return codegen_literal_float(static_cast<const FloatLiteral*>(expr));
-        case Expr::Null:
-            return codegen_literal_null(static_cast<const NullLiteral*>(expr));
-        case Expr::String:
-            return codegen_literal_string(static_cast<const StringLiteral*>(expr));
-
-        case Expr::Binary: {
-            auto binary = static_cast<const BinaryOp*>(expr);
-
-            switch (binary->get_operator()) {
-                case BinaryOp::Assign:
-                    return codegen_assignment(binary);
-                case BinaryOp::Add:
-                case BinaryOp::Sub:
-                    return codegen_addition(binary);
-                case BinaryOp::Mul:
-                    return codegen_multiply(binary);
-                case BinaryOp::Div:
-                case BinaryOp::Mod:
-                    return codegen_division(binary);
-                case BinaryOp::And:
-                case BinaryOp::Or:
-                case BinaryOp::Xor:
-                    return codegen_bitwise_arithmetic(binary);
-                case BinaryOp::LShift:
-                case BinaryOp::RShift:
-                    return codegen_bit_shift(binary);
-                case BinaryOp::LogicAnd:
-                    return codegen_logical_and(binary);
-                case BinaryOp::LogicOr:
-                    return codegen_logical_or(binary);
-                case BinaryOp::Eq:
-                case BinaryOp::NEq:
-                case BinaryOp::Lt:
-                case BinaryOp::LtEq:
-                case BinaryOp::Gt:
-                case BinaryOp::GtEq:
-                    return codegen_numerical_comparison(binary);
-                default:
-                    assert(false && "unknown binary operator!");
-            }
-        }
-
-        case Expr::Unary: {
-            auto unary = static_cast<const UnaryOp*>(expr);
-
-            switch (unary->get_operator()) {
-                case UnaryOp::Negate:
-                    return codegen_negation(unary);
-                case UnaryOp::Not:
-                    return codegen_bitwise_not(unary);
-                case UnaryOp::LogicNot:
-                    return codegen_logical_not(unary);
-                case UnaryOp::AddressOf:
-                    return codegen_address_of(unary);
-                case UnaryOp::Dereference:
-                    return codegen_valued_dereference(unary);
-                default:
-                    assert(false && "unknown unary operator!");
-            }
-        }
-        
-        case Expr::Access:
-            return codegen_valued_access(static_cast<const AccessExpr*>(expr));
-        case Expr::Ref:
-            return codegen_valued_reference(static_cast<const RefExpr*>(expr));
-        case Expr::Subscript:
-            return codegen_valued_subscript(static_cast<const SubscriptExpr*>(expr));
-        case Expr::Call:
-            return codegen_function_call(static_cast<const CallExpr*>(expr));
-        case Expr::Cast:
-            return codegen_type_cast(static_cast<const CastExpr*>(expr));
-        case Expr::Paren:
-            return codegen_parentheses(static_cast<const ParenExpr*>(expr));
-        case Expr::Sizeof:
-            return codegen_sizeof(static_cast<const SizeofExpr*>(expr));
-    }
-}
-
-lir::Value *LIRCodegen::codegen_valued_access(const AccessExpr *expr) {
-    lir::Value *addr = codegen_addressed_access(expr);
-    assert(addr);
-
-    return m_builder.build_load(to_lir_type(expr->get_type()), addr);
-}
-
-lir::Value *LIRCodegen::codegen_valued_reference(const RefExpr *expr) {
-    assert(expr->get_defn());
-
-    switch (expr->get_defn()->get_kind()) {
-        case Defn::Parameter:
-        case Defn::Variable: {
-            lir::Value *addr = codegen_addressed_reference(expr);
-            assert(addr);
-
-            return m_builder.build_load(to_lir_type(expr->get_type()), addr);
-        }
-    
-        case Defn::Variant: {
-            auto var = static_cast<const VariantDefn*>(expr->get_defn());
-            return lir::Integer::get(
-                m_cfg, 
-                to_lir_type(expr->get_type()), 
-                var->get_value()
-            );
-        }
-
+lir::Value* LIRCodegen::codegen_valued_expression(const Expr* expr) {
+    if (auto boolean = dynamic_cast<const BoolLiteral*>(expr)) {
+        return codegen_literal_boolean(boolean);
+    } else if (auto character = dynamic_cast<const CharLiteral*>(expr)) {
+        return codegen_literal_character(character);
+    } else if (auto integer = dynamic_cast<const IntegerLiteral*>(expr)) {
+        return codegen_literal_integer(integer);
+    } else if (auto fp = dynamic_cast<const FloatLiteral*>(expr)) {
+        return codegen_literal_float(fp);
+    } else if (auto null = dynamic_cast<const NullLiteral*>(expr)) {
+        return codegen_literal_null(null);
+    } else if (auto string = dynamic_cast<const StringLiteral*>(expr)) {
+        return codegen_literal_string(string);
+    } else if (auto binary = dynamic_cast<const BinaryOp*>(expr)) {
+        switch (binary->op()) 
+        {
+        case BinaryOp::Assign:
+            return codegen_assignment(binary);
+        case BinaryOp::Add:
+        case BinaryOp::Sub:
+            return codegen_addition(binary);
+        case BinaryOp::Mul:
+            return codegen_multiply(binary);
+        case BinaryOp::Div:
+        case BinaryOp::Mod:
+            return codegen_division(binary);
+        case BinaryOp::And:
+        case BinaryOp::Or:
+        case BinaryOp::Xor:
+            return codegen_bitwise_arithmetic(binary);
+        case BinaryOp::LShift:
+        case BinaryOp::RShift:
+            return codegen_bit_shift(binary);
+        case BinaryOp::LogicAnd:
+            return codegen_logical_and(binary);
+        case BinaryOp::LogicOr:
+            return codegen_logical_or(binary);
+        case BinaryOp::Eq:
+        case BinaryOp::NEq:
+        case BinaryOp::Lt:
+        case BinaryOp::LtEq:
+        case BinaryOp::Gt:
+        case BinaryOp::GtEq:
+            return codegen_numerical_comparison(binary);
         default:
-            assert(false && "unable to generate valued reference!");
+            assert(false && "unknown binary operator!");
+        }
+    } else if (auto unary = dynamic_cast<const UnaryOp*>(expr)) {
+        switch (unary->op()) 
+        {
+        case UnaryOp::Negate:
+            return codegen_negation(unary);
+        case UnaryOp::Not:
+            return codegen_bitwise_not(unary);
+        case UnaryOp::LogicNot:
+            return codegen_logical_not(unary);
+        case UnaryOp::AddressOf:
+            return codegen_address_of(unary);
+        case UnaryOp::Dereference:
+            return codegen_valued_dereference(unary);
+        default:
+            assert(false && "unknown unary operator!");
+        }
+    } else if (auto access = dynamic_cast<const AccessExpr*>(expr)) {
+        return codegen_valued_access(access);
+    } else if (auto ref = dynamic_cast<const RefExpr*>(expr)) {
+        return codegen_valued_reference(ref);
+    } else if (auto subscript = dynamic_cast<const SubscriptExpr*>(expr)) {
+        return codegen_valued_subscript(subscript);
+    } else if (auto call = dynamic_cast<const CallExpr*>(expr)) {
+        return codegen_function_call(call);
+    } else if (auto cast = dynamic_cast<const CastExpr*>(expr)) {
+        return codegen_type_cast(cast);
+    } else if (auto paren = dynamic_cast<const ParenExpr*>(expr)) {
+        return codegen_parentheses(paren);
+    } else if (auto szof = dynamic_cast<const SizeofExpr*>(expr)) {
+        return codegen_sizeof(szof);
     }
+
+    return nullptr;
 }
 
-lir::Value *LIRCodegen::codegen_valued_subscript(const SubscriptExpr *expr) {
-    lir::Value *addr = codegen_addressed_subscript(expr);
+lir::Value* LIRCodegen::codegen_valued_access(const AccessExpr* expr) {
+    lir::Value* addr = codegen_addressed_access(expr);
     assert(addr);
 
-    return m_builder.build_load(to_lir_type(expr->get_type()), addr);
+    return m_builder.build_load(to_lir_type(expr->type()), addr);
+}
+
+lir::Value* LIRCodegen::codegen_valued_reference(const RefExpr* expr) {
+    assert(expr->is_resolved());
+
+    if (auto var = dynamic_cast<const VariableDefn*>(expr->defn())) {
+        lir::Value *addr = codegen_addressed_reference(expr);
+        assert(addr);
+
+        return m_builder.build_load(to_lir_type(expr->type()), addr);
+    } else if (auto param = dynamic_cast<const ParameterDefn*>(expr->defn())) {
+        lir::Value *addr = codegen_addressed_reference(expr);
+        assert(addr);
+
+        return m_builder.build_load(to_lir_type(expr->type()), addr);
+    } else if (auto var = dynamic_cast<const VariantDefn*>(expr->defn())) {
+        return lir::Integer::get(
+            m_cfg, 
+            to_lir_type(expr->type()), 
+            var->get_value()
+        );
+    }
+
+    return nullptr;
+}
+
+lir::Value* LIRCodegen::codegen_valued_subscript(const SubscriptExpr* expr) {
+    lir::Value* addr = codegen_addressed_subscript(expr);
+    assert(addr);
+
+    return m_builder.build_load(to_lir_type(expr->type()), addr);
 }
 
 lir::Value* LIRCodegen::codegen_valued_dereference(const UnaryOp* expr) {
     lir::Value* ptr = codegen_addressed_dereference(expr);
     assert(ptr);
 
-    return m_builder.build_load(to_lir_type(expr->get_type()), ptr);
+    return m_builder.build_load(to_lir_type(expr->type()), ptr);
 }
 
 lir::Value* LIRCodegen::codegen_literal_boolean(const BoolLiteral* expr) {
@@ -160,7 +153,7 @@ lir::Value* LIRCodegen::codegen_literal_boolean(const BoolLiteral* expr) {
 lir::Value* LIRCodegen::codegen_literal_integer(const IntegerLiteral* expr) {
     return lir::Integer::get(
         m_cfg,
-        to_lir_type(expr->get_type()),
+        to_lir_type(expr->type()),
         expr->get_value()
     );
 }
@@ -176,25 +169,25 @@ lir::Value* LIRCodegen::codegen_literal_character(const CharLiteral* expr) {
 lir::Value* LIRCodegen::codegen_literal_float(const FloatLiteral* expr) {
     return m_builder.build_const(lir::Float::get(
         m_cfg,
-        to_lir_type(expr->get_type()),
+        to_lir_type(expr->type()),
         static_cast<double>(expr->get_value())
     ));
 }
 
 lir::Value* LIRCodegen::codegen_literal_null(const NullLiteral* expr) {
-    return lir::Null::get(m_cfg, to_lir_type(expr->get_type()));
+    return lir::Null::get(m_cfg, to_lir_type(expr->type()));
 }
 
 lir::Value* LIRCodegen::codegen_literal_string(const StringLiteral* expr) {
-    return m_builder.build_string(lir::String::get(m_cfg, expr->get_value()));
+    return m_builder.build_string(lir::String::get(m_cfg, expr->value()));
 }
 
 lir::Value* LIRCodegen::codegen_type_cast(const CastExpr* expr) {
-    lir::Value* value = codegen_valued_expression(expr->get_expr());
+    lir::Value* value = codegen_valued_expression(expr->expr());
     assert(value);
 
     lir::Type* source = value->get_type();
-    lir::Type* dest = to_lir_type(expr->get_type());
+    lir::Type* dest = to_lir_type(expr->type());
 
     if (source->is_integer_type()) {
         if (dest->is_integer_type()) {
@@ -215,7 +208,7 @@ lir::Value* LIRCodegen::codegen_type_cast(const CastExpr* expr) {
                 return m_builder.build_itrunc(dest, value);
             }
             
-            if (expr->get_expr()->get_type()->isSignedInt()) {
+            if (expr->expr()->type()->is_signed_integer()) {
                 return m_builder.build_sext(dest, value);
             } else {
                 return m_builder.build_zext(dest, value);
@@ -226,7 +219,7 @@ lir::Value* LIRCodegen::codegen_type_cast(const CastExpr* expr) {
                 return m_builder.build_const(lir::Float::get(m_cfg, dest, integer->get_value()));
             }
 
-            if (expr->get_expr()->get_type()->isSignedInt()) {
+            if (expr->expr()->type()->is_signed_integer()) {
                 return m_builder.build_s2f(dest, value);
             } else {
                 return m_builder.build_u2f(dest, value);
@@ -248,7 +241,7 @@ lir::Value* LIRCodegen::codegen_type_cast(const CastExpr* expr) {
                 return lir::Integer::get(m_cfg, dest, fp->get_value());
             }
 
-            if (expr->get_type()->isSignedInt()) {
+            if (expr->type()->is_signed_integer()) {
                 return m_builder.build_f2s(dest, value);
             } else {
                 return m_builder.build_f2u(dest, value);
@@ -293,19 +286,18 @@ lir::Value* LIRCodegen::codegen_type_cast(const CastExpr* expr) {
         }
     }
     
-    log::fatal("unsupported type cast", 
-        log::Span(m_ast->get_file(), expr->get_span()));
+    log::fatal("unsupported type cast", log::Span(m_ast->get_file(), expr->get_span()));
 }
 
 lir::Value* LIRCodegen::codegen_function_call(const CallExpr* expr) {
-    lir::Value* callee = codegen_addressed_expression(expr->get_callee());
+    lir::Value* callee = codegen_addressed_expression(expr->callee());
     assert(callee);
 
     std::vector<lir::Value*> args = {};
     args.reserve(expr->num_args());
 
     lir::Value* aret = nullptr;
-    lir::Type* result_type = to_lir_type(expr->get_type());
+    lir::Type* result_type = to_lir_type(expr->type());
     if (!m_mach.is_scalar(result_type)) {
         if (m_state.place) {
             aret = m_state.place;
@@ -321,9 +313,20 @@ lir::Value* LIRCodegen::codegen_function_call(const CallExpr* expr) {
         args.push_back(aret);
     }
 
-    for (Expr* arg : expr->get_args()) {
+    if (expr->has_receiver()) {
+        lir::Value* receiver;
+        if (dynamic_cast<const PointerType*>(expr->receiver()->type())) {
+            receiver = codegen_valued_expression(expr->receiver());
+        } else if (dynamic_cast<const StructType*>(expr->receiver()->type())) {
+            receiver = codegen_addressed_expression(expr->receiver());
+        }
+
+        args.push_back(receiver);
+    }
+
+    for (Expr* arg : expr->args()) {
         lir::Value* value = nullptr;
-        lir::Type* type = to_lir_type(arg->get_type());
+        lir::Type* type = to_lir_type(arg->type());
 
         if (!m_mach.is_scalar(type)) {
             value = codegen_addressed_expression(arg);
@@ -346,13 +349,13 @@ lir::Value* LIRCodegen::codegen_function_call(const CallExpr* expr) {
 }
 
 lir::Value* LIRCodegen::codegen_parentheses(const ParenExpr* expr) {
-    return codegen_valued_expression(expr->get_expr());
+    return codegen_valued_expression(expr->expr());
 }
 
 lir::Value* LIRCodegen::codegen_sizeof(const SizeofExpr* expr) {
     return lir::Integer::get(
         m_cfg,
-        to_lir_type(expr->get_type()),
-        (m_mach.get_type_size(to_lir_type(expr->get_target_type())) / 8)
+        to_lir_type(expr->type()),
+        (m_mach.get_type_size(to_lir_type(expr->target())) / 8)
     );
 }

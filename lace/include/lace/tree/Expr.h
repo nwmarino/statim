@@ -1,21 +1,23 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
-#ifndef LOVELACE_EXPR_H_
-#define LOVELACE_EXPR_H_
+#ifndef LACE_EXPR_H_
+#define LACE_EXPR_H_
 
 //
 //  This header file declares a set of polymorphic classes for representing 
-//  expressions in the abstract syntax tree.
+//  expressions in the syntax tree.
 //
 
+#include "lace/tree/Defn.h"
 #include "lace/tree/Stmt.h"
 #include "lace/tree/Type.h"
 #include "lace/tree/VisitorBase.h"
 
 #include <cassert>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -27,40 +29,16 @@ class NamedDefn;
 class Type;
 class ValueDefn;
 
-/// Base class for all expression nodes in the abstract syntax tree.
+/// Base class for all expression nodes in the syntax tree.
 class Expr {
-public:
-    /// The different kinds of expressions.
-    enum Kind : uint32_t {
-        Bool,
-        Char,
-        Integer,
-        Float,
-        Null,
-        String,
-        Binary,
-        Unary,
-        Access,
-        Call,
-        Cast,
-        Paren,
-        Ref,
-        Sizeof,
-        Subscript,
-    };
-
 protected:
-    /// The kind of expression this is.
-    const Kind m_kind;
-
     /// The span of source code that this expression covers.
     const SourceSpan m_span;
 
     /// The type of this expression.
-    QualType m_type;
+    Type* m_type;
 
-    Expr(Kind kind, SourceSpan span, const QualType& type) 
-      : m_kind(kind), m_span(span), m_type(type) {}
+    Expr(SourceSpan span, Type* type) : m_span(span), m_type(type) {}
 
 public:
     virtual ~Expr() = default;
@@ -89,70 +67,27 @@ public:
     /// semantic analysis.
     virtual bool is_lvalue() const { return false; }
 
-    Kind get_kind() const { return m_kind; }
-
-    /// Test if this is a boolean literal.
-    bool is_bool() const { return m_kind == Bool; }
-
-    /// Test if this is a character literal.
-    bool is_char() const { return m_kind == Char; }
-
-    /// Test if this is an integer literal.
-    bool is_integer() const { return m_kind == Integer; }
-
-    /// Test if this is a float literal.
-    bool is_float() const { return m_kind == Float; }
-
-    /// Test if this is a null literal.
-    bool is_null() const { return m_kind == Null; }
-
-    /// Test if this is a string literal.
-    bool is_string() const { return m_kind == String; }
-
-    /// Test if this is a binary operator.
-    bool is_binary() const { return m_kind == Binary; }
-
-    /// Test if this is a unary operator.
-    bool is_unary() const { return m_kind == Unary; }
-
-    /// Test if this is an access expression.
-    bool is_access() const { return m_kind == Access; }
-
-    /// Test if this is a call expression.
-    bool is_call() const { return m_kind == Call; }
-
-    /// Test if this is a cast expression.
-    bool is_cast() const { return m_kind == Cast; }
-
-    /// Test if this is a parentheses expression.
-    bool is_paren() const { return m_kind == Paren; }
-
-    /// Test if this is a reference expression.
-    bool is_ref() const { return m_kind == Ref; }
-
-    /// Test if this is a sizeof expression.
-    bool is_sizeof() const { return m_kind == Sizeof; }
-
-    /// Test if this is a subscript expression.
-    bool is_subscript() const { return m_kind == Subscript; }
-
+    /// Returns the span of source which this expression covers.
     SourceSpan get_span() const { return m_span; }
 
-    void set_type(const QualType& type) { m_type = type; }
-    const QualType& get_type() const { return m_type; }
-    QualType& get_type() { return m_type; }
+    /// Set the type of this expression to |type|.
+    void set_type(Type* type) { m_type = type; }
+
+    /// Returns the type of this expression.
+    const Type* type() const { return m_type; }
+    Type* type() { return m_type; }
 };
 
 /// Representation of boolean literals, e.g. 'true' or 'false'.
 class BoolLiteral final : public Expr {
     const bool m_value;
 
-    BoolLiteral(SourceSpan span, const QualType& type, bool value)
-      : Expr(Expr::Bool, span, type), m_value(value) {}
+    BoolLiteral(SourceSpan span, Type* type, bool value)
+      : Expr(span, type), m_value(value) {}
 
 public:
     [[nodiscard]]
-    static BoolLiteral* create(AST::Context& ctx, SourceSpan span, bool value);
+    static BoolLiteral* create(AST& ast, SourceSpan span, bool value);
 
     ~BoolLiteral() = default;
 
@@ -166,6 +101,7 @@ public:
 
     bool is_constant() const override { return true; }
 
+    /// Returns the boolean value of this literal.
     bool get_value() const { return m_value; }
 };
 
@@ -173,12 +109,12 @@ public:
 class CharLiteral final : public Expr {
     char m_value;
 
-    CharLiteral(SourceSpan span, const QualType& type, char value)
-      : Expr(Expr::Char, span, type), m_value(value) {}
+    CharLiteral(SourceSpan span, Type* type, char value)
+      : Expr(span, type), m_value(value) {}
 
 public:
     [[nodiscard]]
-    static CharLiteral* create(AST::Context& ctx, SourceSpan span, char value);
+    static CharLiteral* create(AST& ast, SourceSpan span, char value);
 
     ~CharLiteral() = default;
     
@@ -192,6 +128,7 @@ public:
 
     bool is_constant() const override { return true; }
 
+    /// Returns the character value of this literal.
     char get_value() const { return m_value; }
 };
 
@@ -199,13 +136,13 @@ public:
 class IntegerLiteral final : public Expr {
     const int64_t m_value;
 
-    IntegerLiteral(SourceSpan span, const QualType& type, int64_t value)
-      : Expr(Expr::Integer, span, type), m_value(value) {}
+    IntegerLiteral(SourceSpan span, Type* type, int64_t value)
+      : Expr(span, type), m_value(value) {}
 
 public:
     [[nodiscard]]
-    static IntegerLiteral* create(AST::Context& ctx, SourceSpan span, 
-                                  const QualType& type, int64_t value);
+    static IntegerLiteral* create(AST& ast, SourceSpan span, 
+                                  Type* type, int64_t value);
 
     ~IntegerLiteral() = default;
     
@@ -219,6 +156,7 @@ public:
 
     bool is_constant() const override { return true; }
 
+    /// Returns the integer value of this literal.
     int64_t get_value() const { return m_value; }
 };
 
@@ -226,13 +164,13 @@ public:
 class FloatLiteral final : public Expr {
     const double m_value;
 
-    FloatLiteral(SourceSpan span, const QualType& type, double value)
-      : Expr(Expr::Float, span, type), m_value(value) {}
+    FloatLiteral(SourceSpan span, Type* type, double value)
+      : Expr(span, type), m_value(value) {}
 
 public:
     [[nodiscard]]
-    static FloatLiteral* create(AST::Context& ctx, SourceSpan span, 
-                                const QualType& type, double value);
+    static FloatLiteral* create(AST& ast, SourceSpan span, Type* type, 
+                                double value);
 
     ~FloatLiteral() = default;
 
@@ -246,18 +184,17 @@ public:
 
     bool is_constant() const override { return true; }
 
+    /// Returns the floating point value of this literal.
     double get_value() const { return m_value; }
 };
 
 /// Representation of null literals, e.g. `null`.
 class NullLiteral final : public Expr {
-    NullLiteral(SourceSpan span, const QualType& type) 
-      : Expr(Expr::Null, span, type) {}
+    NullLiteral(SourceSpan span, Type* type) : Expr(span, type) {}
 
 public:
     [[nodiscard]]
-    static NullLiteral* create(AST::Context& ctx, SourceSpan span, 
-                               const QualType& type);
+    static NullLiteral* create(AST& ast, SourceSpan span, Type* type);
 
     ~NullLiteral() = default;
 
@@ -274,15 +211,14 @@ public:
 
 /// Representation of string literals, e.g. `"hello"` and `"world"`.
 class StringLiteral final : public Expr {
-    const std::string m_value;
+    std::string m_value;
 
-    StringLiteral(SourceSpan span, const QualType& type, const
-                  std::string& value)
-      : Expr(Expr::String, span, type), m_value(value) {}
+    StringLiteral(SourceSpan span, Type* type, const std::string& value)
+      : Expr(span, type), m_value(value) {}
 
 public:
     [[nodiscard]]
-    static StringLiteral* create(AST::Context& ctx, SourceSpan span, 
+    static StringLiteral* create(AST& ast, SourceSpan span, 
                                  const std::string& value);
 
     ~StringLiteral() = default;
@@ -297,10 +233,12 @@ public:
 
     bool is_constant() const override { return true; }
 
-    const std::string& get_value() const { return m_value; }
+    /// Returns the string value of this literal.
+    const std::string& value() const { return m_value; }
+    std::string& value() { return m_value; }
 };
 
-/// Represents a binary operation.
+/// Represents an operation between two expressions.
 class BinaryOp final : public Expr {
     friend class SemanticAnalysis;
 
@@ -340,7 +278,8 @@ public:
 
     /// Test if the given |op| performs a numerical comparison.
     static bool is_numerical_comparison(Operator op) {
-        return Eq <= op && op <= GtEq;
+        return op == Eq || op == NEq || op == Lt 
+            || op == LtEq || op == Gt || op == GtEq;
     }
 
     /// Test if the given |op| performs a bitwise comparison.
@@ -358,13 +297,12 @@ private:
     Expr* m_lhs;
     Expr* m_rhs;
 
-    BinaryOp(SourceSpan span, const QualType& type, Operator op, 
-             Expr* lhs, Expr* rhs)
-      : Expr(Expr::Binary, span, type), m_op(op), m_lhs(lhs), m_rhs(rhs) {}
+    BinaryOp(SourceSpan span, Type* type, Operator op, Expr* lhs, Expr* rhs)
+      : Expr(span, type), m_op(op), m_lhs(lhs), m_rhs(rhs) {}
 
 public:
     [[nodiscard]]
-    static BinaryOp* create(AST::Context& ctx, SourceSpan span, Operator op, 
+    static BinaryOp* create(AST& ast, SourceSpan span, Operator op, 
                             Expr* lhs, Expr* rhs);
 
     ~BinaryOp() override;
@@ -381,16 +319,19 @@ public:
         return m_lhs->is_constant() && m_rhs->is_constant(); 
     }
 
-    Operator get_operator() const { return m_op; }
+    /// Returns the operator of this expression.
+    Operator op() const { return m_op; }
 
-    const Expr* get_lhs() const { return m_lhs; }
-    Expr* get_lhs() { return m_lhs; }
+    /// Returns the left-hand side expression of this operator.
+    const Expr* lhs() const { return m_lhs; }
+    Expr* lhs() { return m_lhs; }
 
-    const Expr* get_rhs() const { return m_rhs; }
-    Expr* get_rhs() { return m_rhs; }
+    /// Returns the right-hand side expression of this operator.
+    const Expr* rhs() const { return m_rhs; }
+    Expr* rhs() { return m_rhs; }
 };
 
-/// Represents a unary operation.
+/// Represents an operation on a lone expression.
 class UnaryOp final : public Expr {
 public:
     /// The different kinds of unary operators.
@@ -404,14 +345,10 @@ public:
     };
 
     /// Test if the given |op| can be used as a prefix operator.
-    static bool is_prefix(Operator op) {
-        return op != Unknown;
-    }
+    static bool is_prefix(Operator op) { return op != Unknown; }
 
-    /// Test if the given |op| can be used as a prefix operator.
-    static bool is_postfix(Operator op) {
-        return false;
-    }
+    /// Test if the given |op| can be used as a postfix operator.
+    static bool is_postfix(Operator op) { return false; }
 
 private:
     /// The operator to use.
@@ -424,14 +361,13 @@ private:
     /// The expression to operate on.
     Expr* m_expr;
 
-    UnaryOp(SourceSpan span, const QualType& type, Operator op, bool prefix, 
+    UnaryOp(SourceSpan span, Type* type, Operator op, bool prefix, 
             Expr* expr)
-      : Expr(Expr::Unary, span, type), m_op(op), m_prefix(prefix), 
-        m_expr(expr) {}
+      : Expr(span, type), m_op(op), m_prefix(prefix), m_expr(expr) {}
 
 public:
     [[nodiscard]]
-    static UnaryOp* create(AST::Context& ctx, SourceSpan span, Operator op, 
+    static UnaryOp* create(AST& ast, SourceSpan span, Operator op, 
                            bool prefix, Expr* expr);
 
     ~UnaryOp() override;
@@ -450,7 +386,8 @@ public:
 
     bool is_lvalue() const override { return m_op == Dereference; }
 
-    Operator get_operator() const { return m_op; }
+    /// Returns the operator of this expression.
+    Operator op() const { return m_op; }
 
     /// Test if this unary operation is interpreted as a prefix operator.
     bool is_prefix() const { return m_prefix; }
@@ -458,8 +395,9 @@ public:
     /// Test if this unary operation is interpreted as a postfix operator.
     bool is_postfix() const { return !m_prefix; }
 
-    const Expr* get_expr() const { return m_expr; }
-    Expr* get_expr() { return m_expr; }
+    /// Returns the expression this operates on.
+    const Expr* expr() const { return m_expr; }
+    Expr* expr() { return m_expr; }
 };
 
 /// Represents a structure field access `.` expression.
@@ -467,21 +405,19 @@ class AccessExpr final : public Expr {
     /// The base expression i.e. structure to access a field from.
     Expr* m_base;
     
-    ///  The name of the structure field to access. Used for the sake of 
-    /// forwarding referencing.
+    /// The name of the field to access. Used for forwarding references.
     std::string m_name;
 
     /// The field to access.
-    const FieldDefn* m_field;
+    ValueDefn* m_field;
 
-    AccessExpr(SourceSpan span, const QualType& type, Expr* base, 
-               const std::string& name, const FieldDefn* field)
-      : Expr(Expr::Access, span, type), m_base(base), m_name(name), 
-        m_field(field) {}
+    AccessExpr(SourceSpan span, Type* type, Expr* base, const std::string& name, 
+               ValueDefn* field)
+      : Expr(span, type), m_base(base), m_name(name), m_field(field) {}
 
 public:
     [[nodiscard]]
-    static AccessExpr* create(AST::Context& ctx, SourceSpan span, Expr* base, 
+    static AccessExpr* create(AST& ast, SourceSpan span, Expr* base, 
                               const std::string& name);
 
     ~AccessExpr() override;
@@ -496,13 +432,23 @@ public:
 
     bool is_lvalue() const override { return true; }
 
-    const Expr* get_base() const { return m_base; }
-    Expr* get_base() { return m_base; }
+    /// Returns the base expression of this field access.
+    const Expr* base() const { return m_base; }
+    Expr* base() { return m_base; }
 
-    const std::string& get_name() { return m_name; }
+    /// Returns the name of the field which this expression accesses.
+    const std::string& name() const { return m_name; }
+    std::string& name() { return m_name; }
 
-    void set_field(const FieldDefn* field) { m_field = field; }
-    const FieldDefn* get_field() const { return m_field; }
+    /// Set the field that this expression accesses to |field|.
+    void set_field(ValueDefn* field) { m_field = field; }
+
+    /// Returns the field which this expression accesses.
+    const ValueDefn* field() const { return m_field; }
+    ValueDefn* field() { return m_field; }
+
+    /// Test if the field which this expression accesses has been resolved.
+    bool is_resolved() const { return m_field != nullptr; }
 };
 
 /// Represents a function call `...(...)` expression.
@@ -514,15 +460,16 @@ public:
 
 private:
     Expr* m_callee;
+    Expr* m_receiver;
     Args m_args;
 
-    CallExpr(SourceSpan span, const QualType& type, Expr* callee, 
-             const Args& args)
-      : Expr(Expr::Call, span, type), m_callee(callee), m_args(args) {}
+    CallExpr(SourceSpan span, Type* type, Expr* callee, const Args& args, 
+             Expr* receiver)
+      : Expr(span, type), m_callee(callee), m_receiver(receiver), m_args(args) {}
 
 public:
     [[nodiscard]]
-    static CallExpr* create(AST::Context& ctx, SourceSpan span, Expr* callee, 
+    static CallExpr* create(AST& ast, SourceSpan span, Expr* callee, 
                             const Args& args);
 
     ~CallExpr() override;
@@ -535,12 +482,25 @@ public:
 
     void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
-    const Expr* get_callee() const { return m_callee; }
-    Expr* get_callee() { return m_callee; }
+    /// Returns the callee function of this call.
+    const Expr* callee() const { return m_callee; }
+    Expr* callee() { return m_callee; }
 
-    const Args& get_args() const { return m_args; }
-    Args& get_args() { return m_args; }
+    /// Set the receiver expression of this call to |expr|.
+    void set_receiver(Expr* expr) { m_receiver = expr; }
 
+    /// Returns the receiver expression of this call, if it has one.
+    const Expr* receiver() const { return m_receiver; }
+    Expr* receiver() { return m_receiver; }
+
+    /// Test if this call expression has a receiver expression.
+    bool has_receiver() const { return m_receiver != nullptr; }
+
+    /// Returns the argument list of this function call.
+    const Args& args() const { return m_args; }
+    Args& args() { return m_args; }
+
+    /// Returns the |i|-th argument of this function call.
     const Expr* get_arg(uint32_t i) const { 
         assert(i < num_args() && "index out of bounds!");
         return m_args[i]; 
@@ -551,7 +511,10 @@ public:
         return m_args[i]; 
     }
 
+    /// Returns the number of arguments in this function call.
     uint32_t num_args() const { return m_args.size(); }
+
+    /// Test if this function call has any arguments.
     bool has_args() const { return !m_args.empty(); }
 };
 
@@ -559,13 +522,13 @@ public:
 class CastExpr final : public Expr {
     Expr* m_expr;
 
-    CastExpr(SourceSpan span, const QualType& type, Expr* expr)
-      : Expr(Expr::Cast, span, type), m_expr(expr) {}
+    CastExpr(SourceSpan span, Type* type, Expr* expr)
+      : Expr(span, type), m_expr(expr) {}
 
 public:
     [[nodiscard]]
-    static CastExpr* create(AST::Context& ctx, SourceSpan span, 
-                            const QualType& type, Expr* expr);
+    static CastExpr* create(AST& ast, SourceSpan span, Type* type, 
+                            Expr* expr);
 
     ~CastExpr() override;
     
@@ -579,20 +542,21 @@ public:
 
     bool is_constant() const override { return m_expr->is_constant(); }
 
-    const Expr* get_expr() const { return m_expr; }
-    Expr* get_expr() { return m_expr; }
+    /// Returns the expression which this is casting.
+    const Expr* expr() const { return m_expr; }
+    Expr* expr() { return m_expr; }
 };
 
 /// Represents an expression within parentheses, i.e. `(...)`.
 class ParenExpr final : public Expr {
     Expr* m_expr;
 
-    ParenExpr(SourceSpan span, const QualType& type, Expr* expr)
-      : Expr(Expr::Paren, span, type), m_expr(expr) {}
+    ParenExpr(SourceSpan span, Type* type, Expr* expr)
+      : Expr(span, type), m_expr(expr) {}
 
 public:
     [[nodiscard]]
-    static ParenExpr* create(AST::Context& ctx, SourceSpan span, Expr* expr);
+    static ParenExpr* create(AST& ast, SourceSpan span, Expr* expr);
 
     ~ParenExpr() override;
 
@@ -606,24 +570,33 @@ public:
 
     bool is_constant() const override { return m_expr->is_constant(); }
 
-    const Expr* get_expr() const { return m_expr; }
-    Expr* get_expr() { return m_expr; }
+    /// Returns the expression nested in this set of parentheses.
+    const Expr* expr() const { return m_expr; }
+    Expr* expr() { return m_expr; }
+};
+
+struct Specifier final {
+    std::string name;
+    SpaceDefn* nspace;
 };
 
 /// Represents a named definition reference expression.
 class RefExpr final : public Expr {
-    const std::string m_name;
-    const ValueDefn* m_defn;
+    std::string m_name;
+    std::vector<Specifier> m_specs;
+    ValueDefn* m_defn;
 
 public:
-    RefExpr(SourceSpan span, const QualType& type, const std::string& name, 
-                const ValueDefn* defn)
-      : Expr(Expr::Ref, span, type), m_name(name), m_defn(defn) {}
+    RefExpr(SourceSpan span, Type* type, const std::string& name, 
+            const std::vector<Specifier>& specs, ValueDefn* defn)
+      : Expr(span, type), m_name(name), m_specs(specs), m_defn(defn) {}
 
 public:
     [[nodiscard]]
-    static RefExpr* create(AST::Context& ctx, SourceSpan span, 
-                           const std::string& name, const ValueDefn* defn);
+    static RefExpr* create(AST& ast, SourceSpan span, 
+                           const std::string& name,
+                           const std::vector<Specifier>& specs, 
+                           ValueDefn* defn);
 
     ~RefExpr() = default;
     
@@ -637,24 +610,42 @@ public:
 
     bool is_lvalue() const override;
 
-    const std::string& get_name() const { return m_name; }
+    /// Returns the name of the definition which this expression references.
+    const std::string& name() const { return m_name; }
+    std::string& name() { return m_name; }
 
-    void set_defn(const ValueDefn* defn) { m_defn = defn; }
-    const ValueDefn* get_defn() const { return m_defn; }
+    /// Returns the list of namespace specifiers this reference has.
+    const std::vector<Specifier>& specs() const { return m_specs; }
+    std::vector<Specifier>& specs() { return m_specs; }
+
+    /// Returns the number of namespace specifiers this reference has.
+    uint32_t num_specs() const { return m_specs.size(); }
+
+    /// Test if this reference has any namespace specifiers.
+    bool has_specs() const { return !m_specs.empty(); }
+
+    /// Set the definition which this expression references to |defn|.
+    void set_defn(ValueDefn* defn) { m_defn = defn; }
+
+    /// Returns the definition which this expression references.
+    const ValueDefn* defn() const { return m_defn; }
+    ValueDefn* defn() { return m_defn; }
+
+    /// Test if the definition which this expression references has been resolved.
+    bool is_resolved() const { return m_defn != nullptr; }
 };
 
 /// Represents a `sizeof(T)` expression.
 class SizeofExpr final : public Expr {
     /// The type to get the size of.
-    QualType m_target;
+    Type* m_target;
 
-    SizeofExpr(SourceSpan span, const QualType& type, const QualType& target)
-      : Expr(Expr::Sizeof, span, type), m_target(target) {}
+    SizeofExpr(SourceSpan span, Type* type, Type* target)
+      : Expr(span, type), m_target(target) {}
 
 public:
     [[nodiscard]]
-    static SizeofExpr* create(AST::Context& ctx, SourceSpan span, 
-                              const QualType& target);
+    static SizeofExpr* create(AST& ast, SourceSpan span, Type* target);
 
     ~SizeofExpr() = default;
     
@@ -668,8 +659,70 @@ public:
 
     bool is_constant() const override { return true; }
 
-    const QualType& get_target_type() const { return m_target; }
-    QualType& get_target_type() { return m_target; }
+    /// Set the target type of this operator to |type|.
+    void set_target(Type* type) { m_target = type; }
+
+    /// Returns the type which this expression is to result in the size of.
+    const Type* target() const { return m_target; }
+    Type* target() { return m_target; }
+};
+
+/// Represents a structure initialization expression `... { ... }`.
+class StructInitExpr final : public Expr {
+public:
+    using Fields = std::map<std::string, Expr*>;
+
+private:
+    Fields m_fields;
+
+    StructInitExpr(SourceSpan span, Type* type, const Fields& fields)
+      : Expr(span, type), m_fields(fields) {}
+
+public:
+    [[nodiscard]]
+    static StructInitExpr* create(AST& ast, SourceSpan span, 
+                                  Type* type, const Fields& fields);
+
+    ~StructInitExpr() override;
+    
+    StructInitExpr(const StructInitExpr&) = delete;
+    void operator=(const StructInitExpr&) = delete;
+
+    StructInitExpr(StructInitExpr&&) noexcept = delete;
+    void operator=(StructInitExpr&&) noexcept = delete;
+
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
+
+    /// Test if this initializer expression is constant. Initializers are 
+    /// constant if and only if all of their fields are constants.
+    bool is_constant() const override {
+        for (const auto& [field, expr] : m_fields) {
+            if (!expr->is_constant())
+                return false;
+        }
+        
+        return true;
+    }
+
+    /// Returns the fields of this initializer expression.
+    const Fields& fields() const { return m_fields; }
+    Fields& fields() { return m_fields; }
+
+    /// Returns the field with the given |name| being initialized in this 
+    /// expression.
+    const Expr* get_field(const std::string& name) const {
+        return m_fields.at(name);
+    }
+
+    Expr* get_field(const std::string& name) {
+        return m_fields.at(name);
+    }
+
+    /// Returns the number of fields which this expression initializes.
+    uint32_t num_fields() const { return m_fields.size(); }
+
+    /// Test if this initializer expression contains any fields.
+    [[nodiscard]] bool empty() const { return m_fields.empty(); } 
 };
 
 /// Represents a subscript `[]` expression.
@@ -677,13 +730,12 @@ class SubscriptExpr final : public Expr {
     Expr* m_base;
     Expr* m_index;
 
-    SubscriptExpr(SourceSpan span, const QualType& type, Expr* base, 
-                  Expr* index)
-      : Expr(Expr::Subscript, span, type), m_base(base), m_index(index) {}
+    SubscriptExpr(SourceSpan span, Type* type, Expr* base, Expr* index)
+      : Expr(span, type), m_base(base), m_index(index) {}
 
 public:
     [[nodiscard]]
-    static SubscriptExpr* create(AST::Context& ctx, SourceSpan span, Expr* base, 
+    static SubscriptExpr* create(AST& ast, SourceSpan span, Expr* base, 
                                  Expr* index);
 
     ~SubscriptExpr() override;
@@ -698,13 +750,15 @@ public:
 
     bool is_lvalue() const override { return true; }
 
-    const Expr* get_base() const { return m_base; }
-    Expr* get_base() { return m_base; }
+    /// Returns the base expression of this subscript.
+    const Expr* base() const { return m_base; }
+    Expr* base() { return m_base; }
 
-    const Expr* get_index() const { return m_index; }
-    Expr* get_index() { return m_index; }
+    /// Returns the index expression of this subscript.
+    const Expr* index() const { return m_index; }
+    Expr* index() { return m_index; }
 };
 
 } // namespace lace
 
-#endif // LOVELACE_EXPR_H_
+#endif // LACE_EXPR_H_

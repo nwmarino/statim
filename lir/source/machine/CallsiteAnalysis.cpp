@@ -4,9 +4,9 @@
 //
 
 #include "lir/machine/CallsiteAnalysis.h"
-#include "lir/machine/AMD64.hpp"
-#include "lir/machine/MachineOp.hpp"
-#include "lir/machine/Register.hpp"
+#include "lir/machine/AMD64.h"
+#include "lir/machine/MachineOp.h"
+#include "lir/machine/Register.h"
 #include "lir/machine/RegisterAllocator.h"
 
 #include <vector>

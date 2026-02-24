@@ -3,13 +3,13 @@
 //  All rights reserved.
 //
 
-#include "spbe/analysis/SSARewritePass.hpp"
-#include "spbe/graph/BasicBlock.hpp"
-#include "spbe/graph/CFG.hpp"
-#include "spbe/graph/Constant.hpp"
-#include "spbe/graph/InstrBuilder.hpp"
-#include "spbe/graph/Instruction.hpp"
-#include "spbe/graph/Value.hpp"
+#include "lir/analysis/SSARewritePass.h"
+#include "lir/graph/BasicBlock.h"
+#include "lir/graph/Builder.h"
+#include "lir/graph/CFG.h"
+#include "lir/graph/Constant.h"
+#include "lir/graph/Instruction.h"
+#include "lir/graph/Value.h"
 
 #include <algorithm>
 #include <functional>
@@ -23,40 +23,39 @@
 
 using namespace lir;
 
-using InsertMode = InstrBuilder::InsertMode;
-
-static void compute_rpo(Function* fn, std::vector<BasicBlock*>& rpo) {
-    std::set<BasicBlock*> visited;
-    std::vector<BasicBlock*> order;
+/// Compute the reverse post order of flow for basic blocks in the given |func|.
+static void compute_rpo(Function* func, std::vector<BasicBlock*>& rpo) {
+    std::set<BasicBlock*> visited = {};
+    std::vector<BasicBlock*> order = {};
     
-    std::function<void(BasicBlock*)> dfs = [&](BasicBlock* blk) {
-        if (!visited.insert(blk).second)
+    std::function<void(BasicBlock*)> dfs = [&](BasicBlock* block) {
+        if (!visited.insert(block).second)
             return;
 
-        for (auto* succ : blk->succs())
+        for (BasicBlock* succ : block->get_succs())
             dfs(succ);
     
-        order.push_back(blk);
+        order.push_back(block);
     };
 
-    dfs(fn->front());
+    dfs(func->get_head());
     rpo.assign(order.rbegin(), order.rend());
 }
 
 void SSARewritePass::run() {
-    m_builder.set_insert_mode(InsertMode::Prepend);
+    m_builder.set_mode(Builder::InsertMode::Prepend);
 
-    for (const auto& fn : m_cfg.functions())
-        process(fn);
+    for (Function* func : m_cfg.get_functions())
+        process(func);
 }
 
-void SSARewritePass::process(Function* fn) {
-    std::map<std::string, Local*> locals_copy = fn->locals();
+void SSARewritePass::process(Function* func) {
+    std::map<std::string, Local*> locals_copy = func->get_locals();
     for (const auto& [name, local] : locals_copy)
-        promote_local(fn, local);
+        promote_local(func, local);
 }
 
-void SSARewritePass::promote_local(Function* fn, Local* local) {
+void SSARewritePass::promote_local(Function* func, Local* local) {
 #ifdef LIR_SSA_DEBUGGING
     std::cerr << "Promoting local: ";
     local->print(std::cerr);
@@ -65,16 +64,17 @@ void SSARewritePass::promote_local(Function* fn, Local* local) {
 
     m_local = local;
 
-    std::vector<BasicBlock*> rpo;
-    compute_rpo(fn, rpo);
+    std::vector<BasicBlock*> rpo = {};
+    compute_rpo(func, rpo);
 
-    for (auto* blk : rpo) {
-        for (auto* inst = blk->front(); inst; inst = inst->next()) {
-            if (inst->is_load() && inst->get_operand(0) == local) {
-                // This instruction reads from |local|, meaning it uses the
-                // the most recent value.
-                Value* v = read_variable(blk);
+    for (BasicBlock* block : rpo) {
+        for (Instruction* inst = block->get_head(); inst; inst = inst->get_next()) {
+            if (dynamic_cast<Load*>(inst) && inst->get_operand(0) == local) {
+                // This instruction reads from |local|, meaning it should use 
+                // the most recently defined value.
+                Value* v = read_variable(block);
                 inst->replace_all_uses_with(v);
+
                 assert(!inst->used());
 
 #ifdef LIR_SSA_DEBUGGING
@@ -85,37 +85,41 @@ void SSARewritePass::promote_local(Function* fn, Local* local) {
 #endif // LIR_SSA_DEBUGGING
 
                 m_to_remove.push_back(inst);
-            } else if (inst->is_store() && inst->get_operand(1) == local) {
+            } else if (dynamic_cast<Store*>(inst) && inst->get_operand(1) == local) {
                 // This instruction writes to |local|, meaning it defines a
                 // new value.
-                write_variable(blk, inst->get_operand(0));
+                write_variable(block, inst->get_operand(0));
                 m_to_remove.push_back(inst);
             }
         }
 
-        m_visited.push_back(blk);
+        m_visited.push_back(block);
 
-        for (const auto& blk : rpo) {
-            if (is_sealed(blk))
+        // For each basic block, if all of its predecessors have been visited,
+        // and it is not already sealed, then seal the block.
+        for (BasicBlock* block : rpo) {
+            if (is_sealed(block))
                 continue;
 
             bool all_preds_visited = true;
-            for (const auto& pred : blk->preds())
-                if (!visited(pred)) all_preds_visited = false;
+            for (BasicBlock* pred : block->get_preds()) {
+                if (!visited(pred)) 
+                    all_preds_visited = false;
+            }
 
-            if (all_preds_visited && !is_sealed(blk))
-                seal_block(blk);
+            if (all_preds_visited && !is_sealed(block))
+                seal_block(block);
         }
     }
 
-    for (auto& inst : m_to_remove) {
-        assert(!inst->used());
-        inst->detach_from_parent();
+    for (Instruction* inst : m_to_remove) {
+        assert(!inst->used() && "instruction is still in use!");
+        inst->detach();
         delete inst;
     }
 
     if (!m_local->used()) {
-        m_local->detach_from_parent();
+        m_local->detach();
         delete m_local;
     }
 
@@ -127,82 +131,86 @@ void SSARewritePass::promote_local(Function* fn, Local* local) {
     m_current_def.clear();
 }
 
-void SSARewritePass::write_variable(BasicBlock* blk, Value* value) {
-    m_current_def[blk] = value;
+void SSARewritePass::write_variable(BasicBlock* block, Value* value) {
+    m_current_def[block] = value;
 }
 
-Value* SSARewritePass::read_variable(BasicBlock* blk) {
-    if (m_current_def.count(blk) == 1)
-        return m_current_def[blk];
+Value* SSARewritePass::read_variable(BasicBlock* block) {
+    if (m_current_def.count(block) == 1)
+        return m_current_def[block];
 
-    return read_variable_recursive(blk);
+    return read_variable_recursive(block);
 }
 
-Value* SSARewritePass::add_phi_operands(Instruction* phi) {
-    assert(phi->num_operands() == 0);
+Value* SSARewritePass::add_phi_operands(Phi* phi) {
+    assert(phi->num_operands() == 0 && "phi already has operands!");
 
-    // For each predecessor to |blk|, which is the block that |phi| is in, try 
-    // and read a def of |local| and add it as an incoming edge to |phi|.
-    for (auto& pred : phi->get_parent()->preds()) {
+    // For each predecessor to the parent of |phi|, try and read a def of 
+    // |local| and add it as an incoming edge to |phi|.
+    for (BasicBlock* pred : phi->get_parent()->get_preds()) {
         Value* value = read_variable(pred);
 
 #ifdef LIR_SSA_DEBUGGING
-        std::cerr << "[PHI bb" << phi->get_parent()->get_number() << "] v" << 
-            phi->result_id() << " new operand: ";
+        std::cerr << "[PHI bb" << phi->get_parent()->get_number() << "] v" 
+            << phi->result_id() << " new operand: ";
         value->print(std::cerr);
         std::cerr << '\n';
 #endif // LIR_SSA_DEBUGGING
 
-        phi->add_incoming(m_cfg, value, pred);
+        phi->add_edge(value, pred);
     }
 
     return try_remove_trivial_phi(phi);
 }
 
-Value* SSARewritePass::read_variable_recursive(BasicBlock* blk) {
-    assert(!blk->is_entry_block() && blk->num_preds() > 0);
+Value* SSARewritePass::read_variable_recursive(BasicBlock* block) {
+    assert(!block->is_entry() && block->num_preds() > 0);
 
-    if (!is_sealed(blk)) {
-        m_builder.set_insert(blk);
-        Instruction* phi = m_builder.build_phi(m_local->get_allocated_type());
-        if (m_incomplete_phis.count(blk) == 0)
-            m_incomplete_phis.emplace(blk, std::unordered_map<Local*, std::vector<Instruction*>>());
+    if (!is_sealed(block)) {
+        m_builder.set_insert(block);
+        Phi* phi = m_builder.build_phi(m_local->get_allocated_type());
+        if (m_incomplete_phis.count(block) == 0)
+            m_incomplete_phis.emplace(block, std::unordered_map<Local*, std::vector<Phi*>>());
 
-        if (m_incomplete_phis[blk].count(m_local))
-            m_incomplete_phis[blk].emplace(m_local, std::vector<Instruction*>());
+        if (m_incomplete_phis[block].count(m_local))
+            m_incomplete_phis[block].emplace(m_local, std::vector<Phi*>());
 
-        m_incomplete_phis[blk][m_local].push_back(phi);
-        write_variable(blk, phi);
+        m_incomplete_phis[block][m_local].push_back(phi);
+        write_variable(block, phi);
         return phi;
-    } else if (blk->num_preds() == 1) {
+    } else if (block->num_preds() == 1) {
         // Only one predecessor to the block, so we can recursively look in the 
         // predecessor for a def.
-        Value* v = read_variable(blk->preds()[0]);
-        m_current_def[blk] = v;
+        Value* v = read_variable(block->get_preds()[0]);
+        m_current_def[block] = v;
         return v;
     }
 
-    // There are multiple predecessors to |blk|, so there may be multiple 
+    // There are multiple predecessors to |block|, so there may be multiple 
     // incoming defs, which means a phi function is necessary for now.
-    m_builder.set_insert(blk);
-    Instruction* phi = m_builder.build_phi(m_local->get_allocated_type());
-    m_current_def[blk] = phi;
+
+    m_builder.set_insert(block);
+
+    Phi* phi = m_builder.build_phi(m_local->get_allocated_type());
+    m_current_def[block] = phi;
+
     Value* v = add_phi_operands(phi);
-    m_current_def[blk] = v;
+    m_current_def[block] = v;
+
     return v;
 }
 
-Value* SSARewritePass::try_remove_trivial_phi(Instruction* phi) {
-    // For each incoming value to |phi|, see if it is a reference to the phi
-    // itself or another operand to determine if it is considered trivial.
-    // A phi can also be considered trivial if it merges less than two unique
-    // values.
+Value* SSARewritePass::try_remove_trivial_phi(Phi* phi) {
+    // For each of |phi|'s edges, see if it is a reference to the phi itself or 
+    // one of its operand to determine if it is considered trivial.
+    //
+    // Note that since a phi node just propogates values as they step through
+    // control flow, a unique operand can replace all uses of the phi thereof.
     Value* same = nullptr;
-    for (auto op : phi->get_operand_list()) {
-        PhiOperand* phi_op = dynamic_cast<PhiOperand*>(op->get_value());
-        assert(phi_op && "non phi-compatible operand in phi operand list");
+    for (uint32_t i = 0; i < phi->num_edges(); ++i) {
+        Phi::Edge edge = phi->get_edge(i);
 
-        if (phi_op->get_value() == same || phi_op->get_value() == phi) {
+        if (edge.value == same || edge.value == phi) {
             // This is a reference to one of the phi's operands or a reference
             // to the phi itself.
             continue;
@@ -213,56 +221,69 @@ Value* SSARewritePass::try_remove_trivial_phi(Instruction* phi) {
             return phi;
         }
 
-        same = phi_op->get_value();
+        same = edge.value;
     }
 
     assert(same);
 
-    std::vector<User*> phi_users;
-    for (auto* use : phi->uses())
+    // Track each user of |phi|, which is not |phi| itself. This is to record
+    // a copy for later.
+    std::vector<User*> users = {};
+    for (Use* use : phi->uses()) {
         if (use->get_user() != phi)
-            phi_users.push_back(use->get_user());
+            users.push_back(use->get_user());
+    }
 
+    // Replace all uses of |phi| with it's unique value.
     phi->replace_all_uses_with(same);
 
-    for (auto& [blk, def] : m_current_def)
+    // If |phi| is being used as the current definition for the local being
+    // processed, replace it with the only unique operand.
+    for (auto& [block, def] : m_current_def) {
         if (def == phi)
-            m_current_def[blk] = same;
+            m_current_def[block] = same;
+    }
 
-    phi->detach_from_parent();
+    phi->detach();
     delete phi;
 
-    for (const auto& user : phi_users)
-        if (auto* instr = dynamic_cast<Instruction*>(user))
-            if (instr->is_phi())
-                try_remove_trivial_phi(instr);
+    for (User* user : users) {
+        Instruction* inst = dynamic_cast<Instruction*>(user);
+        if (!user)
+            continue;
+
+        Phi* phi_user = dynamic_cast<Phi*>(inst);
+        if (phi_user)
+            try_remove_trivial_phi(phi_user);
+    }
 
     return same;
 }
 
-bool SSARewritePass::visited(BasicBlock* blk) {
+bool SSARewritePass::visited(BasicBlock* block) const {
     return std::find(
-        m_visited.begin(), m_visited.end(), blk) != m_visited.end();
+        m_visited.begin(), m_visited.end(), block) != m_visited.end();
 }
 
-bool SSARewritePass::is_sealed(BasicBlock* blk) {
+bool SSARewritePass::is_sealed(BasicBlock* block) const {
     return std::find(
-        m_sealed.begin(), m_sealed.end(), blk) != m_sealed.end();
+        m_sealed.begin(), m_sealed.end(), block) != m_sealed.end();
 }
 
-void SSARewritePass::seal_block(BasicBlock* blk) {
-    assert(!is_sealed(blk));
+void SSARewritePass::seal_block(BasicBlock* block) {
+    assert(!is_sealed(block) && "block is already sealed!");
 
-    for (auto& [ local, phis ] : m_incomplete_phis[blk]) {
-        for (auto& phi : phis)
+    // For each incomplete phi in |block|, attach its operands.
+    for (auto& [local, phis] : m_incomplete_phis[block]) {
+        for (Phi* phi : phis)
             add_phi_operands(phi);
 
         phis.clear();
     }
 
-    m_sealed.push_back(blk);
+    m_sealed.push_back(block);
     
 #ifdef LIR_SSA_DEBUGGING
-    std::cerr << "Sealed block: bb" << blk->get_number() << "\n";
+    std::cerr << "Sealed block: bb" << block->get_position() << "\n";
 #endif // LIR_SSA_DEBUGGING
 }

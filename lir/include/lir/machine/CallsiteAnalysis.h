@@ -6,7 +6,7 @@
 #ifndef LIR_CALLSITE_ANALYSIS_H_
 #define LIR_CALLSITE_ANALYSIS_H_
 
-#include "lir/machine/MachineFunction.hpp"
+#include "lir/machine/MachineFunction.h"
 #include "lir/machine/RegisterAllocator.h"
 
 #include <vector>

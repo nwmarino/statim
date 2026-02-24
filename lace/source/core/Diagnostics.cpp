@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
@@ -29,7 +29,7 @@ static std::vector<std::string> readSource(const Span& span) {
     assert(span.end.line >= span.start.line && "span ends before it starts!");
     
     std::string contents;
-    Result res = readFile(span.path, contents);
+    bool res = read_file(span.path, contents);
     if (!res)
         return {};
 

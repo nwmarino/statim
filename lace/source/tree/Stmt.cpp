@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
@@ -11,49 +11,48 @@
 
 using namespace lace;
 
-/*
-AsmStmt::~AsmStmt() {
-    for (Expr* arg : m_args)
-        delete arg;
+//>==---------------------------------------------------------------------------
+//                          AdapterStmt Implementation
+//>==---------------------------------------------------------------------------
 
-    m_ins.clear();
-    m_outs.clear();
-    m_args.clear();
-    m_clobbers.clear();
+AdapterStmt* AdapterStmt::create(AST& ast, Defn* defn) {
+    return new AdapterStmt(defn->span(), defn);
 }
 
-AsmStmt* AsmStmt::create(
-        Context &ctx, SourceSpan span, const string& iasm, 
-        const vector<string> &outs, const vector<string> &ins, 
-        const vector<Expr*> &args, const vector<string> &clobbers) {
-    return new AsmStmt(span, iasm, outs, ins, args, clobbers);
-}
-*/
-
-AdapterStmt* AdapterStmt::create(AST::Context& ctx, Defn* defn) {
-    return new AdapterStmt(defn->get_span(), defn);
-}
-
-AdapterStmt* AdapterStmt::create(AST::Context& ctx, Expr* expr) {
+AdapterStmt* AdapterStmt::create(AST& ast, Expr* expr) {
     return new AdapterStmt(expr->get_span(), expr);
 }
 
 AdapterStmt::~AdapterStmt() {
-    switch (m_flavor) {
-        case Definitive:
+    switch (m_kind) 
+    {
+    case Kind::Definitive:
+        if (m_defn)
             delete m_defn;
-            m_defn = nullptr;
-            break;
-        case Expressive:
+
+        m_defn = nullptr;
+        break;
+    case Kind::Expressive:
+        if (m_expr)
             delete m_expr;
-            m_expr = nullptr;
-            break;
+        
+        m_expr = nullptr;
+        break;
     }
 }
 
+//>==---------------------------------------------------------------------------
+//                          BlockStmt Implementation
+//>==---------------------------------------------------------------------------
+
+BlockStmt* BlockStmt::create(AST& ast, SourceSpan span, Scope* scope, 
+                             const Stmts& stmts) {
+    return new BlockStmt(span, scope, stmts);
+}
+
 BlockStmt::~BlockStmt() {
-    delete m_scope;
-    m_scope = nullptr;
+    //delete m_scope;
+    //m_scope = nullptr;
 
     for (Stmt* stmt : m_stmts)
         delete stmt;
@@ -61,9 +60,13 @@ BlockStmt::~BlockStmt() {
     m_stmts.clear();
 }
 
-BlockStmt* BlockStmt::create(AST::Context& ctx, SourceSpan span, Scope* scope, 
-                             const Stmts& stmts) {
-    return new BlockStmt(span, scope, stmts);
+//>==---------------------------------------------------------------------------
+//                          IfStmt Implementation
+//>==---------------------------------------------------------------------------
+
+IfStmt* IfStmt::create(AST& ast, SourceSpan span, Expr* cond, 
+                       Stmt* then, Stmt* els) {
+    return new IfStmt(span, cond, then, els);
 }
 
 IfStmt::~IfStmt() {
@@ -79,13 +82,20 @@ IfStmt::~IfStmt() {
     }
 }
 
-IfStmt* IfStmt::create(AST::Context& ctx, SourceSpan span, Expr* cond, 
-                       Stmt* then, Stmt* els) {
-    return new IfStmt(span, cond, then, els);
+//>==---------------------------------------------------------------------------
+//                          RestartStmt Implementation
+//>==---------------------------------------------------------------------------
+
+RestartStmt* RestartStmt::create(AST& ast, SourceSpan span) {
+    return new RestartStmt(span);
 }
 
-RestartStmt* RestartStmt::create(AST::Context& ctx, SourceSpan span) {
-    return new RestartStmt(span);
+//>==---------------------------------------------------------------------------
+//                          RetStmt Implementation
+//>==---------------------------------------------------------------------------
+
+RetStmt* RetStmt::create(AST& ast, SourceSpan span, Expr* expr) {
+    return new RetStmt(span, expr);
 }
 
 RetStmt::~RetStmt() {
@@ -95,12 +105,21 @@ RetStmt::~RetStmt() {
     }
 }
 
-RetStmt* RetStmt::create(AST::Context& ctx, SourceSpan span, Expr* expr) {
-    return new RetStmt(span, expr);
+//>==---------------------------------------------------------------------------
+//                          StopStmt Implementation
+//>==--------------------------------------------------------------------------
+
+StopStmt* StopStmt::create(AST& ast, SourceSpan span) {
+    return new StopStmt(span);
 }
 
-StopStmt* StopStmt::create(AST::Context& ctx, SourceSpan span) {
-    return new StopStmt(span);
+//>==---------------------------------------------------------------------------
+//                          UntilStmt Implementation
+//>==---------------------------------------------------------------------------
+
+UntilStmt* UntilStmt::create(AST& ast, SourceSpan span, Expr* cond, 
+                             Stmt* body) {
+    return new UntilStmt(span, cond, body);
 }
 
 UntilStmt::~UntilStmt() {
@@ -113,12 +132,11 @@ UntilStmt::~UntilStmt() {
     }
 }
 
-UntilStmt* UntilStmt::create(AST::Context& ctx, SourceSpan span, Expr* cond, 
-                             Stmt* body) {
-    return new UntilStmt(span, cond, body);
-}
+//>==---------------------------------------------------------------------------
+//                          RuneStmt Implementation
+//>==---------------------------------------------------------------------------
 
-RuneStmt* RuneStmt::create(AST::Context& ctx, SourceSpan span, Rune* rune) {
+RuneStmt* RuneStmt::create(AST& ast, SourceSpan span, Rune* rune) {
     return new RuneStmt(span, rune);
 }
 

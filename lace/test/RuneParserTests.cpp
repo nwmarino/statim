@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
@@ -11,17 +11,17 @@ namespace lace::test {
 
 class RuneParserTests : public ::testing::Test {
 protected:
-    AST* unit;
+    AST* ast;
 
     void SetUp() override {
-        unit = nullptr;
+        ast = nullptr;
     }
 
     void TearDown() override {
-        if (unit) { 
-            delete unit;
-            unit = nullptr;
-        }
+        if (ast) 
+            delete ast;
+
+        ast = nullptr;
     }
 };
 

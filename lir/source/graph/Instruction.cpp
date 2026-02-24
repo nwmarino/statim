@@ -3,10 +3,10 @@
 //  All rights reserved.
 //
 
-#include "lir/graph/BasicBlock.hpp"
-#include "lir/graph/Constant.hpp"
-#include "lir/graph/Value.hpp"
-#include "lir/graph/Instruction.hpp"
+#include "lir/graph/BasicBlock.h"
+#include "lir/graph/Constant.h"
+#include "lir/graph/Value.h"
+#include "lir/graph/Instruction.h"
 
 #include <format>
 
@@ -261,7 +261,7 @@ void Phi::print(std::ostream &os, PrintPolicy policy) const {
         os << std::format("%{} := phi <{}> ", m_def, get_type()->to_string());
 
         for (uint32_t i = 0, e = num_edges(); i < e; ++i) {
-            const Edge edge = get_edge(i);
+            const CEdge edge = get_edge(i);
 
             os << '(';
             edge.value->print(os, PrintPolicy::Use);

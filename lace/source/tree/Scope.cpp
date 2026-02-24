@@ -8,11 +8,18 @@
 
 using namespace lace;
 
+Scope::~Scope() {
+    for (Scope* scope : m_children)
+        delete scope;
+
+    m_children.clear();
+}
+
 bool Scope::add(NamedDefn* defn) {
-    if (get(defn->get_name()))
+    if (get(defn->name()))
         return false;
 
-    m_defns.emplace(defn->get_name(), defn);
+    m_defns.emplace(defn->name(), defn);
     return true;
 }
 
@@ -23,6 +30,22 @@ NamedDefn* Scope::get(const std::string& name) const {
 
     if (m_parent)
         return m_parent->get(name);
+
+    return nullptr;
+}
+
+SpaceDefn* Scope::get_namespace(const std::string& name) const {
+    auto it = m_defns.find(name);
+    if (it != m_defns.end()) {
+        NamedDefn* defn = it->second;
+        if (SpaceDefn* nspace = dynamic_cast<SpaceDefn*>(defn))
+            return nspace;
+
+        return nullptr;
+    }
+
+    if (m_parent)
+        return m_parent->get_namespace(name);
 
     return nullptr;
 }

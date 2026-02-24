@@ -1,4 +1,4 @@
-$[public]
+$public
 main :: () -> s64 {
     let a: s64 = 42;
     let b: s64 = a + 21;

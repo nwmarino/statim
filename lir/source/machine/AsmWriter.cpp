@@ -4,12 +4,12 @@
 //
 
 #include "lir/machine/AsmWriter.h"
-#include "lir/machine/MachineConstant.hpp"
-#include "lir/machine/MachineFunction.hpp"
-#include "lir/machine/MachineObject.hpp"
-#include "lir/machine/MachineOp.hpp"
-#include "lir/machine/MachineOperand.hpp"
-#include "lir/machine/MachineRegister.hpp"
+#include "lir/machine/MachineConstant.h"
+#include "lir/machine/MachineFunction.h"
+#include "lir/machine/MachineObject.h"
+#include "lir/machine/MachineOp.h"
+#include "lir/machine/MachineOperand.h"
+#include "lir/machine/MachineRegister.h"
 
 #include <cstring>
 #include <format>

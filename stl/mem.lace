@@ -1,0 +1,158 @@
+load "linux.lace";
+
+Metadata :: struct {
+    size: u64,
+    next: *Metadata,
+    free: bool,
+}
+
+border :: *void = null;
+head :: *Metadata = null;
+
+update_border :: () -> *void {
+    border = brk(0);
+    ret border;
+}
+
+get_block_pointer :: (ptr: *void) -> *Metadata {
+    ret cast<*Metadata>(ptr) - 1;
+}
+
+extend_heap :: (inc: u64) -> *void {
+    if !border {
+        update_border();
+        if !border {
+            ret cast<*void>(-1);
+        }
+    }
+
+    if inc == 0 {
+        ret border;
+    }
+
+    let old_border: *void = border;
+    let new_border: *void = cast<*char>(border) + inc;
+
+    if brk(new_border) == old_border {
+        ret cast<*void>(-1);
+    }
+
+    border = new_border;
+    ret border;
+}
+
+find_free_space :: (last: **Metadata, size: u64) -> *Metadata {
+    let curr: *Metadata = border;
+    until !curr {
+        if curr.free && curr.size >= size {
+            stop;
+        }
+
+        *last = curr;
+        curr = curr.next;
+    }
+
+    ret curr;
+}
+
+request_space :: (last: *Metadata, size: u64) -> *Metadata {
+    let total_size: u64 = size + sizeof(Metadata);
+    let block: *Metadata = null;
+    let mem: *void = null;
+    let border_meta: *Metadata = cast<*Metadata>(extend_heap(0));
+
+    block = cast<*Metadata>(border_meta);
+    mem = extend_heap(total_size);
+
+    if last {
+        last.next = block;
+    }
+
+    block.size = size;
+    block.next = null;
+    block.free = false;
+    ret block;
+}
+
+$public
+copy :: (dst: *void, src: *void, n: u64) -> void {
+    let d: *char = cast<*char>(dst);
+    let s: *char = cast<*char>(src);
+    let i: u64 = 0;
+
+    until i > n {
+        d[i] = s[i];
+        i = i + 1;
+    }
+}
+
+$public
+alloc :: (size: u64) -> *void {
+    let block: *Metadata = null;
+    let align: u64 = size;
+
+    if size % 16 != 0 {
+        align = align + 16 - (size % 16);
+    }
+
+    if !head {
+        block = request_space(null, align);
+        if !block {
+            ret null;
+        }
+
+        head = block;
+    } else {
+        let last: *Metadata = head;
+        block = find_free_space(&last, align);
+
+        if block {
+            block.free = false;
+        } else {
+            block = request_space(last, align);
+            if !block {
+                ret null;
+            }
+        }
+    }
+
+    ret block + 1;
+}
+
+$public
+free :: (ptr: *void) -> void {
+    if !ptr {
+        ret;
+    }
+
+    let block: *Metadata = get_block_pointer(ptr);
+    block.free = true;
+    
+    if block.next {
+        if block.next.free {
+            block.size = block.size + block.next.size + sizeof(Metadata);
+            block.next = block.next.next;
+        }
+    }
+}
+
+$public
+realloc :: (ptr: *void, size: u64) -> *void {
+    if !ptr {
+        ret alloc(size);
+    }
+
+    let block: *Metadata = get_block_pointer(ptr);
+    if block.size >= size {
+        ret ptr;
+    }
+
+    let new: *void = alloc(size);
+    if !new {
+        ret null;
+    }
+
+    copy(new, ptr, block.size);
+    free(ptr);
+    ret new;
+}

@@ -1,27 +1,15 @@
-- Assertions
-- Desugaring IR pass to turn large immediates into separate const instructions
-- Carve out lexing, allowing for better parallelism
-- Print
+- Default field inits.
+- Strings
+- $print
+- File I/O
+- $write
+
 - Match statement
 - For statement
-- String, File packages
-- Aggregate initializers
-- Dynamic memory allocator
-- Per-field destruction
 - Defer statement
-- Line-by-line debugging symbols
-- Format strings
-- Inline assembly
-- Custom enum types
-- Unnamed enums
-- Enum flags
-- Unions
-- Ternary '?' operator
-  - TernaryExpr
-  - Select instruction
+- Union definition
+- Multiple return types
+- Templates
 - CTFE
 - Build system
-- Namespacing
 - Full DWARF symbols
-- Type polymorphism
-- Slices

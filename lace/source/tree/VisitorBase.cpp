@@ -13,9 +13,9 @@ using namespace lace;
 
 void VisitorBase::visit(AST& node) {
     m_ast = &node;
-    m_scope = node.get_scope();
+    m_scope = node.scope();
 
-    for (Defn* defn : node.get_defns())
+    for (Defn* defn : node.defns())
         defn->accept(*this);
 }
 
@@ -24,7 +24,7 @@ void VisitorBase::visit(AliasDefn& node) {
 }
 
 void VisitorBase::visit(EnumDefn& node) {
-    for (VariantDefn* variant : node.get_variants())
+    for (VariantDefn* variant : node.variants())
         variant->accept(*this);
 }
 
@@ -33,12 +33,18 @@ void VisitorBase::visit(FieldDefn& node) {
 }
 
 void VisitorBase::visit(FunctionDefn& node) {
-    m_scope = node.get_scope();
+    m_scope = node.scope();
+
+    if (node.has_receiver())
+        node.receiver()->accept(*this);
+
+    for (ParameterDefn* param : node.params())
+        param->accept(*this);
 
     if (node.has_body())
-        node.get_body()->accept(*this);
+        node.body()->accept(*this);
 
-    m_scope = m_scope->getParent();
+    m_scope = m_scope->parent();
 }
 
 void VisitorBase::visit(LoadDefn& node) {
@@ -49,14 +55,28 @@ void VisitorBase::visit(ParameterDefn& node) {
 
 }
 
+void VisitorBase::visit(SpaceDefn& node) {
+    m_namespaces.push_back(&node);
+    m_scope = node.scope();
+
+    for (NamedDefn* defn : node.defns()) {
+        // Only pass over definitions defined in the same file.
+        if (defn->origin() == node.origin())
+            defn->accept(*this);
+    }
+
+    m_scope = m_scope->parent();
+    m_namespaces.pop_back();
+}
+
 void VisitorBase::visit(StructDefn& node) {
-    for (FieldDefn* field : node.get_fields())
+    for (FieldDefn* field : node.fields())
         field->accept(*this);
 }
 
 void VisitorBase::visit(VariableDefn& node) {
     if (node.has_init())
-        node.get_init()->accept(*this);
+        node.init()->accept(*this);
 }
 
 void VisitorBase::visit(VariantDefn& node) {
@@ -64,31 +84,32 @@ void VisitorBase::visit(VariantDefn& node) {
 }
 
 void VisitorBase::visit(AdapterStmt& node) {
-    switch (node.get_flavor()) {
-        case AdapterStmt::Definitive:
-            node.get_defn()->accept(*this);
-            break;
-        case AdapterStmt::Expressive:
-            node.get_expr()->accept(*this);
-            break;
+    switch (node.kind()) 
+    {
+    case AdapterStmt::Kind::Definitive:
+        node.defn()->accept(*this);
+        break;
+    case AdapterStmt::Kind::Expressive:
+        node.expr()->accept(*this);
+        break;
     }
 }
 
 void VisitorBase::visit(BlockStmt& node) {
-    m_scope = node.get_scope();
+    m_scope = node.scope();
 
-    for (Stmt* stmt : node.get_stmts())
+    for (Stmt* stmt : node.stmts())
         stmt->accept(*this);
 
-    m_scope = m_scope->getParent();
+    m_scope = m_scope->parent();
 }
 
 void VisitorBase::visit(IfStmt& node) {
-    node.get_cond()->accept(*this);
-    node.get_then()->accept(*this);
+    node.condition()->accept(*this);
+    node.then_body()->accept(*this);
 
     if (node.has_else())
-        node.get_else()->accept(*this);
+        node.else_body()->accept(*this);
 }
 
 void VisitorBase::visit(RestartStmt& node) {
@@ -97,7 +118,7 @@ void VisitorBase::visit(RestartStmt& node) {
 
 void VisitorBase::visit(RetStmt& node) {
     if (node.has_expr())
-        node.get_expr()->accept(*this);
+        node.expr()->accept(*this);
 }
 
 void VisitorBase::visit(StopStmt& node) {
@@ -105,10 +126,10 @@ void VisitorBase::visit(StopStmt& node) {
 }
 
 void VisitorBase::visit(UntilStmt& node) {
-    node.get_cond()->accept(*this);
+    node.condition()->accept(*this);
 
     if (node.has_body())
-        node.get_body()->accept(*this);
+        node.body()->accept(*this);
 }
 
 void VisitorBase::visit(RuneStmt& node) {
@@ -140,101 +161,95 @@ void VisitorBase::visit(StringLiteral& node) {
 }
 
 void VisitorBase::visit(BinaryOp& node) {
-    node.get_lhs()->accept(*this);
-    node.get_rhs()->accept(*this);
+    node.lhs()->accept(*this);
+    node.rhs()->accept(*this);
 }
 
 void VisitorBase::visit(UnaryOp& node) {
-    node.get_expr()->accept(*this);
+    node.expr()->accept(*this);
 }
 
 void VisitorBase::visit(AccessExpr& node) {
-    node.get_base()->accept(*this);
+    node.base()->accept(*this);
 }
 
 void VisitorBase::visit(CallExpr& node) {
-    node.get_callee()->accept(*this);
+    node.callee()->accept(*this);
 
-    for (Expr* arg : node.get_args())
+    for (Expr* arg : node.args())
         arg->accept(*this);
 }
 
 void VisitorBase::visit(CastExpr& node) {
-    node.get_expr()->accept(*this);
-}
-
-void VisitorBase::visit(SizeofExpr& node) {
-
-}
-
-void VisitorBase::visit(SubscriptExpr& node) {
-    node.get_base()->accept(*this);
-    node.get_index()->accept(*this);
+    node.expr()->accept(*this);
 }
 
 void VisitorBase::visit(ParenExpr& node) {
-    node.get_expr()->accept(*this);
+    node.expr()->accept(*this);
 }
 
 void VisitorBase::visit(RefExpr& node) {
 
 }
 
-Result VisitorBase::resolveType(const QualType& type) const {
-    switch (type->getClass()) {
-        case Type::Class::Array: {
-            auto array_type = dynamic_cast<const ArrayType*>(type.getType());
-            assert(array_type);
+void VisitorBase::visit(SizeofExpr& node) {
 
-            return resolveType(array_type->element());
+}
+
+void VisitorBase::visit(StructInitExpr& node) {
+    for (auto& [field, expr] : node.fields())
+        expr->accept(*this);
+}
+
+void VisitorBase::visit(SubscriptExpr& node) {
+    node.base()->accept(*this);
+    node.index()->accept(*this);
+}
+
+Type* VisitorBase::resolve_type(Type* type) const {
+    if (auto deferred = dynamic_cast<DeferredType*>(type)) {
+        NamedDefn* named_defn = m_scope->get(deferred->name()); 
+        if (!named_defn)
+            return nullptr;
+
+        TypeDefn* type_defn = dynamic_cast<TypeDefn*>(named_defn);
+        if (!type_defn)
+            return nullptr;
+
+        return type_defn->type();
+    } else if (auto enumeration = dynamic_cast<EnumType*>(type)) {
+        Type* underlying = resolve_type(enumeration->underlying());
+        if (underlying != enumeration->underlying())
+            enumeration->set_underlying(underlying);
+
+        return enumeration;
+    } else if (auto func = dynamic_cast<FunctionType*>(type)) {
+        Type* result = resolve_type(func->result());
+        if (!result)
+            return nullptr;
+
+        std::vector<Type*> params = {};
+        params.reserve(func->num_params());
+
+        for (Type* param : func->params()) {
+            Type* res = resolve_type(param);
+            if (!res)
+                return nullptr;
+
+            params.push_back(res);
         }
 
-        case Type::Class::Deferred: {
-            auto deferred_type = dynamic_cast<const DeferredType*>(type.getType());
-            assert(deferred_type);
+        return FunctionType::get(*m_ast, result, params);
+    } else if (auto ptr = dynamic_cast<PointerType*>(type)) {
+        Type* pointee = resolve_type(ptr->pointee());
+        if (!pointee)
+            return nullptr;
 
-            NamedDefn* named_defn = m_scope->get(deferred_type->name()); 
-            if (!named_defn)
-                return false;
+        if (pointee != ptr->pointee())
+            ptr->set_pointee(pointee);
 
-            TypeDefn* type_defn = dynamic_cast<TypeDefn*>(named_defn);
-            if (!type_defn)
-                return false;
-
-            type.setType(type_defn->get_type());
-            return true;
-        }
-
-        case Type::Class::Enum: {
-            auto enum_type = dynamic_cast<const EnumType*>(type.getType());
-            assert(enum_type);
-
-            return resolveType(enum_type->underlying());
-        }
-
-        case Type::Class::Function: {
-            auto func_type = dynamic_cast<const FunctionType*>(type.getType());
-            assert(func_type);
-
-            if (!resolveType(func_type->result()))
-                return false;
-
-            for (const QualType& param : func_type->params()) {
-                if (!resolveType(param))
-                    return false;
-            }
-
-            return true;
-        }
-
-        case Type::Class::Pointer: {
-            auto ptr_type = dynamic_cast<const PointerType*>(type.getType());
-            assert(ptr_type);
-            
-            return resolveType(ptr_type->pointee());
-        }
-
-        default:
-            return true;
+        return ptr;
     }
+
+    return type;
 }

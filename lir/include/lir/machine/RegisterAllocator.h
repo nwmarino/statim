@@ -6,8 +6,8 @@
 #ifndef LIR_REGISTER_ALLOCATOR_H_
 #define LIR_REGISTER_ALLOCATOR_H_
 
-#include "lir/machine/MachineFunction.hpp"
-#include "lir/machine/Register.hpp"
+#include "lir/machine/MachineFunction.h"
+#include "lir/machine/Register.h"
 
 #include <unordered_map>
 #include <vector>

@@ -1,8 +1,9 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
+#include "lace/lexer/Lexer.h"
 #include "lace/parser/Parser.h"
 #include "lace/tree/AST.h"
 #include "lace/tree/SymbolAnalysis.h"
@@ -22,40 +23,56 @@ protected:
     }
 
     void TearDown() override {
-        if (ast) {
+        if (ast)
             delete ast;
-            ast = nullptr;
-        }
+            
+        ast = nullptr;
     }
 };
 
 TEST_F(SymbolAnalysisTests, VariableRef_Positive) {
-    Parser parser("test :: () -> s64 { let x: s64 = 0; ret x; }");
-    EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
+    TokenStream stream;
+    Lexer lexer("test :: () -> s64 { let x: s64 = 0; ret x; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
+    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
     EXPECT_NO_FATAL_FAILURE(ast->accept(syma));
 }
 
 TEST_F(SymbolAnalysisTests, VariableRef_Negative) {
-    Parser parser("test :: () -> s64 { let x: s64 = 0; ret y; }");
-    EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
+    TokenStream stream;
+    Lexer lexer("test :: () -> s64 { let x: s64 = 0; ret y; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
+    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
     EXPECT_DEATH(ast->accept(syma), "");
 }
 
 TEST_F(SymbolAnalysisTests, CalleeRef_Positive) {
-    Parser parser("foo :: () -> s64 { ret bar(); } bar :: () -> s64 { ret 0; }");
-    EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
+    TokenStream stream;
+    Lexer lexer("foo :: () -> s64 { ret bar(); } bar :: () -> s64 { ret 0; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
+    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
     EXPECT_NO_FATAL_FAILURE(ast->accept(syma));
 }
 
 TEST_F(SymbolAnalysisTests, ParamRef_Positive) {
-    Parser parser("foo :: (a: s64) -> s64 { ret a; }");
-    EXPECT_NO_FATAL_FAILURE(ast = parser.parse());
+    TokenStream stream;
+    Lexer lexer("foo :: (a: s64) -> s64 { ret a; }");
+    ASSERT_TRUE(lexer.lex(stream));
+
+    Parser parser(stream);
+    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
     SymbolAnalysis syma(opts);
     EXPECT_NO_FATAL_FAILURE(ast->accept(syma));

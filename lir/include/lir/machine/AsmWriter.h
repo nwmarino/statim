@@ -6,9 +6,9 @@
 #ifndef LIR_ASM_WRITER_H_
 #define LIR_ASM_WRITER_H_
 
-#include "lir/machine/AMD64.hpp"
-#include "lir/machine/MachineObject.hpp"
-#include "lir/machine/MachineOp.hpp"
+#include "lir/machine/AMD64.h"
+#include "lir/machine/MachineObject.h"
+#include "lir/machine/MachineOp.h"
 
 #include <unordered_map>
 

@@ -7,11 +7,11 @@
 #define LACE_PARSER_H_
 
 //
-//  This header file declares the Parser class, which is used in tandem with the lexer to turn 
-//  source code into an abstract syntax tree.
+//  This header file declares the Parser class, which is used in tandem with 
+//  the lexer to turn source code into a syntax tree.
 //
 
-#include "lace/lexer/Lexer.h"
+#include "lace/lexer/TokenStream.h"
 #include "lace/tree/AST.h"
 #include "lace/tree/Defn.h"
 #include "lace/tree/Expr.h"
@@ -21,28 +21,33 @@ namespace lace {
 
 /// Definition of a parser for a lace translation unit into a syntax tree.
 class Parser final {
-    using Tokens = std::vector<Token>;
-
+    TokenStream& m_stream;
     std::string m_file;
-    Lexer m_lexer;
-    Tokens m_tokens = {};
     AST* m_ast = nullptr;
-    AST::Context* m_context = nullptr;
     Scope* m_scope = nullptr;
+    bool m_allow_inits = true;
 
-    /// Returns the current token in use.
+public:
+    /// Create a new parser instance to work on |source|. 
     ///
-    /// Fails by assertion if no tokens have been lexed yet.
+    /// Optionally, a |path| may be provided for better diagnostics i.e. 
+    /// reading in invalid code from the file which contains |source|.
+    Parser(TokenStream& stream, const std::string& file = "");
+
+    /// Attempt to parse and a new abstract syntax tree from the source
+    /// this parser was constructed with.
+    [[nodiscard]] AST* parse();
+
+private:
+    /// Returns the current token in use.
     inline const Token& curr() const {
-        assert(!m_tokens.empty() && "no tokens have been lexed yet!");
-        return m_tokens.back();
+        return m_stream.get();
     }
 
     /// Lex the next token.
-    inline void next() {
-        Token token;
-        m_lexer.lex(token);
-        m_tokens.push_back(token); 
+    inline const Token& next() {
+        m_stream.advance();
+        return curr(); 
     }
 
     /// Returns the current location in source, based on the current token.
@@ -94,15 +99,21 @@ class Parser final {
 
     /// Enter a new scope, with the current scope as the parent node. Returns
     /// an unmanaged pointer to the new scope.
-    [[nodiscard]] inline Scope* enter_scope() {
-        m_scope = new Scope(m_scope);
+    Scope* enter_scope() {
+        Scope* scope = new Scope(m_scope);
+        assert(scope && "failed to create new scope!");
+
+        if (m_scope)
+            m_scope->children().push_back(scope);
+        
+        m_scope = scope;
         return m_scope;
     }
 
     /// Exit the current scope, and move up to the parent node.
     ///
     /// If there is no parent scope, then the current scope just becomes null.
-    inline void exit_scope() { m_scope = m_scope->getParent(); }
+    inline void exit_scope() { m_scope = m_scope->parent(); }
 
     /// Returns the equivelant unary operator for the given token |kind|.
     UnaryOp::Operator get_unary_op(Token::Kind kind) const;
@@ -116,9 +127,12 @@ class Parser final {
     /// Parse a set of rune decorators and append them to |runes|. 
     void parse_rune_decorators(std::vector<Rune*>& runes);
 
-    QualType parse_type_specifier();
+    Type* parse_type_specifier();
 
     Defn* parse_initial_definition();
+    
+    Defn* parse_function_definition(std::vector<Rune*> runes, uint64_t start);
+
     Defn* parse_binding_definition(std::vector<Rune*> runes, const Token name);
     Defn* parse_load_definition();
     
@@ -135,28 +149,18 @@ class Parser final {
     Expr* parse_postfix_operator();
     Expr* parse_binary_operator(Expr* base, int8_t precedence);
 
-    Expr* parse_boolean_literal();
-    Expr* parse_integer_literal();
-    Expr* parse_floating_point_literal();
-    Expr* parse_character_literal();
-    Expr* parse_null_pointer_literal();
-    Expr* parse_string_literal();
+    Expr* parse_literal_bool();
+    Expr* parse_literal_int();
+    Expr* parse_literal_float();
+    Expr* parse_literal_char();
+    Expr* parse_literal_null();
+    Expr* parse_literal_string();
 
     Expr* parse_type_cast();
     Expr* parse_parentheses();
     Expr* parse_sizeof_operator();
     Expr* parse_named_reference();
-
-public:
-    /// Create a new parser instance to work on |source|. Optionally, a |path|
-    /// may be provided for better diagnostics i.e. reading in faulty code
-    /// from a file which contains |source|.
-    Parser(const std::string& source, const std::string& path = "");
-
-    /// Attempt to parse and return an abstract syntax tree from the source
-    /// this parser was constructed with.
-    [[nodiscard]] 
-    AST* parse();
+    Expr* parse_struct_initializer(uint64_t start);
 };
 
 } // namespace lace

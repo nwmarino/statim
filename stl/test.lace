@@ -1,0 +1,15 @@
+load "mem.lace";
+load "string.lace";
+
+$public
+main :: () -> s64 {
+    let s: string;
+
+    s.from("Hello world!\n");
+
+    let len: u64 = s.len();
+
+    s.destroy();
+
+    ret len;
+}

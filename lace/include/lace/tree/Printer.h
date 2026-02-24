@@ -1,11 +1,12 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
 #ifndef LOVELACE_PRINTER_H_
 #define LOVELACE_PRINTER_H_
 
+#include "lace/tree/Expr.h"
 #include "lace/tree/Type.h"
 #include "lace/tree/VisitorBase.h"
 
@@ -25,6 +26,7 @@ public:
     void visit(AST& node) override;
 
     void visit(LoadDefn& node) override;
+    void visit(SpaceDefn& node) override;
     void visit(VariableDefn& node) override;
     void visit(ParameterDefn& node) override;
     void visit(FunctionDefn& node) override;
@@ -58,6 +60,7 @@ public:
     void visit(ParenExpr& node) override;
     void visit(RefExpr& node) override;
     void visit(SizeofExpr& node) override;
+    void visit(StructInitExpr& node) override;
     void visit(SubscriptExpr& node) override;
 };
 

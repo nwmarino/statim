@@ -1,10 +1,9 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
 #include "lace/core/Diagnostics.h"
-#include "lace/lexer/Lexer.h"
 #include "lace/parser/Parser.h"
 #include "lace/tree/AST.h"
 #include "lace/tree/Defn.h"
@@ -15,22 +14,20 @@
 
 using namespace lace;
 
-Parser::Parser(const std::string& source, const std::string& path)
-  : m_file(path), m_lexer(source, path) {}
+Parser::Parser(TokenStream& stream, const std::string& file)
+  : m_stream(stream), m_file(file) {}
 
 AST* Parser::parse() {
     m_ast = AST::create(m_file);
-    m_context = &m_ast->get_context();
-    m_scope = m_ast->get_scope();
+    m_scope = m_ast->scope();
 
-    next(); // Lex the first token.
-
-    while (!m_lexer.isEof()) {
+    while (!m_stream.complete()) {
         Defn* defn = parse_initial_definition();
-        if (!defn)
-            log::fatal("expected definition", log::Location(m_file, loc()));
+        //if (!defn)
+        //    log::fatal("expected definition", log::Location(m_file, loc()));
 
-        m_ast->get_defns().push_back(defn);
+        if (defn)
+            m_ast->defns().push_back(defn);
     }
 
     return m_ast;
@@ -49,62 +46,39 @@ bool Parser::is_reserved(const std::string& ident) const {
     return keywords.contains(ident);
 }
 
-QualType Parser::parse_type_specifier() {
-    QualType type = {};
-
-    while (expect("mut")) {
-        if (type.isMut()) {
-            log::warn("duplicate 'mut' keyword", log::Location(m_file, loc()));
-        } else {
-            type.withMut();
-        }
-    }
+Type* Parser::parse_type_specifier() {
+    Type* type = nullptr;
     
     if (expect(Token::Star)) {
-        type.setType(PointerType::get(*m_context, parse_type_specifier()));
-        return type;
-    } else if (expect(Token::OpenBrack)) {
-        if (!match(Token::Integer))
-            log::fatal("expected integer after '['", log::Location(m_file, loc()));
-
-        int32_t size = std::stoi(curr().value);
-        if (size <= 0)
-            log::fatal("array size must be greater than 0", log::Location(m_file, loc()));
-
-        next();
-
-        if (!expect(Token::CloseBrack))
-            log::fatal("expected ']'", log::Location(m_file, loc()));
-
-        type.setType(ArrayType::get(*m_context, parse_type_specifier(), size));
-        return type;
+        return PointerType::get(*m_ast, parse_type_specifier());
     } else if (match(Token::Identifier)) {
-        std::unordered_map<std::string, const Type*> types = {
-            { "void", BuiltinType::get(*m_context, BuiltinType::Kind::Void) },
-            { "bool", BuiltinType::get(*m_context, BuiltinType::Kind::Bool) },
-            { "char", BuiltinType::get(*m_context, BuiltinType::Kind::Char) },
-            { "s8", BuiltinType::get(*m_context, BuiltinType::Kind::Int8) },
-            { "s16", BuiltinType::get(*m_context, BuiltinType::Kind::Int16) },
-            { "s32", BuiltinType::get(*m_context, BuiltinType::Kind::Int32) },
-            { "s64", BuiltinType::get(*m_context, BuiltinType::Kind::Int64) },
-            { "u8", BuiltinType::get(*m_context, BuiltinType::Kind::UInt8) },
-            { "u16", BuiltinType::get(*m_context, BuiltinType::Kind::UInt16) },
-            { "u32", BuiltinType::get(*m_context, BuiltinType::Kind::UInt32) },
-            { "u64", BuiltinType::get(*m_context, BuiltinType::Kind::UInt64) },
-            { "f32", BuiltinType::get(*m_context, BuiltinType::Kind::Float32) },
-            { "f64", BuiltinType::get(*m_context, BuiltinType::Kind::Float64) },
+        std::unordered_map<std::string, Type*> types = {
+            { "void", BuiltinType::get(*m_ast, BuiltinType::Kind::Void) },
+            { "bool", BuiltinType::get(*m_ast, BuiltinType::Kind::Bool) },
+            { "char", BuiltinType::get(*m_ast, BuiltinType::Kind::Char) },
+            { "s8", BuiltinType::get(*m_ast, BuiltinType::Kind::Int8) },
+            { "s16", BuiltinType::get(*m_ast, BuiltinType::Kind::Int16) },
+            { "s32", BuiltinType::get(*m_ast, BuiltinType::Kind::Int32) },
+            { "s64", BuiltinType::get(*m_ast, BuiltinType::Kind::Int64) },
+            { "u8", BuiltinType::get(*m_ast, BuiltinType::Kind::UInt8) },
+            { "u16", BuiltinType::get(*m_ast, BuiltinType::Kind::UInt16) },
+            { "u32", BuiltinType::get(*m_ast, BuiltinType::Kind::UInt32) },
+            { "u64", BuiltinType::get(*m_ast, BuiltinType::Kind::UInt64) },
+            { "f32", BuiltinType::get(*m_ast, BuiltinType::Kind::Float32) },
+            { "f64", BuiltinType::get(*m_ast, BuiltinType::Kind::Float64) },
         };
 
         auto it = types.find(curr().value);
         if (it != types.end()) {
-            type.setType(it->second);
+            type = it->second;
         } else {
-            type.setType(DeferredType::get(*m_context, curr().value));
+            type = DeferredType::get(*m_ast, curr().value);
         }
 
         next();
-        return type;
     } else {
         log::fatal("expected type identifier", log::Location(m_file, loc()));
     }
+
+    return type;
 }

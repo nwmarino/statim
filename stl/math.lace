@@ -1,0 +1,22 @@
+$public
+stl :: space {
+
+$public
+min :: (x: s64, y: s64) -> s64 {
+    if x <= y {
+        ret x;
+    } else {
+        ret y;
+    }
+}
+
+$public
+max :: (x: s64, y: s64) -> s64 {
+    if x >= y {
+        ret x;
+    } else {
+        ret y;
+    }
+}
+
+} // space stl

@@ -3,10 +3,10 @@
 //  All rights reserved.
 //
 
-#include "lir/graph/CFG.hpp"
-#include "lir/graph/Builder.hpp"
-#include "lir/graph/Constant.hpp"
-#include "lir/graph/Instruction.hpp"
+#include "lir/graph/CFG.h"
+#include "lir/graph/Builder.h"
+#include "lir/graph/Constant.h"
+#include "lir/graph/Instruction.h"
 
 using namespace lir;
 

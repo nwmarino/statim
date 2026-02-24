@@ -3,8 +3,8 @@
 //  All rights reserved.
 //
 
-#ifndef LOVELACE_LIR_CODEGEN_H_
-#define LOVELACE_LIR_CODEGEN_H_
+#ifndef LACE_LIR_CODEGEN_H_
+#define LACE_LIR_CODEGEN_H_
 
 //
 //  This header file declares the LIRCodegen class, whom instances thereof 
@@ -17,12 +17,13 @@
 #include "lace/tree/Type.h"
 #include "lace/tree/VisitorBase.h"
 
-#include "lir/graph/BasicBlock.hpp"
-#include "lir/graph/Builder.hpp"
-#include "lir/graph/CFG.hpp"
-#include "lir/graph/Function.hpp"
-#include "lir/graph/Type.hpp"
-#include "lir/machine/Machine.hpp"
+#include "lir/graph/BasicBlock.h"
+#include "lir/graph/Builder.h"
+#include "lir/graph/CFG.h"
+#include "lir/graph/Function.h"
+#include "lir/graph/Type.h"
+#include "lir/machine/Machine.h"
+#include <unordered_map>
 
 namespace lace {
 
@@ -37,6 +38,15 @@ class LIRCodegen final {
     const lir::Machine& m_mach;
 
     const AST* m_ast;
+
+    /// The current stack of namespaces for which the current location in
+    /// source resides.
+    std::vector<const SpaceDefn*> m_namespaces = {};
+
+    std::unordered_map<const StructDefn*, lir::StructType*> m_structs = {};
+    std::unordered_map<const VariableDefn*, lir::Global*> m_globals = {};
+    std::unordered_map<const FunctionDefn*, lir::Function*> m_funcs = {};
+
     lir::CFG& m_cfg;
     lir::Builder m_builder;
     lir::Function* m_func = nullptr;
@@ -47,12 +57,26 @@ public:
       : m_options(options), m_mach(cfg.get_machine()), m_ast(ast), m_cfg(cfg),
         m_builder(cfg) {}
 
+    LIRCodegen(const LIRCodegen&) = delete;
+    void operator=(const LIRCodegen&) = delete;
+
+    LIRCodegen(LIRCodegen&&) noexcept = delete;
+    void operator=(LIRCodegen&&) noexcept = delete;
+
     /// Run the code generation process.
     void run();
 
 private:
     /// Lower the given lace |type| to its LIR equivelant, where possible.
-    lir::Type* to_lir_type(const QualType& type);
+    lir::Type* to_lir_type(const Type* type);
+
+    /// Enter the given name |space|.
+    void enter_namespace(const SpaceDefn* space);
+
+    /// Exit the current namespace, and move up one level.
+    void exit_namespace();
+
+    std::string get_namespace_prefix() const;
 
     lir::Function* get_function(const std::string& name, lir::Type* result = nullptr,
                                 const std::vector<lir::Type*>& args = {});
@@ -64,27 +88,30 @@ private:
     ///
     /// Ultimately, the type of the returned value will be a 8-bit integer 
     /// representation a.k.a boolean.
-    lir::Value* inject_comparison(lir::Value *value);
+    lir::Value* inject_comparison(lir::Value* value);
 
     /// Generate an empty lowering for the given |defn|.
-    void codegen_initial_definition(const Defn *defn);
+    void codegen_initial_definition(const Defn* defn);
 
     /// Generate code for the body of the given |defn|. 
     /// Assumes that the definition has been lowered already, and exists by 
     /// name in the graph.
-    void codegen_lowered_definition(const Defn *defn);
+    void codegen_lowered_definition(const Defn* defn);
 
-    lir::Function* codegenInitialFunction(const FunctionDefn* defn);
-    lir::Function *codegen_lowered_function(const FunctionDefn *defn);
+    void codegen_initial_namespace(const SpaceDefn* defn);
+    void codegen_lowered_namespace(const SpaceDefn* defn);
 
-    lir::Global *codegen_initial_global(const VariableDefn *defn);
-    lir::Global *codegen_lowered_global(const VariableDefn *defn);
+    lir::Function* codegen_initial_function(const FunctionDefn* defn);
+    lir::Function* codegen_lowered_function(const FunctionDefn* defn);
 
-    lir::StructType *codegen_initial_structure(const StructDefn *defn);
-    lir::StructType *codegen_lowered_structure(const StructDefn *defn);
+    lir::Global* codegen_initial_global(const VariableDefn* defn);
+    lir::Global* codegen_lowered_global(const VariableDefn* defn);
+
+    lir::StructType* codegen_initial_structure(const StructDefn* defn);
+    lir::StructType* codegen_lowered_structure(const StructDefn* defn);
 
     /// Generate a LIR local for the given local variable |defn|.
-    lir::Local *codegen_local_variable(const VariableDefn *defn);
+    lir::Local* codegen_local_variable(const VariableDefn* defn);
 
     /// Generate a value (rvalue) for the given |expr|.
     lir::Value* codegen_valued_expression(const Expr* expr);
@@ -160,6 +187,7 @@ private:
     lir::Value* codegen_function_call(const CallExpr* expr);
     lir::Value* codegen_parentheses(const ParenExpr* expr);
     lir::Value* codegen_sizeof(const SizeofExpr* expr);
+    lir::Value* codegen_struct_init(const StructInitExpr* expr);
 
     /// Generate code for an arbitrary |stmt|.
     void codegen_statement(const Stmt *stmt);
@@ -179,4 +207,4 @@ private:
 
 } // namespace lace
 
-#endif // LOVELACE_LIR_CODEGEN_H_
+#endif // LACE_LIR_CODEGEN_H_

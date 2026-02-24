@@ -3,10 +3,10 @@
 //  All rights reserved.
 //
 
-#include "lir/graph/BasicBlock.hpp"
-#include "lir/graph/CFG.hpp"
-#include "lir/graph/Value.hpp"
-#include "lir/graph/Function.hpp"
+#include "lir/graph/BasicBlock.h"
+#include "lir/graph/CFG.h"
+#include "lir/graph/Value.h"
+#include "lir/graph/Function.h"
 
 #include <algorithm>
 #include <format>

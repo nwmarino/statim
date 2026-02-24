@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
@@ -18,117 +18,12 @@ Stmt* Parser::parse_initial_statement() {
         return parse_block_statement();
     } else if (match(Token::Sign)) {
         return parse_rune_statement();
-    //} else if (match("asm")) {
-    //   return parse_inline_assembly_statement();
     } else if (match("let")) {
         return parse_declarative_statement();
     } else {
         return parse_control_statement();
     }
 }
-
-/*
-Stmt* Parser::parse_inline_assembly_statement() {
-    const SourceLocation start = loc();
-    next(); // 'asm'
-
-    if (!expect(Token::SetBrace))
-        m_diags.fatal("expected '{'", SourceSpan(loc()));
-
-    string iasm;
-    vector<Expr*> args = {};
-    vector<string> outs = {};
-    vector<string> ins = {};
-    vector<string> clobbers = {};
-
-    // Parse the assembly template (between '{' and the first ':').
-    while (!expect(Token::Colon)) {
-        if (!match(Token::String))
-            m_diags.fatal("expected inline assembly string literal", SourceSpan(loc()));
-
-        iasm += last().value;
-        if (iasm.back() != '\n')
-            iasm.push_back('\n');
-        
-        next();
-    }
-
-    // Parse the output constraints (between the first ':' and the second ':').
-    while (!expect(Token::Colon)) {
-        if (!match(Token::String))
-            m_diags.fatal("expected output constraint string", SourceSpan(loc()));
-
-        outs.push_back(last().value);
-        next();
-
-        if (!expect(Token::SetParen))
-            m_diags.fatal("expected '('", SourceSpan(loc()));
-
-        Expr* arg = parse_initial_expression();
-        if (!arg)
-            m_diags.fatal("expected expression", SourceSpan(loc()));
-
-        args.push_back(arg);
-
-        if (!expect(Token::EndParen))
-            m_diags.fatal("expected ')'", SourceSpan(loc()));
-
-        if (expect(Token::Colon))
-            break;
-
-        if (!expect(Token::Comma))
-            m_diags.fatal("expected ','", SourceSpan(loc()));
-    }
-
-    // Parse the input constraints (between the second ':' and the third ':').
-    while (!expect(Token::Colon)) {
-        if (!match(Token::String))
-            m_diags.fatal("expected input constraint string", SourceSpan(loc()));
-
-        ins.push_back(last().value);
-        next();
-
-        if (!expect(Token::SetParen))
-            m_diags.fatal("expected '('", SourceSpan(loc()));
-
-        Expr* arg = parse_initial_expression();
-        if (!arg)
-            m_diags.fatal("expected expression", SourceSpan(loc()));
-
-        args.push_back(arg);
-
-        if (!expect(Token::EndParen))
-            m_diags.fatal("expected ')'", SourceSpan(loc()));
-
-        if (expect(Token::Colon))
-            break;
-
-        if (!expect(Token::Comma))
-            m_diags.fatal("expected ','", SourceSpan(loc()));
-    }
-
-    // Parse the clobbers (between the third ':' and the '}').
-    while (!match(Token::EndBrace)) {
-        if (!match(Token::String))
-            m_diags.fatal("expected clobber string", SourceSpan(loc()));
-
-        clobbers.push_back(last().value);
-        next();
-
-        if (match(Token::EndBrace))
-            break;
-
-        if (!expect(Token::Comma))
-            m_diags.fatal("expected ','", SourceSpan(loc()));
-    }
-
-    const SourceLocation end = loc();
-    next(); // ')'
-
-    return AsmStmt::create(
-        *m_context, SourceSpan(start, end), iasm, outs, ins, args, clobbers);
-}
-*/
 
 Stmt* Parser::parse_block_statement() {
     SourceLocation start = loc();
@@ -154,16 +49,16 @@ Stmt* Parser::parse_block_statement() {
     SourceLocation end = loc();
     next(); // '}'
 
-    return BlockStmt::create(*m_context, SourceSpan(start, end), scope, stmts);
+    return BlockStmt::create(*m_ast, SourceSpan(start, end), scope, stmts);
 }
 
 Stmt* Parser::parse_control_statement() {
     const Token ctrl = curr();
     
     if (expect("stop")) {
-        return StopStmt::create(*m_context, since(ctrl.loc));
+        return StopStmt::create(*m_ast, since(ctrl.loc));
     } else if (expect("restart")) {
-        return RestartStmt::create(*m_context, since(ctrl.loc));
+        return RestartStmt::create(*m_ast, since(ctrl.loc));
     } else if (expect("ret")) {
         Expr* expr = nullptr;
         if (!expect(Token::Semi)) {
@@ -172,10 +67,14 @@ Stmt* Parser::parse_control_statement() {
                 log::fatal("expected ';'", log::Span(m_file, since(loc())));
         }
 
-        return RetStmt::create(*m_context, since(ctrl.loc), expr);
+        return RetStmt::create(*m_ast, since(ctrl.loc), expr);
     } else if (expect("if")) {
+        m_allow_inits = false;
+
         Expr* cond = parse_initial_expression();
         assert(cond && "unable to parse 'if' condition!");
+
+        m_allow_inits = true;
 
         Stmt* then_body = parse_initial_statement();
         assert(then_body && "unable to parse 'if' then body!");
@@ -187,11 +86,14 @@ Stmt* Parser::parse_control_statement() {
         }
 
         return IfStmt::create(
-            *m_context, since(ctrl.loc), cond, then_body, else_body);
+            *m_ast, since(ctrl.loc), cond, then_body, else_body);
     } else if (expect("until")) {
+        m_allow_inits = false;
         Expr* cond = parse_initial_expression();
         if (!cond)
             log::fatal("expected 'until' condition", log::Span(m_file, since(loc())));
+
+        m_allow_inits = true;
 
         Stmt* body = nullptr;
         if (!match(Token::Semi)) {
@@ -200,13 +102,13 @@ Stmt* Parser::parse_control_statement() {
                 log::fatal("expected 'until' body", log::Span(m_file, since(loc())));
         }
 
-        return UntilStmt::create(*m_context, since(ctrl.loc), cond, body);
+        return UntilStmt::create(*m_ast, since(ctrl.loc), cond, body);
     } else {
         Expr* expr = parse_initial_expression();
         if (!expr)
             log::fatal("expected statement", log::Span(m_file, since(loc())));
 
-        return AdapterStmt::create(*m_context, expr);
+        return AdapterStmt::create(*m_ast, expr);
     }
 }
 
@@ -223,7 +125,7 @@ Stmt* Parser::parse_declarative_statement() {
     if (!expect(Token::Colon))
         log::fatal("expected ':'", log::Span(m_file, since(loc())));
 
-    QualType type = parse_type_specifier();
+    Type* type = parse_type_specifier();
 
     SourceLocation end = loc();
     Expr* init = nullptr;
@@ -238,25 +140,30 @@ Stmt* Parser::parse_declarative_statement() {
     }
 
     VariableDefn* var = VariableDefn::create(
-        *m_context, 
+        *m_ast, 
         SourceSpan(start, end), 
         name, 
         {}, // runes
         type, 
         init,
-        false);
+        false
+    );
 
-    m_scope->add(var);
-    return AdapterStmt::create(*m_context, var);
+    if (!m_scope->add(var)) {
+        log::fatal("name already exists in scope: " + name, 
+            log::Span(m_file, since(loc())));
+    }
+
+    return AdapterStmt::create(*m_ast, var);
 }
 
 Stmt* Parser::parse_rune_statement() {
     const SourceLocation start = loc();
     next(); // '$'
 
-    static std::unordered_map<std::string, Rune::Type> runes = {
-        { "abort", Rune::Abort},
-        { "unreachable", Rune::Unreachable },
+    static std::unordered_map<std::string, Rune::Kind> runes = {
+        { "abort", Rune::Kind::Abort},
+        { "unreachable", Rune::Kind::Unreachable },
     };
 
     if (!match(Token::Identifier))
@@ -266,8 +173,8 @@ Stmt* Parser::parse_rune_statement() {
         log::fatal("unknown rune: " + curr().value, log::Span(m_file, loc()));
     
     const SourceLocation end = loc();
-    Rune::Type type = runes[curr().value];
+    Rune::Kind kind = runes[curr().value];
     next();
 
-    return RuneStmt::create(*m_context, SourceSpan(start, end), new Rune(type));
+    return RuneStmt::create(*m_ast, SourceSpan(start, end), new Rune(kind));
 }

@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
@@ -11,51 +11,23 @@
 
 using namespace lace;
 
-//>==-----------------------------------------------------------------------------------------------
-//                                      QualType Implementation
-//>==-----------------------------------------------------------------------------------------------
+//>==---------------------------------------------------------------------------
+//                          AliasType Implementation
+//>==---------------------------------------------------------------------------
 
-bool QualType::compare(const QualType& other) const {
-    return /* m_quals == other.m_quals && */ m_type->compare(other.getType());
-}
-
-bool QualType::canCast(const QualType& other, bool implicitly) const {
-    // @Todo: reinvent this, but careful of (mut lval) <- (immut rval) failing.
-    // In the above case, the type checker falls back to trying a cast, but 
-    // fails due to differences in mutability. Needs more thorough context.
-    
-    //if (other.is_mut() && !is_mut())
-    //    return false;
-
-    return m_type->canCast(other.getType(), implicitly);
-}
-
-std::string QualType::string() const {
-    std::string res = "";
-
-    if (isMut())
-        res += "mut ";
-
-    return res + m_type->string();
-}
-
-//>==-----------------------------------------------------------------------------------------------
-//                                      AliasType Implementation
-//>==-----------------------------------------------------------------------------------------------
-
-AliasType* AliasType::create(AST::Context& ctx, const QualType& underlying, const AliasDefn* defn) {
+AliasType* AliasType::create(AST& ast, Type* aliased, AliasDefn* defn) {
     assert(defn && "defn cannot be null!");
     
-    AliasType* type = new AliasType(underlying, defn);
+    AliasType* type = new AliasType(aliased, defn);
     assert(type);
 
-    ctx.m_aliases.emplace(defn->get_name(), type);
+    ast.m_types.aliases.emplace(defn->name(), type);
     return type;
 }
 
-AliasType* AliasType::get(AST::Context& ctx, const std::string &name) {
-    auto it = ctx.m_aliases.find(name);
-    if (it != ctx.m_aliases.end())
+AliasType* AliasType::get(AST& ast, const std::string &name) {
+    auto it = ast.m_types.aliases.find(name);
+    if (it != ast.m_types.aliases.end())
         return it->second;
 
     return nullptr;
@@ -64,146 +36,117 @@ AliasType* AliasType::get(AST::Context& ctx, const std::string &name) {
 std::string AliasType::string() const {
     assert(m_defn && "type has no declaration set!");
 
-    return m_defn->get_name();
+    return m_defn->name();
 }
 
-Result AliasType::canCast(const Type* other, bool implicitly) const {
+bool AliasType::can_cast(const Type* other, bool implicit) const {
     assert(other && "other type cannot be null!");
 
-    return m_underlying.canCast(other, implicitly);
+    return m_aliased->can_cast(other, implicit);
 }
 
-//>==-----------------------------------------------------------------------------------------------
-//                                      ArrayType Implementation
-//>==-----------------------------------------------------------------------------------------------
+//>==---------------------------------------------------------------------------
+//                          BuiltinType Implementation
+//>==---------------------------------------------------------------------------
 
-ArrayType* ArrayType::get(AST::Context& ctx, const QualType& element, uint32_t size) {
-    ArrayType* type = new ArrayType(element, size);
-    assert(type);
-
-    ctx.m_arrays.push_back(type);
-    return type;
-}
-
-Result ArrayType::compare(const Type* other) const {
-    assert(other && "other type cannot be null!");
-
-    if (!other->isClass(Class::Array))
-        return false;
-
-    auto array_type = static_cast<const ArrayType*>(other);
-    return m_size == array_type->size() && m_element.compare(array_type->element());
-}
-
-Result ArrayType::canCast(const Type* other, bool implicitly) const {
-    assert(other && "other type cannot be null!");
-
-    // Can only cast [...]T -> *T.
-    if (!other->isClass(Class::Pointer))
-        return false;
-
-    return m_element.canCast(static_cast<const PointerType*>(other)->pointee());
-}
-
-//>==-----------------------------------------------------------------------------------------------
-//                                      BuiltinType Implementation
-//>==-----------------------------------------------------------------------------------------------
-
-BuiltinType* BuiltinType::get(AST::Context &ctx, Kind kind) {
-    return ctx.m_builtins[static_cast<uint32_t>(kind)];
+BuiltinType* BuiltinType::get(AST& ast, Kind kind) {
+    return ast.m_types.builtins[static_cast<uint32_t>(kind)];
 }
 
 std::string BuiltinType::string() const {
-    switch (m_kind) {
-        case Kind::Void:      
-            return "void";
-        case Kind::Bool:      
-            return "bool";
-        case Kind::Char:      
-            return "char";
-        case Kind::Int8:      
-            return "s8";
-        case Kind::Int16:     
-            return "s16";
-        case Kind::Int32:     
-            return "s32";
-        case Kind::Int64:     
-            return "s64";
-        case Kind::UInt8:     
-            return "u8";
-        case Kind::UInt16:    
-            return "u16";
-        case Kind::UInt32:    
-            return "u32";
-        case Kind::UInt64:    
-            return "u64";
-        case Kind::Float32:   
-            return "f32";
-        case Kind::Float64:   
-            return "f64";
+    switch (m_kind) 
+    {
+    case Kind::Void:      
+        return "void";
+    case Kind::Bool:      
+        return "bool";
+    case Kind::Char:      
+        return "char";
+    case Kind::Int8:      
+        return "s8";
+    case Kind::Int16:     
+        return "s16";
+    case Kind::Int32:     
+        return "s32";
+    case Kind::Int64:     
+        return "s64";
+    case Kind::UInt8:     
+        return "u8";
+    case Kind::UInt16:    
+        return "u16";
+    case Kind::UInt32:    
+        return "u32";
+    case Kind::UInt64:    
+        return "u64";
+    case Kind::Float32:   
+        return "f32";
+    case Kind::Float64:   
+        return "f64";
     }
 }
 
-Result BuiltinType::compare(const Type* other) const {
+bool BuiltinType::compare(const Type* other) const {
     assert(other && "other type cannot be null!");
 
-    if (!other->isClass(Class::Builtin))
+    auto BT = dynamic_cast<const BuiltinType*>(other);
+    if (!BT)
         return false;
 
-    return m_kind == static_cast<const BuiltinType*>(other)->kind();
+    return m_kind == BT->kind();
 }
 
-Result BuiltinType::canCast(const Type* other, bool implicitly) const {
+bool BuiltinType::can_cast(const Type* other, bool implicit) const {
     assert(other && "other type cannot be null!");
 
-    if (implicitly) {
-        if (!other->isClass(Class::Builtin))
+    if (implicit) {
+        if (!dynamic_cast<const BuiltinType*>(other))
             return false;
 
-        if (isFloatingPoint() && other->isInteger())
+        if (is_floating_point() && other->is_integer())
             return false;
 
-        return isVoid() == other->isVoid();
+        return is_void() == other->is_void();
     } else {
-        if (other->isClass(Class::Builtin))
-            return isVoid() == other->isVoid();
+        if (dynamic_cast<const BuiltinType*>(other))
+            return is_void() == other->is_void();
 
-        if (other->isClass(Class::Pointer))
-            return isInteger();
+        // int -> pointer is allowed, explicitly.
+        if (dynamic_cast<const PointerType*>(other))
+            return is_integer();
 
         return false;
     }
 }
 
-DeferredType* DeferredType::get(AST::Context& ctx, const std::string& name) {
+DeferredType* DeferredType::get(AST& ast, const std::string& name) {
     DeferredType* type = new DeferredType(name);
     assert(type);
 
-    ctx.m_deferred.push_back(type);
+    ast.m_types.deferred.push_back(type);
     return type;
 }
 
-//>==-----------------------------------------------------------------------------------------------
-//                                      EnumType Implementation
-//>==-----------------------------------------------------------------------------------------------
+//>==---------------------------------------------------------------------------
+//                          EnumType Implementation
+//>==---------------------------------------------------------------------------
 
-EnumType* EnumType::create(AST::Context& ctx, const QualType& underlying, const EnumDefn* defn) {
+EnumType* EnumType::create(AST& ast, Type* underlying, EnumDefn* defn) {
     assert(defn && "definition cannot be null!");
 
-    auto it = ctx.m_enums.find(defn->get_name());
-    if (it != ctx.m_enums.end())
+    auto it = ast.m_types.enums.find(defn->name());
+    if (it != ast.m_types.enums.end())
         return nullptr;
 
     EnumType* type = new EnumType(underlying, defn);
     assert(type);
 
-    ctx.m_enums.emplace(defn->get_name(), type);
+    ast.m_types.enums.emplace(defn->name(), type);
     return type;
 }
 
-EnumType* EnumType::get(AST::Context& ctx, const std::string& name) {
-    auto it = ctx.m_enums.find(name);
-    if (it != ctx.m_enums.end())
+EnumType* EnumType::get(AST& ast, const std::string& name) {
+    auto it = ast.m_types.enums.find(name);
+    if (it != ast.m_types.enums.end())
         return it->second;
 
     return nullptr;
@@ -212,101 +155,103 @@ EnumType* EnumType::get(AST::Context& ctx, const std::string& name) {
 std::string EnumType::string() const {
     assert(m_defn && "type has no declaration set!");
 
-    return m_defn->get_name();
+    return m_defn->name();
 }
 
-Result EnumType::canCast(const Type* other, bool implicitly) const {
+bool EnumType::can_cast(const Type* other, bool implicit) const {
     assert(other && "other type cannot be null!");
     
-    return other->isInteger();
+    return other->is_integer();
 }
 
-//>==-----------------------------------------------------------------------------------------------
-//                                      FunctionType Implementation
-//>==-----------------------------------------------------------------------------------------------
+//>==---------------------------------------------------------------------------
+//                          FunctionType Implementation
+//>==---------------------------------------------------------------------------
 
-FunctionType* FunctionType::get(AST::Context& ctx, const QualType& ret, 
-                                const std::vector<QualType>& params) {
-    FunctionType* type = new FunctionType(ret, params);
+FunctionType* FunctionType::get(AST& ast, Type* result, 
+                                const std::vector<Type*>& params) {
+    FunctionType* type = new FunctionType(result, params);
     assert(type);
     
-    ctx.m_functions.push_back(type);
+    ast.m_types.functions.push_back(type);
     return type;
 }
 
 std::string FunctionType::string() const {
     std::string res = "(";
-    for (uint32_t i = 0, e = numParams(); i != e; ++i) {
-        res += m_params[i].string();
+    for (uint32_t i = 0, e = num_params(); i != e; ++i) {
+        res += m_params[i]->string();
         if (i + 1 != e)
             res += ", ";
     }
 
-    return std::format("{}) -> {}", res, m_result.string());
+    return std::format("{}) -> {}", res, m_result->string());
 }
 
-//>==-----------------------------------------------------------------------------------------------
-//                                      PointerType Implementation
-//>==-----------------------------------------------------------------------------------------------
+//>==---------------------------------------------------------------------------
+//                          PointerType Implementation
+//>==---------------------------------------------------------------------------
 
-PointerType* PointerType::get(AST::Context& ctx, const QualType& pointee) {
+PointerType* PointerType::get(AST& ast, Type* pointee) {
     PointerType* type = new PointerType(pointee);
     assert(type);
 
-    ctx.m_pointers.push_back(type);
+    ast.m_types.pointers.push_back(type);
     return type;
 }
 
-Result PointerType::compare(const Type* other) const {
+bool PointerType::compare(const Type* other) const {
     assert(other && "other type cannot be null!");
 
-    if (!other->isClass(Class::Pointer))
+    auto PT = dynamic_cast<const PointerType*>(other);
+    if (!PT)
         return false;
 
-    return m_pointee.compare(static_cast<const PointerType*>(other)->pointee());
+    return m_pointee->compare(PT->pointee());
 }
 
-Result PointerType::canCast(const Type* other, bool implicitly) const {
+bool PointerType::can_cast(const Type* other, bool implicit) const {
     assert(other && "other type cannot be null!");
 
-    if (implicitly) {
+    if (implicit) {
         // Can implicitly cast *void -> *T.
-        if (m_pointee->isVoid())
+        if (m_pointee->is_void())
             return true;
 
         // Cannot implicitly cast away pointer indirection.
-        if (!other->isClass(Class::Pointer))
+        auto PT = dynamic_cast<const PointerType*>(other);
+        if (!PT)
             return false;
 
         // Can implicitly cast *T -> *void.
-        return static_cast<const PointerType*>(other)->pointee()->isVoid();
+        return PT->pointee()->is_void();
     } else {
         // Can explicitly cast to other pointer types or integers.
-        return other->isClass(Class::Pointer) || other->isInteger();
+        return other->is_integer() || dynamic_cast<const PointerType*>(other);
     }
 }
 
-//>==-----------------------------------------------------------------------------------------------
-//                                      StructType Implementation
-//>==-----------------------------------------------------------------------------------------------
+//>==---------------------------------------------------------------------------
+//                          StructType Implementation
+//>==---------------------------------------------------------------------------
 
-StructType* StructType::create(AST::Context& ctx, const StructDefn* defn) {
+StructType* StructType::create(AST& ast, StructDefn* defn) {
     assert(defn && "definition cannot be null!");
     
-    auto it = ctx.m_structs.find(defn->get_name());
-    if (it != ctx.m_structs.end())
+    auto it = ast.m_types.structs.find(defn->name());
+    if (it != ast.m_types.structs.end())
         return nullptr;
 
     StructType* type = new StructType(defn);
     assert(type);
 
-    ctx.m_structs.emplace(defn->get_name(), type);
+    ast.m_types.structs.emplace(defn->name(), type);
     return type;
 }
 
-StructType* StructType::get(AST::Context& ctx, const std::string& name) {
-    auto it = ctx.m_structs.find(name);
-    if (it != ctx.m_structs.end())
+StructType* StructType::get(AST& ast, const std::string& name) {
+    auto it = ast.m_types.structs.find(name);
+    if (it != ast.m_types.structs.end())
         return it->second;
 
     return nullptr;
@@ -314,6 +259,5 @@ StructType* StructType::get(AST::Context& ctx, const std::string& name) {
 
 std::string StructType::string() const {
     assert(m_defn && "type has no declaration set!");
-    
-    return m_defn->get_name();
+    return m_defn->name();
 }

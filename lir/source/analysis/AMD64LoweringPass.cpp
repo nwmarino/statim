@@ -3,20 +3,20 @@
 //  All rights reserved.
 //
 
-#include "lir/analysis/AMD64LoweringPass.hpp"
-#include "lir/graph/Constant.hpp"
-#include "lir/graph/Function.hpp"
-#include "lir/graph/Global.hpp"
-#include "lir/graph/Instruction.hpp"
-#include "lir/graph/Type.hpp"
-#include "lir/machine/AMD64.hpp"
-#include "lir/machine/FunctionABI.hpp"
-#include "lir/machine/MachineConstant.hpp"
-#include "lir/machine/MachineFunction.hpp"
-#include "lir/machine/MachineOp.hpp"
-#include "lir/machine/MachineOperand.hpp"
-#include "lir/machine/MachineRegister.hpp"
-#include "lir/machine/Register.hpp"
+#include "lir/analysis/AMD64LoweringPass.h"
+#include "lir/graph/Constant.h"
+#include "lir/graph/Function.h"
+#include "lir/graph/Global.h"
+#include "lir/graph/Instruction.h"
+#include "lir/graph/Type.h"
+#include "lir/machine/AMD64.h"
+#include "lir/machine/FunctionABI.h"
+#include "lir/machine/MachineConstant.h"
+#include "lir/machine/MachineFunction.h"
+#include "lir/machine/MachineOp.h"
+#include "lir/machine/MachineOperand.h"
+#include "lir/machine/MachineRegister.h"
+#include "lir/machine/Register.h"
 
 #include <cstdint>
 #include <string>
@@ -187,7 +187,7 @@ void AMD64LoweringPass::run() {
         // Empty functions should not be lowered, they should either be resolved at link time or 
         // with some library.
         //if (func->empty())
-       //     continue;
+        //    continue;
 
         FunctionABI abi = FunctionABI(m_mach, func);
 
@@ -248,7 +248,8 @@ uint8_t AMD64LoweringPass::get_subreg_byte(const Type *type) const {
     assert(type && "type cannot be null!");
     assert(m_mach.is_scalar(type) && "type must be scalar!");
 
-    switch (m_mach.get_type_size(type)) {
+    const uint32_t bits = m_mach.get_type_size(type);
+    switch (bits) {
         case 8:
             return 1;
         case 16:
@@ -707,9 +708,12 @@ void AMD64LoweringPass::lower_call(const Call* C) {
     assert(MF && "Call callee does not exist!");
 
     const FunctionABI& abi = MF->abi();
+    uint32_t sp_buffer = 0;
 
     for (uint32_t i = 0; i < C->num_args(); ++i) {
         const FunctionABI::Location& loc = abi.getParamLocation(i);
+        sp_buffer += loc.size;
+
         const Value* arg_val = C->get_arg(i);
         const MachineOperand arg_op = to_operand(arg_val);
         
@@ -743,6 +747,9 @@ void AMD64LoweringPass::lower_call(const Call* C) {
                 .add_mem(MachineRegister(RSP, 8), loc.offset);
         }
     }
+
+    StackFrame& frame = m_func->get_stack_frame();
+    frame.set_extra(std::max(frame.extra(), sp_buffer));
 
     if (abi.hasResult()) {
         // The result register needs to implicitly defined by the call.
@@ -850,7 +857,7 @@ void AMD64LoweringPass::lower_phi(const Phi* P) {
     MachineLabel* curr = m_insert;
 
     for (uint32_t i = 0; i < P->num_edges(); ++i) {
-        Phi::Edge edge = P->get_edge(i);
+        Phi::CEdge edge = P->get_edge(i);
 
         m_insert = m_func->get_label(edge.pred->position());
         assert(m_insert);

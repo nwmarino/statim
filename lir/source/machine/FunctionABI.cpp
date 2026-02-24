@@ -3,8 +3,8 @@
 //  All rights reserved.
 //
 
-#include "lir/machine/AMD64.hpp"
-#include "lir/machine/FunctionABI.hpp"
+#include "lir/machine/AMD64.h"
+#include "lir/machine/FunctionABI.h"
 
 using namespace lir;
 
@@ -25,12 +25,17 @@ FunctionABI::FunctionABI(const Machine& mach, const Function* func) {
             rReg = AMD64_Register::RAX;
         }
 
-        m_result = Location { Location::Kind::Register, rReg };
+        m_result = Location { 
+            Location::Kind::Register, 
+            mach.get_type_size(result) / 8,    
+            rReg 
+        };
     }
 
     for (const Type* param : type->get_params()) {
         m_params.push_back(Location {
             .kind = Location::Kind::Stack,
+            .size = mach.get_type_size(param) / 8,
             .offset = offset
         });
 

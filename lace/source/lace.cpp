@@ -6,19 +6,22 @@
 #include "lace/core/Diagnostics.h"
 #include "lace/core/ThreadPool.h"
 #include "lace/core/Options.h"
+#include "lace/lexer/Lexer.h"
+#include "lace/lexer/TokenStream.h"
 #include "lace/parser/Parser.h"
 #include "lace/tools/Files.h"
 #include "lace/tree/AST.h"
+#include "lace/tree/Defn.h"
 #include "lace/tree/LIRCodegen.h"
 #include "lace/tree/Printer.h"
 #include "lace/tree/SemanticAnalysis.h"
 #include "lace/tree/SymbolAnalysis.h"
 #include "lace/tree/TypeResolution.h"
 
-#include "lir/analysis/AMD64LoweringPass.hpp"
+#include "lir/analysis/AMD64LoweringPass.h"
 #include "lir/machine/AsmWriter.h"
-#include "lir/machine/Machine.hpp"
-#include "lir/machine/Printer.hpp"
+#include "lir/machine/Machine.h"
+#include "lir/machine/Printer.h"
 #include "lir/machine/RegisterAnalysis.h"
 
 #include <chrono>
@@ -56,6 +59,7 @@ struct InputFile final {
 
 /// A mapping between the absolute path of an input file and its parsed AST.
 static FileTable g_files = {};
+static std::string g_STL = "/home/lovelace/stl";
 
 static inline Timestamp get_time() {
     return high_resolution_clock::now();
@@ -84,13 +88,13 @@ void computeDependencies(const Asts& asts, Asts& ordering, DepTable& deps) {
     for (AST* ast : asts) {
         path parent = absolute(ast->get_file()).parent_path();
     
-        for (Defn* defn : ast->get_defns()) {
+        for (Defn* defn : ast->defns()) {
             LoadDefn* load = dynamic_cast<LoadDefn*>(defn);
             if (!load)
                 continue;
 
             // Find the canonical path for the target file.
-            path target = parent / load->get_path();
+            path target = parent / load->path();
             target = weakly_canonical(target);
 
             auto it = g_files.find(target.string());
@@ -99,7 +103,7 @@ void computeDependencies(const Asts& asts, Asts& ordering, DepTable& deps) {
                 load->set_path(target.string());
             } else {
                 log::fatal("unresolved file: " + target.string(), 
-                    log::Span(ast->get_file(), load->get_span()));
+                    log::Span(ast->get_file(), load->span()));
             }
         }
     }
@@ -129,9 +133,45 @@ void computeDependencies(const Asts& asts, Asts& ordering, DepTable& deps) {
         dfs(ast);
 }
 
+void merge_namespace(AST* ast, Scope* dest, SpaceDefn* incoming) {
+    // Check for an existing namespace in the |dest| scope with the same name.
+    SpaceDefn* existing = dest->get_namespace(incoming->name());
+    if (!existing) {
+        // If an existing namespace does not exist, just try to add the 
+        // namespace as is.
+        if (!dest->add(incoming)) {
+            log::fatal("failed to load namespace, name already exists: " 
+                + incoming->name(), log::Location(ast->get_file(), { 1, 1 }));
+        }
+        
+        return;
+    }
+
+    // An existing namespace with the same name as |incoming| exists.
+    // So, we must recursively merge all definitions in |incoming| with 
+    // whatever may exist in the |dest| scope.
+
+    for (auto& [name, defn] : incoming->scope()->defns()) {
+        // Skip private definitions.
+        if (!defn->has_rune(Rune::Kind::Public))
+            continue;
+
+        if (defn->origin() != incoming->origin())
+            continue;
+
+        if (SpaceDefn* nspace = dynamic_cast<SpaceDefn*>(defn)) {
+            // If we have to import a nested namespace, then merge it too.
+            merge_namespace(ast, existing->scope(), nspace);
+        } else if (!existing->scope()->add(defn)) {
+            log::fatal("name-wise conflict during load: " + name,
+                log::Location(ast->get_file(), { 1, 1 }));
+        }
+    }
+}
+
 /// Resolve the dependent symbols for each tree in |asts|, based on their
-/// dependencies defined in |deps|. Assumes that |asts| contains syntax 
-/// trees in their dependency order.
+/// dependencies defined in |deps|. 
+/// Assumes that |asts| contains syntax trees in their dependency order.
 void resolveDependencies(Options& options, const Asts& asts, const DepTable& deps) {
     for (AST* ast : asts) {
         Asts dep_list = deps.at(ast);
@@ -139,22 +179,26 @@ void resolveDependencies(Options& options, const Asts& asts, const DepTable& dep
 
         // For each dependency, fetch all of its public, named definitions.
         for (AST* dep : dep_list) {
-            for (Defn* defn : dep->get_defns()) {
+            for (Defn* defn : dep->defns()) {
                 NamedDefn* symbol = dynamic_cast<NamedDefn*>(defn);
-                if (symbol && symbol->hasRune(Rune::Public))
+                if (symbol && symbol->has_rune(Rune::Kind::Public))
                     symbols.push_back(symbol);
             }
         }
 
-        Scope* scope = ast->get_scope();
+        Scope* scope = ast->scope();
         for (NamedDefn* symbol : symbols) {
-            bool res = scope->add(symbol);
-            if (!res) {
-                log::fatal("name-wise conflict with an existing definition: " 
-                    + symbol->get_name(), log::Location(ast->get_file(), { 1, 1 }));
+            if (SpaceDefn* nspace = dynamic_cast<SpaceDefn*>(symbol)) {
+                merge_namespace(ast, ast->scope(), nspace);
+            } else {
+                bool res = scope->add(symbol);
+                if (!res) {
+                    log::fatal("name-wise conflict with an existing definition: " 
+                        + symbol->name(), log::Location(ast->get_file(), { 1, 1 }));
+                }
             }
 
-            ast->get_loaded().push_back(symbol);
+            ast->defns().push_back(symbol);
         }
 
         const Timestamp time_namea_start = get_time();
@@ -251,21 +295,38 @@ void drive_lir_backend(const Options &options, const Asts &asts) {
         writer.run(as);
         as.close();
 
-        /*
-        std::string assembler = "as " + ast->get_file() + ".s -o " + ast->get_file() + ".o";
+        const std::string assembler = std::format(
+            "as {}.s -o {}.o", 
+            ast->get_file(), 
+            ast->get_file()
+        );
+
         std::system(assembler.c_str());
-        */
+    }
+
+    if (options.link) {
+        std::string linker = std::format("ld -o {} ", options.output);
+
+        for (AST* ast : asts)
+            linker += std::format("{}.o ", ast->get_file());
+        
+        if (options.stl)
+            linker += std::format("{}/rt.o", g_STL);
+
+        std::system(linker.c_str());
     }
 }
 
-int32_t main(int32_t argc, char *argv[]) {
+int32_t main(int32_t argc, char* argv[]) {
     Options options = {};
     options.output = "main";
     options.opt = Options::OptLevel::Default;
     options.threads = 1;
 
     options.debug = true;
+    options.link = true;
     options.multithread = true;
+    options.stl = true;
     options.verbose = true;
     options.version = true;
     options.dump_ast = true;
@@ -275,6 +336,9 @@ int32_t main(int32_t argc, char *argv[]) {
     log::direct(std::cout);
 
     std::vector<InputFile> files = {
+        InputFile("/home/lovelace/stl/string.lace"),
+        InputFile("/home/lovelace/stl/mem.lace"),
+        InputFile("/home/lovelace/stl/linux.lace"),
     };
 
     for (int32_t i = 1; i < argc; ++i) {
@@ -284,6 +348,8 @@ int32_t main(int32_t argc, char *argv[]) {
             options.verbose = true;
         } else if (arg == "-g") {
             options.debug = true;
+        } else if (arg == "-l") {
+            options.link = true;
         } else if (arg == "-v") {
             log::note("version: " + std::to_string(LACE_VERSION_MAJOR) + "." + 
                 std::to_string(LACE_VERSION_MINOR));
@@ -295,6 +361,10 @@ int32_t main(int32_t argc, char *argv[]) {
             options.opt = Options::OptLevel::Space;
         } else if (arg == "-st") {
             options.multithread = false;
+        } else if (arg == "-stl") {
+            options.stl = true;
+        } else if (arg == "-no-stl") {
+            options.stl = false;
         } else if (arg == "-dump-ast") {
             options.dump_ast = true;
         } else if (arg == "-dump-lir") {
@@ -373,11 +443,17 @@ int32_t main(int32_t argc, char *argv[]) {
                 Timestamp parse_start = get_time();
 
                 std::string contents;
-                if (!readFile(f.file, contents))
+                if (!read_file(f.file, contents))
                     log::flush();
 
-                Parser parser(contents, f.file);
+                TokenStream stream;
+                Lexer lexer(contents, f.file);
+                if (!lexer.lex(stream))
+                    log::flush();
+
+                Parser parser(stream, f.file);
                 f.ast = parser.parse();
+                assert(f.ast);
 
                 if (options.verbose) {
                     duration<double> dur = get_time() - parse_start;
@@ -396,11 +472,17 @@ int32_t main(int32_t argc, char *argv[]) {
         Timestamp parse_start = get_time();
 
         std::string contents;
-        if (!readFile(f.file, contents))
+        if (!read_file(f.file, contents))
             log::flush();
 
-        Parser parser(contents, f.file);
+        TokenStream stream;
+        Lexer lexer(contents, f.file);
+        if (!lexer.lex(stream))
+            log::flush();
+
+        Parser parser(stream, f.file);
         f.ast = parser.parse();
+        assert(f.ast);
         
         if (options.verbose) {
             duration<double> dur = get_time() - parse_start;

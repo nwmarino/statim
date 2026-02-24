@@ -1,7 +1,7 @@
 $public
 main :: () -> s64 {
-    let a: mut bool = true;
-    let b: mut bool = false;
+    let a: bool = true;
+    let b: bool = false;
 
     if a && b {
         a = !b;

@@ -6,7 +6,6 @@
 #ifndef LACE_TOKEN_STREAM_H_
 #define LACE_TOKEN_STREAM_H_
 
-#include "lace/core/Common.h"
 #include "lace/lexer/Token.h"
 
 #include <algorithm>
@@ -37,8 +36,13 @@ public:
 
     /// Returns the current token in the stream.
     [[nodiscard]] const Token& get() const {
-        assert(m_position < size() && "index out of bounds!");
-        return m_tokens[m_position];
+        return get(m_position);
+    }
+
+    /// Returns the token in this stream at the given |position|.
+    [[nodiscard]] const Token& get(uint64_t position) const {
+        assert(position < size() && "index out of bounds!");
+        return m_tokens[position];
     }
 
     /// Returns the current position of this stream.
@@ -56,18 +60,19 @@ public:
     }
 
     /// Seek to the absolute |position| of this stream.
-    /// Fails if the position would exceed the bounds of this stream.
-    [[nodiscard]] Result seek(uint64_t position) {
-        if (position < 0 || position >= size())
-            return false;
-
+    void seek(uint64_t position) {
+        assert(0 <= position && position <= size() && "position out of bounds!");
         m_position = position;
-        return true;
     }
 
     /// Reset the position of this stream.
     void reset() {
         m_position = 0;
+    }
+
+    /// Test if this stream is complete, i.e. the end has been reached.
+    [[nodiscard]] bool complete() const { 
+        return m_position + 1 >= m_tokens.size(); 
     }
 
     /// Returns the size of this stream based on how many tokens are in it.

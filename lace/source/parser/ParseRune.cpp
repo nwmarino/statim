@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
@@ -12,19 +12,16 @@ void Parser::parse_rune_decorators(std::vector<Rune*>& runes) {
     if (!expect(Token::Sign))
         return;
 
-    static std::unordered_map<std::string, Rune::Type> table = {
-        { "intrinsic", Rune::Intrinsic },
-        { "public", Rune::Public },
-        { "private", Rune::Private },
+    static std::unordered_map<std::string, Rune::Kind> table = {
+        { "intrinsic", Rune::Kind::Intrinsic },
+        { "public", Rune::Kind::Public },
+        { "private", Rune::Kind::Private },
     };
 
-    if (expect(Token::OpenBrack)) 
-    {
+    if (expect(Token::OpenBrack)) {
         // '[' means this is a delimited list of runes, so parse runes until a
         // ']' is found.
-        
-        while (!expect(Token::CloseBrack)) 
-        {
+        while (!expect(Token::CloseBrack)) {
             if (!match(Token::Identifier))
                 log::fatal("expected identifier", log::Span(m_file, loc()));
 
@@ -40,13 +37,9 @@ void Parser::parse_rune_decorators(std::vector<Rune*>& runes) {
 
             if (!expect(Token::Comma))
                 log::fatal("expected ','", log::Span(m_file, loc()));
-
         }
-    } 
-    else 
-    {
+    } else {
         // No '[' means this is a single rune.
-
         if (!match(Token::Identifier))
             log::fatal("expected identifier", log::Span(m_file, loc()));
 

@@ -1,35 +1,24 @@
 # Changelog
 
 ## General
-- Remove LLVM backend.
-- Extend some standard library components e.g. runtime, strings, files.
-- Remove some old statim code.
-- Fixed bugs in runtime assembly.
+- Add structure initializers `{ ... }`.
+- Add namespaces `... '::' space { ... }`.
+- Add namespace specifiers `... '::' ...`
+- Add pointer receiver functions `... (...) '::' (...) '->' ... { ... }`
+- Add pointer receiver calls `... '.' ... (...)`
+- Remove the `mut` keyword and qualified types.
 
 ## lace
-- Fixed some formatting bugs in the diagnostics logger.
-- Add phase timing to verbose outputs.
-- Updated code generation for new LIR definitions.
-- Prevent duplicate input files using absolute path.
-- Change header file convention to always use `.h`.
-- Added new `TokenStream` class to later separate concerns with respect 
-to lexing at parse-time.
+- Add new `StructInitExpr` for struct initializer expressions.
+- Add new `SpaceDefn` for namespace definitions.
+- Add new `Specifier` to `RefExpr` for namespace specifiers.
+- Update parser and tests to use new `TokenStream` construct.
+- Removed `mut` qualifier and type mutability contracts.
+- Simplified type system to use raw instances of `Type`, and removed `QualType`.
+- Add automatic (STL) linkiing via `-l` and `-stl/-no-stl` flags.
+- Move `AST::Context` out into `AST` itself, and update all uses.
+- Replace uses of "loaded" with "imports".
 
 ## LIR
-- Redesigned instruction API to use separate classes per instruction type.
-- Cleanup AMD64 lowering code into a dedicated IR pass.
-- Updated machine-specific API to use clearer operand types with better 
-indirection.
-- Updated printer, register analysis, and ASM write passes for new machine API.
-- Added back the `Phi` node.
-- Added the `extract` instruction for constant index field access of aggregates.
-- Split the `pwalk` instruction into separate `access` and `index` instructions
-for addressed structure access and pointer arithmetic, respectively.
-- Move `Function::Arg` to a separate `Parameter` class.
-- Add weak patch for non-i64 indices in pointer arithmetic instructions to sign 
-extend into full x64 registers.
-- Update old machine printer pass.
-- Remove 1-bit integer type `i1`, replaced with instances of `i8` where 
-applicable e.g. comparisons.
-- Replace `Machine` type methods with bit results instead of bytes, and update 
-uses appropriately.
+- Updated SSA rewrite pass to new LIR definitions.
+- Allocate space on the stack for call arguments where applicable.

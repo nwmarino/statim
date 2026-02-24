@@ -3,8 +3,8 @@
 //  All rights reserved.
 //
 
-#include "lir/graph/CFG.hpp"
-#include "lir/graph/Type.hpp"
+#include "lir/graph/CFG.h"
+#include "lir/graph/Type.h"
 
 using namespace lir;
 

@@ -3,7 +3,7 @@
 //  All rights reserved.
 //
 
-#include "lir/machine/AMD64.hpp"
+#include "lir/machine/AMD64.h"
 
 #include <cassert>
 

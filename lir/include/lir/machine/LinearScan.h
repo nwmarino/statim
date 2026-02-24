@@ -6,8 +6,8 @@
 #ifndef LIR_LINEAR_SCAN_H_
 #define LIR_LINEAR_SCAN_H_
 
-#include "lir/machine/MachineFunction.hpp"
-#include "lir/machine/MachineOp.hpp"
+#include "lir/machine/MachineFunction.h"
+#include "lir/machine/MachineOp.h"
 #include "lir/machine/RegisterAllocator.h"
 
 #include <vector>

@@ -1,10 +1,10 @@
 //
-//  Copyright (c) 2025-2026 Nick Marino
+//  Copyright (c) 2025-2026 Nicholas Marino
 //  All rights reserved.
 //
 
-#ifndef LOVELACE_AST_H_
-#define LOVELACE_AST_H_
+#ifndef LACE_AST_H_
+#define LACE_AST_H_
 
 //
 //  This header file declares the AST type, which represents the root of an
@@ -14,6 +14,7 @@
 //  frontend type ownership.
 //
 
+#include "lace/tree/Type.h"
 #include "lace/tree/VisitorBase.h"
 
 #include <cassert>
@@ -24,68 +25,41 @@
 
 namespace lace {
 
-class AliasType;
-class ArrayType;
-class BuiltinType;
-class DeferredType;
 class Defn;
-class EnumType;
-class FunctionType;
-class PointerType;
 class Scope;
-class StructType;
 
 class AST final {
-public:
-    using Defns = std::vector<Defn*>;
+    friend class SymbolAnalysis;
+    friend class AliasType;
+    friend class ArrayType;
+    friend class BuiltinType;
+    friend class DeferredType;
+    friend class EnumType;
+    friend class FunctionType;
+    friend class PointerType;
+    friend class StructType;
 
-    class Context final {
-        friend class SymbolAnalysis;
-        friend class AliasType;
-        friend class ArrayType;
-        friend class BuiltinType;
-        friend class DeferredType;
-        friend class EnumType;
-        friend class FunctionType;
-        friend class PointerType;
-        friend class StructType;
+    using AliasTypePool = std::unordered_map<std::string, AliasType*>;
+    using BuiltinTypePool = std::vector<BuiltinType*>;
+    using DeferredTypePool = std::vector<DeferredType*>;
+    using EnumTypePool = std::unordered_map<std::string, EnumType*>;
+    using FunctionTypePool = std::vector<FunctionType*>;
+    using PointerTypePool = std::vector<PointerType*>;
+    using StructTypePool = std::unordered_map<std::string, StructType*>;
 
-        using AliasTypePool = std::unordered_map<std::string, AliasType*>;
-        using ArrayTypePool = std::vector<ArrayType*>;
-        using BuiltinTypePool = std::vector<BuiltinType*>;
-        using DeferredTypePool = std::vector<DeferredType*>;
-        using EnumTypePool = std::unordered_map<std::string, EnumType*>;
-        using FunctionTypePool = std::vector<FunctionType*>;
-        using PointerTypePool = std::vector<PointerType*>;
-        using StructTypePool = std::unordered_map<std::string, StructType*>;
-
-        AliasTypePool m_aliases = {};
-        ArrayTypePool m_arrays = {};
-        BuiltinTypePool m_builtins = {};
-        DeferredTypePool m_deferred = {};
-        EnumTypePool m_enums = {};
-        FunctionTypePool m_functions = {};
-        PointerTypePool m_pointers = {};
-        StructTypePool m_structs = {};
-
-    public:
-        Context();
-
-        ~Context();
-
-        Context(const Context&) = delete;
-        void operator=(const Context&) = delete;
-
-        Context(Context&&) noexcept = delete;
-        void operator=(Context&&) noexcept = delete;
-    };
-
-private:
-    Context m_context = {};
     std::string m_file;
     std::vector<Defn*> m_defns = {};
-    std::vector<Defn*> m_loaded = {};
     Scope* m_scope = nullptr;
+
+    struct {
+        AliasTypePool aliases = {};
+        BuiltinTypePool builtins = {};
+        DeferredTypePool deferred = {};
+        EnumTypePool enums = {};
+        FunctionTypePool functions = {};
+        PointerTypePool pointers = {};
+        StructTypePool structs = {};
+    } m_types;
 
     AST(const std::string& file);
 
@@ -102,40 +76,38 @@ public:
     AST(AST&&) noexcept = delete;
     void operator=(AST&&) noexcept = delete;
 
-    void accept(VisitorBase& visitor) { 
-        visitor.visit(*this); 
-    }
+    void accept(VisitorBase& visitor) { visitor.visit(*this); }
 
+    /// Returns the path of the file which this syntax tree represents.
     const std::string& get_file() const { return m_file; }
 
-    const Context& get_context() const { return m_context; }
-    Context& get_context() { return m_context; }
+    /// Returns the definitions which are defined in the file represented by
+    /// this syntax tree.
+    const std::vector<Defn*>& defns() const { return m_defns; }
+    std::vector<Defn*>& defns() { return m_defns; }
 
-    const Defns& get_defns() const { return m_defns; }
-    Defns& get_defns() { return m_defns; }
-
+    /// Returns the |i|-th definition in this syntax tree.
     const Defn* get_defn(uint32_t i) const {
-        assert(i <= num_defns() && "index out of bounds!");
+        assert(i <= m_defns.size() && "index out of bounds!");
         return m_defns[i];
     }
 
     Defn* get_defn(uint32_t i) {
-        assert(i <= num_defns() && "index out of bounds!");
+        assert(i <= m_defns.size() && "index out of bounds!");
         return m_defns[i];
     }
 
+    /// Returns the number of definitions in this syntax tree.
     uint32_t num_defns() const { return m_defns.size(); }
+
+    /// Test if this syntax tree has any definitions.
     bool has_defns() const { return !m_defns.empty(); }
 
-    const Defns& get_loaded() const { return m_loaded; }
-    Defns& get_loaded() { return m_loaded; }
-
-    uint32_t num_loaded() const { return m_loaded.size(); }
-
-    const Scope* get_scope() const { return m_scope; }
-    Scope* get_scope() { return m_scope; }
+    /// Returns the global scope of this syntax tree.
+    const Scope* scope() const { return m_scope; }
+    Scope* scope() { return m_scope; }
 };
 
 } // namespace lace
 
-#endif // LOVELACE_AST_H_
+#endif // LACE_AST_H_
