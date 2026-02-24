@@ -1,29 +1,19 @@
+#
 #   Copyright (c) 2025-2026 Nicholas Marino
-#  
+#   All rights reserved.
+#
 #   All runtime functions defined here assume the lace pure-stack ABI.
+#
 
     .text
     .global _start
     .type   _start, @function
 _start:
-    callq   __rt_init
     callq   main@PLT
     movq    %rax, %rdi
     movq    $60, %rax   # exit syscall
     syscall
     ud2                 # unreachable
-
-    .text
-    .type   __rt_init, @function
-__rt_init:
-#   call    __fmt_arena_init@PLT
-    retq
-
-    .text
-    .type   __rt_shutdown, @function
-__rt_shutdown:
-#   call    __fmt_arena_destroy@PLT
-    retq
 
 # __copy :: (*void, *void, s64) -> void
     .text
@@ -58,7 +48,7 @@ __abort:
     movq    $0, %rdi    # pid 0
     movq    $0, %rsi    # signal 6 (SIGABRT)
     syscall             # kill syscall
-    callq   __unreachable 
+    ud2                 # unreachable
 
 # __unreachable :: () -> void
     .text
