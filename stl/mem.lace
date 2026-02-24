@@ -75,9 +75,6 @@ request_space :: (last: *Metadata, size: u64) -> *Metadata {
 }
 
 $public
-stl :: space {
-
-$public
 copy :: (dst: *void, src: *void, n: u64) -> void {
     let d: *char = cast<*char>(dst);
     let s: *char = cast<*char>(src);
@@ -159,5 +156,3 @@ realloc :: (ptr: *void, size: u64) -> *void {
     free(ptr);
     ret new;
 }
-
-} // space stl

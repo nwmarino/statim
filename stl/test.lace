@@ -1,15 +1,15 @@
 load "mem.lace";
+load "string.lace";
 
 $public
 main :: () -> s64 {
-    let ptr: *s64 = stl::alloc(sizeof(s64));
-    if !ptr {
-        ret 1;
-    }
+    let s: string;
 
-    *ptr = 42;
-    let x: s64 = *ptr;
-    stl::free(ptr);
+    s.from("Hello world!\n");
 
-    ret x;
+    let len: u64 = s.len();
+
+    s.destroy();
+
+    ret len;
 }

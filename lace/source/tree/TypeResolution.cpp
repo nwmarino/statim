@@ -44,6 +44,10 @@ void TypeResolution::visit(FunctionDefn& node) {
     if (node.has_receiver()) {
         assert(sig->num_params() >= 1);
         node.receiver()->set_type(sig->get_param(0));
+        i = 1;
+
+        if (node.origin() != m_ast)
+            goto VALID_RECEIVER;
 
         // This function is a method to some structure. We must try and resolve
         // that structure and add this is as a method.
@@ -62,8 +66,8 @@ void TypeResolution::visit(FunctionDefn& node) {
             log::fatal("method " + node.name() + " already exists", span);
         
         struct_defn->methods().push_back(&node);
-        i = 1;
     }
+VALID_RECEIVER:
 
     for (const uint32_t e = node.num_params(); i < e; ++i) {
         ParameterDefn* param = node.get_param(i);

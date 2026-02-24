@@ -1,15 +1,13 @@
 load "mem.lace";
 
 $public
-stl :: space {
-
-$public
 string :: struct {
     data: *char,
     len: u64,
 }
 
 /// Initialize the dynamic string |s| with the given static string |str|.
+$public
 from (s: *string) :: (str: *char) -> void {
     let len: u64 = 0;
     until str[len] == '\0' {
@@ -23,23 +21,29 @@ from (s: *string) :: (str: *char) -> void {
     s.len = len;
 }
 
+/// Destroy the given string |s|.
+$public
 destroy (s: *string) :: () -> void {
     free(s.data);
     s.data = null;
     s.len = 0;
 }
 
+/// Returns the length of the given string |s|.
+$public
 len (s: *string) :: () -> u64 {
     ret s.len;
 }
 
+/// Test if the given string |s| is empty, i.e. contains no characters.
+$public
 empty (s: *string) :: () -> bool {
     ret s.len == 0;
 }
 
+/// Returns the character at position |i| of the given string |s|.
+$public
 at (s: *string) :: (i: u64) -> char {
     // @Todo: check index.
     ret s.data[i];
 }
-
-} // space stl

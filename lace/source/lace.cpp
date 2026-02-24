@@ -140,8 +140,8 @@ void merge_namespace(AST* ast, Scope* dest, SpaceDefn* incoming) {
         // If an existing namespace does not exist, just try to add the 
         // namespace as is.
         if (!dest->add(incoming)) {
-            log::fatal("name-wise conflict during load: " + incoming->name(), 
-                log::Location(ast->get_file(), { 1, 1 }));
+            log::fatal("failed to load namespace, name already exists: " 
+                + incoming->name(), log::Location(ast->get_file(), { 1, 1 }));
         }
         
         return;
@@ -156,11 +156,14 @@ void merge_namespace(AST* ast, Scope* dest, SpaceDefn* incoming) {
         if (!defn->has_rune(Rune::Kind::Public))
             continue;
 
+        if (defn->origin() != incoming->origin())
+            continue;
+
         if (SpaceDefn* nspace = dynamic_cast<SpaceDefn*>(defn)) {
             // If we have to import a nested namespace, then merge it too.
             merge_namespace(ast, existing->scope(), nspace);
         } else if (!existing->scope()->add(defn)) {
-            log::fatal("name-wise conflict during load: " + existing->name(),
+            log::fatal("name-wise conflict during load: " + name,
                 log::Location(ast->get_file(), { 1, 1 }));
         }
     }
