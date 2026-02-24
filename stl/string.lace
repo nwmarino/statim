@@ -1,3 +1,9 @@
+pkg stl::string;
+
+pkg stl.string;
+
+pkg string;
+
 load "mem.lace";
 
 $public
