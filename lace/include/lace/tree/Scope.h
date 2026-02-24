@@ -22,17 +22,38 @@
 
 namespace lace {
 
+class Defn;
 class NamedDefn;
 class SpaceDefn;
+class Type;
+
+struct Symbol final {
+    enum class Kind : uint32_t {
+        Definition,
+        Type,
+    };
+
+    enum class Visibility : uint32_t {
+        Public,
+        Private,
+    };
+
+    std::string name;
+    std::string qual_name;
+    Kind kind;
+    Visibility visibility;
+    union {
+        NamedDefn* defn;
+        Type* type;
+    };
+};
+
+using SymbolTable = std::unordered_map<std::string, Symbol>;
 
 class Scope final {
-public:
-    using DefnTable = std::unordered_map<std::string, NamedDefn*>;
-
-private:
     Scope* m_parent;
     std::vector<Scope*> m_children = {};
-    DefnTable m_defns = {};
+    SymbolTable m_symbols = {};
 
 public:
     Scope(Scope* parent = nullptr) : m_parent(parent) {}
@@ -62,24 +83,21 @@ public:
     /// Test if this scope has any child nodes.
     bool has_children() const { return !m_children.empty(); }
 
-    /// Returns the table of definitions in this scope.
-    const std::unordered_map<std::string, NamedDefn*>& defns() const { return m_defns; }
-    std::unordered_map<std::string, NamedDefn*>& defns() { return m_defns; }
+    /// Returns the symbol table of this scope.
+    const SymbolTable& symbols() const { return m_symbols; }
+    SymbolTable& symbols() { return m_symbols; }
 
-    /// Add the given |defn| to this scope. 
-    /// If it conflicts name-wise with another definition, then the attempt 
+    /// Add the given |symbol| to this scope. 
+    /// If it conflicts name-wise with another symbol, then the attempt 
     /// returns false.
-    [[nodiscard]] bool add(NamedDefn* defn);
+    [[nodiscard]] bool add(const Symbol& symbol);
 
-    /// Returns the definition in this scope with the given |name| if one 
-    /// exists, and null otherwise.
-    NamedDefn* get(const std::string& name) const;
+    /// Test if this scope contains a symbol with the given |name|.
+    [[nodiscard]] bool has(const std::string& name) const;
 
-    /// Returns the namespace definition in this scope with the given |name| if
-    /// one exists, and null otherwise.
-    /// If a definition with the given |name| exists, but is not a namespace, 
-    /// null is still returned.
-    SpaceDefn* get_namespace(const std::string& name) const;
+    /// Dispatch the symbol in this scope with the given |name| to |symbol|.
+    /// Returns the result of whether the symbol could be found.
+    [[nodiscard]] bool get(const std::string& name, Symbol& symbol) const;
 };
 
 } // namespace lace
