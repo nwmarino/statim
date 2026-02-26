@@ -9,8 +9,6 @@
 #include "lace/core/Options.h"
 #include "lace/tree/Scope.h"
 
-#include <vector>
-
 namespace lace {
 
 class Rib;
@@ -59,8 +57,6 @@ class VisitorBase {
 protected:
     Options& m_options;
     Rib* m_rib = nullptr;
-    Scope* m_scope = nullptr;
-    std::vector<SpaceDefn*> m_namespaces = {};
 
     VisitorBase(Options& options) : m_options(options) {}
 
@@ -112,14 +108,6 @@ public:
     virtual void visit(SizeofExpr& node);
     virtual void visit(StructInitExpr& node);
     virtual void visit(SubscriptExpr& node);
-
-protected:
-    /// Attempt to resolve any deferred types within the component(s) of the 
-    /// given |type|, and return a new, fully resolved type.
-    ///
-    /// If a component of the given |type| could not be resolved, then null is 
-    /// returned.
-    [[nodiscard]] Type* resolve_type(Type* type) const;
 };
 
 } // namespace lace

@@ -66,6 +66,9 @@ public:
     Scope(Scope&&) noexcept = delete;
     void operator=(Scope&&) noexcept = delete;
 
+    /// Set the parent of this scope to |scope|.
+    void set_parent(Scope* scope) { m_parent = scope; }
+
     /// Returns the scope tree which is the parent to this one, if it exists, 
     /// and null otherwise.
     Scope* parent() const { return m_parent; }

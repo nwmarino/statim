@@ -20,6 +20,7 @@
 namespace lace {
 
 class NameResolution final : public VisitorBase {
+    Scope* m_scope = nullptr;
 public:
     NameResolution(Options& options);
 
@@ -35,6 +36,8 @@ public:
 
     void visit(VariableDefn& node) override;
 
+    void visit(BlockStmt& node) override;
+
     void visit(AccessExpr& node) override;
 
     void visit(CastExpr& node) override;
@@ -44,6 +47,14 @@ public:
     void visit(SizeofExpr& node) override;
 
     void visit(StructInitExpr& node) override;
+
+private:
+    /// Attempt to resolve any deferred types within the component(s) of the 
+    /// given |type|, and return a new, fully resolved type.
+    ///
+    /// If a component of the given |type| could not be resolved, then null is 
+    /// returned.
+    [[nodiscard]] Type* resolve_type(Type* type) const;
 };
 
 } // namespace lace

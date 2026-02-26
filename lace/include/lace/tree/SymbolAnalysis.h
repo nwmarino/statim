@@ -16,8 +16,18 @@
 namespace lace {
 
 class SymbolAnalysis final : public VisitorBase {
+    Scope* m_scope = nullptr;
+
 public:
     SymbolAnalysis(Options& options);
+
+    ~SymbolAnalysis() = default;
+
+    SymbolAnalysis(const SymbolAnalysis&) = delete;
+    void operator=(const SymbolAnalysis&) = delete;
+
+    SymbolAnalysis(SymbolAnalysis&&) noexcept = delete;
+    void operator=(SymbolAnalysis&&) noexcept = delete;
 
     void visit(Rib& rib) override;
 
@@ -36,6 +46,11 @@ public:
     void visit(VariantDefn& node) override;
 
     void visit(BlockStmt& node) override;
+
+private:
+    /// Returns the qualified version of the given |name| under the current rib
+    /// tree.
+    std::string qualify_name(const std::string& name) const;
 };
 
 } // namespace lace
