@@ -25,8 +25,6 @@ public:
 
     void visit(AST& node) override;
 
-    void visit(LoadDefn& node) override;
-    void visit(SpaceDefn& node) override;
     void visit(VariableDefn& node) override;
     void visit(ParameterDefn& node) override;
     void visit(FunctionDefn& node) override;

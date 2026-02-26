@@ -48,24 +48,36 @@ class SemanticAnalysis final : public VisitorBase {
 public:
     SemanticAnalysis(Options& options);
 
-    void visit(VariableDefn& node) override;
     void visit(FunctionDefn& node) override;
+
+    void visit(VariableDefn& node) override;
     
     void visit(IfStmt& node) override;
+
     void visit(RestartStmt& node) override;
+
     void visit(RetStmt& node) override;
+
     void visit(StopStmt& node) override;
+
     void visit(UntilStmt& node) override;
 
     void visit(BinaryOp& node) override;
+
     void visit(UnaryOp& node) override;
 
     void visit(AccessExpr& node) override;
+    
     void visit(CallExpr& node) override;
+
     void visit(CastExpr& node) override;
+
     void visit(ParenExpr& node) override;
+
     void visit(RefExpr& node) override;
+
     void visit(StructInitExpr& node) override;
+
     void visit(SubscriptExpr& node) override;
 };
 

@@ -3,34 +3,44 @@
 //  All rights reserved.
 //
 
-#include "lace/tree/AST.h"
+#include "lace/tree/Rib.h"
 #include "lace/tree/Defn.h"
 #include "lace/tree/Type.h"
 
 using namespace lace;
 
-AST::AST(const std::string& file) : m_file(file) {
+Rib::Rib(const std::string& name, const std::string& path, Rib* parent) 
+  : m_name(name), m_path(path), m_parent(parent) {
     m_scope = new Scope();
 
     // Initialize all built-in types.
-    for (uint32_t i = static_cast<uint32_t>(BuiltinType::Kind::Void); i <= static_cast<uint32_t>(BuiltinType::Kind::Float64); ++i) {
+    uint32_t i = static_cast<uint32_t>(BuiltinType::Kind::Void);
+    while (i <= static_cast<uint32_t>(BuiltinType::Kind::Float64)) {
         BuiltinType::Kind kind = static_cast<BuiltinType::Kind>(i);
         m_types.builtins.push_back(new BuiltinType(kind));
+        i++;
     }
 }
 
-AST::~AST() {
+Rib::~Rib() {
+    for (Rib* rib : m_children) {
+        if (rib)
+            delete rib;
+    }
+
+    m_children.clear();
+
     for (auto& [name, type] : m_types.aliases) {
         if (type)
             delete type;
     }
 
-    for (auto& type : m_types.builtins) {
+    for (BuiltinType* type : m_types.builtins) {
         if (type)
             delete type;
     }
 
-    for (auto& type : m_types.deferred) {
+    for (DeferredType* type : m_types.deferred) {
         if (type)
             delete type;
     }
@@ -40,12 +50,12 @@ AST::~AST() {
             delete type;
     }
 
-    for (auto& type : m_types.functions) {
+    for (FunctionType* type : m_types.functions) {
         if (type)
             delete type;
     }
 
-    for (auto& type : m_types.pointers) {
+    for (PointerType* type : m_types.pointers) {
         if (type)
             delete type;
     }
@@ -65,17 +75,17 @@ AST::~AST() {
 
     if (m_scope)
         delete m_scope;
-    
+
     m_scope = nullptr;
 
     for (Defn* defn : m_defns) {
-        if (defn && defn->origin() == this)
+        if (defn)
             delete defn;
     }
 
     m_defns.clear();
 }
 
-AST* AST::create(const std::string& file) {
-    return new AST(file);
+Rib* Rib::create(const std::string& name, const std::string& path, Rib* parent) {
+    return new Rib(name, path, parent);
 }

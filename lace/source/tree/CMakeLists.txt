@@ -1,8 +1,8 @@
 set(TREE_SOURCES
-    AST.cpp
     Defn.cpp
     Expr.cpp
     Printer.cpp
+    Rib.cpp
     Rune.cpp
     Scope.cpp
     SemanticAnalysis.cpp

@@ -8,10 +8,10 @@
 
 //
 //  This header file declares a set of polymorphic classes for representing 
-//  statements in the abstract syntax tree.
+//  statements in the syntax tree.
 //
 
-#include "lace/tree/AST.h"
+#include "lace/tree/Rib.h"
 #include "lace/tree/Rune.h"
 #include "lace/tree/VisitorBase.h"
 #include "lace/types/SourceSpan.h"
@@ -28,7 +28,7 @@ class Scope;
 class Stmt {
 protected:
     /// The span of source code that this statement covers.
-    const SourceSpan m_span;
+    SourceSpan m_span;
 
     Stmt(SourceSpan span) : m_span(span) {}
 
@@ -43,8 +43,12 @@ public:
 
     virtual void accept(VisitorBase& visitor) = 0;
     
+    /// Set the span of source code which this statement covers to |span|.
+    void set_span(SourceSpan span) { m_span = span; }
+
     /// Returns the span of source code which this statement covers.
-    SourceSpan get_span() const { return m_span; }
+    const SourceSpan& span() const { return m_span; }
+    SourceSpan& span() { return m_span; }
 };
 
 /// Represents a statement that adapts either a nested definition or expression.
@@ -70,11 +74,9 @@ private:
       : Stmt(span), m_kind(Kind::Expressive), m_expr(expr) {}
 
 public:
-    [[nodiscard]]
-    static AdapterStmt* create(AST& ast, Defn* defn);
+    [[nodiscard]] static AdapterStmt* create(Rib& rib, Defn* defn);
     
-    [[nodiscard]]
-    static AdapterStmt* create(AST& ast, Expr* expr);
+    [[nodiscard]] static AdapterStmt* create(Rib& rib, Expr* expr);
 
     ~AdapterStmt() override;
 
@@ -126,7 +128,7 @@ public:
 class BlockStmt final : public Stmt {
 public:
     using Stmts = std::vector<Stmt*>;
-    
+
 private:
     Scope* m_scope;
     Stmts m_stmts;
@@ -136,7 +138,7 @@ private:
 
 public:
     [[nodiscard]]
-    static BlockStmt* create(AST& ast, SourceSpan span, Scope* scope,
+    static BlockStmt* create(Rib& rib, SourceSpan span, Scope* scope,
                              const Stmts& stmts);
 
     ~BlockStmt() override;
@@ -192,7 +194,7 @@ class IfStmt final : public Stmt {
 
 public:
     [[nodiscard]]
-    static IfStmt* create(AST& ast, SourceSpan span, Expr* cond, 
+    static IfStmt* create(Rib& rib, SourceSpan span, Expr* cond, 
                           Stmt* then, Stmt* els);
 
     ~IfStmt() override;
@@ -228,7 +230,7 @@ class RestartStmt final : public Stmt {
 
 public:
     [[nodiscard]]
-    static RestartStmt* create(AST& ast, SourceSpan span);
+    static RestartStmt* create(Rib& rib, SourceSpan span);
 
     ~RestartStmt() = default;
 
@@ -252,7 +254,7 @@ class RetStmt final : public Stmt {
 
 public:
     [[nodiscard]]
-    static RetStmt* create(AST& ast, SourceSpan span, Expr* expr);
+    static RetStmt* create(Rib& rib, SourceSpan span, Expr* expr);
 
     ~RetStmt() override;
 
@@ -278,7 +280,7 @@ class StopStmt final : public Stmt {
 
 public:
     [[nodiscard]]
-    static StopStmt* create(AST& ast, SourceSpan span);
+    static StopStmt* create(Rib& rib, SourceSpan span);
     
     ~StopStmt() = default;
 
@@ -301,7 +303,7 @@ class UntilStmt final : public Stmt {
 
 public:
     [[nodiscard]]
-    static UntilStmt* create(AST& ast, SourceSpan span, Expr* cond, 
+    static UntilStmt* create(Rib& rib, SourceSpan span, Expr* cond, 
                              Stmt* body);
 
     ~UntilStmt() override;
@@ -334,7 +336,7 @@ class RuneStmt final : public Stmt {
 
 public:
     [[nodiscard]] 
-    static RuneStmt* create(AST& ast, SourceSpan span, Rune* rune);
+    static RuneStmt* create(Rib& rib, SourceSpan span, Rune* rune);
 
     ~RuneStmt() override;
 

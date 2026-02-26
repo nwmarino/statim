@@ -4,16 +4,13 @@ Lex instances of `Token` into a `TokenStream` via the `Lexer` interface.
 
 **Syntax Analysis.**
 
-Parse each `TokenStream` into a `Package` via the `Parser` interface.
+Parse each `TokenStream` into a `Rib` via the `Parser` interface.
 
-**Package Analysis.**
+**Rib Analysis.**
 
 *pass I: `SymbolAnalysis`*
 
-- Expand names using their `Package` of origin, e.g. `foo` in `tools::extras` 
-becomes `tools::extras::foo`.
-
-- Construct scope trees using `Scope` that contains instances of `Symbol`.
+- Construct `Scope` trees that contain instances of `Symbol`.
 
 *pass IIa: `NameResolution`*
 

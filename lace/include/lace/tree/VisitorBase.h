@@ -8,20 +8,20 @@
 
 #include "lace/core/Options.h"
 #include "lace/tree/Scope.h"
+
 #include <vector>
 
 namespace lace {
 
-class AST;
+class Rib;
 
 class AliasDefn;
 class EnumDefn;
 class FieldDefn;
 class FunctionDefn;
-class LoadDefn;
 class ParameterDefn;
-class SpaceDefn;
 class StructDefn;
+class UseDefn;
 class VariableDefn;
 class VariantDefn;
 
@@ -58,7 +58,7 @@ class Type;
 class VisitorBase {
 protected:
     Options& m_options;
-    AST* m_ast = nullptr;
+    Rib* m_rib = nullptr;
     Scope* m_scope = nullptr;
     std::vector<SpaceDefn*> m_namespaces = {};
 
@@ -73,16 +73,15 @@ public:
     VisitorBase(VisitorBase&&) noexcept = delete;
     void operator=(VisitorBase&&) noexcept = delete;
     
-    virtual void visit(AST& node);
+    virtual void visit(Rib& rib);
 
     virtual void visit(AliasDefn& node);
     virtual void visit(EnumDefn& node);
     virtual void visit(FieldDefn& node);
     virtual void visit(FunctionDefn& node);
-    virtual void visit(LoadDefn& node);
     virtual void visit(ParameterDefn& node);
-    virtual void visit(SpaceDefn& node);
     virtual void visit(StructDefn& node);
+    virtual void visit(UseDefn& node);
     virtual void visit(VariableDefn& node);
     virtual void visit(VariantDefn& node);
 

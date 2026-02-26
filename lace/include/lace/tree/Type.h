@@ -19,7 +19,8 @@
 
 namespace lace {
 
-class AST;
+class Rib;
+
 class AliasDefn;
 class Context;
 class EnumDefn;
@@ -70,7 +71,7 @@ public:
 
 /// Returns named type aliases defined by an alias definiiton.
 class AliasType final : public Type {
-    friend class AST;
+    friend class Rib;
 
 private:
     Type* m_aliased;
@@ -81,10 +82,10 @@ private:
 
 public:
     [[nodiscard]]
-    static AliasType* create(AST& ast, Type* aliased, AliasDefn* defn);
+    static AliasType* create(Rib& rib, Type* aliased, AliasDefn* defn);
     
     [[nodiscard]]
-    static AliasType* get(AST& ast, const std::string& name);
+    static AliasType* get(Rib& rib, const std::string& name);
 
     std::string string() const override;
 
@@ -112,7 +113,7 @@ public:
 
 /// Representation of types which are built-in to the language.
 class BuiltinType final : public Type {
-    friend class AST;
+    friend class Rib;
 
 public:
     /// Possible kinds of built-in types.
@@ -138,7 +139,7 @@ private:
     BuiltinType(Kind kind) : m_kind(kind) {}
 
 public:
-    [[nodiscard]] static BuiltinType* get(AST& ast, Kind kind);
+    [[nodiscard]] static BuiltinType* get(Rib& rib, Kind kind);
 
     std::string string() const override;
 
@@ -207,14 +208,14 @@ public:
 
 /// Wrapper class for types that were deferred resolution at parse time.
 class DeferredType final : public Type {
-    friend class AST;
+    friend class Rib;
 
     std::string m_name;
 
     DeferredType(const std::string& name) : m_name(name) {}
 
 public:
-    static DeferredType* get(AST& ast, const std::string& name);
+    static DeferredType* get(Rib& rib, const std::string& name);
 
     std::string string() const override { return std::format("'{}'", m_name); }
 
@@ -224,7 +225,7 @@ public:
 
 /// Represents named types defined by an enum definition.
 class EnumType final : public Type {
-    friend class AST;
+    friend class Rib;
 
     Type* m_underlying;
     EnumDefn* m_defn;
@@ -234,10 +235,10 @@ class EnumType final : public Type {
 
 public:
     [[nodiscard]]
-    static EnumType* create(AST& ast, Type* underlying, EnumDefn* defn);
+    static EnumType* create(Rib& rib, Type* underlying, EnumDefn* defn);
 
     [[nodiscard]]
-    static EnumType* get(AST& ast, const std::string& name);
+    static EnumType* get(Rib& rib, const std::string& name);
 
     std::string string() const override;
 
@@ -266,7 +267,7 @@ public:
 /// Represents the type of a function signature i.e. a resulting type and a set 
 /// of parameter types.
 class FunctionType final : public Type {
-    friend class AST;
+    friend class Rib;
     
 private:
     Type* m_result;
@@ -277,7 +278,7 @@ private:
 
 public:
     [[nodiscard]]
-    static FunctionType* get(AST& ast, Type* result, 
+    static FunctionType* get(Rib& rib, Type* result, 
                              const std::vector<Type*>& params);
 
     std::string string() const override;
@@ -313,7 +314,7 @@ public:
 
 /// Represents composite pointer types.
 class PointerType final : public Type {
-    friend class AST;
+    friend class Rib;
 
     Type* m_pointee;
 
@@ -321,7 +322,7 @@ class PointerType final : public Type {
 
 public:
     [[nodiscard]]
-    static PointerType* get(AST& ast, Type* pointee);
+    static PointerType* get(Rib& rib, Type* pointee);
 
     std::string string() const override { 
         return std::format("*{}", m_pointee->string()); 
@@ -343,7 +344,7 @@ public:
 
 /// Represents named types defined by a struct definition.
 class StructType final : public Type {
-    friend class AST;
+    friend class Rib;
 
     StructDefn* m_defn;
 
@@ -351,10 +352,10 @@ class StructType final : public Type {
 
 public:
     [[nodiscard]]
-    static StructType* create(AST& ast, StructDefn* defn);
+    static StructType* create(Rib& rib, StructDefn* defn);
     
     [[nodiscard]]
-    static StructType* get(AST& ast, const std::string& name);    
+    static StructType* get(Rib& rib, const std::string& name);    
 
     std::string string() const override;
 

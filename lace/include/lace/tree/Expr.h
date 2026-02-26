@@ -33,7 +33,7 @@ class ValueDefn;
 class Expr {
 protected:
     /// The span of source code that this expression covers.
-    const SourceSpan m_span;
+    SourceSpan m_span;
 
     /// The type of this expression.
     Type* m_type;
@@ -67,8 +67,12 @@ public:
     /// semantic analysis.
     virtual bool is_lvalue() const { return false; }
 
+    /// Set the span of source code which this expression covers to |span|.
+    void set_span(SourceSpan span) { m_span = span; }
+
     /// Returns the span of source which this expression covers.
-    SourceSpan get_span() const { return m_span; }
+    const SourceSpan& span() const { return m_span; }
+    SourceSpan& span() { return m_span; }
 
     /// Set the type of this expression to |type|.
     void set_type(Type* type) { m_type = type; }
@@ -78,7 +82,7 @@ public:
     Type* type() { return m_type; }
 };
 
-/// Representation of boolean literals, e.g. 'true' or 'false'.
+/// Representation of boolean literals, e.g. `true` or `false`.
 class BoolLiteral final : public Expr {
     const bool m_value;
 
@@ -87,7 +91,7 @@ class BoolLiteral final : public Expr {
 
 public:
     [[nodiscard]]
-    static BoolLiteral* create(AST& ast, SourceSpan span, bool value);
+    static BoolLiteral* create(Rib& rib, SourceSpan span, bool value);
 
     ~BoolLiteral() = default;
 
@@ -114,7 +118,7 @@ class CharLiteral final : public Expr {
 
 public:
     [[nodiscard]]
-    static CharLiteral* create(AST& ast, SourceSpan span, char value);
+    static CharLiteral* create(Rib& rib, SourceSpan span, char value);
 
     ~CharLiteral() = default;
     
@@ -141,7 +145,7 @@ class IntegerLiteral final : public Expr {
 
 public:
     [[nodiscard]]
-    static IntegerLiteral* create(AST& ast, SourceSpan span, 
+    static IntegerLiteral* create(Rib& rib, SourceSpan span, 
                                   Type* type, int64_t value);
 
     ~IntegerLiteral() = default;
@@ -169,7 +173,7 @@ class FloatLiteral final : public Expr {
 
 public:
     [[nodiscard]]
-    static FloatLiteral* create(AST& ast, SourceSpan span, Type* type, 
+    static FloatLiteral* create(Rib& rib, SourceSpan span, Type* type, 
                                 double value);
 
     ~FloatLiteral() = default;
@@ -194,7 +198,7 @@ class NullLiteral final : public Expr {
 
 public:
     [[nodiscard]]
-    static NullLiteral* create(AST& ast, SourceSpan span, Type* type);
+    static NullLiteral* create(Rib& rib, SourceSpan span, Type* type);
 
     ~NullLiteral() = default;
 
@@ -218,7 +222,7 @@ class StringLiteral final : public Expr {
 
 public:
     [[nodiscard]]
-    static StringLiteral* create(AST& ast, SourceSpan span, 
+    static StringLiteral* create(Rib& rib, SourceSpan span, 
                                  const std::string& value);
 
     ~StringLiteral() = default;
@@ -302,7 +306,7 @@ private:
 
 public:
     [[nodiscard]]
-    static BinaryOp* create(AST& ast, SourceSpan span, Operator op, 
+    static BinaryOp* create(Rib& rib, SourceSpan span, Operator op, 
                             Expr* lhs, Expr* rhs);
 
     ~BinaryOp() override;
@@ -367,7 +371,7 @@ private:
 
 public:
     [[nodiscard]]
-    static UnaryOp* create(AST& ast, SourceSpan span, Operator op, 
+    static UnaryOp* create(Rib& rib, SourceSpan span, Operator op, 
                            bool prefix, Expr* expr);
 
     ~UnaryOp() override;
@@ -417,7 +421,7 @@ class AccessExpr final : public Expr {
 
 public:
     [[nodiscard]]
-    static AccessExpr* create(AST& ast, SourceSpan span, Expr* base, 
+    static AccessExpr* create(Rib& rib, SourceSpan span, Expr* base, 
                               const std::string& name);
 
     ~AccessExpr() override;
@@ -469,7 +473,7 @@ private:
 
 public:
     [[nodiscard]]
-    static CallExpr* create(AST& ast, SourceSpan span, Expr* callee, 
+    static CallExpr* create(Rib& rib, SourceSpan span, Expr* callee, 
                             const Args& args);
 
     ~CallExpr() override;
@@ -527,7 +531,7 @@ class CastExpr final : public Expr {
 
 public:
     [[nodiscard]]
-    static CastExpr* create(AST& ast, SourceSpan span, Type* type, 
+    static CastExpr* create(Rib& rib, SourceSpan span, Type* type, 
                             Expr* expr);
 
     ~CastExpr() override;
@@ -556,7 +560,7 @@ class ParenExpr final : public Expr {
 
 public:
     [[nodiscard]]
-    static ParenExpr* create(AST& ast, SourceSpan span, Expr* expr);
+    static ParenExpr* create(Rib& rib, SourceSpan span, Expr* expr);
 
     ~ParenExpr() override;
 
@@ -575,11 +579,6 @@ public:
     Expr* expr() { return m_expr; }
 };
 
-struct Specifier final {
-    std::string name;
-    SpaceDefn* nspace;
-};
-
 /// Represents a named definition reference expression.
 class RefExpr final : public Expr {
     std::string m_name;
@@ -593,7 +592,7 @@ public:
 
 public:
     [[nodiscard]]
-    static RefExpr* create(AST& ast, SourceSpan span, 
+    static RefExpr* create(Rib& rib, SourceSpan span, 
                            const std::string& name,
                            const std::vector<Specifier>& specs, 
                            ValueDefn* defn);
@@ -645,7 +644,7 @@ class SizeofExpr final : public Expr {
 
 public:
     [[nodiscard]]
-    static SizeofExpr* create(AST& ast, SourceSpan span, Type* target);
+    static SizeofExpr* create(Rib& rib, SourceSpan span, Type* target);
 
     ~SizeofExpr() = default;
     
@@ -680,7 +679,7 @@ private:
 
 public:
     [[nodiscard]]
-    static StructInitExpr* create(AST& ast, SourceSpan span, 
+    static StructInitExpr* create(Rib& rib, SourceSpan span, 
                                   Type* type, const Fields& fields);
 
     ~StructInitExpr() override;
@@ -735,7 +734,7 @@ class SubscriptExpr final : public Expr {
 
 public:
     [[nodiscard]]
-    static SubscriptExpr* create(AST& ast, SourceSpan span, Expr* base, 
+    static SubscriptExpr* create(Rib& rib, SourceSpan span, Expr* base, 
                                  Expr* index);
 
     ~SubscriptExpr() override;
