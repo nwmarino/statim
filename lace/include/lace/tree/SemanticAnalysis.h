@@ -46,7 +46,7 @@ class SemanticAnalysis final : public VisitorBase {
                                TypeCheckMode mode = AllowImplicit) const;
 
 public:
-    SemanticAnalysis(Options& options);
+    SemanticAnalysis(Context& context);
 
     void visit(FunctionDefn& node) override;
 
@@ -71,6 +71,8 @@ public:
     void visit(CallExpr& node) override;
 
     void visit(CastExpr& node) override;
+
+    void visit(FieldInitExpr& node) override;
 
     void visit(ParenExpr& node) override;
 

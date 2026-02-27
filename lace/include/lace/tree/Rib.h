@@ -25,11 +25,6 @@ namespace lace {
 class Defn;
 class Scope;
 
-struct Specifier {
-    std::string name;
-    Rib* rib;
-};
-
 class Rib final {
     friend class AliasType;
     friend class BuiltinType;
@@ -47,19 +42,11 @@ class Rib final {
     using PointerTypePool = std::vector<PointerType*>;
     using StructTypePool = std::unordered_map<std::string, StructType*>;
 
-    /// The name of this rib.
+    /// The name of this rib, e.g. `stl::io`.
     std::string m_name;
 
     /// The path of the original file which defined this rib.
     std::string m_path;
-
-    /// The rib which is the parent to this one, if it has one.
-    ///
-    /// For example, the parent of 'stl::string' is 'stl'.
-    Rib* m_parent;
-
-    /// The rib which are children to this one.
-    std::vector<Rib*> m_children = {};
 
     /// The global scope of this rib.
     Scope* m_scope;
@@ -77,13 +64,11 @@ class Rib final {
         StructTypePool structs = {};
     } m_types;
 
-    Rib(const std::string& name, const std::string& path, Rib* parent);
+    Rib(const std::string& name, const std::string& path);
 
 public:
-    /// Create a new rib with the given |name| and |parent| rib.
-    [[nodiscard]] static Rib* create(const std::string& name, 
-                                     const std::string& path,
-                                     Rib* parent = nullptr);
+    [[nodiscard]] 
+    static Rib* create(const std::string& name, const std::string& path);
 
     ~Rib();
 
@@ -100,17 +85,6 @@ public:
 
     /// Returns the path of the file which originally defined this rib.
     const std::string& path() const { return m_path; }
-
-    /// Set the parent of this rib to |rib|.
-    void set_parent(Rib* rib) { m_parent = rib; }
-
-    /// Returns the parent of this rib, if it has one.
-    const Rib* parent() const { return m_parent; }
-    Rib* parent() { return m_parent; }
-
-    /// Returns the child rib list of this rib.
-    const std::vector<Rib*>& children() const { return m_children; }
-    std::vector<Rib*>& children() { return m_children; }
 
     /// Returns the scope of this rib.
     const Scope* scope() const { return m_scope; }

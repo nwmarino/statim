@@ -17,7 +17,6 @@
 #include "lace/tree/VisitorBase.h"
 
 #include <cassert>
-#include <map>
 #include <string>
 #include <vector>
 
@@ -582,20 +581,18 @@ public:
 /// Represents a named definition reference expression.
 class RefExpr final : public Expr {
     std::string m_name;
-    std::vector<Specifier> m_specs;
+    std::string m_spec;
     ValueDefn* m_defn;
 
 public:
     RefExpr(SourceSpan span, Type* type, const std::string& name, 
-            const std::vector<Specifier>& specs, ValueDefn* defn)
-      : Expr(span, type), m_name(name), m_specs(specs), m_defn(defn) {}
+            const std::string& spec, ValueDefn* defn)
+      : Expr(span, type), m_name(name), m_spec(spec), m_defn(defn) {}
 
 public:
     [[nodiscard]]
-    static RefExpr* create(Rib& rib, SourceSpan span, 
-                           const std::string& name,
-                           const std::vector<Specifier>& specs, 
-                           ValueDefn* defn);
+    static RefExpr* create(Rib& rib, SourceSpan span, const std::string& name,
+                           const std::string& spec, ValueDefn* defn);
 
     ~RefExpr() = default;
     
@@ -613,15 +610,12 @@ public:
     const std::string& name() const { return m_name; }
     std::string& name() { return m_name; }
 
-    /// Returns the list of namespace specifiers this reference has.
-    const std::vector<Specifier>& specs() const { return m_specs; }
-    std::vector<Specifier>& specs() { return m_specs; }
+    /// Returns the rib specifier this reference has.
+    const std::string& spec() const { return m_spec; }
+    std::string& spec() { return m_spec; }
 
-    /// Returns the number of namespace specifiers this reference has.
-    uint32_t num_specs() const { return m_specs.size(); }
-
-    /// Test if this reference has any namespace specifiers.
-    bool has_specs() const { return !m_specs.empty(); }
+    /// Test if this reference has a rib specifier.
+    bool has_spec() const { return !m_spec.empty(); }
 
     /// Set the definition which this expression references to |defn|.
     void set_defn(ValueDefn* defn) { m_defn = defn; }
@@ -666,10 +660,59 @@ public:
     Type* target() { return m_target; }
 };
 
+/// Represents the initialization of a named field within a structure 
+/// initialization expression.
+class FieldInitExpr final : public Expr {
+    friend class SemanticAnalysis;
+
+    std::string m_name;
+    Expr* m_expr;
+    FieldDefn* m_field = nullptr;
+
+    FieldInitExpr(SourceSpan span, Type* type, const std::string& name, 
+                  Expr* expr)
+      : Expr(span, type), m_name(name), m_expr(expr) {}
+
+public:
+    [[nodiscard]] 
+    static FieldInitExpr* create(Rib& rib, SourceSpan span, Type* type, 
+                                 const std::string& name, Expr* expr);
+
+    ~FieldInitExpr() override;
+
+    FieldInitExpr(const FieldInitExpr&) = delete;
+    void operator=(const FieldInitExpr&) = delete;
+
+    FieldInitExpr(FieldInitExpr&&) noexcept = delete;
+    void operator=(FieldInitExpr&&) noexcept = delete;
+
+    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
+
+    bool is_constant() const override {
+        return m_expr->is_constant();
+    }
+
+    /// Returns the name of the field this initializer references.
+    const std::string& name() const { return m_name; }
+
+    /// Returns the initializing expression to use.
+    const Expr* expr() const { return m_expr; }
+    Expr* expr() { return m_expr; }
+
+    /// Set the referenced field definition of this initializer to |field|.
+    void set_field(FieldDefn* field) { m_field = field; }
+
+    /// Returns the field referenced by this initializer.
+    const FieldDefn* field() const { return m_field; }
+    FieldDefn* field() { return m_field; }
+};
+
 /// Represents a structure initialization expression `... { ... }`.
 class StructInitExpr final : public Expr {
+    friend class SemanticAnalysis;
+
 public:
-    using Fields = std::map<std::string, Expr*>;
+    using Fields = std::vector<FieldInitExpr*>;
 
 private:
     Fields m_fields;
@@ -695,8 +738,8 @@ public:
     /// Test if this initializer expression is constant. Initializers are 
     /// constant if and only if all of their fields are constants.
     bool is_constant() const override {
-        for (const auto& [field, expr] : m_fields) {
-            if (!expr->is_constant())
+        for (FieldInitExpr* field : m_fields) {
+            if (!field->is_constant())
                 return false;
         }
         
@@ -708,13 +751,34 @@ public:
     Fields& fields() { return m_fields; }
 
     /// Returns the field with the given |name| being initialized in this 
-    /// expression.
-    const Expr* get_field(const std::string& name) const {
-        return m_fields.at(name);
+    /// expression if it exists, and null otherwise.
+    const FieldInitExpr* get_field(const std::string& name) const {
+        for (FieldInitExpr* field : m_fields) {
+            if (field->name() == name)
+                return field;
+        }
+
+        return nullptr;
     }
 
     Expr* get_field(const std::string& name) {
-        return m_fields.at(name);
+        for (FieldInitExpr* field : m_fields) {
+            if (field->name() == name)
+                return field;
+        }
+
+        return nullptr;
+    }
+
+    /// Returns the |i|-th field in this initializer.
+    const FieldInitExpr* get_field(uint32_t i) const {
+        assert(i < m_fields.size() && "index out of bounds!");
+        return m_fields[i];
+    }
+
+    FieldInitExpr* get_field(uint32_t i) {
+        assert(i < m_fields.size() && "index out of bounds!");
+        return m_fields[i];
     }
 
     /// Returns the number of fields which this expression initializes.

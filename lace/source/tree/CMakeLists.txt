@@ -1,6 +1,7 @@
 set(TREE_SOURCES
     Defn.cpp
     Expr.cpp
+    NameResolution.cpp
     Printer.cpp
     Rib.cpp
     Rune.cpp
@@ -9,7 +10,6 @@ set(TREE_SOURCES
     Stmt.cpp
     SymbolAnalysis.cpp
     Type.cpp
-    TypeResolution.cpp
     VisitorBase.cpp
 )
 

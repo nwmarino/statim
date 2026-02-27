@@ -15,24 +15,36 @@
 //  or target otherwise) should override special behavior within this pass.
 //
 
+#include "lace/tree/Rib.h"
 #include "lace/tree/VisitorBase.h"
 
 namespace lace {
 
 class NameResolution final : public VisitorBase {
     Scope* m_scope = nullptr;
+
 public:
-    NameResolution(Options& options);
+    NameResolution(Context& context);
+
+    ~NameResolution() = default;
+
+    NameResolution(const NameResolution&) = delete;
+    void operator=(const NameResolution&) = delete;
+
+    NameResolution(NameResolution&&) noexcept = delete;
+    void operator=(NameResolution&&) noexcept = delete;
 
     void visit(Rib& rib) override;
 
     void visit(AliasDefn& node) override;
 
-    void visit(EnumDefn& node) override;
+    void visit(FieldDefn& node) override;
 
     void visit(FunctionDefn& node) override;
 
     void visit(ParameterDefn& node) override;
+
+    void visit(UseDefn& node) override;
 
     void visit(VariableDefn& node) override;
 
@@ -41,6 +53,8 @@ public:
     void visit(AccessExpr& node) override;
 
     void visit(CastExpr& node) override;
+
+    void visit(FieldInitExpr& node) override;
 
     void visit(RefExpr& node) override;
 

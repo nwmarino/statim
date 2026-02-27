@@ -66,14 +66,15 @@ public:
 
 /// Represents a top-level `use` definition.
 class UseDefn final : public Defn {
-    std::vector<Specifier> m_path;
+    std::string m_path;
+    Rib* m_target = nullptr;
 
-    UseDefn(Rib* rib, SourceSpan span, const std::vector<Specifier>& path) 
+    UseDefn(Rib* rib, SourceSpan span, const std::string& path) 
       : Defn(rib, span), m_path(path) {}
 
 public:
     [[nodiscard]]
-    static UseDefn* create(Rib& rib, SourceSpan span, const std::string& path);
+    static UseDefn* create(Rib& rib, SourceSpan span, const std::string& trail);
 
     ~UseDefn() = default;
 
@@ -85,12 +86,16 @@ public:
 
     void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
-    /// Set the target rib path of this load to |path|.
-    void set_path(const std::vector<Specifier>& path) { m_path = path; }
-
     /// Returns the rib path which this use targets.
-    const std::vector<Specifier>& path() const { return m_path; }
-    std::vector<Specifier>& path() { return m_path; }
+    const std::string& path() const { return m_path; }
+    std::string& path() { return m_path; }
+
+    /// Set the target rib of this use to the given |rib|.
+    void set_target(Rib* rib) { m_target = rib; }
+
+    /// Returns the target rib of this use.
+    const Rib* target() const { return m_target; }
+    Rib* target() { return m_target; }
 };
 
 /// Base class for definitions with a name and potential rune set.

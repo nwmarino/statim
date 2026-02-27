@@ -12,7 +12,7 @@
 //
 
 #include "lace/lexer/TokenStream.h"
-#include "lace/tree/AST.h"
+#include "lace/tree/Rib.h"
 #include "lace/tree/Defn.h"
 #include "lace/tree/Expr.h"
 #include "lace/types/SourceLocation.h"
@@ -23,7 +23,7 @@ namespace lace {
 class Parser final {
     TokenStream& m_stream;
     std::string m_file;
-    AST* m_ast = nullptr;
+    Rib* m_rib = nullptr;
     Scope* m_scope = nullptr;
     bool m_allow_inits = true;
 
@@ -36,13 +36,11 @@ public:
 
     /// Attempt to parse and a new abstract syntax tree from the source
     /// this parser was constructed with.
-    [[nodiscard]] AST* parse();
+    [[nodiscard]] Rib* parse();
 
 private:
     /// Returns the current token in use.
-    inline const Token& curr() const {
-        return m_stream.get();
-    }
+    inline const Token& curr() const { return m_stream.get(); }
 
     /// Lex the next token.
     inline const Token& next() {
@@ -56,7 +54,7 @@ private:
     /// Returns a source span beginning at |pos| and ending at the current
     /// location.
     inline SourceSpan since(SourceLocation pos) const { 
-        return SourceSpan(pos, curr().loc); 
+        return SourceSpan { pos, loc() }; 
     }
 
     /// Test if the kind of the current token matches with |kind|.
@@ -97,24 +95,6 @@ private:
     /// in the language.
     bool is_reserved(const std::string& ident) const;
 
-    /// Enter a new scope, with the current scope as the parent node. Returns
-    /// an unmanaged pointer to the new scope.
-    Scope* enter_scope() {
-        Scope* scope = new Scope(m_scope);
-        assert(scope && "failed to create new scope!");
-
-        if (m_scope)
-            m_scope->children().push_back(scope);
-        
-        m_scope = scope;
-        return m_scope;
-    }
-
-    /// Exit the current scope, and move up to the parent node.
-    ///
-    /// If there is no parent scope, then the current scope just becomes null.
-    inline void exit_scope() { m_scope = m_scope->parent(); }
-
     /// Returns the equivelant unary operator for the given token |kind|.
     UnaryOp::Operator get_unary_op(Token::Kind kind) const;
 
@@ -127,6 +107,8 @@ private:
     /// Parse a set of rune decorators and append them to |runes|. 
     void parse_rune_decorators(std::vector<Rune*>& runes);
 
+    std::string parse_trail();
+
     Type* parse_type_specifier();
 
     Defn* parse_initial_definition();
@@ -134,7 +116,7 @@ private:
     Defn* parse_function_definition(std::vector<Rune*> runes, uint64_t start);
 
     Defn* parse_binding_definition(std::vector<Rune*> runes, const Token name);
-    Defn* parse_load_definition();
+    Defn* parse_use();
     
     Stmt* parse_initial_statement();
     Stmt* parse_block_statement();

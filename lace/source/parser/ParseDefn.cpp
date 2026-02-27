@@ -20,8 +20,8 @@ Defn* Parser::parse_initial_definition() {
     if (!match(Token::Identifier))
         log::fatal("expected identifier", log::Location(m_file, loc()));
 
-    if (match("load"))
-        return parse_load_definition();
+    if (match("use"))
+        return parse_use();
 
     uint64_t position = m_stream.position();
     next(); // id
@@ -51,9 +51,7 @@ Defn* Parser::parse_function_definition(std::vector<Rune*> runes, uint64_t start
     const Token function_id = curr();
     next(); // id
 
-    Scope* scope = enter_scope();
-
-    log::Span lspan = { m_ast->get_file(), function_id.loc };
+    log::Span lspan = { m_rib->path(), function_id.loc };
 
     // Parse a receiver, if the function has one.
     ParameterDefn* receiver = nullptr;
@@ -74,15 +72,12 @@ Defn* Parser::parse_function_definition(std::vector<Rune*> runes, uint64_t start
             log::fatal("receiver type must be a pointer", lspan);
 
         receiver = ParameterDefn::create(
-            *m_ast, 
+            *m_rib, 
             SourceSpan { receiver_id.loc, loc() }, 
             receiver_id.value,
             {}, 
             receiver_type
         );
-
-        if (!m_scope->add(receiver))
-            log::fatal("name already exists: " + receiver->name(), lspan);
 
         if (!expect(Token::CloseParen))
             log::fatal("expected ')' after function receiver", lspan);
@@ -109,19 +104,12 @@ Defn* Parser::parse_function_definition(std::vector<Rune*> runes, uint64_t start
         assert(param_type);
 
         ParameterDefn* param = ParameterDefn::create(
-            *m_ast, 
+            *m_rib, 
             SourceSpan { param_id.loc, loc() },
             param_id.value,
             {},
             param_type
         );
-
-        if (param->name() != "_") {
-            // If the parameter name isn't the default '_', then add it to the
-            // function scope.
-            if (!m_scope->add(param))
-                log::fatal("name already exists: " + param->name(), lspan);
-        }
         
         params.push_back(param);
 
@@ -150,8 +138,6 @@ Defn* Parser::parse_function_definition(std::vector<Rune*> runes, uint64_t start
         log::fatal("expected ';' or '{'", lspan);
     }
 
-    exit_scope();
-
     std::vector<Type*> param_types = {};
     param_types.reserve(params.size());
 
@@ -162,20 +148,16 @@ Defn* Parser::parse_function_definition(std::vector<Rune*> runes, uint64_t start
         param_types.push_back(param->type());
 
     FunctionDefn* defn = FunctionDefn::create(
-        *m_ast, 
+        *m_rib, 
         SourceSpan { function_id.loc, loc() },
         function_id.value,
         runes,
-        FunctionType::get(*m_ast, result_type, param_types), 
-        scope, 
+        FunctionType::get(*m_rib, result_type, param_types), 
+        new Scope(), 
         receiver,
         params, 
         body
     );
-
-    // Only add the function to global scope if it doesn't have a receiver.
-    if (!receiver && !m_scope->add(defn))
-        log::fatal("name already exists: " + defn->name(), lspan);
     
     return defn;
 }
@@ -204,7 +186,7 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
             Type* field_type = parse_type_specifier();
 
             FieldDefn* field = FieldDefn::create(
-                *m_ast, 
+                *m_rib, 
                 since(field_name.loc), 
                 field_name.value, 
                 {},
@@ -226,48 +208,39 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
         fields.shrink_to_fit();
         
         StructDefn* defn = StructDefn::create(
-            *m_ast, 
+            *m_rib, 
             SourceSpan(name.loc, end), 
             name.value, 
             runes,
             nullptr
         );
 
-        StructType* type = StructType::create(*m_ast, defn);
-        
-        defn->set_type(type);
+        defn->set_type(StructType::create(*m_rib, defn));
         defn->set_fields(fields);
-
-        if (!m_scope->add(defn)) {
-            log::fatal("name already exists in scope: " + defn->name(),
-                log::Span(m_file, since(name.loc)));
-        }
-
         return defn;
     } else if (expect("enum")) {
         Type* underlying;
         if (match(Token::Identifier)) {
             underlying = parse_type_specifier();
         } else {
-            underlying = BuiltinType::get(*m_ast, BuiltinType::Kind::Int64);
+            underlying = BuiltinType::get(*m_rib, BuiltinType::Kind::Int64);
         }
 
         EnumDefn* defn = EnumDefn::create(
-            *m_ast, 
+            *m_rib, 
             name.loc, 
             name.value, 
             runes,
             underlying
         );
 
-        EnumType* type = EnumType::create(*m_ast, underlying, defn);
+        EnumType* type = EnumType::create(*m_rib, underlying, defn);
         defn->set_type(type);
         
         if (!expect(Token::OpenBrace))
             log::fatal("expected '{'", log::Span(m_file, since(name.loc)));
 
         std::vector<VariantDefn*> variants = {};
-        variants.reserve(4);
 
         int64_t value = 0;
         SourceLocation end = loc();
@@ -297,21 +270,14 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
                 next();
             }
 
-            VariantDefn* variant = VariantDefn::create(
-                *m_ast, 
+            variants.push_back(VariantDefn::create(
+                *m_rib, 
                 since(variant_name.loc), 
                 variant_name.value, 
                 {},
                 type, 
                 value++
-            );
-
-            if (!m_scope->add(variant)) {
-                log::fatal("name already exists in scope: " + variant->name(), 
-                    log::Span(m_file, since(loc())));
-            }
-            
-            variants.push_back(variant);
+            ));
 
             if (match(Token::CloseBrace)) {
                 end = loc();
@@ -323,70 +289,8 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
                 log::fatal("expected ','", log::Span(m_file, since(loc())));
         }
 
-        variants.shrink_to_fit();
-
         defn->set_variants(variants);
-
-        if (!m_scope->add(defn)) {
-            log::fatal("name already exists in scope: " + defn->name(),
-                log::Span(m_file, since(loc())));
-        }
-
         return defn;
-    } else if (expect("space")) {
-        if (!expect(Token::OpenBrace))
-            log::fatal("expected '{'", log::Span(m_file, since(loc())));
-        
-        SpaceDefn* existing = nullptr;
-        if (NamedDefn* defn = m_scope->get(name.value)) {
-            existing = dynamic_cast<SpaceDefn*>(defn);
-            if (existing) {
-                // @Todo: PROVE this is always true, or change it.
-                assert(existing->scope()->parent() == m_scope);
-
-                m_scope = existing->scope();
-            } else {
-                enter_scope();
-            }
-        } else {
-            enter_scope();
-        }
-
-        std::vector<NamedDefn*> defns = {};
-        while (!match(Token::CloseBrace)) {
-            Defn* defn = parse_initial_definition();
-            if (!defn)
-                log::fatal("expected definition", log::Span(m_file, since(loc())));
-            
-            NamedDefn* named = dynamic_cast<NamedDefn*>(defn);
-            if (!named)
-                log::fatal("expected named definition", log::Span(m_file, since(loc())));
-
-            defns.push_back(named);
-        }
-
-        SpaceDefn* space = SpaceDefn::create(
-            *m_ast, 
-            SourceSpan { name.loc, loc() }, 
-            name.value, 
-            runes, 
-            m_scope, 
-            defns
-        );
-
-        exit_scope();
-
-        next(); // '}'
-
-        if (existing)
-            return space;
-
-        if (!m_scope->add(space)) {
-            log::fatal("name already exists in scope: " + space->name(), 
-                log::Span(m_file, space->span()));
-        }
-
-        return space;
     } else {
         // Assume global variable definition.
         Type* type = parse_type_specifier();
@@ -396,14 +300,14 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
         
         if (expect(Token::Eq)) {
             init = parse_initial_expression();
-            end = init->get_span().end;
+            end = init->span().end;
         }
 
         // Semis are not strictly necessary, but are not disallowed either.
         while (expect(Token::Semi));
 
-        VariableDefn* var = VariableDefn::create(
-            *m_ast, 
+        return VariableDefn::create(
+            *m_rib, 
             SourceSpan(name.loc, end), 
             name.value, 
             runes,
@@ -411,33 +315,16 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
             init, 
             true
         );
-
-        if (!m_scope->add(var)) {
-            log::fatal("name already exists in scope: " + var->name(), 
-                log::Span(m_file, since(name.loc)));
-        }
-
-        return var;
     }
 
     return nullptr;
 }
 
-Defn* Parser::parse_load_definition() {
+Defn* Parser::parse_use() {
+    assert(curr().value == "use");
+
     const SourceLocation start = loc();
-    next(); // 'load'
+    next(); // 'use'
 
-    if (!match(Token::String))
-        log::fatal("expected file path", log::Span(m_file, since(start)));
-
-    const Token path = curr();
-    next();
-
-    while (expect(Token::Semi));
-
-    return LoadDefn::create(
-        *m_ast, 
-        SourceSpan { start, path.loc }, 
-        path.value
-    );
+    return UseDefn::create(*m_rib, since(start), parse_trail());
 }

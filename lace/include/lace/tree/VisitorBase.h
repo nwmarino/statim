@@ -6,8 +6,9 @@
 #ifndef LACE_VISITOR_BASE_H_
 #define LACE_VISITOR_BASE_H_
 
-#include "lace/core/Options.h"
+#include "lace/core/Context.h"
 #include "lace/tree/Scope.h"
+#include "lace/tree/Type.h"
 
 namespace lace {
 
@@ -45,6 +46,7 @@ class UnaryOp;
 class AccessExpr;
 class CallExpr;
 class CastExpr;
+class FieldInitExpr;
 class ParenExpr;
 class RefExpr;
 class SizeofExpr;
@@ -55,10 +57,10 @@ class Type;
 
 class VisitorBase {
 protected:
-    Options& m_options;
+    Context& m_context;
     Rib* m_rib = nullptr;
 
-    VisitorBase(Options& options) : m_options(options) {}
+    VisitorBase(Context& context) : m_context(context) {}
 
 public:
     virtual ~VisitorBase() = default;
@@ -103,6 +105,7 @@ public:
     virtual void visit(AccessExpr& node);
     virtual void visit(CallExpr& node);
     virtual void visit(CastExpr& node);
+    virtual void visit(FieldInitExpr& node);
     virtual void visit(ParenExpr& node);
     virtual void visit(RefExpr& node);
     virtual void visit(SizeofExpr& node);

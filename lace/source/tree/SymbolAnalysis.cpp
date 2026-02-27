@@ -13,7 +13,7 @@
 
 using namespace lace;
 
-SymbolAnalysis::SymbolAnalysis(Options& options) : VisitorBase(options) {}
+SymbolAnalysis::SymbolAnalysis(Context& context) : VisitorBase(context) {}
 
 void SymbolAnalysis::visit(Rib& rib) {
     m_scope = rib.scope();
@@ -68,21 +68,24 @@ void SymbolAnalysis::visit(EnumDefn& node) {
 void SymbolAnalysis::visit(FunctionDefn& node) {
     assert(m_scope);
 
-    Symbol::Visibility visibility = Symbol::Visibility::Private;
-    if (node.has_rune(Rune::Kind::Public))
-        visibility = Symbol::Visibility::Public;
+    // Only add functions to global scope if they don't have a ptr receiver.
+    if (!node.has_receiver()) {
+        Symbol::Visibility visibility = Symbol::Visibility::Private;
+        if (node.has_rune(Rune::Kind::Public))
+            visibility = Symbol::Visibility::Public;
 
-    bool res = m_scope->add(Symbol {
-        .name = node.name(),
-        .qual_name = qualify_name(node.name()),
-        .kind = Symbol::Kind::Definition,
-        .visibility = visibility,
-        .defn = &node,
-    });
+        bool res = m_scope->add(Symbol {
+            .name = node.name(),
+            .qual_name = qualify_name(node.name()),
+            .kind = Symbol::Kind::Definition,
+            .visibility = visibility,
+            .defn = &node,
+        });
 
-    if (!res) {
-        log::error("function conflicts with existing name: " + node.name(), 
-            log::Span { m_rib->path(), node.span() });
+        if (!res) {
+            log::error("function conflicts with existing name: " + node.name(), 
+                log::Span { m_rib->path(), node.span() });
+        }
     }
 
     node.scope()->set_parent(m_scope);
@@ -95,6 +98,9 @@ void SymbolAnalysis::visit(FunctionDefn& node) {
 
 void SymbolAnalysis::visit(ParameterDefn& node) {
     assert(m_scope);
+
+    if (node.name() == "_")
+        return;
 
     Symbol::Visibility visibility = Symbol::Visibility::Private;
     if (node.has_rune(Rune::Kind::Public))
@@ -193,11 +199,5 @@ void SymbolAnalysis::visit(BlockStmt& node) {
 }
 
 std::string SymbolAnalysis::qualify_name(const std::string& name) const {
-    std::string res = name;
-    
-    Rib* curr = m_rib;
-    while (curr)
-        res = curr->name() + '.' + res;
-    
-    return res;
+    return m_rib->name() + "::" + name;
 }

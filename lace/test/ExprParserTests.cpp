@@ -6,7 +6,7 @@
 #include "lace/lexer/Lexer.h"
 #include "lace/lexer/TokenStream.h"
 #include "lace/parser/Parser.h"
-#include "lace/tree/AST.h"
+#include "lace/tree/Rib.h"
 #include "lace/tree/Expr.h"
 #include "lace/tree/Stmt.h"
 
@@ -16,17 +16,17 @@ namespace lace::test {
 
 class ExprParserTests : public ::testing::Test {
 protected:
-    AST* ast;
+    Rib* rib;
 
     void SetUp() override {
-        ast = nullptr;
+        rib = nullptr;
     }
 
     void TearDown() override {
-        if (ast)
-            delete ast;
-            
-        ast = nullptr;
+        if (rib)
+            delete rib;
+
+        rib = nullptr;
     }
 };
 
@@ -36,11 +36,11 @@ TEST_F(ExprParserTests, StructInitExpr) {
     ASSERT_TRUE(lexer.lex(stream));
 
     Parser parser(stream);
-    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
+    ASSERT_NO_FATAL_FAILURE(rib = parser.parse());
 
-    EXPECT_EQ(ast->num_defns(), 1);
+    EXPECT_EQ(rib->num_defns(), 1);
 
-    auto F = dynamic_cast<FunctionDefn*>(ast->get_defn(0));
+    auto F = dynamic_cast<FunctionDefn*>(rib->get_defn(0));
     EXPECT_NE(F, nullptr);
     EXPECT_TRUE(F->has_body());
 

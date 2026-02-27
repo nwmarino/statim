@@ -19,7 +19,7 @@ class SymbolAnalysis final : public VisitorBase {
     Scope* m_scope = nullptr;
 
 public:
-    SymbolAnalysis(Options& options);
+    SymbolAnalysis(Context& context);
 
     ~SymbolAnalysis() = default;
 
@@ -40,7 +40,7 @@ public:
     void visit(ParameterDefn& node) override;
 
     void visit(StructDefn& node) override;
-
+    
     void visit(VariableDefn& node) override;
 
     void visit(VariantDefn& node) override;

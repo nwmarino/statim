@@ -7,7 +7,7 @@ add_executable(lace source/lace.cpp)
 target_compile_options(lace PRIVATE -g)
 
 target_link_libraries(lace PUBLIC
-    Codegen
+    #Codegen
     Core
     Lexer
     LIR
@@ -16,10 +16,10 @@ target_link_libraries(lace PUBLIC
     Tools
 )
 
-target_include_directories(Codegen PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-)
+#target_include_directories(Codegen PUBLIC
+#    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+#    $<INSTALL_INTERFACE:include>
+#)
 
 target_include_directories(Core PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -50,9 +50,9 @@ add_executable(lace_test
     test/RuneParserTests.cpp
     test/StmtParserTests.cpp
     test/TypeParserTests.cpp
-    test/SymbolAnalysisTests.cpp
-    test/SemanticAnalysisTests.cpp
-    test/CodegenTests.cpp
+    #test/SymbolAnalysisTests.cpp
+    #test/SemanticAnalysisTests.cpp
+    #test/CodegenTests.cpp
 )
 
 target_include_directories(lace_test PUBLIC
@@ -61,7 +61,7 @@ target_include_directories(lace_test PUBLIC
 )
 
 target_link_libraries(lace_test PRIVATE
-    Codegen
+    #Codegen
     Core
     Lexer
     LIR

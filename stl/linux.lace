@@ -1,3 +1,5 @@
+rib stl::linux;
+
 $public
 exit :: (_: s64) -> void;
 

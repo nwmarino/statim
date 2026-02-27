@@ -5,7 +5,7 @@
 
 #include "lace/lexer/Lexer.h"
 #include "lace/parser/Parser.h"
-#include "lace/tree/AST.h"
+#include "lace/tree/Rib.h"
 #include "lace/tree/Defn.h"
 #include "lace/tree/Expr.h"
 #include "lace/tree/Stmt.h"
@@ -17,17 +17,17 @@ namespace lace::test {
 
 class DefnParserTests : public ::testing::Test {
 protected:
-    AST* ast;
+    Rib* rib;
 
     void SetUp() override {
-        ast = nullptr;
+        rib = nullptr;
     }
 
     void TearDown() override {
-        if (ast) { 
-            delete ast;
-            ast = nullptr;
-        }
+        if (rib)
+            delete rib;
+
+        rib = nullptr;
     }
 };
 
@@ -37,11 +37,11 @@ TEST_F(DefnParserTests, Functions_Empty) {
     ASSERT_TRUE(lexer.lex(stream));
 
     Parser parser(stream);
-    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
+    ASSERT_NO_FATAL_FAILURE(rib = parser.parse());
 
-    EXPECT_EQ(ast->num_defns(), 1);
+    EXPECT_EQ(rib->num_defns(), 1);
 
-    auto F1 = dynamic_cast<const FunctionDefn*>(ast->get_defn(0));
+    auto F1 = dynamic_cast<const FunctionDefn*>(rib->get_defn(0));
     EXPECT_NE(F1, nullptr);
     EXPECT_EQ(F1->name(), "test");
     EXPECT_FALSE(F1->has_runes());
@@ -55,11 +55,11 @@ TEST_F(DefnParserTests, Functions_NonEmpty) {
     ASSERT_TRUE(lexer.lex(stream));
 
     Parser parser(stream);
-    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
+    ASSERT_NO_FATAL_FAILURE(rib = parser.parse());
 
-    EXPECT_EQ(ast->num_defns(), 1);
+    EXPECT_EQ(rib->num_defns(), 1);
 
-    auto F1 = dynamic_cast<const FunctionDefn*>(ast->get_defn(0));
+    auto F1 = dynamic_cast<const FunctionDefn*>(rib->get_defn(0));
     EXPECT_NE(F1, nullptr);
     EXPECT_EQ(F1->name(), "test");
     EXPECT_TRUE(F1->has_body());
@@ -83,11 +83,11 @@ TEST_F(DefnParserTests, Functions_WithParameters) {
     ASSERT_TRUE(lexer.lex(stream));
 
     Parser parser(stream);
-    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
+    ASSERT_NO_FATAL_FAILURE(rib = parser.parse());
 
-    EXPECT_EQ(ast->num_defns(), 1);
+    EXPECT_EQ(rib->num_defns(), 1);
 
-    auto F1 = dynamic_cast<const FunctionDefn*>(ast->get_defn(0));
+    auto F1 = dynamic_cast<const FunctionDefn*>(rib->get_defn(0));
     EXPECT_NE(F1, nullptr);
     EXPECT_EQ(F1->name(), "test");
     EXPECT_TRUE(F1->has_params());
@@ -110,11 +110,11 @@ TEST_F(DefnParserTests, GlobalVariables_NoInitializer) {
     ASSERT_TRUE(lexer.lex(stream));
 
     Parser parser(stream);
-    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
+    ASSERT_NO_FATAL_FAILURE(rib = parser.parse());
 
-    EXPECT_EQ(ast->num_defns(), 1);
+    EXPECT_EQ(rib->num_defns(), 1);
 
-    auto V1 = dynamic_cast<const VariableDefn*>(ast->get_defn(0));
+    auto V1 = dynamic_cast<const VariableDefn*>(rib->get_defn(0));
     EXPECT_NE(V1, nullptr);
     EXPECT_EQ(V1->name(), "glob");
     EXPECT_EQ(V1->type()->string(), "s64");
@@ -127,11 +127,11 @@ TEST_F(DefnParserTests, GlobalVariables_WithInitializer) {
     ASSERT_TRUE(lexer.lex(stream));
 
     Parser parser(stream);
-    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
+    ASSERT_NO_FATAL_FAILURE(rib = parser.parse());
 
-    EXPECT_EQ(ast->num_defns(), 1);
+    EXPECT_EQ(rib->num_defns(), 1);
 
-    auto V1 = dynamic_cast<const VariableDefn*>(ast->get_defn(0));
+    auto V1 = dynamic_cast<const VariableDefn*>(rib->get_defn(0));
     EXPECT_NE(V1, nullptr);
     EXPECT_EQ(V1->name(), "glob");
     EXPECT_EQ(V1->type()->string(), "s64");
@@ -148,11 +148,11 @@ TEST_F(DefnParserTests, Structs_NonEmpty) {
     ASSERT_TRUE(lexer.lex(stream));
 
     Parser parser(stream);
-    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
+    ASSERT_NO_FATAL_FAILURE(rib = parser.parse());
 
-    EXPECT_EQ(ast->num_defns(), 1);
+    EXPECT_EQ(rib->num_defns(), 1);
 
-    auto S1 = dynamic_cast<const StructDefn*>(ast->get_defn(0));
+    auto S1 = dynamic_cast<const StructDefn*>(rib->get_defn(0));
     EXPECT_NE(S1, nullptr);
     EXPECT_EQ(S1->name(), "Box");
     EXPECT_EQ(S1->num_fields(), 3);
@@ -186,11 +186,11 @@ TEST_F(DefnParserTests, Enum) {
     ASSERT_TRUE(lexer.lex(stream));
 
     Parser parser(stream);
-    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
+    ASSERT_NO_FATAL_FAILURE(rib = parser.parse());
 
-    EXPECT_EQ(ast->num_defns(), 1);
+    EXPECT_EQ(rib->num_defns(), 1);
 
-    auto E1 = dynamic_cast<EnumDefn*>(ast->get_defn(0));
+    auto E1 = dynamic_cast<EnumDefn*>(rib->get_defn(0));
     EXPECT_NE(E1, nullptr);
     EXPECT_EQ(E1->name(), "Colors");
     EXPECT_EQ(E1->num_variants(), 3);

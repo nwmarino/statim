@@ -6,6 +6,7 @@
 #include "lace/tree/Defn.h"
 #include "lace/tree/Expr.h"
 #include "lace/tree/Printer.h"
+#include "lace/tree/Rib.h"
 #include "lace/tree/Stmt.h"
 #include "lace/tree/VisitorBase.h"
 #include "lace/types/SourceLocation.h"
@@ -16,82 +17,67 @@
 
 using namespace lace;
 
-Printer::Printer(Options& options, std::ostream& out) : VisitorBase(options), m_out(out) {}
+Printer::Printer(Context& context, std::ostream& out) 
+  : VisitorBase(context), m_out(out) {}
 
-void Printer::visit(AST& node) {
-    m_out << std::format("AST \"{}\"\n", node.get_file());
+void Printer::visit(Rib& rib) {
+    m_out << std::format("AST \"{}\"\n", rib.path());
 
     ++m_indent;
 
-    VisitorBase::visit(node);
-    
+    VisitorBase::visit(rib);
+
     --m_indent;
 }
 
-void Printer::visit(LoadDefn& node) {
+void Printer::visit(AliasDefn& node) {
     print_indent();
 
     const SourceSpan span = node.span();
-    const SourceLocation start = span.start, end = span.end;
+    const SourceLocation start = span.start, end = span.start;
 
-    m_out << std::format("Load <{}:{}, {}:{}> \"{}\"\n", 
-        start.line, 
-        start.col, 
-        end.line, 
-        end.col, 
-        node.path()
+    const AliasType* type = dynamic_cast<const AliasType*>(node.type());
+    assert(type);
+
+    m_out << std::format("Alias <{}:{}, {}:{}> {} '{}'\n",
+        start.line,
+        start.col,
+        end.line,
+        end.col,
+        node.name(),
+        type->aliased()->string()
     );
 }
 
-void Printer::visit(SpaceDefn& node) {
+void Printer::visit(EnumDefn& node) {
     print_indent();
 
     const SourceSpan span = node.span();
-    const SourceLocation start = span.start, end = span.end;
+    const SourceLocation start = span.start, end = span.start;
 
-    m_out << std::format("Space <{}:{}, {}:{}> '{}'\n", 
-        start.line, 
-        start.col, 
-        end.line, 
-        end.col, 
+    m_out << std::format("Enum <{}:{}, {}:{}> {}\n",
+        start.line,
+        start.col,
+        end.line,
+        end.col,
         node.name()
     );
-    
+
     ++m_indent;
-    for (NamedDefn* defn : node.defns())
-        defn->accept(*this);
+
+    for (VariantDefn* variant : node.variants())
+        variant->accept(*this);
+
     --m_indent;
 }
 
-void Printer::visit(VariableDefn& node) {
+void Printer::visit(FieldDefn& node) {
     print_indent();
 
     const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
-    m_out << std::format("Variable <{}:{}, {}:{}> {} '{}'\n", 
-        start.line, 
-        start.col, 
-        end.line, 
-        end.col, 
-        node.name(), 
-        node.type()->string()
-    );
-
-    if (node.has_init()) {
-        ++m_indent;
-        node.init()->accept(*this);
-        --m_indent;
-    }
-}
-
-void Printer::visit(ParameterDefn& node) {
-    print_indent();
-
-    const SourceSpan span = node.span();
-    const SourceLocation start = span.start, end = span.start;
-    
-    m_out << std::format("Parameter <{}:{}, {}:{}> {} '{}'\n",
+    m_out << std::format("Field <{}:{}, {}:{}> {} '{}'\n",
         start.line,
         start.col,
         end.line,
@@ -127,54 +113,19 @@ void Printer::visit(FunctionDefn& node) {
     --m_indent;
 }
 
-void Printer::visit(FieldDefn& node) {
+void Printer::visit(ParameterDefn& node) {
     print_indent();
 
     const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
-
-    m_out << std::format("Field <{}:{}, {}:{}> {} '{}'\n",
+    
+    m_out << std::format("Parameter <{}:{}, {}:{}> {} '{}'\n",
         start.line,
         start.col,
         end.line,
         end.col,
         node.name(),
         node.type()->string()
-    );
-}
-
-void Printer::visit(VariantDefn& node) {
-    print_indent();
-
-    const SourceSpan span = node.span();
-    const SourceLocation start = span.start, end = span.start;
-
-    m_out << std::format("Variant <{}:{}, {}:{}> {} '{}'\n",
-        start.line,
-        start.col,
-        end.line,
-        end.col,
-        node.name(),
-        node.type()->string()
-    );
-}
-
-void Printer::visit(AliasDefn& node) {
-    print_indent();
-
-    const SourceSpan span = node.span();
-    const SourceLocation start = span.start, end = span.start;
-
-    const AliasType* type = dynamic_cast<const AliasType*>(node.type());
-    assert(type);
-
-    m_out << std::format("Alias <{}:{}, {}:{}> {} '{}'\n",
-        start.line,
-        start.col,
-        end.line,
-        end.col,
-        node.name(),
-        type->aliased()->string()
     );
 }
 
@@ -200,32 +151,63 @@ void Printer::visit(StructDefn& node) {
     --m_indent;
 }
 
-void Printer::visit(EnumDefn& node) {
+void Printer::visit(UseDefn& node) {
+    print_indent();
+
+    const SourceSpan span = node.span();
+    const SourceLocation start = span.start, end = span.end;
+
+    m_out << std::format("Use <{}:{}, {}:{}> \"{}\"\n", 
+        start.line, 
+        start.col, 
+        end.line, 
+        end.col,
+        node.path()
+    );
+}
+
+void Printer::visit(VariableDefn& node) {
     print_indent();
 
     const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
-    m_out << std::format("Enum <{}:{}, {}:{}> {}\n",
+    m_out << std::format("Variable <{}:{}, {}:{}> {} '{}'\n", 
+        start.line, 
+        start.col, 
+        end.line, 
+        end.col, 
+        node.name(), 
+        node.type()->string()
+    );
+
+    if (node.has_init()) {
+        ++m_indent;
+        node.init()->accept(*this);
+        --m_indent;
+    }
+}
+
+void Printer::visit(VariantDefn& node) {
+    print_indent();
+
+    const SourceSpan span = node.span();
+    const SourceLocation start = span.start, end = span.start;
+
+    m_out << std::format("Variant <{}:{}, {}:{}> {} '{}'\n",
         start.line,
         start.col,
         end.line,
         end.col,
-        node.name()
+        node.name(),
+        node.type()->string()
     );
-
-    ++m_indent;
-
-    for (VariantDefn* variant : node.variants())
-        variant->accept(*this);
-
-    --m_indent;
 }
 
 void Printer::visit(AdapterStmt& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Adapter <{}:{}, {}:{}>\n",
@@ -236,14 +218,16 @@ void Printer::visit(AdapterStmt& node) {
     );
 
     ++m_indent;
+
     VisitorBase::visit(node);
+
     --m_indent;
 }
 
 void Printer::visit(BlockStmt& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Block <{}:{}, {}:{}>\n",
@@ -254,14 +238,16 @@ void Printer::visit(BlockStmt& node) {
     );
 
     ++m_indent;
+
     VisitorBase::visit(node);
+
     --m_indent;
 }
 
 void Printer::visit(IfStmt& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("If <{}:{}, {}:{}>\n",
@@ -272,14 +258,16 @@ void Printer::visit(IfStmt& node) {
     );
 
     ++m_indent;
+
     VisitorBase::visit(node);
+
     --m_indent;
 }
 
 void Printer::visit(RestartStmt& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Restart <{}:{}, {}:{}>\n",
@@ -293,7 +281,7 @@ void Printer::visit(RestartStmt& node) {
 void Printer::visit(RetStmt& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Ret <{}:{}, {}:{}>\n",
@@ -304,14 +292,16 @@ void Printer::visit(RetStmt& node) {
     );
 
     ++m_indent;
+
     VisitorBase::visit(node);
+
     --m_indent;
 }
 
 void Printer::visit(StopStmt& node) {
         print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Stop <{}:{}, {}:{}>\n",
@@ -325,7 +315,7 @@ void Printer::visit(StopStmt& node) {
 void Printer::visit(UntilStmt& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Until <{}:{}, {}:{}>\n",
@@ -336,14 +326,16 @@ void Printer::visit(UntilStmt& node) {
     );
 
     ++m_indent;
+
     VisitorBase::visit(node);
+
     --m_indent;
 }
 
 void Printer::visit(BoolLiteral& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Bool <{}:{}, {}:{}> {} '{}'\n",
@@ -359,7 +351,7 @@ void Printer::visit(BoolLiteral& node) {
 void Printer::visit(CharLiteral& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Char <{}:{}, {}:{}> '{}' '{}'\n",
@@ -375,7 +367,7 @@ void Printer::visit(CharLiteral& node) {
 void Printer::visit(IntegerLiteral& node) {
         print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Integer <{}:{}, {}:{}> {} '{}'\n",
@@ -391,7 +383,7 @@ void Printer::visit(IntegerLiteral& node) {
 void Printer::visit(FloatLiteral& node) {
         print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Float <{}:{}, {}:{}> {} '{}'\n",
@@ -407,7 +399,7 @@ void Printer::visit(FloatLiteral& node) {
 void Printer::visit(NullLiteral& node) {
         print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Null <{}:{}, {}:{}> '{}'\n",
@@ -422,7 +414,7 @@ void Printer::visit(NullLiteral& node) {
 void Printer::visit(StringLiteral& node) {
         print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("String <{}:{}, {}:{}> \"{}\" '{}'\n",
@@ -438,7 +430,7 @@ void Printer::visit(StringLiteral& node) {
 void Printer::visit(BinaryOp& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Binary <{}:{}, {}:{}> '{}' ",
@@ -515,14 +507,16 @@ void Printer::visit(BinaryOp& node) {
     m_out << '\n';
 
     ++m_indent;
+
     VisitorBase::visit(node);
+
     --m_indent;
 }
 
 void Printer::visit(UnaryOp& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Unary <{}:{}, {}:{}> '{}' ",
@@ -557,14 +551,16 @@ void Printer::visit(UnaryOp& node) {
     m_out << '\n';
 
     ++m_indent;
+
     VisitorBase::visit(node);
+
     --m_indent;
 }
 
 void Printer::visit(AccessExpr& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Access <{}:{}, {}:{}> {} '{}'\n",
@@ -577,14 +573,16 @@ void Printer::visit(AccessExpr& node) {
     );
 
     ++m_indent;
+
     VisitorBase::visit(node);
+
     --m_indent;
 }
 
 void Printer::visit(CallExpr& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Call <{}:{}, {}:{}> '{}'\n",
@@ -596,14 +594,16 @@ void Printer::visit(CallExpr& node) {
     );
 
     ++m_indent;
+
     VisitorBase::visit(node);
+
     --m_indent;
 }
 
 void Printer::visit(CastExpr& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Cast <{}:{}, {}:{}> '{}'\n",
@@ -615,14 +615,38 @@ void Printer::visit(CastExpr& node) {
     );
 
     ++m_indent;
+
     VisitorBase::visit(node);
+
+    --m_indent;
+}
+
+void Printer::visit(FieldInitExpr& node) {
+    print_indent();
+
+    const SourceSpan span = node.span();
+    const SourceLocation start = span.start, end = span.start;
+
+    m_out << std::format("FieldInit <{}:{}, {}:{}> {} '{}'\n",
+        start.line,
+        start.col,
+        end.line,
+        end.col,
+        node.name(),
+        node.type()->string()
+    );
+
+    ++m_indent;
+
+    VisitorBase::visit(node);
+
     --m_indent;
 }
 
 void Printer::visit(ParenExpr& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Paren <{}:{}, {}:{}> '{}'\n",
@@ -634,14 +658,16 @@ void Printer::visit(ParenExpr& node) {
     );
 
     ++m_indent;
+
     VisitorBase::visit(node);
+
     --m_indent;
 }
 
 void Printer::visit(RefExpr& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Ref <{}:{}, {}:{}> {} '{}'\n",
@@ -653,10 +679,10 @@ void Printer::visit(RefExpr& node) {
         node.type()->string()
     );
 
-    if (node.has_specs()) {
+    if (node.has_spec()) {
         m_indent++;
-        for (const Specifier& spec : node.specs())
-            m_out << std::format("Specifier {}\n", spec.name);
+        print_indent();
+        m_out << std::format("Specifier \"{}\"\n", node.spec());
         m_indent--;
     }
 }
@@ -664,7 +690,7 @@ void Printer::visit(RefExpr& node) {
 void Printer::visit(SizeofExpr& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Sizeof <{}:{}, {}:{}> {} '{}'\n",
@@ -680,7 +706,7 @@ void Printer::visit(SizeofExpr& node) {
 void Printer::visit(StructInitExpr& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.end;
 
     m_out << std::format("StructInit <{}:{}, {}:{}> '{}'\n",
@@ -692,19 +718,16 @@ void Printer::visit(StructInitExpr& node) {
     );
 
     ++m_indent;
-    for (const auto& [name, expr] : node.fields()) {
-        print_indent();
-        m_out << std::format("FieldInit {} '{}'\n", name, expr->type()->string());
-        ++m_indent;
-        expr->accept(*this);
-        --m_indent;
-    }
+
+    VisitorBase::visit(node);
+
+    --m_indent;
 }
 
 void Printer::visit(SubscriptExpr& node) {
     print_indent();
 
-    const SourceSpan span = node.get_span();
+    const SourceSpan span = node.span();
     const SourceLocation start = span.start, end = span.start;
 
     m_out << std::format("Subscript <{}:{}, {}:{}> '{}'\n",
@@ -716,6 +739,8 @@ void Printer::visit(SubscriptExpr& node) {
     );
 
     ++m_indent;
+
     VisitorBase::visit(node);
+
     --m_indent;
 }

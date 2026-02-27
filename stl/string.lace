@@ -1,10 +1,6 @@
-pkg stl::string;
+rib stl::string;
 
-pkg stl.string;
-
-pkg string;
-
-load "mem.lace";
+use stl::mem;
 
 $public
 string :: struct {
@@ -20,9 +16,9 @@ from (s: *string) :: (str: *char) -> void {
         len = len + 1;
     }
 
-    s.data = alloc(len + 1);
+    s.data = stl::mem::alloc(len + 1);
 
-    copy(s.data, str, len);
+    stl::mem::copy(s.data, str, len);
     s.data[len] = '\0';
     s.len = len;
 }
@@ -30,7 +26,7 @@ from (s: *string) :: (str: *char) -> void {
 /// Destroy the given string |s|.
 $public
 destroy (s: *string) :: () -> void {
-    free(s.data);
+    stl::mem::free(s.data);
     s.data = null;
     s.len = 0;
 }

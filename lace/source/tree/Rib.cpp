@@ -9,8 +9,8 @@
 
 using namespace lace;
 
-Rib::Rib(const std::string& name, const std::string& path, Rib* parent) 
-  : m_name(name), m_path(path), m_parent(parent) {
+Rib::Rib(const std::string& name, const std::string& path) 
+  : m_name(name), m_path(path) {
     m_scope = new Scope();
 
     // Initialize all built-in types.
@@ -23,13 +23,6 @@ Rib::Rib(const std::string& name, const std::string& path, Rib* parent)
 }
 
 Rib::~Rib() {
-    for (Rib* rib : m_children) {
-        if (rib)
-            delete rib;
-    }
-
-    m_children.clear();
-
     for (auto& [name, type] : m_types.aliases) {
         if (type)
             delete type;
@@ -86,6 +79,6 @@ Rib::~Rib() {
     m_defns.clear();
 }
 
-Rib* Rib::create(const std::string& name, const std::string& path, Rib* parent) {
-    return new Rib(name, path, parent);
+Rib* Rib::create(const std::string& name, const std::string& path) {
+    return new Rib(name, path);
 }

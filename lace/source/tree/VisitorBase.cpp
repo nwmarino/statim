@@ -51,6 +51,10 @@ void VisitorBase::visit(StructDefn& node) {
         field->accept(*this);
 }
 
+void VisitorBase::visit(UseDefn& node) {
+    
+}
+
 void VisitorBase::visit(VariableDefn& node) {
     if (node.has_init())
         node.init()->accept(*this);
@@ -157,6 +161,10 @@ void VisitorBase::visit(CastExpr& node) {
     node.expr()->accept(*this);
 }
 
+void VisitorBase::visit(FieldInitExpr& node) {
+    node.expr()->accept(*this);
+}
+
 void VisitorBase::visit(ParenExpr& node) {
     node.expr()->accept(*this);
 }
@@ -170,8 +178,8 @@ void VisitorBase::visit(SizeofExpr& node) {
 }
 
 void VisitorBase::visit(StructInitExpr& node) {
-    for (auto& [field, expr] : node.fields())
-        expr->accept(*this);
+    for (FieldInitExpr* field : node.fields())
+        field->accept(*this);
 }
 
 void VisitorBase::visit(SubscriptExpr& node) {

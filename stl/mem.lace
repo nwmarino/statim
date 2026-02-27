@@ -1,4 +1,6 @@
-load "linux.lace";
+rib stl::mem;
+
+use stl::linux;
 
 Metadata :: struct {
     size: u64,
@@ -10,7 +12,7 @@ border :: *void = null;
 head :: *Metadata = null;
 
 update_border :: () -> *void {
-    border = brk(0);
+    border = stl::linux::brk(0);
     ret border;
 }
 
@@ -33,7 +35,7 @@ extend_heap :: (inc: u64) -> *void {
     let old_border: *void = border;
     let new_border: *void = cast<*char>(border) + inc;
 
-    if brk(new_border) == old_border {
+    if stl::linux::brk(new_border) == old_border {
         ret cast<*void>(-1);
     }
 

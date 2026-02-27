@@ -22,6 +22,7 @@
 
 namespace lace {
 
+class Rib;
 class Defn;
 class NamedDefn;
 class SpaceDefn;
@@ -30,6 +31,7 @@ class Type;
 struct Symbol final {
     enum class Kind : uint32_t {
         Definition,
+        Rib,
         Type,
     };
 
@@ -44,6 +46,7 @@ struct Symbol final {
     Visibility visibility;
     union {
         NamedDefn* defn;
+        Rib* rib;
         Type* type;
     };
 };

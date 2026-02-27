@@ -3,8 +3,8 @@
 //  All rights reserved.
 //
 
-#ifndef LOVELACE_PRINTER_H_
-#define LOVELACE_PRINTER_H_
+#ifndef LACE_PRINTER_H_
+#define LACE_PRINTER_H_
 
 #include "lace/tree/Expr.h"
 #include "lace/tree/Type.h"
@@ -21,18 +21,19 @@ class Printer final : public VisitorBase {
     }
 
 public:
-    Printer(Options& options, std::ostream& out);
+    Printer(Context& context, std::ostream& out);
 
-    void visit(AST& node) override;
+    void visit(Rib& rib) override;
 
-    void visit(VariableDefn& node) override;
-    void visit(ParameterDefn& node) override;
-    void visit(FunctionDefn& node) override;
-    void visit(FieldDefn& node) override;
-    void visit(VariantDefn& node) override;
     void visit(AliasDefn& node) override;
-    void visit(StructDefn& node) override;
     void visit(EnumDefn& node) override;
+    void visit(FieldDefn& node) override;
+    void visit(FunctionDefn& node) override;
+    void visit(ParameterDefn& node) override;
+    void visit(StructDefn& node) override;
+    void visit(UseDefn& node) override;
+    void visit(VariableDefn& node) override;
+    void visit(VariantDefn& node) override;
 
     void visit(AdapterStmt& node) override;
     void visit(BlockStmt& node) override;
@@ -55,6 +56,7 @@ public:
     void visit(AccessExpr& node) override;
     void visit(CallExpr& node) override;
     void visit(CastExpr& node) override;
+    void visit(FieldInitExpr& node) override;
     void visit(ParenExpr& node) override;
     void visit(RefExpr& node) override;
     void visit(SizeofExpr& node) override;
@@ -64,4 +66,4 @@ public:
 
 } // namespace lace
 
-#endif // LOVELACE_PRINTER_H_
+#endif // LACE_PRINTER_H_

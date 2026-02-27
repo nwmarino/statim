@@ -3,6 +3,7 @@
 //  All rights reserved.
 //
 
+#include "lace/core/Context.h"
 #include "lace/core/Diagnostics.h"
 #include "lace/core/ThreadPool.h"
 #include "lace/core/Options.h"
@@ -10,13 +11,13 @@
 #include "lace/lexer/TokenStream.h"
 #include "lace/parser/Parser.h"
 #include "lace/tools/Files.h"
-#include "lace/tree/AST.h"
+#include "lace/tree/NameResolution.h"
+#include "lace/tree/Rib.h"
 #include "lace/tree/Defn.h"
-#include "lace/tree/LIRCodegen.h"
+#include "lace/tree/Codegen.h"
 #include "lace/tree/Printer.h"
 #include "lace/tree/SemanticAnalysis.h"
 #include "lace/tree/SymbolAnalysis.h"
-#include "lace/tree/TypeResolution.h"
 
 #include "lir/analysis/AMD64LoweringPass.h"
 #include "lir/machine/AsmWriter.h"
@@ -43,27 +44,16 @@ using namespace lace;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-using Asts = std::unordered_set<AST*>;
-using DepTable = std::unordered_map<AST*, Asts>;
-using FileTable = std::unordered_map<std::string, AST*>;
-
 using Timestamp = time_point<high_resolution_clock>;
 
-struct InputFile final {
-    std::string file;
-    AST* ast;
-
-    InputFile(const std::string& file, AST* ast = nullptr) 
-      : file(file), ast(ast) {}
-};
-
 /// A mapping between the absolute path of an input file and its parsed AST.
-static FileTable g_files = {};
 static std::string g_STL = "/home/lovelace/stl";
 
 static inline Timestamp get_time() {
     return high_resolution_clock::now();
 }
+
+/*
 
 /// Setup |g_files| based on the set of given |asts| and their respective
 /// input files.
@@ -317,6 +307,8 @@ void drive_lir_backend(const Options &options, const Asts &asts) {
     }
 }
 
+*/
+
 int32_t main(int32_t argc, char* argv[]) {
     Options options = {};
     options.output = "main";
@@ -335,10 +327,10 @@ int32_t main(int32_t argc, char* argv[]) {
 
     log::direct(std::cout);
 
-    std::vector<InputFile> files = {
-        InputFile("/home/lovelace/stl/string.lace"),
-        InputFile("/home/lovelace/stl/mem.lace"),
-        InputFile("/home/lovelace/stl/linux.lace"),
+    std::vector<std::string> files = {
+        "/root/lace/stl/string.lace",
+        "/root/lace/stl/mem.lace",
+        "/root/lace/stl/linux.lace",
     };
 
     for (int32_t i = 1; i < argc; ++i) {
@@ -392,8 +384,8 @@ int32_t main(int32_t argc, char* argv[]) {
 
             bool dupe = false;
             std::string path = absolute(arg).string();
-            for (const InputFile& f : files) {
-                if (f.file == path) {
+            for (const std::string& file : files) {
+                if (file == path) {
                     dupe = true;
                     break;
                 }
@@ -405,11 +397,13 @@ int32_t main(int32_t argc, char* argv[]) {
     }
 
     if (files.empty())
-        log::fatal("no input files");
+        log::error("no input files");
 
     log::flush();
 
     Timestamp start = get_time();
+
+    Context context(options);
 
     if (options.multithread) {
         const uint32_t supported_threads = std::thread::hardware_concurrency(); 
@@ -429,138 +423,119 @@ int32_t main(int32_t argc, char* argv[]) {
             static_cast<uint32_t>(files.size()));
     }
 
-    ThreadPool *pool = nullptr;
+    ThreadPool* tpool = nullptr;
     if (options.multithread) {
-        pool = new ThreadPool(options.threads);
-        assert(pool);
+        tpool = new ThreadPool(options.threads);
+        assert(tpool);
     }
 
-    if (options.multithread && options.threads > 1) {
-        assert(pool);
-
-        for (InputFile &f : files) {
-            pool->push([&f, options] {
-                Timestamp parse_start = get_time();
-
-                std::string contents;
-                if (!read_file(f.file, contents))
-                    log::flush();
-
-                TokenStream stream;
-                Lexer lexer(contents, f.file);
-                if (!lexer.lex(stream))
-                    log::flush();
-
-                Parser parser(stream, f.file);
-                f.ast = parser.parse();
-                assert(f.ast);
-
-                if (options.verbose) {
-                    duration<double> dur = get_time() - parse_start;
-
-                    std::stringstream ss;
-                    ss << std::format("{}: Finished parsing\n-- took {}\n", 
-                        f.file, dur);
-                    
-                    std::cout << ss.str();
-                }
-            });
-        }
-
-        pool->wait();
-    } else for (InputFile &f : files) {
-        Timestamp parse_start = get_time();
+    auto parse_file = [&context](const std::string& file) {
+        const Timestamp pstart = get_time();
 
         std::string contents;
-        if (!read_file(f.file, contents))
+        if (!read_file(file, contents))
             log::flush();
 
-        TokenStream stream;
-        Lexer lexer(contents, f.file);
-        if (!lexer.lex(stream))
+        TokenStream tstream;
+        Lexer lexer(contents, file);
+        if (!lexer.lex(tstream))
             log::flush();
 
-        Parser parser(stream, f.file);
-        f.ast = parser.parse();
-        assert(f.ast);
-        
-        if (options.verbose) {
-            duration<double> dur = get_time() - parse_start;
+        Parser parser(tstream, file);
+        Rib* rib = parser.parse();
+        assert(rib);
+
+        if (!context.add_rib(rib))
+            log::error("rib '" + rib->name() + "' has multiple definitions");
+
+        if (context.options().verbose) {
+            duration<double> dur = get_time() - pstart;
 
             std::stringstream ss;
-            ss << std::format("{}: Finished parsing\n-- took {}\n", f.file, dur);
+            ss << std::format("{}: Finished parsing\n-- took {}\n", 
+                file, dur);
             
             std::cout << ss.str();
         }
+    };
+
+    if (options.multithread && options.threads > 1) {
+        assert(tpool);
+
+        for (std::string& file : files) {
+            tpool->push([&file, &context, &parse_file] { 
+                parse_file(file); 
+            });
+        }
+
+        tpool->wait();
+    } else for (std::string& file : files) {
+        parse_file(file);
     }
 
     log::flush();
 
-    Asts asts = {};
-    asts.reserve(files.size());
-    for (InputFile &f : files)
-        asts.insert(f.ast);
+    for (auto& [name, rib] : context.ribs()) {
+        const Timestamp pstart = get_time();
 
-    setup_file_table(asts);
+        SymbolAnalysis syma(context);
+        rib->accept(syma);
 
-    Asts ordering = {};
-    DepTable deps = {};
-    ordering.reserve(asts.size());
-    deps.reserve(asts.size());
-
-    computeDependencies(asts, ordering, deps);
-    resolveDependencies(options, ordering, deps);
-
-    // Perform symbol analysis on each syntax tree.
-    for (AST* ast : asts) {
-        const Timestamp syma_start = get_time();
-
-        SymbolAnalysis symbol_analysis(options);
-        ast->accept(symbol_analysis);
-
-        if (options.verbose) {
-            duration<double> dur = get_time() - syma_start;
+        if (context.options().verbose) {
+            duration<double> dur = get_time() - pstart;
             std::cout << std::format("{}: Finished symbol analysis\n-- took {}\n", 
-                ast->get_file(), dur);
+                rib->path(), dur);
         }
     }
 
     log::flush();
 
-    // Perform semantic analysis on each syntax tree.
-    for (AST *ast : asts) {
-        const Timestamp sema_start = get_time();
+    for (auto& [name, rib] : context.ribs()) {
+        const Timestamp pstart = get_time();
 
-        SemanticAnalysis semantic_analysis(options);
-        ast->accept(semantic_analysis);
+        NameResolution nres(context);
+        rib->accept(nres);
 
-        if (options.verbose) {
-            duration<double> dur = get_time() - sema_start;
-            std::cout << std::format("{}: Finished semantic analysis\n-- took {}\n", 
-                ast->get_file(), dur);
+        if (context.options().verbose) {
+            duration<double> dur = get_time() - pstart;
+            std::cout << std::format("{}: Finished name resolution\n-- took {}\n", 
+                rib->path(), dur);
         }
+    }
 
-        // AST is now considered valid, so print it if needbe.
-        if (options.dump_ast) {
-            std::ofstream out(ast->get_file() + ".ast");
+    log::flush();
+
+    for (auto& [name, rib] : context.ribs()) {
+        const Timestamp pstart = get_time();
+
+        SemanticAnalysis sema(context);
+        rib->accept(sema);
+
+        if (context.options().verbose) {
+            duration<double> dur = get_time() - pstart;
+            std::cout << std::format("{}: Finished semantic analysis\n-- took {}\n", 
+                rib->path(), dur);
+        }
+    }
+
+    log::flush();
+
+    if (context.options().dump_ast) {
+        for (const auto& [name, rib] : context.ribs()) {
+            std::ofstream out(rib->path() + ".ast");
             if (!out || !out.is_open())
-                log::fatal("failed to open file: " + ast->get_file() + ".ast");
+                log::fatal("failed to open file: " + rib->path() + ".ast");
 
-            Printer printer(options, out);
-            ast->accept(printer);
+            Printer printer(context, out);
+            rib->accept(printer);
+
             out.close();
         }
     }
 
     log::flush();
 
-    drive_lir_backend(options, asts);
-
-    for (AST* ast : asts)
-        delete ast;
-
-    asts.clear();
-    files.clear();
+    //drive_lir_backend(options, asts);
 
     if (options.verbose) {
         duration<double> dur = get_time() - start;
