@@ -8,6 +8,7 @@
 #include "lace/tree/Type.h"
 
 #include <cassert>
+#include <string>
 
 using namespace lace;
 
@@ -118,8 +119,13 @@ bool BuiltinType::can_cast(const Type* other, bool implicit) const {
     }
 }
 
-DeferredType* DeferredType::get(Rib& rib, const std::string& name) {
-    DeferredType* type = new DeferredType(name);
+//>==---------------------------------------------------------------------------
+//                          DeferredType Implementation
+//>==---------------------------------------------------------------------------
+
+DeferredType* DeferredType::get(Rib& rib, const std::string& name, 
+                                const std::string& spec) {
+    DeferredType* type = new DeferredType(name, spec);
     assert(type);
 
     rib.m_types.deferred.push_back(type);

@@ -331,6 +331,7 @@ int32_t main(int32_t argc, char* argv[]) {
         "/root/lace/stl/string.lace",
         "/root/lace/stl/mem.lace",
         "/root/lace/stl/linux.lace",
+        "/root/lace/stl/index.lace",
     };
 
     for (int32_t i = 1; i < argc; ++i) {
@@ -421,6 +422,10 @@ int32_t main(int32_t argc, char* argv[]) {
         // No point in us using more threads than there are files.
         options.threads = std::min(options.threads, 
             static_cast<uint32_t>(files.size()));
+
+        // Skip multithreading if we only have 1 thread available to us.
+        if (options.threads == 1)
+            options.multithread = false;
     }
 
     ThreadPool* tpool = nullptr;
@@ -459,10 +464,8 @@ int32_t main(int32_t argc, char* argv[]) {
         }
     };
 
-    if (options.multithread && options.threads > 1) {
-        assert(tpool);
-
-        for (std::string& file : files) {
+    if (options.multithread) {
+        for (const std::string& file : files) {
             tpool->push([&file, &context, &parse_file] { 
                 parse_file(file); 
             });
@@ -475,7 +478,7 @@ int32_t main(int32_t argc, char* argv[]) {
 
     log::flush();
 
-    for (auto& [name, rib] : context.ribs()) {
+    for (const auto& [name, rib] : context.ribs()) {
         const Timestamp pstart = get_time();
 
         SymbolAnalysis syma(context);
@@ -490,7 +493,7 @@ int32_t main(int32_t argc, char* argv[]) {
 
     log::flush();
 
-    for (auto& [name, rib] : context.ribs()) {
+    for (const auto& [name, rib] : context.ribs()) {
         const Timestamp pstart = get_time();
 
         NameResolution nres(context);
@@ -505,7 +508,7 @@ int32_t main(int32_t argc, char* argv[]) {
 
     log::flush();
 
-    for (auto& [name, rib] : context.ribs()) {
+    for (const auto& [name, rib] : context.ribs()) {
         const Timestamp pstart = get_time();
 
         SemanticAnalysis sema(context);

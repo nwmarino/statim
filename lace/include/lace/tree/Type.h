@@ -211,16 +211,25 @@ class DeferredType final : public Type {
     friend class Rib;
 
     std::string m_name;
+    std::string m_spec;
 
-    DeferredType(const std::string& name) : m_name(name) {}
+    DeferredType(const std::string& name, const std::string& spec) 
+      : m_name(name), m_spec(spec) {}
 
 public:
-    static DeferredType* get(Rib& rib, const std::string& name);
+    static DeferredType* get(Rib& rib, const std::string& name, 
+                             const std::string& spec);
 
     std::string string() const override { return std::format("'{}'", m_name); }
 
     /// Returns the name of this type.
     const std::string& name() const { return m_name; }
+
+    /// Returns the rib specifier of this type, if it has one.
+    const std::string& spec() const { return m_spec; }
+
+    /// Test if this type reference has a rib specifier.
+    bool has_spec() const { return !m_spec.empty(); }
 };
 
 /// Represents named types defined by an enum definition.

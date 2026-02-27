@@ -340,13 +340,43 @@ void SemanticAnalysis::visit(AccessExpr& node) {
     }
 
     FunctionDefn* method = sd->get_method(node.name());
-    if (method) {
-        node.set_field(method);
-        node.set_type(method->type());
+    if (!method) {
+        log::error("no field or method '" + node.name() + "' in '" + sd->name() + "'", span);  
         return;
     }
-    
-    log::error("no field or method '" + node.name() + "' in '" + sd->name() + "'", span);  
+
+    // Since methods are attached to their target structures, and not parent
+    // ribs, we must verify that the method is visible to the current rib.
+    Rib* morigin = method->rib();
+    if (morigin != m_rib) {
+        // Method was defined elsewhere, check that it is public first.
+        if (!method->has_rune(Rune::Kind::Public)) {
+            log::error("method '" + method->name() + "' exists in '" + morigin->name() + "', but is private", span);
+            return;
+        }
+
+        // Method is public, so check that the rib it was defined in is being
+        // used by the current rib.
+        bool found = false;
+        for (Defn* defn : m_rib->defns()) {
+            UseDefn* use = dynamic_cast<UseDefn*>(defn);
+            if (!use)
+                continue;
+
+            if (use->target() == morigin) {
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            log::error("method '" + method->name() + "' exists in '" + morigin->name() + "', but is not used", span);
+            return;
+        }
+    }
+
+    node.set_field(method);
+    node.set_type(method->type());    
 }
 
 void SemanticAnalysis::visit(RefExpr& node) {
@@ -362,11 +392,16 @@ void SemanticAnalysis::visit(CallExpr& node) {
     Expr* callee = node.callee();
     callee->accept(*this);
 
+    // If the callee of this call is a field access, then it is likely a call
+    // to a function with a receiver.
+    if (AccessExpr* access = dynamic_cast<AccessExpr*>(node.callee()))
+        node.set_receiver(access->base());
+
     const log::Span span = { m_rib->path(), node.span() };
 
     FunctionType* ft = dynamic_cast<FunctionType*>(node.callee()->type());
     if (!ft) {
-        log::error("callee is not a valid function", span);
+        log::error("callee is not a valid function; got type '" + node.callee()->type()->string() + "'", span);
         return;
     }
 

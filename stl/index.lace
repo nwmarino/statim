@@ -1,13 +1,14 @@
-load "mem.lace";
-load "string.lace";
+rib index;
+
+use stl::string;
 
 $public
 main :: () -> s64 {
-    let s: string;
+    let s: stl::string::string;
 
     s.from("Hello world!\n");
 
-    let len: u64 = s.len();
+    let len: u64 = s.size();
 
     s.destroy();
 

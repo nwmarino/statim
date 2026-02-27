@@ -21,7 +21,7 @@ Printer::Printer(Context& context, std::ostream& out)
   : VisitorBase(context), m_out(out) {}
 
 void Printer::visit(Rib& rib) {
-    m_out << std::format("AST \"{}\"\n", rib.path());
+    m_out << std::format("Rib {} \"{}\"\n", rib.name(), rib.path());
 
     ++m_indent;
 

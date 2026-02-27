@@ -50,8 +50,6 @@ public:
 
     void visit(BlockStmt& node) override;
 
-    void visit(AccessExpr& node) override;
-
     void visit(CastExpr& node) override;
 
     void visit(FieldInitExpr& node) override;
@@ -68,7 +66,7 @@ private:
     ///
     /// If a component of the given |type| could not be resolved, then null is 
     /// returned.
-    [[nodiscard]] Type* resolve_type(Type* type) const;
+    [[nodiscard]] Type* resolve_type(Type* type);
 };
 
 } // namespace lace

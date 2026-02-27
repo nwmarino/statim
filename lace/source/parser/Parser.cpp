@@ -77,39 +77,54 @@ std::string Parser::parse_trail() {
     return trail;
 }
 
-Type* Parser::parse_type_specifier() {
-    Type* type = nullptr;
-    
-    if (expect(Token::Star)) {
+Type* Parser::parse_type_specifier() {    
+    if (expect(Token::Star))
         return PointerType::get(*m_rib, parse_type_specifier());
-    } else if (match(Token::Identifier)) {
-        std::unordered_map<std::string, Type*> types = {
-            { "void", BuiltinType::get(*m_rib, BuiltinType::Kind::Void) },
-            { "bool", BuiltinType::get(*m_rib, BuiltinType::Kind::Bool) },
-            { "char", BuiltinType::get(*m_rib, BuiltinType::Kind::Char) },
-            { "s8", BuiltinType::get(*m_rib, BuiltinType::Kind::Int8) },
-            { "s16", BuiltinType::get(*m_rib, BuiltinType::Kind::Int16) },
-            { "s32", BuiltinType::get(*m_rib, BuiltinType::Kind::Int32) },
-            { "s64", BuiltinType::get(*m_rib, BuiltinType::Kind::Int64) },
-            { "u8", BuiltinType::get(*m_rib, BuiltinType::Kind::UInt8) },
-            { "u16", BuiltinType::get(*m_rib, BuiltinType::Kind::UInt16) },
-            { "u32", BuiltinType::get(*m_rib, BuiltinType::Kind::UInt32) },
-            { "u64", BuiltinType::get(*m_rib, BuiltinType::Kind::UInt64) },
-            { "f32", BuiltinType::get(*m_rib, BuiltinType::Kind::Float32) },
-            { "f64", BuiltinType::get(*m_rib, BuiltinType::Kind::Float64) },
-        };
 
-        auto it = types.find(curr().value);
-        if (it != types.end()) {
-            type = it->second;
-        } else {
-            type = DeferredType::get(*m_rib, curr().value);
-        }
+    Type* type = nullptr;
 
-        next();
-    } else {
-        log::fatal("expected type identifier", log::Location(m_file, loc()));
+    if (!match(Token::Identifier))
+        log::fatal("expected type identifier", log::Span { m_file, loc() });
+
+    std::unordered_map<std::string, Type*> types = {
+        { "void", BuiltinType::get(*m_rib, BuiltinType::Kind::Void) },
+        { "bool", BuiltinType::get(*m_rib, BuiltinType::Kind::Bool) },
+        { "char", BuiltinType::get(*m_rib, BuiltinType::Kind::Char) },
+        { "s8", BuiltinType::get(*m_rib, BuiltinType::Kind::Int8) },
+        { "s16", BuiltinType::get(*m_rib, BuiltinType::Kind::Int16) },
+        { "s32", BuiltinType::get(*m_rib, BuiltinType::Kind::Int32) },
+        { "s64", BuiltinType::get(*m_rib, BuiltinType::Kind::Int64) },
+        { "u8", BuiltinType::get(*m_rib, BuiltinType::Kind::UInt8) },
+        { "u16", BuiltinType::get(*m_rib, BuiltinType::Kind::UInt16) },
+        { "u32", BuiltinType::get(*m_rib, BuiltinType::Kind::UInt32) },
+        { "u64", BuiltinType::get(*m_rib, BuiltinType::Kind::UInt64) },
+        { "f32", BuiltinType::get(*m_rib, BuiltinType::Kind::Float32) },
+        { "f64", BuiltinType::get(*m_rib, BuiltinType::Kind::Float64) },
+    };
+
+    std::string name = curr().value;
+    next(); // id
+
+    auto it = types.find(name);
+    if (it != types.end())
+        return it->second;
+
+    std::string spec = "";
+    while (true) {
+        if (!expect(Token::Path))
+            break;
+
+        if (!spec.empty())
+            spec += "::";
+
+        spec += name;
+
+        if (!match(Token::Identifier))
+            log::fatal("expected identifier", log::Span(m_file, since(loc())));
+
+        name = curr().value;
+        next(); // id
     }
-
-    return type;
+    
+    return DeferredType::get(*m_rib, name, spec);
 }

@@ -53,11 +53,11 @@ void NameResolution::visit(FieldDefn& node) {
 }
 
 void NameResolution::visit(FunctionDefn& node) {
+    const log::Span span = { m_rib->path(), node.span().start };
+
     Type* type = resolve_type(node.type());
     if (!type) {
-        log::error("unresolved function type: '" + node.type()->string() + "'", 
-            log::Span { m_rib->path(), node.span() });
-
+        log::error("unresolved function type: '" + node.type()->string() + "'", span);
         return;
     }
 
@@ -69,6 +69,27 @@ void NameResolution::visit(FunctionDefn& node) {
     m_scope = node.scope();
 
     VisitorBase::visit(node);
+
+    if (node.has_receiver()) {
+        Type* rt = node.get_receiver_type();
+        assert(rt);
+
+        StructType* st = dynamic_cast<StructType*>(rt);
+        if (!st) {
+            log::error("cannot define receiver '" + node.name() + "' for non-struct '" + rt->string() + "'", span);
+            return;
+        }
+
+        StructDefn* sd = st->defn();
+        assert(sd);
+
+        if (sd->has_field(node.name()) || sd->has_method(node.name())) {
+            log::error("field '" + node.name() + "' already exists for '" + sd->name() + "'", span);
+            return;
+        }
+
+        sd->methods().push_back(&node);
+    }
 
     m_scope = m_scope->parent();
 }
@@ -123,10 +144,6 @@ void NameResolution::visit(BlockStmt& node) {
     m_scope = m_scope->parent();
 }
 
-void NameResolution::visit(AccessExpr& node) {
-    VisitorBase::visit(node);  
-}
-
 void NameResolution::visit(CastExpr& node) {
     Type* type = resolve_type(node.type());
     if (!type) {
@@ -161,15 +178,16 @@ void NameResolution::visit(RefExpr& node) {
     }
 
     Symbol symbol = {};
-    if (!m_scope->get(node.name(), symbol)) {
+    bool res = m_scope->get(node.name(), symbol);
+    m_scope = prev_scope;
+
+    if (!res) {
         log::error("unresolved reference: '" + node.name() + "'",
             log::Span { m_rib->path(), node.span() });
 
         m_scope = prev_scope;
         return;
     }
-
-    m_scope = prev_scope;
 
     if (symbol.kind != Symbol::Kind::Definition) {
         log::error("invalid type reference: '" + node.name() + "'",
@@ -239,10 +257,23 @@ void NameResolution::visit(StructInitExpr& node) {
     }
 }
 
-Type* NameResolution::resolve_type(Type* type) const {
+Type* NameResolution::resolve_type(Type* type) {
     if (auto deferred = dynamic_cast<DeferredType*>(type)) {
+        Scope* prev_scope = m_scope;
+
+        if (deferred->has_spec()) {
+            Rib* rib = m_context.get_rib(deferred->spec());
+            if (!rib)
+                return nullptr;
+
+            m_scope = rib->scope();
+        }
+
         Symbol symbol = {};
-        if (!m_scope->get(deferred->name(), symbol))
+        bool res = m_scope->get(deferred->name(), symbol);
+        m_scope = prev_scope;
+        
+        if (!res)
             return nullptr;
 
         if (symbol.kind == Symbol::Kind::Type) {
