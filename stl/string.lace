@@ -31,6 +31,12 @@ destroy (s: *string) :: () -> void {
     s.len = 0;
 }
 
+/// Returns the underlying data of the given string |s|.
+$public
+str (s: *string) :: () -> *char {
+    ret s.data;
+}
+
 /// Returns the size of the given string |s|.
 $public
 size (s: *string) :: () -> u64 {

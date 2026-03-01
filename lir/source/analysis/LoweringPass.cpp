@@ -58,46 +58,8 @@ void LoweringPass::lower_constant(const Constant* C, std::vector<MachineConstant
         const std::string &value = string->get_value();
         const MachineConstant::Kind kind = MachineConstant::Kind::Int8;
 
-        for (uint32_t i = 0, e = value.size(); i < e; ++i) {
-            const int64_t ch = static_cast<long>(value[i]);
-            switch (value[i]) {
-                case '\\':
-                    data.push_back(MachineConstant(kind, (long) '\\'));
-                    data.push_back(MachineConstant(kind, (long) '\\'));
-                    break;
-                case '\'':
-                    data.push_back(MachineConstant(kind, (long) '\\'));
-                    data.push_back(MachineConstant(kind, (long) '\''));
-                    break;
-                case '\"':
-                    data.push_back(MachineConstant(kind, (long) '\\'));
-                    data.push_back(MachineConstant(kind, (long) '"'));
-                    break;
-                case '\n':
-                    data.push_back(MachineConstant(kind, (long) '\\'));
-                    data.push_back(MachineConstant(kind, (long) 'n'));
-                    break;
-                case '\t':
-                    data.push_back(MachineConstant(kind, (long) '\\'));
-                    data.push_back(MachineConstant(kind, (long) 't'));
-                    break;
-                case '\r':
-                    data.push_back(MachineConstant(kind, (long) '\\'));
-                    data.push_back(MachineConstant(kind, (long) 'r'));
-                    break;
-                case '\b':
-                    data.push_back(MachineConstant(kind, (long) '\\'));
-                    data.push_back(MachineConstant(kind, (long) 'b'));
-                    break;
-                case '\0':
-                    data.push_back(MachineConstant(kind, (long) '\\'));
-                    data.push_back(MachineConstant(kind, (long) '0'));
-                    break;
-                default:
-                    data.push_back(MachineConstant(kind, ch));
-                    break;
-            }
-        }
+        for (uint32_t i = 0, e = value.size(); i < e; ++i)
+            data.push_back(MachineConstant(kind, (long) value[i]));
     } else if (auto aggregate = dynamic_cast<const Aggregate*>(C)) {
         for (uint32_t i = 0, e = aggregate->num_operands(); i < e; ++i)
             lower_constant(aggregate->get_value(i), data);

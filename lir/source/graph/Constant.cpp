@@ -197,34 +197,35 @@ void String::print(std::ostream &os, PrintPolicy policy) const {
         os << '"';
 
         for (uint32_t i = 0, e = m_value.size(); i < e; ++i) {
-            switch (m_value[i]) {
-                case '\\':
-                    os << "\\\\";
-                    break;
-                case '\'':
-                    os << "\\'";
-                    break;
-                case '\"':
-                    os << "\\\"";
-                    break;
-                case '\n':
-                    os << "\\n";
-                    break;
-                case '\t':
-                    os << "\\t";
-                    break;
-                case '\r':
-                    os << "\\r";
-                    break;
-                case '\b':
-                    os << "\\b";
-                    break;
-                case '\0':
-                    os << "\\0";
-                    break;
-                default:
-                    os << m_value[i];
-                    break;
+            switch (m_value[i]) 
+            {
+            case '\\':
+                os << "\\\\";
+                break;
+            case '\'':
+                os << "\\'";
+                break;
+            case '\"':
+                os << "\\\"";
+                break;
+            case '\n':
+                os << "\\n";
+                break;
+            case '\t':
+                os << "\\t";
+                break;
+            case '\r':
+                os << "\\r";
+                break;
+            case '\b':
+                os << "\\b";
+                break;
+            case '\0':
+                os << "\\0";
+                break;
+            default:
+                os << m_value[i];
+                break;
             }
         }
         

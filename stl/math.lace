@@ -1,5 +1,4 @@
-$public
-stl :: space {
+rib stl::math;
 
 $public
 min :: (x: s64, y: s64) -> s64 {
@@ -18,5 +17,3 @@ max :: (x: s64, y: s64) -> s64 {
         ret y;
     }
 }
-
-} // space stl

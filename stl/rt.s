@@ -9,7 +9,7 @@
     .global _start
     .type   _start, @function
 _start:
-    callq   main@PLT
+    callq   index.main@PLT
     movq    %rax, %rdi
     movq    $60, %rax   # exit syscall
     syscall
@@ -57,11 +57,11 @@ __abort:
 __unreachable:
     ud2
 
-# exit :: (s64) -> void
+# stl.linux.exit :: (s64) -> void
     .text
-    .global exit
-    .type   exit, @function
-exit:
+    .global stl.linux.exit
+    .type   stl.linux.exit, @function
+stl.linux.exit:
     pushq	%rbp
 	movq	%rsp, %rbp
     movq    16(%rbp), %rdi
@@ -69,11 +69,11 @@ exit:
     syscall
     ud2
 
-# open :: (*char, s64, s64) -> s64
+# stl.linux.open :: (*char, s64, s64) -> s64
     .text
-    .global open
-    .type   open, @function
-open: 
+    .global stl.linux.open
+    .type   stl.linux.open, @function
+stl.linux.open: 
     pushq	%rbp
 	movq	%rsp, %rbp
     movq    16(%rbp), %rdi
@@ -85,11 +85,11 @@ open:
 	popq	%rbp
     retq
 
-# close :: (s64) -> s64
+# stl.linux.close :: (s64) -> s64
     .text
-    .global close
-    .type   close, @function
-close:
+    .global stl.linux.close
+    .type   stl.linux.close, @function
+stl.linux.close:
     pushq	%rbp
 	movq	%rsp, %rbp
     movq    16(%rbp), %rdi
@@ -99,11 +99,11 @@ close:
 	popq	%rbp
     retq
 
-# read :: (s64, *char, s64) -> s64
+# stl.linux.read :: (s64, *char, s64) -> s64
     .text
-    .global read
-    .type   read, @function
-read:
+    .global stl.linux.read
+    .type   stl.linux.read, @function
+stl.linux.read:
     pushq	%rbp
 	movq	%rsp, %rbp
     movq    16(%rbp), %rdi
@@ -115,11 +115,11 @@ read:
 	popq	%rbp
     retq
 
-# write :: (s64, *mut char, s64) -> s64
+# stl.linux.write :: (s64, *mut char, s64) -> s64
     .text
-    .global write
-    .type   write, @function
-write:
+    .global stl.linux.write
+    .type   stl.linux.write, @function
+stl.linux.write:
     pushq	%rbp
 	movq	%rsp, %rbp
     movq    16(%rbp), %rdi
@@ -131,11 +131,11 @@ write:
 	popq	%rbp
     retq
 
-# brk :: (u64) -> *void
+# stl.linux.brk :: (u64) -> *void
     .text
-    .global brk
-    .type   brk, @function
-brk:
+    .global stl.linux.brk
+    .type   stl.linux.brk, @function
+stl.linux.brk:
     pushq	%rbp
 	movq	%rsp, %rbp
     movq    16(%rbp), %rdi

@@ -1,6 +1,7 @@
 rib index;
 
 use stl::string;
+use stl::io;
 
 $public
 main :: () -> s64 {
@@ -8,9 +9,9 @@ main :: () -> s64 {
 
     s.from("Hello world!\n");
 
-    let len: u64 = s.size();
+    stl::io::print(s);
 
     s.destroy();
 
-    ret len;
+    ret 0;
 }

@@ -1,0 +1,58 @@
+rib stl::io;
+
+use stl::linux;
+use stl::string;
+
+$public
+FileFlags :: enum {
+    FILE_FLAGS_READ_ONLY = 0,
+    FILE_FLAGS_WRITE_ONLY = 1,
+    FILE_FLAGS_READ_WRITE = 2,
+    FILE_FLAGS_CREATE = 64,
+    FILE_FLAGS_TRUNCATE = 512,
+    FILE_FLAGS_APPEND = 1024,
+}
+
+$public
+FileSeek :: enum {
+    FILE_SEEK_SET = 0,
+    FILE_SEEK_CUR = 1,
+    FILE_SEEK_END = 2,
+}
+
+$public
+File :: struct {
+    fd: s64,
+    is_open: bool,
+}
+
+$public
+open (f: *File) :: (path: *char, flags: FileFlags) -> bool {
+    f.fd = 0;
+    f.is_open = false;
+
+    let res: s64 = stl::linux::open(path, flags, 420);
+    if res == -1 {
+        ret false;
+    }
+
+    f.fd = res;
+    f.is_open = true;
+    ret true;
+}
+
+$public
+close (f: *File) :: () -> void {
+    if !f.is_open {
+        ret;
+    }
+
+    if stl::linux::close(f.fd) != -1 {
+        f.is_open = false;
+    }
+}
+
+$public
+print :: (s: stl::string::string) -> void {
+    stl::linux::write(1, s.str(), s.size());
+}

@@ -45,7 +45,7 @@ using namespace std::chrono;
 using Timestamp = time_point<high_resolution_clock>;
 
 /// A mapping between the absolute path of an input file and its parsed AST.
-static std::string g_STL = "/home/lovelace/stl";
+static std::string g_standard = "/root/lace/stl";
 
 static inline Timestamp get_time() {
     return high_resolution_clock::now();
@@ -74,6 +74,7 @@ int32_t main(int32_t argc, char* argv[]) {
         "/root/lace/stl/mem.lace",
         "/root/lace/stl/linux.lace",
         "/root/lace/stl/index.lace",
+        "/root/lace/stl/io.lace",
     };
 
     for (int32_t i = 1; i < argc; ++i) {
@@ -141,7 +142,7 @@ int32_t main(int32_t argc, char* argv[]) {
     if (files.empty())
         log::fatal("no input files");
 
-    Timestamp start = get_time();
+    const Timestamp start = get_time();
 
     Context context(options);
 
@@ -173,7 +174,7 @@ int32_t main(int32_t argc, char* argv[]) {
         assert(tpool);
     }
 
-    auto parse_file = [&context](const std::string& file) {
+    const auto parse_file = [&context](const std::string& file) {
         const Timestamp pstart = get_time();
 
         std::string contents;
@@ -193,7 +194,7 @@ int32_t main(int32_t argc, char* argv[]) {
             log::error("rib '" + rib->name() + "' has multiple definitions");
 
         if (context.options().verbose) {
-            duration<double> dur = get_time() - pstart;
+            const duration<double> dur = get_time() - pstart;
 
             std::stringstream ss;
             ss << std::format("{}: Finished parsing\n-- took {}\n", 
@@ -224,7 +225,7 @@ int32_t main(int32_t argc, char* argv[]) {
         rib->accept(syma);
 
         if (context.options().verbose) {
-            duration<double> dur = get_time() - pstart;
+            const duration<double> dur = get_time() - pstart;
             std::cout << std::format("{}: Finished symbol analysis\n-- took {}\n", 
                 rib->path(), dur);
         }
@@ -239,7 +240,7 @@ int32_t main(int32_t argc, char* argv[]) {
         rib->accept(nres);
 
         if (context.options().verbose) {
-            duration<double> dur = get_time() - pstart;
+            const duration<double> dur = get_time() - pstart;
             std::cout << std::format("{}: Finished name resolution\n-- took {}\n", 
                 rib->path(), dur);
         }
@@ -254,7 +255,7 @@ int32_t main(int32_t argc, char* argv[]) {
         rib->accept(sema);
 
         if (context.options().verbose) {
-            duration<double> dur = get_time() - pstart;
+            const duration<double> dur = get_time() - pstart;
             std::cout << std::format("{}: Finished semantic analysis\n-- took {}\n", 
                 rib->path(), dur);
         }
@@ -297,7 +298,7 @@ int32_t main(int32_t argc, char* argv[]) {
     lir::Machine mach(lir::Machine::Linux);
 
     for (const auto& [root, ribs] : translations) {
-        Timestamp cstart = get_time();
+        const Timestamp cstart = get_time();
 
         lir::CFG graph(mach, "");
 
@@ -307,7 +308,7 @@ int32_t main(int32_t argc, char* argv[]) {
             rib->accept(codegen);
 
         if (context.options().verbose) {
-            duration<double> dur = get_time() - cstart;
+            const duration<double> dur = get_time() - cstart;
             std::cout << std::format("{}: Finished code generation\n-- took{}\n", root, dur);
         }
 
@@ -320,14 +321,14 @@ int32_t main(int32_t argc, char* argv[]) {
             file.close();
         }
 
-        Timestamp lstart = get_time();
+        const Timestamp lstart = get_time();
 
         lir::MachineObject mobj(mach);
         lir::AMD64LoweringPass lowering(graph, mobj);
         lowering.run();
 
         if (context.options().verbose) {
-            duration<double> dur = get_time() - lstart;
+            const duration<double> dur = get_time() - lstart;
             std::cout << std::format("{}: Finished lowering\n-- took {}\n", root, dur);
         }
 
@@ -341,14 +342,14 @@ int32_t main(int32_t argc, char* argv[]) {
             mir.close();
         }
 
-        Timestamp rstart = get_time();
+        const Timestamp rstart = get_time();
 
         lir::RegisterAnalysis rega(mobj);
         rega.run();
 
         if (context.options().verbose) {
-            duration<double> dur = get_time() - rstart;
-            std::cout << std::format("{}: Finished register analysis\n-- took{}\n", root, dur);
+            const duration<double> dur = get_time() - rstart;
+            std::cout << std::format("{}: Finished register analysis\n-- took {}\n", root, dur);
         }
 
         std::ofstream as(root + ".s");
@@ -363,7 +364,6 @@ int32_t main(int32_t argc, char* argv[]) {
         std::system(assembler.c_str());
     }
 
-    /*
     if (context.options().link) {
         std::string linker = std::format("ld -o {} ", options.output);
 
@@ -371,14 +371,13 @@ int32_t main(int32_t argc, char* argv[]) {
             linker += std::format("{}.o ", root);
         
         if (options.stl)
-            linker += std::format("{}/rt.o", g_STL);
+            linker += std::format("{}/rt.o", g_standard);
 
         std::system(linker.c_str());
     }
-    */
 
     if (options.verbose) {
-        duration<double> dur = get_time() - start;
+        const duration<double> dur = get_time() - start;
         std::cout << std::format("Finished all compilation procedures.\n-- took {}\n", dur);
     }
 

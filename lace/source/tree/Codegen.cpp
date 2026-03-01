@@ -33,6 +33,8 @@ void Codegen::visit(FunctionDefn& node) {
     if (info.complete)
         return;
 
+    assert(func->empty());
+
     m_func = func;
 
     lir::BasicBlock* entry = lir::BasicBlock::create(m_func);
@@ -470,7 +472,7 @@ void Codegen::visit(AccessExpr& node) {
         ));
 
         if (vc == Valued)
-            m_temp = m_builder.build_load(fetch(node.type()), ptr);
+            m_temp = m_builder.build_load(fetch(node.type()), m_temp);
     } else if (FunctionDefn* method = dynamic_cast<FunctionDefn*>(node.field())) {
         m_temp = fetch(method);
 
@@ -1074,7 +1076,7 @@ void Codegen::lower(VariableDefn* defn) {
         fetch(defn->type()), 
         linkage, 
         mangle(defn), 
-        false
+        true
     );
 
     m_globals.emplace(defn, GlobalInfo {
