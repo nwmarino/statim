@@ -72,6 +72,8 @@ void NameResolution::visit(FunctionDefn& node) {
 
     if (node.has_receiver()) {
         Type* rt = node.get_receiver_type();
+        
+        // @Todo: may not work if the receiver type couldn't be resolved.
         assert(rt);
 
         StructType* st = dynamic_cast<StructType*>(rt);
@@ -163,14 +165,19 @@ void NameResolution::visit(FieldInitExpr& node) {
 }
 
 void NameResolution::visit(RefExpr& node) {
-    Scope* prev_scope = m_scope;
+    const log::Span span = { m_rib->path(), node.span() };
+    
+    Scope* prev_scope = m_scope;    
 
     if (node.has_spec()) {
         Rib* rib = m_context.get_rib(node.spec());
         if (!rib) {
-            log::error("unresolved rib specifier: '" + node.spec() + "'",
-                log::Span { m_rib->path(), node.span() });
+            log::error("unresolved rib specifier: '" + node.spec() + "'", span);
+            return;
+        }
 
+        if (!uses_rib(rib)) {
+            log::error("'" + node.name() + "' exists, but '" + rib->name() + "' is not being used", span);
             return;
         }
 
@@ -182,25 +189,18 @@ void NameResolution::visit(RefExpr& node) {
     m_scope = prev_scope;
 
     if (!res) {
-        log::error("unresolved reference: '" + node.name() + "'",
-            log::Span { m_rib->path(), node.span() });
-
-        m_scope = prev_scope;
+        log::error("unresolved reference: '" + node.name() + "'", span);
         return;
     }
 
     if (symbol.kind != Symbol::Kind::Definition) {
-        log::error("invalid type reference: '" + node.name() + "'",
-            log::Span { m_rib->path(), node.span() });
-
+        log::error("invalid type reference: '" + node.name() + "'", span);
         return;
     }
 
     ValueDefn* vd = dynamic_cast<ValueDefn*>(symbol.defn);
     if (!vd) {
-        log::error("invalid reference to non-value: '" + node.name() + "'",
-            log::Span { m_rib->path(), node.span() });
-        
+        log::error("invalid reference to non-value: '" + node.name() + "'", span);
         return;
     }
 
@@ -265,6 +265,13 @@ Type* NameResolution::resolve_type(Type* type) {
             Rib* rib = m_context.get_rib(deferred->spec());
             if (!rib)
                 return nullptr;
+
+            // Ensure that the host rib is being used by the local one.
+            if (!uses_rib(rib)) {
+                // @Todo: add locational info.
+                log::error("type " + type->string() + "' exists, but '" + rib->name() + "' is not being used");
+                return nullptr;
+            }
 
             m_scope = rib->scope();
         }

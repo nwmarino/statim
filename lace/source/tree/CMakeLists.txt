@@ -1,4 +1,5 @@
 set(TREE_SOURCES
+    Codegen.cpp
     Defn.cpp
     Expr.cpp
     NameResolution.cpp
@@ -21,4 +22,5 @@ add_library(Tree
 target_link_libraries(Tree
     PRIVATE
         Core
+        LIR
 )

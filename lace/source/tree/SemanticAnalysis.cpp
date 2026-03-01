@@ -357,19 +357,7 @@ void SemanticAnalysis::visit(AccessExpr& node) {
 
         // Method is public, so check that the rib it was defined in is being
         // used by the current rib.
-        bool found = false;
-        for (Defn* defn : m_rib->defns()) {
-            UseDefn* use = dynamic_cast<UseDefn*>(defn);
-            if (!use)
-                continue;
-
-            if (use->target() == morigin) {
-                found = true;
-                break;
-            }
-        }
-
-        if (!found) {
+        if (!uses_rib(morigin)) {
             log::error("method '" + method->name() + "' exists in '" + morigin->name() + "', but is not used", span);
             return;
         }

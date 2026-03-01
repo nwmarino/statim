@@ -111,6 +111,10 @@ public:
     virtual void visit(SizeofExpr& node);
     virtual void visit(StructInitExpr& node);
     virtual void visit(SubscriptExpr& node);
+
+protected:
+    /// Test if the current rib is using the given |target| rib.
+    bool uses_rib(Rib* target) const;
 };
 
 } // namespace lace

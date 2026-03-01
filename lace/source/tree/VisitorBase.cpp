@@ -186,3 +186,16 @@ void VisitorBase::visit(SubscriptExpr& node) {
     node.base()->accept(*this);
     node.index()->accept(*this);
 }
+
+bool VisitorBase::uses_rib(Rib* target) const {
+    for (Defn* defn : m_rib->defns()) {
+        UseDefn* use = dynamic_cast<UseDefn*>(defn);
+        if (!use)
+            continue;
+
+        if (use->target() == target)
+            return true;
+    }
+
+    return false;
+}
