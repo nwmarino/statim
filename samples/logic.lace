@@ -1,3 +1,5 @@
+rib index;
+
 $public
 main :: () -> s64 {
     let a: bool = true;

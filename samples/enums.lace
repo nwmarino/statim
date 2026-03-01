@@ -1,3 +1,5 @@
+rib index;
+
 Colors :: enum {
     Red,
     Blue = -1,

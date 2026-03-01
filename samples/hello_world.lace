@@ -1,0 +1,17 @@
+rib index;
+
+use stl::string;
+use stl::io;
+
+$public
+main :: () -> s64 {
+    let s: stl::string::string;
+
+    s.from("Hello world!\n");
+
+    stl::io::print(s);
+
+    s.destroy();
+
+    ret 0;
+}
