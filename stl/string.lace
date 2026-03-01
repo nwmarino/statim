@@ -4,8 +4,8 @@ use stl::mem;
 
 $public
 string :: struct {
-    data: *char,
-    len: u64,
+    data: *char = null,
+    len: u64 = 0,
 }
 
 /// Initialize the dynamic string |s| with the given static string |str|.

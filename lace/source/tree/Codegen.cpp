@@ -736,6 +736,12 @@ void Codegen::visit(StructInitExpr& node) {
 
     lir::Value* dest = nullptr;
     lir::Type* type = fetch(node.type());
+    
+    StructType* st = dynamic_cast<StructType*>(node.type());
+    assert(st);
+
+    StructDefn* sd = st->defn();
+    assert(sd);
 
     if (m_place) {
         dest = m_place;
@@ -748,9 +754,23 @@ void Codegen::visit(StructInitExpr& node) {
         );
     }
 
-    for (FieldInitExpr* fi : node.fields()) {
-        FieldDefn* field = fi->field();
-        assert(field);
+    for (uint32_t i = 0; i < sd->num_fields(); ++i) {
+        FieldDefn* field = sd->get_field(i);
+        Expr* init = nullptr;
+
+        for (FieldInitExpr* fi : node.fields()) {
+            if (fi->field() == field) {
+                init = fi->expr();
+                break;
+            }
+        }
+
+        if (!init) {
+            if (!field->has_init())
+                continue;
+
+            init = field->init();
+        }
 
         lir::Type* ft = fetch(field->type());
 
@@ -762,7 +782,7 @@ void Codegen::visit(StructInitExpr& node) {
 
         if (m_mach.is_scalar(ft)) {
             m_vc = Valued;
-            fi->expr()->accept(*this);
+            init->accept(*this);
             assert(m_temp);
 
             m_builder.build_store(m_temp, ptr);
@@ -771,7 +791,7 @@ void Codegen::visit(StructInitExpr& node) {
             m_place = ptr;
 
             m_vc = Addressed;
-            fi->accept(*this);
+            init->accept(*this);
             assert(m_temp);
 
             if (m_temp != ptr) {

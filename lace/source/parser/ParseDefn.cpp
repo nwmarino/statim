@@ -184,6 +184,13 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
                 log::fatal("expected ':'", log::Span(m_file, dbg_start));
 
             Type* field_type = parse_type_specifier();
+            Expr* init = nullptr;
+
+            if (expect(Token::Eq)) {
+                init = parse_initial_expression();
+                if (!init)
+                    log::fatal("expected expression after '='", log::Span(m_file, dbg_start));    
+            }
 
             FieldDefn* field = FieldDefn::create(
                 *m_rib, 
@@ -191,7 +198,9 @@ Defn* Parser::parse_binding_definition(std::vector<Rune*> runes, const Token nam
                 field_name.value, 
                 {},
                 field_type,
-                fields.size());
+                init,
+                fields.size()
+            );
 
             fields.push_back(field);
 

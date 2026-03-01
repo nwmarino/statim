@@ -5,7 +5,7 @@ use stl::io;
 
 $public
 main :: () -> s64 {
-    let s: stl::string::string;
+    let s: stl::string::string = stl::string::string {};
 
     s.from("Hello world!\n");
 

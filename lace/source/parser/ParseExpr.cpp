@@ -418,14 +418,16 @@ Expr* Parser::parse_sizeof_operator() {
 
 Expr* Parser::parse_named_reference() {
     uint64_t position = m_stream.position();
-    next();
 
-    if (m_allow_inits && match(Token::OpenBrace)) {
-        return parse_struct_initializer(position);
+    if (m_allow_inits) {
+        Type* type = parse_type_specifier();
+        if (match(Token::OpenBrace))
+            return parse_struct_initializer(type);
     }
 
     m_stream.seek(position);
     SourceLocation loc_start = loc();
+    
     std::string name = curr().value;
     next(); // id
 
@@ -449,14 +451,11 @@ Expr* Parser::parse_named_reference() {
     return RefExpr::create(*m_rib, since(loc_start), name, spec, nullptr);
 }
 
-Expr* Parser::parse_struct_initializer(uint64_t start) {
-    m_stream.seek(start);
+Expr* Parser::parse_struct_initializer(Type* type) {
+    assert(match(Token::OpenBrace));
+    
     const SourceLocation loc_start = loc();
-
-    Type* type = parse_type_specifier();
-
-    if (!expect(Token::OpenBrace))
-        log::fatal("expected '{'", log::Span(m_file, since(loc_start)));
+    next(); // '{'
 
     std::vector<FieldInitExpr*> fields = {};
 

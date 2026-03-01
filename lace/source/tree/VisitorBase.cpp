@@ -28,7 +28,8 @@ void VisitorBase::visit(EnumDefn& node) {
 }
 
 void VisitorBase::visit(FieldDefn& node) {
-
+    if (node.has_init())
+        node.init()->accept(*this);
 }
 
 void VisitorBase::visit(FunctionDefn& node) {

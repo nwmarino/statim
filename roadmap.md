@@ -1,8 +1,6 @@
 - Default field inits.
 - Strings
-- $print
 - File I/O
-- $write
 
 - Match statement
 - For statement

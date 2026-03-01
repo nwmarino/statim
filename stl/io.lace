@@ -23,7 +23,7 @@ FileSeek :: enum {
 $public
 File :: struct {
     fd: s64,
-    is_open: bool,
+    is_open: bool = false,
 }
 
 $public

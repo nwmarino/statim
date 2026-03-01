@@ -5,6 +5,7 @@
 - Revise `load` definitions to `use`s.
 - Change compilation unit to `Rib`s, dependent on their root specifier, e.g. 
   `x` in `x::y`.
+- Add default structure field initializers via `'=' <expr> ';'`.
 
 ## lace
 - Replace `AST` with `Rib` definitions.
@@ -17,3 +18,5 @@
   uses querying and memoization for less unused code.
 
 ## LIR
+- Use buffer size around callsites when spilling registers.
+- Fix bug relating to string lowering.

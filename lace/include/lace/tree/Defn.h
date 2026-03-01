@@ -402,19 +402,22 @@ public:
 
 /// Represents a field definition within a structure.
 class FieldDefn final : public ValueDefn {
+    friend class SemanticAnalysis;
+
+    Expr* m_init;
     uint32_t m_index;
 
     FieldDefn(Rib* rib, SourceSpan span, const std::string& name, 
-              const Runes& runes, Type* type, uint32_t index)
-      : ValueDefn(rib, span, name, runes, type), m_index(index) {}
+              const Runes& runes, Type* type, Expr* init, uint32_t index)
+      : ValueDefn(rib, span, name, runes, type), m_init(init), m_index(index) {}
 
 public:
     [[nodiscard]]
     static FieldDefn* create(Rib& rib, SourceSpan span, 
                              const std::string& name, const Runes& runes, 
-                             Type* type, uint32_t index);
+                             Type* type, Expr* init, uint32_t index);
 
-    ~FieldDefn() = default;
+    ~FieldDefn() override;
 
     FieldDefn(const FieldDefn&) = delete;
     void operator=(const FieldDefn&) = delete;
@@ -423,6 +426,14 @@ public:
     void operator=(FieldDefn&&) noexcept = delete;
 
     void accept(VisitorBase& visitor) override { visitor.visit(*this); }
+
+    /// Returns the default initalizer for this field, if it has one, and null
+    /// otherwise.
+    const Expr* init() const { return m_init; }
+    Expr* init() { return m_init; }
+
+    /// Test if this field has a default initializer.
+    bool has_init() const { return m_init != nullptr; }
 
     /// Returns the index of this field in its parent structure.
     uint32_t get_index() const { return m_index; }

@@ -112,10 +112,17 @@ const Type* FunctionDefn::get_receiver_type() const {
 //                          FieldDefn Implementation
 //>==---------------------------------------------------------------------------
 
-FieldDefn* FieldDefn::create(Rib& rib, SourceSpan span, 
-                             const std::string& name, const Runes& runes, 
-                             Type* type, uint32_t index) {
-    return new FieldDefn(&rib, span, name, runes, type, index);
+FieldDefn* FieldDefn::create(Rib& rib, SourceSpan span, const std::string& name, 
+                             const Runes& runes, Type* type, Expr* init, 
+                             uint32_t index) {
+    return new FieldDefn(&rib, span, name, runes, type, init, index);
+}
+
+FieldDefn::~FieldDefn() {
+    if (m_init)
+        delete m_init;
+
+    m_init = nullptr;
 }
 
 //>==---------------------------------------------------------------------------

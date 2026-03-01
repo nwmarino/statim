@@ -48,6 +48,8 @@ class SemanticAnalysis final : public VisitorBase {
 public:
     SemanticAnalysis(Context& context);
 
+    void visit(FieldDefn& node) override;
+
     void visit(FunctionDefn& node) override;
 
     void visit(VariableDefn& node) override;

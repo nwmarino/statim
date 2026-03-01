@@ -89,6 +89,35 @@ void SemanticAnalysis::visit(VariableDefn& node) {
     }
 }
 
+void SemanticAnalysis::visit(FieldDefn& node) {
+    VisitorBase::visit(node);
+    
+    if (!node.has_init())
+        return;
+
+    const log::Span span = { m_rib->path(), node.span() };
+
+    Expr* init = node.init();
+
+    if (!init->is_constant())
+        log::error("fields cannot be initialized with non-constants", span);
+
+    Type* actual = init->type();
+    Type* expected = node.type();
+
+    const TypeCheckResult res = type_check(actual, expected);
+    if (res == Cast) {
+        node.m_init = CastExpr::create(
+            *m_rib,
+            init->span(), 
+            node.type(), 
+            init
+        );
+    } else if (res == Mismatch) {
+        log::error("initializer type mismatch; got '" + actual->string() + "', but expected '" + expected->string() + "'", span);
+    }
+}
+
 void SemanticAnalysis::visit(FunctionDefn& node) {
     m_func = &node;
 
