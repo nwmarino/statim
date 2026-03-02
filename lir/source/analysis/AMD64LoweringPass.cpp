@@ -8,6 +8,7 @@
 #include "lir/graph/Function.h"
 #include "lir/graph/Global.h"
 #include "lir/graph/Instruction.h"
+#include "lir/graph/Parameter.h"
 #include "lir/graph/Type.h"
 #include "lir/machine/AMD64.h"
 #include "lir/machine/FunctionABI.h"
@@ -665,8 +666,8 @@ void AMD64LoweringPass::lower_access(const Access* A) {
 }
 
 void AMD64LoweringPass::lower_offptr(const Offptr *O) {
-    const MachineOperand source = to_operand(O->get_base());
-    const MachineOperand index = to_operand(O->get_index());
+    MachineOperand source = to_operand(O->get_base());
+    MachineOperand index = to_operand(O->get_index());
 
     const MachineRegister DR(get_vreg_from_def(O), 8);
 
@@ -685,7 +686,14 @@ void AMD64LoweringPass::lower_offptr(const Offptr *O) {
 
         emit(AMD64_ADD64, { offset })
             .add_reg(DR);
-    } else {
+    } else if (bytes != 1) {
+        if (dynamic_cast<const Parameter*>(O->get_index())) {
+            MachineRegister tmp = create_vreg(RegisterClass::GeneralPurpose);
+
+            emit(get_move_op(O->get_index()->get_type()), { index, tmp });
+            index = tmp;
+        }
+
         // Index is dynamic, so we have to multiply it at runtime by the size of the underlying.
         emit(AMD64_IMUL64, { bytes, index });
         emit(AMD64_ADD64, { index })

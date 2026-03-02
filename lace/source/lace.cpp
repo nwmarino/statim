@@ -20,6 +20,8 @@
 #include "lace/tree/SymbolAnalysis.h"
 
 #include "lir/analysis/AMD64LoweringPass.h"
+#include "lir/analysis/ConstantFolding.h"
+#include "lir/analysis/SSARewritePass.h"
 #include "lir/analysis/TrivialDCEPass.h"
 #include "lir/machine/AsmWriter.h"
 #include "lir/machine/Machine.h"
@@ -90,11 +92,6 @@ int32_t main(int32_t argc, char* argv[]) {
     log::direct(std::cout);
 
     std::vector<std::string> files = {
-        "/root/lace/stl/string.lace",
-        "/root/lace/stl/mem.lace",
-        "/root/lace/stl/linux.lace",
-        "/root/lace/stl/index.lace",
-        "/root/lace/stl/io.lace",
     };
 
     for (int32_t i = 1; i < argc; ++i) {
@@ -170,31 +167,32 @@ int32_t main(int32_t argc, char* argv[]) {
     Context context(options);
 
     // If using multi-threading, resolve the best number of threads we can use.
-    if (options.multithread) {
+    if (context.options().multithread) {
         const uint32_t supported_threads = std::thread::hardware_concurrency(); 
 
-        if (options.threads == 1) {
+        if (context.options().threads == 1) {
             // If no -j was provided, then take the larger of 1 and the 
             // detected thread count.
-            options.threads = std::max(1u, supported_threads);
+            context.options().threads = std::max(1u, supported_threads);
         } else {
             // A -j was provided, but if it's larger than the number of threads 
             // supported, then use only what's available.
-            options.threads = std::min(options.threads, supported_threads);
+            context.options().threads = std::min(
+                context.options().threads, supported_threads);
         }
 
         // No point in us using more threads than there are files.
-        options.threads = std::min(options.threads, 
+        context.options().threads = std::min(context.options().threads, 
             static_cast<uint32_t>(files.size()));
 
         // Skip multithreading if we only have 1 thread available to us.
-        if (options.threads == 1)
-            options.multithread = false;
+        if (context.options().threads == 1)
+            context.options().multithread = false;
     }
 
     ThreadPool* tpool = nullptr;
-    if (options.multithread) {
-        tpool = new ThreadPool(options.threads);
+    if (context.options().multithread) {
+        tpool = new ThreadPool(context.options().threads);
         assert(tpool);
     }
 
@@ -228,7 +226,7 @@ int32_t main(int32_t argc, char* argv[]) {
         }
     };
 
-    if (options.multithread) {
+    if (context.options().multithread) {
         for (const std::string& file : files) {
             tpool->push([&file, &context, &parse_file] { 
                 parse_file(file); 
@@ -338,9 +336,15 @@ int32_t main(int32_t argc, char* argv[]) {
 
         if (context.options().opt == Options::OptLevel::Aggressive) {
             const Timestamp ostart = get_time();
+
+            lir::SSARewritePass ssa(graph);
+            ssa.run();
             
             lir::TrivialDCEPass dce(graph);
             dce.run();
+
+            lir::ConstantFolding cf(graph);
+            cf.run();
 
             if (context.options().verbose) {
                 const duration<double> dur = get_time() - ostart;

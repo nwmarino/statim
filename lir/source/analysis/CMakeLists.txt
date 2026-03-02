@@ -1,5 +1,6 @@
 set(ANALYSIS_SOURCES
     AMD64LoweringPass.cpp
+    ConstantFolding.cpp
     LoweringPass.cpp
     SSARewritePass.cpp
     TrivialDCEPass.cpp
