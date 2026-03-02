@@ -13,5 +13,18 @@ main :: () -> s64 {
 
     s.destroy();
 
+    let f: stl::io::File;
+    if !f.open("test.txt", stl::io::FILE_FLAGS_CREATE | stl::io::FILE_FLAGS_READ_WRITE) {
+        ret 42;
+    }
+
+    let buf: stl::string::string;
+    f.read(f.size(), &buf);
+    f.close();
+
+    stl::io::print(buf);
+
+    buf.destroy();
+
     ret 0;
 }

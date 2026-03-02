@@ -23,6 +23,7 @@
 #include "lir/analysis/ConstantFolding.h"
 #include "lir/analysis/SSARewritePass.h"
 #include "lir/analysis/TrivialDCEPass.h"
+#include "lir/machine/AMD64Analysis.h"
 #include "lir/machine/AsmWriter.h"
 #include "lir/machine/Machine.h"
 #include "lir/machine/Printer.h"
@@ -337,8 +338,8 @@ int32_t main(int32_t argc, char* argv[]) {
         if (context.options().opt == Options::OptLevel::Aggressive) {
             const Timestamp ostart = get_time();
 
-            //lir::SSARewritePass ssa(graph);
-            //ssa.run();
+            lir::SSARewritePass ssa(graph);
+            ssa.run();
             
             lir::TrivialDCEPass dce(graph);
             dce.run();
@@ -390,6 +391,16 @@ int32_t main(int32_t argc, char* argv[]) {
         if (context.options().verbose) {
             const duration<double> dur = get_time() - rstart;
             std::cout << std::format("{}: Finished register analysis\n-- took {}\n", root, dur);
+        }
+
+        const Timestamp mostart = get_time();
+
+        lir::AMD64Analysis aa(mach, mobj);
+        aa.run();
+
+        if (context.options().verbose) {
+            const duration<double> dur = get_time() - mostart;
+            std::cout << std::format("{}: Finished machine optimizations\n-- took {}\n", root, dur);
         }
 
         std::ofstream as(root + ".s");

@@ -3,5 +3,6 @@ void pointer.
 - Allow unknown pointer types when two definitions across files depend on each
 other.
 - Should not be able to reference local variables before their definition.
-- SSA Rewrite may lead to parameters being used in most, if not all lowered
-ops, which could violate architecture rules.
+- The SSA rewrite leads to have constant propogation throughout many of the
+samples. This leads to alot of immediates and memory operands in the assembly,
+which tend to violate architecture rules.

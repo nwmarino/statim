@@ -763,12 +763,14 @@ void AMD64LoweringPass::lower_call(const Call* C) {
         // The result register needs to implicitly defined by the call.
         MachineRegister rReg = MachineRegister()
             .setReg(abi.getResultLocation().reg)
+            .setSubreg(get_subreg_byte(C->get_type()))
             .setIsDef()
             .setIsImplicit();
 
-        emit(AMD64_CALL64, { MF,  rReg });
+        emit(AMD64_CALL64, { MF, rReg });
 
-        const MachineRegister dest_op = get_vreg_from_def(C);
+        MachineRegister dest_op = get_vreg_from_def(C);
+        dest_op.setSubreg(rReg.subreg());
 
         rReg.setIsUse();
         rReg.setIsExplicit();

@@ -5,7 +5,8 @@ use stl::mem;
 $public
 string :: struct {
     data: *char = null,
-    len: u64 = 0,
+    len: u32 = 0,
+    cap: u32 = 0,
 }
 
 /// Initialize the dynamic string |s| with the given static string |str|.
@@ -21,6 +22,7 @@ from (s: *string) :: (str: *char) -> void {
     stl::mem::copy(s.data, str, len);
     s.data[len] = '\0';
     s.len = len;
+    s.cap = len + 1;
 }
 
 /// Destroy the given string |s|.
@@ -29,6 +31,7 @@ destroy (s: *string) :: () -> void {
     stl::mem::free(s.data);
     s.data = null;
     s.len = 0;
+    s.cap = 0;
 }
 
 /// Returns the underlying data of the given string |s|.
@@ -39,8 +42,14 @@ str (s: *string) :: () -> *char {
 
 /// Returns the size of the given string |s|.
 $public
-size (s: *string) :: () -> u64 {
+size (s: *string) :: () -> u32 {
     ret s.len;
+}
+
+/// Returns the capacity of the given string |s|.
+$public
+capacity (s: *string) :: () -> u32 {
+    ret s.cap;
 }
 
 /// Test if the given string |s| is empty, i.e. contains no characters.
@@ -51,15 +60,15 @@ empty (s: *string) :: () -> bool {
 
 /// Returns the character at position |i| of the given string |s|.
 $public
-at (s: *string) :: (i: u64) -> char {
+at (s: *string) :: (i: u32) -> char {
     // @Todo: check index.
     ret s.data[i];
 }
 
 /// Reserve |n| bytes of the given string |s|.
 $public
-reserve (s: *string) :: (n: u64) -> void {
-    if n <= s.len {
+reserve (s: *string) :: (n: u32) -> void {
+    if n <= s.cap {
         ret;
     }
 
@@ -68,10 +77,17 @@ reserve (s: *string) :: (n: u64) -> void {
         ret;
     }
 
+    // Copy all bytes incl. null terminator.
     stl::mem::copy(data, s.data, s.len + 1);
 
     s.destroy();
 
     s.data = data;
-    s.len = n;
+    s.cap = n;
+}
+
+/// Append |other| to the back of the given string |s|.
+$public
+append (s: *string) :: (other: string) -> void {
+    ret;    
 }

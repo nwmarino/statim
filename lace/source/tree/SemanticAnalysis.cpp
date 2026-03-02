@@ -505,7 +505,7 @@ void SemanticAnalysis::visit(StructInitExpr& node) {
 
         // Check for duplicate fields.
         for (uint32_t j = i + 1; j < node.num_fields(); ++j) {
-            if (node.get_field(i)->name() == fi->name()) {
+            if (node.get_field(j)->name() == fi->name()) {
                 log::error("struct field initialized more than once: '" + fi->name() + "'", span);
                 return;
             }
