@@ -99,6 +99,22 @@ stl.linux.close:
 	popq	%rbp
     retq
 
+# stl.linux.lseek :: (s64, s64, s64) -> s64
+    .text
+    .global stl.linux.lseek
+    .type   stl.linux.lseek, @function
+stl.linux.lseek:
+    pushq   %rbp
+    movq    %rsp, %rbp
+    movq    16(%rbp), %rdi
+    movq    24(%rbp), %rsi
+    movq    32(%rbp), %rdx
+    movq    $8, %rax
+    syscall
+    movq	%rbp, %rsp
+	popq	%rbp
+    retq
+
 # stl.linux.read :: (s64, *char, s64) -> s64
     .text
     .global stl.linux.read

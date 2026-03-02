@@ -53,6 +53,40 @@ close (f: *File) :: () -> void {
 }
 
 $public
+read (f: *File) :: (n: u64, s: *stl::string::string) -> u64 {
+    if !f.is_open {
+        ret 0;
+    }
+
+    s.reserve(n);
+    ret stl::linux::read(f.fd, s.str(), n);
+}
+
+$public
+seek (f: *File) :: (whence: FileSeek, offset: s64) -> s64 {
+    if !f.is_open {
+        ret 0;
+    }
+
+    ret stl::linux::lseek(f.fd, offset, whence);
+}
+
+$public
+size (f: *File) :: () -> s64 {
+    if !f.is_open {
+        ret 0;
+    }
+
+    // Get the starting position, so we can go back to it.
+    let start: s64 = f.seek(FILE_SEEK_CUR, 0);
+
+    let bytes: s64 = f.seek(FILE_SEEK_END, 0);
+    
+    f.seek(FILE_SEEK_SET, start);
+    ret bytes;
+}
+
+$public
 print :: (s: stl::string::string) -> void {
     stl::linux::write(1, s.str(), s.size());
 }

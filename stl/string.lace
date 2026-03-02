@@ -55,3 +55,23 @@ at (s: *string) :: (i: u64) -> char {
     // @Todo: check index.
     ret s.data[i];
 }
+
+/// Reserve |n| bytes of the given string |s|.
+$public
+reserve (s: *string) :: (n: u64) -> void {
+    if n <= s.len {
+        ret;
+    }
+
+    let data: *char = stl::mem::alloc(n);
+    if !data {
+        ret;
+    }
+
+    stl::mem::copy(data, s.data, s.len + 1);
+
+    s.destroy();
+
+    s.data = data;
+    s.len = n;
+}

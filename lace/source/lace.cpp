@@ -35,8 +35,8 @@
 #include <unordered_set>
 #include <vector>
 
-#define LACE_VERSION_MAJOR 1
-#define LACE_VERSION_MINOR 0
+#define LACE_VERSION_MAJOR 0
+#define LACE_VERSION_MINOR 1
 
 using namespace lace;
 
@@ -44,8 +44,29 @@ using namespace std::chrono;
 
 using Timestamp = time_point<high_resolution_clock>;
 
-/// A mapping between the absolute path of an input file and its parsed AST.
 static std::string g_standard = "/root/lace/stl";
+
+static const char* g_help = R"(usage: ./lace [options] file...
+
+options:
+    -b          use verbose logging
+    -c          stop after assembler
+    -g          include basic debugging symbols
+    -h          display this message
+    -Od         use default optimizations
+    -Oa         use aggressive optimizations
+    -Os         use binary size optimizations
+    -st         force single thread execution
+    -S          stop after assembly
+    -v          display version
+
+    -j <n>      use at most n threads
+    -o <str>    compile to an executable named "str"
+
+    -dump-ast   dump the abstract syntax tree
+    -dump-lir   dump the lace IR
+    -dump-mir   dump the lace MachIR
+)";
 
 static inline Timestamp get_time() {
     return high_resolution_clock::now();
@@ -55,17 +76,15 @@ int32_t main(int32_t argc, char* argv[]) {
     Options options = {};
     options.output = "main";
     options.opt = Options::OptLevel::Default;
+    options.stop = Options::StopPoint::Link;
     options.threads = 1;
 
-    options.debug = true;
-    options.link = true;
+    options.debug = false;
     options.multithread = true;
-    options.stl = true;
-    options.verbose = true;
-    options.version = true;
-    options.dump_ast = true;
-    options.dump_lir = true;
-    options.dump_mir = true;
+    options.verbose = false;
+    options.dump_ast = false;
+    options.dump_lir = false;
+    options.dump_mir = false;
 
     log::direct(std::cout);
 
@@ -82,13 +101,18 @@ int32_t main(int32_t argc, char* argv[]) {
 
         if (arg == "-b") {
             options.verbose = true;
+        } else if (arg == "-c") {
+            options.stop = Options::StopPoint::Object;
         } else if (arg == "-g") {
             options.debug = true;
-        } else if (arg == "-l") {
-            options.link = true;
+        } else if (arg == "-h") {
+            std::cout << std::format("{}\n", g_help);
+            return EXIT_SUCCESS;
+        } else if (arg == "-S") {
+            options.stop = Options::StopPoint::Assembly;
         } else if (arg == "-v") {
-            log::note("version: " + std::to_string(LACE_VERSION_MAJOR) + "." + 
-                std::to_string(LACE_VERSION_MINOR));
+            std::cout << std::format("lace version: {}.{}\n", LACE_VERSION_MAJOR, LACE_VERSION_MINOR);
+            return EXIT_SUCCESS;
         } else if (arg == "-Od") {
             options.opt = Options::OptLevel::Default;
         } else if (arg == "-Oa") {
@@ -97,10 +121,6 @@ int32_t main(int32_t argc, char* argv[]) {
             options.opt = Options::OptLevel::Space;
         } else if (arg == "-st") {
             options.multithread = false;
-        } else if (arg == "-stl") {
-            options.stl = true;
-        } else if (arg == "-no-stl") {
-            options.stl = false;
         } else if (arg == "-dump-ast") {
             options.dump_ast = true;
         } else if (arg == "-dump-lir") {
@@ -125,6 +145,8 @@ int32_t main(int32_t argc, char* argv[]) {
             if (arg.size() < 4 || arg.substr(arg.size() - 5) != ".lace")
                 log::fatal("expected source file ending with \".lace\", got " + arg);
 
+            // Check if the source file has already been recorded so we can
+            // skip dupes.
             bool dupe = false;
             std::string path = std::filesystem::absolute(arg).string();
             for (const std::string& file : files) {
@@ -146,6 +168,7 @@ int32_t main(int32_t argc, char* argv[]) {
 
     Context context(options);
 
+    // If using multi-threading, resolve the best number of threads we can use.
     if (options.multithread) {
         const uint32_t supported_threads = std::thread::hardware_concurrency(); 
 
@@ -360,26 +383,32 @@ int32_t main(int32_t argc, char* argv[]) {
         writer.run(as);
         as.close();
 
-        const std::string assembler = std::format("as {}.s -o {}.o", root, root);
-        std::system(assembler.c_str());
+        if (context.options().stop > Options::StopPoint::Assembly) {
+            const std::string assembler = std::format("as {}.s -o {}.o", root, root);
+            std::system(assembler.c_str());
+        }
     }
 
-    if (context.options().link) {
-        std::string linker = std::format("ld -o {} ", options.output);
+    if (context.options().stop > Options::StopPoint::Object) {
+        std::string linker = std::format("ld -o {} ", context.options().output);
 
         for (const auto& [root, ribs] : translations)
             linker += std::format("{}.o ", root);
         
-        if (options.stl)
-            linker += std::format("{}/rt.o", g_standard);
+        linker += std::format("{}/rt.o", g_standard);
 
         std::system(linker.c_str());
     }
 
-    if (options.verbose) {
+    if (context.options().multithread) {
+        assert(tpool);
+        delete tpool;
+    }
+
+    if (context.options().verbose) {
         const duration<double> dur = get_time() - start;
         std::cout << std::format("Finished all compilation procedures.\n-- took {}\n", dur);
     }
 
-    return 0;
+    return EXIT_SUCCESS;
 }
