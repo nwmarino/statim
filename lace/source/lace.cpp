@@ -20,6 +20,7 @@
 #include "lace/tree/SymbolAnalysis.h"
 
 #include "lir/analysis/AMD64LoweringPass.h"
+#include "lir/analysis/TrivialDCEPass.h"
 #include "lir/machine/AsmWriter.h"
 #include "lir/machine/Machine.h"
 #include "lir/machine/Printer.h"
@@ -333,6 +334,18 @@ int32_t main(int32_t argc, char* argv[]) {
         if (context.options().verbose) {
             const duration<double> dur = get_time() - cstart;
             std::cout << std::format("{}: Finished code generation\n-- took{}\n", root, dur);
+        }
+
+        if (context.options().opt == Options::OptLevel::Aggressive) {
+            const Timestamp ostart = get_time();
+            
+            lir::TrivialDCEPass dce(graph);
+            dce.run();
+
+            if (context.options().verbose) {
+                const duration<double> dur = get_time() - ostart;
+                std::cout << std::format("{}: Finished LIR optimizations\n-- took{}\n", root, dur);
+            }
         }
 
         if (context.options().dump_lir) {

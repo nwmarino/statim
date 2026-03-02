@@ -2,6 +2,7 @@ set(ANALYSIS_SOURCES
     AMD64LoweringPass.cpp
     LoweringPass.cpp
     SSARewritePass.cpp
+    TrivialDCEPass.cpp
 )
 
 add_library(Analysis

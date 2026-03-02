@@ -64,8 +64,7 @@ void Instruction::insert_after(Instruction *inst) {
 }
 
 bool Instruction::is_trivially_dead() const {
-    return false; // @Todo: Implement formally.
-
+    // @Todo: reconsider loads, right now don't need to care.
     if (!is_def() || Value::used())
         return false;
 
