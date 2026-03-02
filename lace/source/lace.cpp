@@ -331,14 +331,14 @@ int32_t main(int32_t argc, char* argv[]) {
 
         if (context.options().verbose) {
             const duration<double> dur = get_time() - cstart;
-            std::cout << std::format("{}: Finished code generation\n-- took{}\n", root, dur);
+            std::cout << std::format("{}: Finished code generation\n-- took {}\n", root, dur);
         }
 
         if (context.options().opt == Options::OptLevel::Aggressive) {
             const Timestamp ostart = get_time();
 
-            lir::SSARewritePass ssa(graph);
-            ssa.run();
+            //lir::SSARewritePass ssa(graph);
+            //ssa.run();
             
             lir::TrivialDCEPass dce(graph);
             dce.run();
@@ -348,7 +348,7 @@ int32_t main(int32_t argc, char* argv[]) {
 
             if (context.options().verbose) {
                 const duration<double> dur = get_time() - ostart;
-                std::cout << std::format("{}: Finished LIR optimizations\n-- took{}\n", root, dur);
+                std::cout << std::format("{}: Finished LIR optimizations\n-- took {}\n", root, dur);
             }
         }
 
