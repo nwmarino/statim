@@ -444,45 +444,157 @@ Register AMD64LoweringPass::get_vreg_from_def(const Instruction *inst) {
     return vreg;
 }
 
-MachineOperand AMD64LoweringPass::to_operand(const Value *value) {
-    if (auto integer = dynamic_cast<const Integer*>(value)) {
+MachineOperand AMD64LoweringPass::as_addressable_operand(const Value* value) {
+    if (const Instruction* inst = dynamic_cast<const Instruction*>(value)) {
+        assert(inst->is_def());
+
+        const Register vreg = get_vreg_from_def(inst);
+
+        return MachineOperand(Memory { 
+            MachineRegister { vreg, 8 }, 
+            0 
+        });
+    } else if (const Parameter* param = dynamic_cast<const Parameter*>(value)) {
+        const uint32_t index = param->get_index();
+        const FunctionABI& abi = m_func->abi();
+        const FunctionABI::Location& loc = abi.getParamLocation(index);
+
+        if (loc.kind == FunctionABI::Location::Kind::Register) {
+            assert(false && "register arguments not implemented!");
+        } else if (loc.kind == FunctionABI::Location::Kind::Stack) {
+            return MachineOperand(Memory {
+                MachineRegister { RBP, 8 },
+                loc.offset + 16 
+            });
+        }
+
+        assert(false && "unreachable!");
+    } else if (const Global* global = dynamic_cast<const Global*>(value)) {
+        MachineData* MD = m_obj.get_global(global->get_name());
+        assert(MD && "global not lowered!");
+
+        return MachineOperand(MD);
+    } else if (const Local* local = dynamic_cast<const Local*>(value)) {
+        auto it = m_locals.find(local);
+        assert(it != m_locals.end() && "local not lowered!");
+
+        return MachineOperand(it->second);
+    }
+
+    assert(false && "cannot convert value to an memory-addressible operand!");
+}
+
+MachineOperand AMD64LoweringPass::as_address_operand(const Value* value) {
+    if (const Instruction* inst = dynamic_cast<const Instruction*>(value)) {
+        assert(inst->is_def());
+
+        const Register vreg = get_vreg_from_def(inst);
+        return MachineOperand(MachineRegister { vreg, 8 });
+    } else if (const Parameter* param = dynamic_cast<const Parameter*>(value)) {
+        const uint32_t index = param->get_index();
+        const FunctionABI& abi = m_func->abi();
+        const FunctionABI::Location& loc = abi.getParamLocation(index);
+
+        if (loc.kind == FunctionABI::Location::Kind::Register) {
+            assert(false && "register arguments not implemented!");
+        } else if (loc.kind == FunctionABI::Location::Kind::Stack) {
+            MachineRegister tmp = create_vreg(RegisterClass::GeneralPurpose);
+
+            emit(AMD64_LEA64, { as_addressable_operand(value) })
+                .add_reg(tmp);
+
+            return tmp;
+        }
+
+        assert(false && "unreachable!");
+    } else if (const Global* global = dynamic_cast<const Global*>(value)) {
+        MachineRegister tmp = create_vreg(RegisterClass::GeneralPurpose);
+
+        emit(AMD64_LEA64, { as_addressable_operand(value) })
+            .add_reg(tmp);
+
+        return tmp;
+    } else if (const Local* local = dynamic_cast<const Local*>(value)) {
+        MachineRegister tmp = create_vreg(RegisterClass::GeneralPurpose);
+
+        emit(AMD64_LEA64, { as_addressable_operand(value) })
+            .add_reg(tmp);
+
+        return tmp;
+    }
+
+    assert(false && "cannot convert value to an address!");
+}
+
+MachineOperand AMD64LoweringPass::as_valued_operand(const Value* value) {
+    if (const Integer* integer = dynamic_cast<const Integer*>(value)) {
         return MachineOperand(integer->get_value());
-    } else if (auto null = dynamic_cast<const Null*>(value)) {
-        return MachineOperand(0l);
-    } else if (auto inst = dynamic_cast<const Instruction*>(value)) {
+    } else if (const Null* null = dynamic_cast<const Null*>(value)) {
+        return MachineOperand(0L);
+    } else if (const Instruction* inst = dynamic_cast<const Instruction*>(value)) {
+        assert(inst->is_def());
+
         Register vreg = get_vreg_from_def(inst);
         uint8_t subreg = get_subreg_byte(value->get_type());
 
         return MachineOperand(MachineRegister { vreg, subreg });
-    } else if (auto param = dynamic_cast<const Parameter*>(value)) {
-        const FunctionABI &abi = m_func->abi();
+    } else if (const Parameter* param = dynamic_cast<const Parameter*>(value)) {
         const uint32_t index = param->get_index();
+        const FunctionABI& abi = m_func->abi();
+        const FunctionABI::Location& loc = abi.getParamLocation(index);
 
-        const FunctionABI::Location &loc = abi.getParamLocation(index);
-        MachineRegister BP(RBP, 8);
+        if (loc.kind == FunctionABI::Location::Kind::Register) {
+            assert(false && "register arguments not implemented!");
+        } else if (loc.kind == FunctionABI::Location::Kind::Stack) {
+            MachineRegister BP(RBP, 8);
 
-        return MachineOperand(Memory { BP, loc.offset + 16 });
-    } else if (auto func = dynamic_cast<const Function*>(value)) {
-        MachineFunction *MF = m_obj.get_function(func->get_name());
-        assert(MF && "function not lowered!");
+            RegisterClass cls = RegisterClass::GeneralPurpose;
+            if (param->get_type()->is_float_type())
+                cls = RegisterClass::FloatingPoint;
 
-        return MachineOperand(MF);
-    } else if (auto global = dynamic_cast<const Global*>(value)) {
-        MachineData *MD = m_obj.get_global(global->get_name());
+            MachineRegister tmp = create_vreg(cls);
+
+            emit(get_move_op(param->get_type()))
+                .add_mem(BP, loc.offset + 16)
+                .add_reg(tmp);
+
+            return tmp;
+        }
+
+        assert(false && "unreachable!");
+    } else if (const Global* global = dynamic_cast<const Global*>(value)) {
+        MachineData* MD = m_obj.get_global(global->get_name());
         assert(MD && "global not lowered!");
 
-        return MachineOperand(MD);
-    } else if (auto local = dynamic_cast<const Local*>(value)) {
+        RegisterClass cls = RegisterClass::GeneralPurpose;
+        if (param->get_type()->is_float_type())
+            cls = RegisterClass::FloatingPoint;
+
+        MachineRegister tmp = create_vreg(cls);
+
+        emit(get_move_op(param->get_type()))
+            .add_data(MD)
+            .add_reg(tmp);
+
+        return tmp;
+    } else if (const Local* local = dynamic_cast<const Local*>(value)) {
         auto it = m_locals.find(local);
         assert(it != m_locals.end() && "local not lowered!");
 
-        MachineLocal *ML = it->second;
-        assert(ML);
+        RegisterClass cls = RegisterClass::GeneralPurpose;
+        if (param->get_type()->is_float_type())
+            cls = RegisterClass::FloatingPoint;
 
-        return MachineOperand(ML);
+        MachineRegister tmp = create_vreg(cls);
+
+        emit(get_move_op(param->get_type()))
+            .add_local(it->second)
+            .add_reg(tmp);
+
+        return tmp;
     }
 
-    assert(false && "invalid value!");
+    assert(false && "cannot convert value to a valued operand!");
 }
 
 MachineOp& AMD64LoweringPass::emit(uint32_t op, 
@@ -588,111 +700,66 @@ void AMD64LoweringPass::lower_const(const Const *C) {
 }
 
 void AMD64LoweringPass::lower_load(const Load *L) {
-    MachineOperand source = to_operand(L->get_addr());
+    const MachineOperand src = as_addressable_operand(L->get_addr());
+    const MachineOperand dst = as_valued_operand(L);
 
-    if (source.is_reg()) {
-        // Source is some defined value, must be reinterpreted as a memory
-        // access at an offset of 0.
-        source = MachineOperand(Memory { source.reg(), 0 });
-    }
-
-    MachineRegister dest(get_vreg_from_def(L), get_subreg_byte(L->get_type()));
-
-    emit(get_move_op(L->get_type()), { source })
-        .add_reg(dest);
+    emit(get_move_op(L->get_type()), { src, dst });
 }
 
 void AMD64LoweringPass::lower_store(const Store *S) {
-    MachineOperand dest = to_operand(S->get_addr());
+    const MachineOperand src = as_valued_operand(S->get_value());
+    const MachineOperand dst = as_addressable_operand(S->get_addr());
 
-    if (dest.is_reg()) {
-        // Destination is some defined value, must be reinterpreted as a memory
-        // access at an offset of 0.
-        dest = MachineOperand(Memory { dest.reg(), 0 });
-    }
-
-    const Value *value = S->get_value();
-    const MachineOperand source = to_operand(value);
-
-    if (dynamic_cast<const Parameter*>(value)) {
-        // Function arguments arrive via the stack, and since the destination of a store is a 
-        // memory reference, the argument must first be moved to a temporary.
-        RegisterClass cls = RegisterClass::GeneralPurpose;
-        if (value->get_type()->is_float_type())
-            cls = RegisterClass::FloatingPoint;
-        
-        MachineRegister tmp = create_vreg(cls);
-        tmp.setSubreg(get_subreg_byte(value->get_type()));
-
-        emit(get_move_op(value->get_type()), { source, tmp });
-        emit(get_move_op(value->get_type()), { tmp, dest });
-    } else {
-        emit(get_move_op(value->get_type()), { source, dest });
-    }
+    emit(get_move_op(S->get_value()->get_type()), { src, dst });
 }
 
 void AMD64LoweringPass::lower_access(const Access* A) {
-    const MachineOperand index = to_operand(A->get_index());
-    assert(index.is_imm() && "Access index is not an immediate!");;
+    auto pt = dynamic_cast<const PointerType*>(A->get_base()->get_type());
+    assert(pt);
 
-    auto ptr = dynamic_cast<const PointerType*>(A->get_base()->get_type());
-    assert(ptr && "Access base is not a pointer!");
+    auto st = dynamic_cast<const StructType*>(pt->get_pointee());
+    assert(st);
 
-    auto structure = dynamic_cast<const StructType*>(ptr->get_pointee());
-    assert(structure && "Access base is not a structure!");
+    const MachineOperand base = as_address_operand(A->get_base());
+    const MachineOperand dst = as_valued_operand(A);
 
-    const MachineOperand source = to_operand(A->get_base());
+    emit(AMD64_MOV64, { base, dst });
 
-    // @Todo: Assumes immediate index.
-    uint32_t offset = m_mach.get_field_offset(structure, index.imm());
+    const MachineOperand index = as_valued_operand(A->get_index());
+    assert(index.is_imm());
 
-    MachineRegister MR(get_vreg_from_def(A), get_subreg_byte(A->get_type()));
-
-    if (dynamic_cast<const Local*>(A->get_base()) || dynamic_cast<const Global*>(A->get_base())) {
-        emit(AMD64_LEA64, { source });
-    } else {
-        emit(AMD64_MOV64, { source, MR });
-    }
-
+    // Since the index of an Access is an immediate, we can resolve the byte 
+    // offset of the desired field now.
+    const uint32_t offset = m_mach.get_field_offset(st, index.imm());
     if (offset != 0) {
         // If the field offset is non-zero, then add it to the base pointer.
-        emit(AMD64_ADD64)
-            .add_imm(offset)
-            .add_reg(MR);
+        emit(AMD64_ADD64, { static_cast<int64_t>(offset), dst });
     }
 }
 
 void AMD64LoweringPass::lower_offptr(const Offptr *O) {
-    MachineOperand source = to_operand(O->get_base());
-    MachineOperand index = to_operand(O->get_index());
+    const MachineOperand base = as_address_operand(O->get_base());
+    const MachineOperand index = as_valued_operand(O->get_index());
+    const MachineOperand dst = as_valued_operand(O);
 
-    const MachineRegister DR(get_vreg_from_def(O), 8);
+    emit(AMD64_MOV64, { base, dst });
 
-    emit(get_move_op(O->get_type()), { source, DR });
+    auto pt = dynamic_cast<const PointerType*>(O->get_base()->get_type());
+    assert(pt);
 
-    auto underlying = dynamic_cast<const PointerType*>(O->get_base()->get_type());
-    assert(underlying && "Offptr base is not a pointer!");
-
-    uint32_t bytes = m_mach.get_type_size(underlying->get_pointee()) / 8;
+    const uint32_t bytes = m_mach.get_type_size(pt->get_pointee()) / 8;
 
     if (index.is_imm()) {
-        // Index is immediate, so we can multiply it at compile-time by the size of the underlying.
-        int64_t offset = static_cast<int64_t>(bytes) * index.imm();
-
-        emit(AMD64_ADD64, { offset })
-            .add_reg(DR);
+        // Index is immediate, so we can multiply it at compile-time by the 
+        // size of the underlying.
+        emit(AMD64_ADD64)
+            .add_imm(static_cast<int64_t>(bytes) * index.imm())
+            .add_operand(dst);
     } else if (bytes != 1) {
-        if (dynamic_cast<const Parameter*>(O->get_index())) {
-            MachineRegister tmp = create_vreg(RegisterClass::GeneralPurpose);
-
-            emit(get_move_op(O->get_index()->get_type()), { index, tmp });
-            index = tmp;
-        }
-
-        // Index is dynamic, so we have to multiply it at runtime by the size of the underlying.
+        // Index is dynamic, so we have to multiply it at runtime by the size 
+        // of the underlying.
         emit(AMD64_IMUL64, { bytes, index });
-        emit(AMD64_ADD64, { index })
-            .add_reg(DR);
+        emit(AMD64_ADD64, { index, dst });
     }
 }
 
@@ -706,48 +773,23 @@ void AMD64LoweringPass::lower_call(const Call* C) {
     auto callee = dynamic_cast<const Function*>(C->get_callee());
     assert(callee && "Call callee is not a function!");
 
-    MachineFunction* MF = m_obj.get_function(callee->get_name());
-    assert(MF && "Call callee does not exist!");
+    assert(m_funcs.contains(callee));
 
+    MachineFunction* MF = m_funcs[callee];
     const FunctionABI& abi = MF->abi();
     uint32_t sp_buffer = 0;
+
+    const MachineRegister SP = { RSP, 8 };
 
     for (uint32_t i = 0; i < C->num_args(); ++i) {
         const FunctionABI::Location& loc = abi.getParamLocation(i);
         sp_buffer += loc.size;
 
-        const Value* arg_val = C->get_arg(i);
-        const MachineOperand arg_op = to_operand(arg_val);
+        const Value* arg = C->get_arg(i);
+        const MachineOperand src = as_valued_operand(arg);
         
-        if (dynamic_cast<const Local*>(arg_val) || dynamic_cast<const Global*>(arg_val)) {
-            // Local/global operands are pointers coming from memory sections (stack & data, 
-            // respectively), and must be addressed using LEA.
-            // 
-            // Since the argument destination is on the stack, and both operands cannot be memory 
-            // references, the address needs to be moved to a temporary.
-
-            MachineRegister tmp = create_vreg(RegisterClass::GeneralPurpose);
-
-            emit(AMD64_LEA64, { arg_op, tmp });
-            emit(AMD64_MOV64, { tmp })
-                .add_mem(MachineRegister(RSP, 8), loc.offset);
-        } else if (dynamic_cast<const Parameter*>(arg_val)) {
-            // Parameter operands come from the stack, and must be moved to a temporary first,
-            // since the destination is also on the stack (a reference to memory).
-
-            RegisterClass cls = RegisterClass::GeneralPurpose;
-            if (arg_val->get_type()->is_float_type())
-                cls = RegisterClass::FloatingPoint;
-
-            MachineRegister tmp = create_vreg(cls);
-
-            emit(get_move_op(arg_val->get_type()), { arg_op, tmp });
-            emit(get_move_op(arg_val->get_type()), { tmp })
-                .add_mem(MachineRegister(RSP, 8), loc.offset);
-        } else {
-            emit(get_move_op(arg_val->get_type()), { arg_op })
-                .add_mem(MachineRegister(RSP, 8), loc.offset);
-        }
+        emit(get_move_op(arg->get_type()), { src })
+            .add_mem(SP, loc.offset);
     }
 
     StackFrame& frame = m_func->get_stack_frame();
@@ -755,22 +797,22 @@ void AMD64LoweringPass::lower_call(const Call* C) {
 
     if (abi.hasResult()) {
         // The result register needs to implicitly defined by the call.
-        MachineRegister rReg = MachineRegister()
+        MachineRegister res = MachineRegister()
             .setReg(abi.getResultLocation().reg)
             .setSubreg(get_subreg_byte(C->get_type()))
             .setIsDef()
             .setIsImplicit();
 
-        emit(AMD64_CALL64, { MF, rReg });
+        emit(AMD64_CALL64, { MF, res });
 
         MachineRegister dest_op = get_vreg_from_def(C);
-        dest_op.setSubreg(rReg.subreg());
+        dest_op.setSubreg(res.subreg());
 
-        rReg.setIsUse();
-        rReg.setIsExplicit();
-        rReg.setIsExpired();
+        res.setIsUse();
+        res.setIsExplicit();
+        res.setIsExpired();
 
-        emit(get_move_op(C->get_type()), { rReg, dest_op });
+        emit(get_move_op(C->get_type()), { res, dest_op });
     } else {
         emit(AMD64_CALL64, { MF });
     }
@@ -782,14 +824,16 @@ void AMD64LoweringPass::lower_ret(const Ret* R) {
     if (R->has_value()) {
         // Resolve the ABI for this function and check that it expects a result.
         const FunctionABI& abi = m_func->abi();
-        assert(abi.hasResult() && "Ret has a value, but ABI does not expect one!");
+        assert(abi.hasResult() && "ret has a value, but ABI doesn't expect one!");
 
         // Get the location to move the return value to.
         const FunctionABI::Location& loc = abi.getResultLocation();
         const Value* value = R->get_value();
-        const MachineOperand result = to_operand(value);
+        const MachineOperand src = as_valued_operand(value);
 
-        MachineRegister rReg = MachineRegister()
+        assert(loc.kind == FunctionABI::Location::Kind::Register);
+
+        MachineRegister dst = MachineRegister()
             .setReg(loc.reg)
             .setSubreg(get_subreg_byte(value->get_type()))
             .setIsDef()
@@ -798,16 +842,16 @@ void AMD64LoweringPass::lower_ret(const Ret* R) {
         AMD64_Op op = get_move_op(value->get_type());
 
         // Move the return value to the location specified by the ABI.
-        emit(get_move_op(value->get_type()), { result, rReg });
+        emit(get_move_op(value->get_type()), { src, dst });
 
         // (1) Restore the function stack frame with this return.
         emit(static_cast<uint32_t>(Intrinsic::Stack_Restore));
 
-        rReg.setIsUse();
-        rReg.setIsImplicit();
-        rReg.setIsExpired();
+        dst.setIsUse();
+        dst.setIsImplicit();
+        dst.setIsExpired();
 
-        emit(AMD64_RET64, { rReg });
+        emit(AMD64_RET64, { dst });
     } else {
         // See (1).
         emit(static_cast<uint32_t>(Intrinsic::Stack_Restore));
@@ -822,7 +866,7 @@ void AMD64LoweringPass::lower_jump(const Jump* J) {
 }
 
 void AMD64LoweringPass::lower_brif(const Brif* B) {
-    MachineOperand cond = to_operand(B->get_cond());
+    MachineOperand cond = as_valued_operand(B->get_cond());
 
     if (cond.is_reg()) {
         // If the condition is coming from a register, make sure it's using 
@@ -846,10 +890,7 @@ void AMD64LoweringPass::lower_brif(const Brif* B) {
 
 void AMD64LoweringPass::lower_phi(const Phi* P) {
     const Type* type = P->get_type();
-
-    MachineRegister dReg = MachineRegister()
-        .setReg(get_vreg_from_def(P))
-        .setSubreg(get_subreg_byte(type));
+    const MachineOperand dst = as_valued_operand(P);
 
     MachineLabel* prev_insert = m_insert;
     m_insert = nullptr;
@@ -867,9 +908,10 @@ void AMD64LoweringPass::lower_phi(const Phi* P) {
             // The target label has only one op, so check if it's a terminator
             // to decide whether to insert the move before/after.
 
-            const MachineOperand source = to_operand(edge.value);
+            const MachineOperand src = as_valued_operand(edge.value);
 
-            MachineOp* move = new MachineOp(get_move_op(type), { source, dReg });
+            MachineOp* move = new MachineOp(get_move_op(type), { src, dst });
+            move->add_comment("PHI_\n");
 
             MachineOp* op = mc_edge->get_head();
             if (!op->is_intrinsic() && is_terminator(static_cast<AMD64_Op>(op->op()))) {
@@ -889,9 +931,11 @@ void AMD64LoweringPass::lower_phi(const Phi* P) {
             ins = ins->get_next();
         }
 
-        const MachineOperand source = to_operand(edge.value);
+        const MachineOperand src = as_valued_operand(edge.value);
 
-        MachineOp* move = new MachineOp(get_move_op(type), { source, dReg });
+        MachineOp* move = new MachineOp(get_move_op(type), { src, dst });
+        move->add_comment("PHI_\n");
+        
         if (ins) {
             move->insertAfter(ins);
         } else {
@@ -905,30 +949,25 @@ void AMD64LoweringPass::lower_phi(const Phi* P) {
 void AMD64LoweringPass::lower_unop(const Unop* U) {
     const Value* value = U->get_value();
     
+    const MachineOperand src = as_valued_operand(value);
+    const MachineOperand dst = as_valued_operand(U);
+
     switch (U->op()) 
     {
         case Unop::Op::Not: {
-            const MachineOperand source = to_operand(value);
-
-            MachineRegister dReg = get_vreg_from_def(U);
-
-            emit(get_move_op(value->get_type()), { source, dReg });
-            emit(getOpNot(value->get_type()), { dReg });
-
+            emit(get_move_op(value->get_type()), { src, dst });
+            emit(getOpNot(value->get_type()), { dst });
             break;
         }
+
         case Unop::Op::INeg: {
-            const MachineOperand source = to_operand(value);
-
-            MachineRegister dReg = get_vreg_from_def(U);
-
-            emit(get_move_op(value->get_type()), { source, dReg });
-            emit(getOpINeg(value->get_type()), { dReg });
-
+            emit(get_move_op(value->get_type()), { src, dst });
+            emit(getOpINeg(value->get_type()), { dst });
             break;
         }
+
         case Unop::Op::FNeg: {
-            assert(false && "FNeg not implemented!");
+            assert(false && "not implemented!");
             break;
         }
     }
@@ -937,12 +976,9 @@ void AMD64LoweringPass::lower_unop(const Unop* U) {
 void AMD64LoweringPass::lower_binop(const Binop* B) {
     const Type* type = B->get_type();
 
-    MachineOperand lhs = to_operand(B->get_lhs());
-    MachineOperand rhs = to_operand(B->get_rhs());
-
-    MachineRegister dReg = MachineRegister()
-        .setReg(get_vreg_from_def(B))
-        .setSubreg(get_subreg_byte(type));
+    MachineOperand lhs = as_valued_operand(B->get_lhs());
+    MachineOperand rhs = as_valued_operand(B->get_rhs());
+    MachineOperand dst = as_valued_operand(B);
 
     switch (B->op()) 
     {
@@ -954,18 +990,18 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
             }
 
             emit(getOpIAdd(type), { lhs, rhs });
-            emit(get_move_op(type), { rhs, dReg });
+            emit(get_move_op(type), { rhs, dst });
 
             break;
         }
 
         case Binop::Op::ISub: {
             if (lhs.is_imm()) {
-                emit(get_move_op(type), { lhs, dReg });
-                emit(getOpISub(type), { rhs, dReg });
+                emit(get_move_op(type), { lhs, dst });
+                emit(getOpISub(type), { rhs, dst });
             } else {
                 emit(getOpISub(type), { rhs, lhs });
-                emit(get_move_op(type), { lhs, dReg });
+                emit(get_move_op(type), { lhs, dst });
             }
             
             break;
@@ -978,8 +1014,8 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
                 rhs = tmp;
             }
 
-            emit(get_move_op(type), { lhs, dReg });
-            emit(getOpIMul(type), { rhs, dReg });
+            emit(get_move_op(type), { lhs, dst });
+            emit(getOpIMul(type), { rhs, dst });
             
             break;
         }
@@ -992,7 +1028,7 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
                 // RAX is explicitly defined by the move.
                 .add_reg({ RAX, get_subreg_byte(type), true });
 
-            emit(get_move_op(type), { rhs, dReg });
+            emit(get_move_op(type), { rhs, dst });
 
             const bool is_mod = (B->op() == Binop::Op::SMod) || (B->op() == Binop::Op::UMod);
 
@@ -1005,7 +1041,7 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
                     // RDX is implicitly written to, but whose value is used by the division op.
                     .add_reg({ RDX, 8, true, true });
 
-                emit(getOpSDiv(type), { dReg })
+                emit(getOpSDiv(type), { dst })
                     // RAX is implicitly used, and its value expires.
                     .add_reg({ RAX, 8, false, true, true })
                     // RDX is implicitly used, and its value expires.
@@ -1022,7 +1058,7 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
                     // (0) is explicitly defined in RDX:4, but it's value is expired.
                     .add_reg({ RDX, 4, true, false, true });
 
-                emit(getOpUDiv(type), { dReg })
+                emit(getOpUDiv(type), { dst })
                     // RAX is implicitly used, and its value expires.
                     .add_reg({ RAX, 8, false, true, true })
                     // RDX is implicitly used, and its value expires.
@@ -1037,12 +1073,12 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
                 emit(get_move_op(type))
                     // Remainder is explicitly moved from RDX, so it expires.
                     .add_reg({ RDX, get_subreg_byte(type), false, false, true })
-                    .add_reg(dReg);
+                    .add_operand(dst);
             } else {
                 emit(get_move_op(type))
                     // Quotient is explicitly moved from RAX, so it expires.
                     .add_reg({ RAX, get_subreg_byte(type), false, false, true })
-                    .add_reg(dReg);
+                    .add_operand(dst);
             }
 
             break;
@@ -1056,18 +1092,18 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
             }
 
             emit(getOpFAdd(type), { lhs, rhs });
-            emit(get_move_op(type), { rhs, dReg });
+            emit(get_move_op(type), { rhs, dst });
 
             break;
         }
 
         case Binop::Op::FSub: {
             if (lhs.is_imm()) {
-                emit(get_move_op(type), { lhs, dReg });
-                emit(getOpFSub(type), { rhs, dReg });
+                emit(get_move_op(type), { lhs, dst });
+                emit(getOpFSub(type), { rhs, dst });
             } else {
                 emit(getOpFSub(type), { rhs, lhs });
-                emit(get_move_op(type), { lhs, dReg });
+                emit(get_move_op(type), { lhs, dst });
             }
             
             break;
@@ -1075,11 +1111,11 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
 
         case Binop::Op::FMul: {
             if (lhs.is_imm()) {
-                emit(get_move_op(type), { lhs, dReg });
-                emit(getOpFMul(type), { rhs, dReg });
+                emit(get_move_op(type), { lhs, dst });
+                emit(getOpFMul(type), { rhs, dst });
             } else {
                 emit(getOpFMul(type), { rhs, lhs });
-                emit(get_move_op(type), { lhs, dReg });
+                emit(get_move_op(type), { lhs, dst });
             }
 
             break;
@@ -1087,11 +1123,11 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
 
         case Binop::Op::FDiv: {
             if (lhs.is_imm()) {
-                emit(get_move_op(type), { lhs, dReg });
-                emit(getOpFDiv(type), { rhs, dReg });
+                emit(get_move_op(type), { lhs, dst });
+                emit(getOpFDiv(type), { rhs, dst });
             } else {
                 emit(getOpFDiv(type), { rhs, lhs });
-                emit(get_move_op(type), { lhs, dReg });
+                emit(get_move_op(type), { lhs, dst });
             }
 
             break;
@@ -1105,7 +1141,7 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
             }
 
             emit(getOpAnd(type), { lhs, rhs });
-            emit(get_move_op(type), { rhs, dReg });
+            emit(get_move_op(type), { rhs, dst });
 
             break;
         }
@@ -1118,7 +1154,7 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
             }
 
             emit(getOpOr(type), { lhs, rhs });
-            emit(get_move_op(type), { rhs, dReg });
+            emit(get_move_op(type), { rhs, dst });
 
             break;
         }
@@ -1131,7 +1167,7 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
             }
 
             emit(getOpXor(type), { lhs, rhs });
-            emit(get_move_op(type), { rhs, dReg });
+            emit(get_move_op(type), { rhs, dst });
 
             break;
         }
@@ -1148,10 +1184,10 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
                 op = getOpSar(type);
             }
 
-            emit(get_move_op(type), { lhs, dReg });
+            emit(get_move_op(type), { lhs, dst });
 
             if (rhs.is_imm()) {
-                emit(op, { rhs, dReg });
+                emit(op, { rhs, dst });
             } else {
                 MachineRegister CL = MachineRegister()
                     .setReg(AMD64_Register::RCX)
@@ -1163,7 +1199,7 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
                     rhs.reg().setSubreg(1);
 
                 emit(get_move_op(type), { rhs, CL });
-                emit(op, { CL, dReg });
+                emit(op, { CL, dst });
             }
 
             break;
@@ -1173,14 +1209,14 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
 
 void AMD64LoweringPass::lower_cast(const Cast* C) {
     const Value* value = C->get_value();
-    MachineOperand source = to_operand(value);
-    MachineRegister dReg = MachineRegister(get_vreg_from_def(C))
-        .setSubreg(get_subreg_byte(C->get_type()));
 
-    switch (C->kind()) 
+    MachineOperand dst = as_valued_operand(C);
+
+    switch (C->kind())
     {
         case Cast::Kind::SExt: {
             AMD64_Op op;
+
             const uint32_t srcsz = m_mach.get_type_size(value->get_type());
             const uint32_t dstsz = m_mach.get_type_size(C->get_type());
 
@@ -1189,45 +1225,55 @@ void AMD64LoweringPass::lower_cast(const Cast* C) {
             } else {
                 op = AMD64_MOVSX;
             }
-            
-            emit(op, { source, dReg });
 
+            const MachineOperand src = as_valued_operand(value);
+            
+            emit(op, { src, dst });
             break;
         }
 
         case Cast::Kind::ZExt: {
             AMD64_Op op;
+
             const uint32_t srcsz = m_mach.get_type_size(value->get_type());
             const uint32_t dstsz = m_mach.get_type_size(C->get_type());
 
             if (srcsz == 32 && dstsz == 64) {
-                // The upper 32 bits are already zero-extended, so we can just make a redundant
-                // move that can get cleaned up later.
                 op = AMD64_MOV;
-                dReg.setSubreg(4);
+
+                assert(dst.is_reg());
+                dst.reg().setSubreg(4);
             } else {
-                op = AMD64_MOVSX;
+                op = AMD64_MOVZX;
             }
 
-            emit(op, { source, dReg });
+            const MachineOperand src = as_valued_operand(value);
 
+            emit(op, { src, dst });
             break;
         }
 
-        case Cast::Kind::FExt:
-            emit(AMD64_CVTSS2SD, { source, dReg });
+        case Cast::Kind::FExt: {
+            const MachineOperand src = as_valued_operand(value);
+            emit(AMD64_CVTSS2SD, { src, dst });
             break;
+        }
 
-        case Cast::Kind::ITrunc:
-            if (source.is_reg())
-                source.reg().setSubreg(get_subreg_byte(C->get_type()));
+        case Cast::Kind::ITrunc: {
+            MachineOperand src = as_valued_operand(value);
 
-            emit(AMD64_MOV, { source, dReg });
+            if (src.is_reg())
+                src.reg().setSubreg(get_subreg_byte(C->get_type()));
+
+            emit(AMD64_MOV, { src, dst });
             break;
+        }
 
-        case Cast::Kind::FTrunc:
-            emit(AMD64_CVTSD2SS, { source, dReg });
+        case Cast::Kind::FTrunc: {
+            const MachineOperand src = as_valued_operand(value);
+            emit(AMD64_CVTSD2SS, { src, dst });
             break;
+        }
 
         case Cast::Kind::S2F: {
             AMD64_Op op;
@@ -1236,8 +1282,10 @@ void AMD64LoweringPass::lower_cast(const Cast* C) {
             } else if (C->get_type()->is_float_type(64)) {
                 op = AMD64_CVTSI2SD;
             }
+            
+            const MachineOperand src = as_valued_operand(value);
 
-            emit(op, { source, dReg });
+            emit(op, { src, dst });
             break;
         }
 
@@ -1249,7 +1297,9 @@ void AMD64LoweringPass::lower_cast(const Cast* C) {
                 op = AMD64_VCVTUSI2SD;
             }
 
-            emit(op, { source, dReg });
+            const MachineOperand src = as_valued_operand(value);
+
+            emit(op, { src, dst });
             break;
         }
 
@@ -1261,7 +1311,9 @@ void AMD64LoweringPass::lower_cast(const Cast* C) {
                 op = getOpSD2SI(C->get_type());
             }
 
-            emit(op, { source, dReg });
+            const MachineOperand src = as_valued_operand(value);
+
+            emit(op, { src, dst });
             break;
         }
 
@@ -1273,32 +1325,39 @@ void AMD64LoweringPass::lower_cast(const Cast* C) {
                 op = getOpSD2UI(C->get_type());
             }
 
-            emit(op, { source, dReg });
+            const MachineOperand src = as_valued_operand(value);
+
+            emit(op, { src, dst });
             break;
         } 
 
-        case Cast::Kind::I2P:
-            emit(get_move_op(value->get_type()), { source, dReg });
+        case Cast::Kind::I2P: {
+            const MachineOperand src = as_valued_operand(value);
+            emit(get_move_op(value->get_type()), { src, dst });
             break;
+        }
 
         case Cast::Kind::P2I:
         case Cast::Kind::Reint: {
             AMD64_Op op;
+
             if (dynamic_cast<const Local*>(value) || dynamic_cast<const Global*>(value)) {
                 op = AMD64_LEA64;
             } else {
                 op = AMD64_MOV64;
             }
 
-            emit(op, { source, dReg });
+            const MachineOperand src = as_address_operand(value);
+
+            emit(op, { src, dst });
             break;
         }
     }
 }
 
 void AMD64LoweringPass::lower_cmp(const Cmp* C) {
-    MachineOperand left = to_operand(C->get_lhs());
-    MachineOperand right = to_operand(C->get_rhs());
+    MachineOperand left = as_valued_operand(C->get_lhs());
+    MachineOperand right = as_valued_operand(C->get_rhs());
 
     AMD64_Op SETcc = cmp_to_setcc(C->pred());
 
@@ -1315,5 +1374,5 @@ void AMD64LoweringPass::lower_cmp(const Cmp* C) {
 
     emit(get_cmp_op(C->get_lhs()->get_type()), { left, right });
     emit(SETcc)
-        .add_reg(MachineRegister { get_vreg_from_def(C), 1 });
+        .add_reg({ get_vreg_from_def(C), 1 });
 }

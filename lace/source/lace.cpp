@@ -93,7 +93,7 @@ int32_t main(int32_t argc, char* argv[]) {
     log::direct(std::cout);
 
     std::vector<std::string> files = {
-        "/home/nwm/lace/samples/logic.lace",
+        "/home/nwm/lace/samples/loops.lace"
     };
 
     for (int32_t i = 1; i < argc; ++i) {

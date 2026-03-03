@@ -972,12 +972,14 @@ void AsmWriter::writeFunction(std::ostream& os, const MachineFunction& func) {
         writeData(os, *data);
     }
 
+    os << "\t.text\n";
+
     const std::string& name = func.get_name();
 
     if (func.isGlobal())
         os << std::format("\t.global\t{}\n", name);
 
-    os << std::format("\t.text\n\t.type\t{}, @function\n{}:\n", name, name);
+    os << std::format("\t.type\t{}, @function\n{}:\n", name, name);
     
     for (uint32_t i = 0; i < func.num_labels(); ++i)
         writeLabel(os, *func.get_label(i));
