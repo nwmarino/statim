@@ -7,16 +7,19 @@
 #define LIR_TRIVIAL_DCE_PASS_H_
 
 #include "lir/analysis/Pass.h"
+#include "lir/graph/Builder.h"
 
 namespace lir {
 
 /// Function-based pass to remove trivially dead instructions.
 class TrivialDCEPass final : public Pass {
+    Builder m_builder;
+
     /// A list of instructions to remove after the current process.
     std::vector<Instruction*> m_to_remove = {};
 
 public:
-    TrivialDCEPass(CFG &cfg) : Pass(cfg) {}
+    TrivialDCEPass(CFG &cfg) : Pass(cfg), m_builder(cfg) {}
 
     ~TrivialDCEPass() = default;
 
@@ -30,6 +33,8 @@ public:
 
 private:
     void process(Function* func);
+
+    void process(Brif* op);
 };
 
 } // namespace lir

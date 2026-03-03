@@ -877,13 +877,25 @@ void AMD64LoweringPass::lower_phi(const Phi* P) {
     for (uint32_t i = 0; i < P->num_edges(); ++i) {
         Phi::CEdge edge = P->get_edge(i);
 
-        m_insert = m_func->get_label(edge.pred->position());
-        assert(m_insert);
+        MachineLabel* label = m_func->get_label(edge.pred->position());
+        assert(label);
 
         MachineOperand source = to_operand(edge.value);
 
-        MachineOp move = MachineOp(get_move_op(type), { source, dReg })
-            .add_comment(stringify_inst(P));
+        MachineOp* move = new MachineOp(get_move_op(type), { source, dReg });
+        move->add_comment(stringify_inst(P));
+
+        MachineOp* ins = label->get_tail(); 
+        for (; ins; ins = ins->get_prev()) {
+            if (ins->is_intrinsic() || !is_terminator(static_cast<AMD64_Op>(ins->op())))
+                break;
+        }
+
+        if (ins) {
+            move->insertAfter(ins);
+        } else {
+            label->prepend(move);
+        }
     }
 
     m_insert = curr;
