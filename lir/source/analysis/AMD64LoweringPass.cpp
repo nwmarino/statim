@@ -245,6 +245,12 @@ void AMD64LoweringPass::run() {
     }
 }
 
+bool AMD64LoweringPass::is_addressable(const Value* value) const {
+    return dynamic_cast<const Local*>(value) != nullptr
+        || dynamic_cast<const Global*>(value) != nullptr
+        || dynamic_cast<const Parameter*>(value) != nullptr;
+}
+
 uint8_t AMD64LoweringPass::get_subreg_byte(const Type *type) const {
     assert(type && "type cannot be null!");
     assert(m_mach.is_scalar(type) && "type must be scalar!");
@@ -631,6 +637,9 @@ void AMD64LoweringPass::lower_store(const Store *S) {
 }
 
 void AMD64LoweringPass::lower_access(const Access* A) {
+    emit(static_cast<uint32_t>(Intrinsic::Husk))
+        .add_comment(stringify_inst(A));
+
     const MachineOperand index = to_operand(A->get_index());
     assert(index.is_imm() && "Access index is not an immediate!");;
 
@@ -648,13 +657,9 @@ void AMD64LoweringPass::lower_access(const Access* A) {
     MachineRegister MR(get_vreg_from_def(A), get_subreg_byte(A->get_type()));
 
     if (dynamic_cast<const Local*>(A->get_base()) || dynamic_cast<const Global*>(A->get_base())) {
-        emit(AMD64_LEA64, { source })
-            .add_reg(MR)
-            .add_comment(stringify_inst(A));
+        emit(AMD64_LEA64, { source });
     } else {
-        emit(AMD64_MOV64, { source })
-            .add_reg(MR)
-            .add_comment(stringify_inst(A));
+        emit(AMD64_MOV64, { source, MR });
     }
 
     if (offset != 0) {
@@ -666,14 +671,15 @@ void AMD64LoweringPass::lower_access(const Access* A) {
 }
 
 void AMD64LoweringPass::lower_offptr(const Offptr *O) {
+    emit(static_cast<uint32_t>(Intrinsic::Husk))
+        .add_comment(stringify_inst(O));
+
     MachineOperand source = to_operand(O->get_base());
     MachineOperand index = to_operand(O->get_index());
 
     const MachineRegister DR(get_vreg_from_def(O), 8);
 
-    emit(get_move_op(O->get_type()), { source })
-        .add_reg(DR)
-        .add_comment(stringify_inst(O));
+    emit(get_move_op(O->get_type()), { source, DR });
 
     auto underlying = dynamic_cast<const PointerType*>(O->get_base()->get_type());
     assert(underlying && "Offptr base is not a pointer!");
@@ -702,8 +708,10 @@ void AMD64LoweringPass::lower_offptr(const Offptr *O) {
 }
 
 void AMD64LoweringPass::lower_call(const Call* C) {
-    emit(static_cast<uint32_t>(Intrinsic::Callsite_Set))
+    emit(static_cast<uint32_t>(Intrinsic::Husk))
         .add_comment(stringify_inst(C));
+
+    emit(static_cast<uint32_t>(Intrinsic::Callsite_Set));
 
     // @Todo: change with function pointers/callbacks.
     // 

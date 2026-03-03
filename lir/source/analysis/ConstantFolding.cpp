@@ -24,14 +24,18 @@ void ConstantFolding::process(Function* func) {
                 process(binop);
             } else if (Unop* unop = dynamic_cast<Unop*>(inst)) {
                 process(unop);
+            } else if (Cmp* cmp = dynamic_cast<Cmp*>(inst)) {
+                process(cmp);
             }
         }
 
         block = block->get_next();
     }
 
-    for (Instruction* inst : m_to_remove)
+    for (Instruction* inst : m_to_remove) {
         inst->detach();
+        delete inst;
+    }
 }
 
 void ConstantFolding::process(Binop* op) {
@@ -326,6 +330,286 @@ void ConstantFolding::process(Unop* op) {
             op->get_type(), 
             -val->get_value()
         ));
+
+        m_to_remove.push_back(op);
+        break;
+    }
+
+    default:
+        break;
+    }
+}
+
+void ConstantFolding::process(Cmp* op) {
+    switch (op->pred())
+    {
+    case Cmp::Predicate::IEq: {
+        Integer* lhs = dynamic_cast<Integer*>(op->get_lhs());
+        Integer* rhs = dynamic_cast<Integer*>(op->get_rhs());
+
+        if (!lhs || !rhs)
+            break;
+
+        op->replace_all_uses_with(lir::Integer::get(
+            m_cfg, 
+            op->get_type(), 
+            lhs->get_value() == rhs->get_value())
+        );
+
+        m_to_remove.push_back(op);
+        break;
+    }
+        
+    case Cmp::Predicate::FEq: {
+        Float* lhs = dynamic_cast<Float*>(op->get_lhs());
+        Float* rhs = dynamic_cast<Float*>(op->get_rhs());
+
+        if (!lhs || !rhs)
+            break;
+
+        op->replace_all_uses_with(lir::Float::get(
+            m_cfg, 
+            op->get_type(), 
+            lhs->get_value() == rhs->get_value())
+        );
+
+        m_to_remove.push_back(op);
+        break;
+    }
+
+    case Cmp::Predicate::INe: {
+        Integer* lhs = dynamic_cast<Integer*>(op->get_lhs());
+        Integer* rhs = dynamic_cast<Integer*>(op->get_rhs());
+
+        if (!lhs || !rhs)
+            break;
+
+        op->replace_all_uses_with(lir::Integer::get(
+            m_cfg, 
+            op->get_type(), 
+            lhs->get_value() != rhs->get_value())
+        );
+
+        m_to_remove.push_back(op);
+        break;
+    }
+
+    case Cmp::Predicate::FNe: {
+        Float* lhs = dynamic_cast<Float*>(op->get_lhs());
+        Float* rhs = dynamic_cast<Float*>(op->get_rhs());
+
+        if (!lhs || !rhs)
+            break;
+
+        op->replace_all_uses_with(lir::Float::get(
+            m_cfg, 
+            op->get_type(), 
+            lhs->get_value() != rhs->get_value())
+        );
+
+        m_to_remove.push_back(op);
+        break;
+    }
+
+    case Cmp::Predicate::Slt: {
+        Integer* lhs = dynamic_cast<Integer*>(op->get_lhs());
+        Integer* rhs = dynamic_cast<Integer*>(op->get_rhs());
+
+        if (!lhs || !rhs)
+            break;
+
+        op->replace_all_uses_with(lir::Integer::get(
+            m_cfg, 
+            op->get_type(), 
+            lhs->get_value() < rhs->get_value())
+        );
+
+        m_to_remove.push_back(op);
+        break;
+    }
+
+    case Cmp::Predicate::Ult: {
+        Integer* lhs = dynamic_cast<Integer*>(op->get_lhs());
+        Integer* rhs = dynamic_cast<Integer*>(op->get_rhs());
+
+        if (!lhs || !rhs)
+            break;
+
+        op->replace_all_uses_with(lir::Integer::get(
+            m_cfg, 
+            op->get_type(), 
+            (uint64_t)(lhs->get_value()) != (uint64_t)(rhs->get_value()))
+        );
+
+        m_to_remove.push_back(op);
+        break;
+    }
+
+    case Cmp::Predicate::Flt: {
+        Float* lhs = dynamic_cast<Float*>(op->get_lhs());
+        Float* rhs = dynamic_cast<Float*>(op->get_rhs());
+
+        if (!lhs || !rhs)
+            break;
+
+        op->replace_all_uses_with(lir::Float::get(
+            m_cfg, 
+            op->get_type(), 
+            lhs->get_value() < rhs->get_value())
+        );
+
+        m_to_remove.push_back(op);
+        break;
+    }
+
+    case Cmp::Predicate::Sle: {
+        Integer* lhs = dynamic_cast<Integer*>(op->get_lhs());
+        Integer* rhs = dynamic_cast<Integer*>(op->get_rhs());
+
+        if (!lhs || !rhs)
+            break;
+
+        op->replace_all_uses_with(lir::Integer::get(
+            m_cfg, 
+            op->get_type(), 
+            lhs->get_value() <= rhs->get_value())
+        );
+
+        m_to_remove.push_back(op);
+        break;
+    }
+
+    case Cmp::Predicate::Ule: {
+        Integer* lhs = dynamic_cast<Integer*>(op->get_lhs());
+        Integer* rhs = dynamic_cast<Integer*>(op->get_rhs());
+
+        if (!lhs || !rhs)
+            break;
+
+        op->replace_all_uses_with(lir::Integer::get(
+            m_cfg, 
+            op->get_type(), 
+            (uint64_t)(lhs->get_value()) <= (uint64_t)(rhs->get_value()))
+        );
+
+        m_to_remove.push_back(op);
+        break;
+    }
+
+    case Cmp::Predicate::Fle: {
+        Float* lhs = dynamic_cast<Float*>(op->get_lhs());
+        Float* rhs = dynamic_cast<Float*>(op->get_rhs());
+
+        if (!lhs || !rhs)
+            break;
+
+        op->replace_all_uses_with(lir::Float::get(
+            m_cfg, 
+            op->get_type(), 
+            lhs->get_value() <= rhs->get_value())
+        );
+
+        m_to_remove.push_back(op);
+        break;
+    }
+
+    case Cmp::Predicate::Sgt: {
+        Integer* lhs = dynamic_cast<Integer*>(op->get_lhs());
+        Integer* rhs = dynamic_cast<Integer*>(op->get_rhs());
+
+        if (!lhs || !rhs)
+            break;
+
+        op->replace_all_uses_with(lir::Integer::get(
+            m_cfg, 
+            op->get_type(), 
+            lhs->get_value() > rhs->get_value())
+        );
+
+        m_to_remove.push_back(op);
+        break;
+    }
+
+    case Cmp::Predicate::Ugt: {
+        Integer* lhs = dynamic_cast<Integer*>(op->get_lhs());
+        Integer* rhs = dynamic_cast<Integer*>(op->get_rhs());
+
+        if (!lhs || !rhs)
+            break;
+
+        op->replace_all_uses_with(lir::Integer::get(
+            m_cfg, 
+            op->get_type(), 
+            (uint64_t)(lhs->get_value()) > (uint64_t)(rhs->get_value()))
+        );
+
+        m_to_remove.push_back(op);
+        break;
+    }
+
+    case Cmp::Predicate::Fgt: {
+        Float* lhs = dynamic_cast<Float*>(op->get_lhs());
+        Float* rhs = dynamic_cast<Float*>(op->get_rhs());
+
+        if (!lhs || !rhs)
+            break;
+
+        op->replace_all_uses_with(lir::Float::get(
+            m_cfg, 
+            op->get_type(), 
+            lhs->get_value() > rhs->get_value())
+        );
+
+        m_to_remove.push_back(op);
+        break;
+    }
+
+    case Cmp::Predicate::Sge: {
+        Integer* lhs = dynamic_cast<Integer*>(op->get_lhs());
+        Integer* rhs = dynamic_cast<Integer*>(op->get_rhs());
+
+        if (!lhs || !rhs)
+            break;
+
+        op->replace_all_uses_with(lir::Integer::get(
+            m_cfg, 
+            op->get_type(), 
+            lhs->get_value() >= rhs->get_value())
+        );
+
+        m_to_remove.push_back(op);
+        break;
+    }
+
+    case Cmp::Predicate::Uge: {
+        Integer* lhs = dynamic_cast<Integer*>(op->get_lhs());
+        Integer* rhs = dynamic_cast<Integer*>(op->get_rhs());
+
+        if (!lhs || !rhs)
+            break;
+
+        op->replace_all_uses_with(lir::Integer::get(
+            m_cfg, 
+            op->get_type(), 
+            (uint64_t)(lhs->get_value()) >= (uint64_t)(rhs->get_value()))
+        );
+
+        m_to_remove.push_back(op);
+        break;
+    }
+
+    case Cmp::Predicate::Fge: {
+        Float* lhs = dynamic_cast<Float*>(op->get_lhs());
+        Float* rhs = dynamic_cast<Float*>(op->get_rhs());
+
+        if (!lhs || !rhs)
+            break;
+
+        op->replace_all_uses_with(lir::Float::get(
+            m_cfg, 
+            op->get_type(), 
+            lhs->get_value() >= rhs->get_value())
+        );
 
         m_to_remove.push_back(op);
         break;

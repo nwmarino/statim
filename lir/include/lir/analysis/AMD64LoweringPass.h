@@ -34,6 +34,9 @@ public:
     void run() override;
 
 private:
+    /// Test if the given |value| is coming from memory.
+    bool is_addressable(const Value* value) const;
+
     /// Returns the AMD64 register byte offset for the given scalar |type|.
     uint8_t get_subreg_byte(const Type *type) const;
 

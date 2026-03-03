@@ -37,6 +37,8 @@ private:
     void process(Binop* op);
 
     void process(Unop* op);
+
+    void process(Cmp* op);
 };
 
 } // namespace lir

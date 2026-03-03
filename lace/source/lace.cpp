@@ -79,7 +79,7 @@ static inline Timestamp get_time() {
 int32_t main(int32_t argc, char* argv[]) {
     Options options = {};
     options.output = "main";
-    options.opt = Options::OptLevel::Default;
+    options.opt = Options::OptLevel::Aggressive;
     options.stop = Options::StopPoint::Link;
     options.threads = 1;
 
@@ -93,6 +93,7 @@ int32_t main(int32_t argc, char* argv[]) {
     log::direct(std::cout);
 
     std::vector<std::string> files = {
+        "/root/lace/samples/logic.lace",
     };
 
     for (int32_t i = 1; i < argc; ++i) {
@@ -340,12 +341,12 @@ int32_t main(int32_t argc, char* argv[]) {
 
             lir::SSARewritePass ssa(graph);
             ssa.run();
-            
-            lir::TrivialDCEPass dce(graph);
-            dce.run();
 
             lir::ConstantFolding cf(graph);
             cf.run();
+            
+            lir::TrivialDCEPass dce(graph);
+            dce.run();
 
             if (context.options().verbose) {
                 const duration<double> dur = get_time() - ostart;

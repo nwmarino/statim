@@ -26,6 +26,8 @@ void TrivialDCEPass::process(Function* func) {
         curr = curr->get_next();
     }
 
-    for (Instruction* inst : m_to_remove)
+    for (Instruction* inst : m_to_remove) {
         inst->detach();
+        delete inst;
+    }
 }
