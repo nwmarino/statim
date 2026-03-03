@@ -4,6 +4,7 @@
 //
 
 #include "lir/analysis/AMD64LoweringPass.h"
+#include "lir/graph/BasicBlock.h"
 #include "lir/graph/Constant.h"
 #include "lir/graph/Function.h"
 #include "lir/graph/Global.h"
@@ -185,24 +186,27 @@ void AMD64LoweringPass::run() {
 
     // Lower each function and it's blocks to machine functions & labels.
     for (const Function* func : m_cfg.get_functions()) {
-        // Empty functions should not be lowered, they should either be resolved at link time or 
-        // with some library.
-        //if (func->empty())
-        //    continue;
-
         FunctionABI abi = FunctionABI(m_mach, func);
 
         MachineFunction* MF = new MachineFunction(
             &m_obj, 
             abi, 
             func->get_name(), 
-            func->has_linkage(Function::LinkageType::Public));
+            func->has_linkage(Function::LinkageType::Public)
+        );
+
         assert(MF && "failed to create new machine function!");
+        assert(!m_funcs.contains(func));
+
+        m_funcs.emplace(func, MF);
+        m_blocks.emplace(MF, std::unordered_map<const BasicBlock*, MachineLabel*>());
 
         const BasicBlock* curr = func->get_head();
         while (curr) {
             MachineLabel* ML = new MachineLabel(MF);
             assert(ML && "failed to create new machine label!");
+
+            m_blocks[MF].emplace(curr, ML);
 
             curr = curr->get_next();
         }
@@ -213,15 +217,15 @@ void AMD64LoweringPass::run() {
         if (func->empty())
             continue;
 
-        MachineFunction *MF = m_obj.get_function(func->get_name());
-        assert(MF);
-        assert(MF->num_labels() == func->size());
+        assert(m_funcs.contains(func));
+
+        MachineFunction *MF = m_funcs[func];
 
         m_func = MF;
         construct_stack_frame(func);
 
         uint32_t pos = 0;
-        for (auto block = func->get_head(); block; block = block->get_next()) {
+        for (const BasicBlock* block = func->get_head(); block; block = block->get_next()) {
             MachineLabel *ML = MF->get_label(pos);
             assert(ML);
             
@@ -481,11 +485,9 @@ MachineOperand AMD64LoweringPass::to_operand(const Value *value) {
     assert(false && "invalid value!");
 }
 
-MachineOp &AMD64LoweringPass::emit(uint32_t op, 
+MachineOp& AMD64LoweringPass::emit(uint32_t op, 
                                    const MachineOp::Operands &operands) {
-    assert(m_insert && "no insertion point set!");
-
-    MachineOp *inst = new MachineOp(op, operands, m_insert);
+    MachineOp* inst = new MachineOp(op, operands, m_insert);
     return *inst;
 }
 
@@ -554,8 +556,7 @@ void AMD64LoweringPass::lower_const(const Const *C) {
         // MOVABS lets us put a 64-bit integer into a register.
         emit(AMD64_MOVABS)
             .add_imm(integer->get_value())
-            .add_reg(dReg)
-            .add_comment(stringify_inst(C));
+            .add_reg(dReg);
     } else if (auto fp = dynamic_cast<const Float*>(constant)) {
         // Floats need to be pooled within the local function.
         std::vector<MachineConstant> bytes = {};
@@ -567,8 +568,7 @@ void AMD64LoweringPass::lower_const(const Const *C) {
 
         emit(get_move_op(fp->get_type()))
             .add_data(MD)
-            .add_reg(dReg)
-            .add_comment(stringify_inst(C));
+            .add_reg(dReg);
     } else if (auto string = dynamic_cast<const String*>(constant)) {
         // Strings must also be pooled into the local function.
         std::vector<MachineConstant> bytes = {};
@@ -579,8 +579,7 @@ void AMD64LoweringPass::lower_const(const Const *C) {
 
         emit(AMD64_LEA64)
             .add_data(MD)
-            .add_reg(dReg)
-            .add_comment(stringify_inst(C));
+            .add_reg(dReg);
     } else if (auto aggregate = dynamic_cast<const Aggregate*>(constant)) {
         assert(false && "(2) non-scalar!");
     } else {
@@ -600,8 +599,7 @@ void AMD64LoweringPass::lower_load(const Load *L) {
     MachineRegister dest(get_vreg_from_def(L), get_subreg_byte(L->get_type()));
 
     emit(get_move_op(L->get_type()), { source })
-        .add_reg(dest)
-        .add_comment(stringify_inst(L));
+        .add_reg(dest);
 }
 
 void AMD64LoweringPass::lower_store(const Store *S) {
@@ -626,20 +624,14 @@ void AMD64LoweringPass::lower_store(const Store *S) {
         MachineRegister tmp = create_vreg(cls);
         tmp.setSubreg(get_subreg_byte(value->get_type()));
 
-        emit(get_move_op(value->get_type()), { source, tmp })
-            .add_comment(stringify_inst(S));
-
+        emit(get_move_op(value->get_type()), { source, tmp });
         emit(get_move_op(value->get_type()), { tmp, dest });
     } else {
-        emit(get_move_op(value->get_type()), { source, dest })
-            .add_comment(stringify_inst(S));
+        emit(get_move_op(value->get_type()), { source, dest });
     }
 }
 
 void AMD64LoweringPass::lower_access(const Access* A) {
-    emit(static_cast<uint32_t>(Intrinsic::Husk))
-        .add_comment(stringify_inst(A));
-
     const MachineOperand index = to_operand(A->get_index());
     assert(index.is_imm() && "Access index is not an immediate!");;
 
@@ -671,9 +663,6 @@ void AMD64LoweringPass::lower_access(const Access* A) {
 }
 
 void AMD64LoweringPass::lower_offptr(const Offptr *O) {
-    emit(static_cast<uint32_t>(Intrinsic::Husk))
-        .add_comment(stringify_inst(O));
-
     MachineOperand source = to_operand(O->get_base());
     MachineOperand index = to_operand(O->get_index());
 
@@ -708,9 +697,6 @@ void AMD64LoweringPass::lower_offptr(const Offptr *O) {
 }
 
 void AMD64LoweringPass::lower_call(const Call* C) {
-    emit(static_cast<uint32_t>(Intrinsic::Husk))
-        .add_comment(stringify_inst(C));
-
     emit(static_cast<uint32_t>(Intrinsic::Callsite_Set));
 
     // @Todo: change with function pointers/callbacks.
@@ -812,9 +798,7 @@ void AMD64LoweringPass::lower_ret(const Ret* R) {
         AMD64_Op op = get_move_op(value->get_type());
 
         // Move the return value to the location specified by the ABI.
-        emit(get_move_op(value->get_type()), { result })
-            .add_reg(rReg)
-            .add_comment(stringify_inst(R));
+        emit(get_move_op(value->get_type()), { result, rReg });
 
         // (1) Restore the function stack frame with this return.
         emit(static_cast<uint32_t>(Intrinsic::Stack_Restore));
@@ -823,13 +807,10 @@ void AMD64LoweringPass::lower_ret(const Ret* R) {
         rReg.setIsImplicit();
         rReg.setIsExpired();
 
-        emit(AMD64_RET64)
-            .add_reg(rReg);
+        emit(AMD64_RET64, { rReg });
     } else {
         // See (1).
-        emit(static_cast<uint32_t>(Intrinsic::Stack_Restore))
-            .add_comment(stringify_inst(R));
-
+        emit(static_cast<uint32_t>(Intrinsic::Stack_Restore));
         emit(AMD64_RET64);
     }
 }
@@ -837,8 +818,7 @@ void AMD64LoweringPass::lower_ret(const Ret* R) {
 void AMD64LoweringPass::lower_jump(const Jump* J) {
     // Simply jump directly to the sole destination label.
     emit(AMD64_JMP)
-        .add_label(m_func->get_label(J->get_dest()->position()))
-        .add_comment(stringify_inst(J));
+        .add_label(m_blocks[m_func][J->get_dest()]);
 }
 
 void AMD64LoweringPass::lower_brif(const Brif* B) {
@@ -853,16 +833,15 @@ void AMD64LoweringPass::lower_brif(const Brif* B) {
     // Emit a zero comparison on the Brif condition.
     emit(AMD64_CMP8)
         .add_imm(0)
-        .add_operand(cond)
-        .add_comment(stringify_inst(B));
+        .add_operand(cond);
 
     // If the condition != 0 i.e. "true", then jump to the true label.
     emit(AMD64_JNE)
-        .add_label(m_func->get_label(B->get_true_dest()->position()));
+        .add_label(m_blocks[m_func][B->get_true_dest()]);
 
     // Otherwise, jump to the false label.
     emit(AMD64_JMP)
-        .add_label(m_func->get_label(B->get_false_dest()->position()));
+        .add_label(m_blocks[m_func][B->get_false_dest()]);
 }
 
 void AMD64LoweringPass::lower_phi(const Phi* P) {
@@ -872,33 +851,55 @@ void AMD64LoweringPass::lower_phi(const Phi* P) {
         .setReg(get_vreg_from_def(P))
         .setSubreg(get_subreg_byte(type));
 
-    MachineLabel* curr = m_insert;
+    MachineLabel* prev_insert = m_insert;
+    m_insert = nullptr;
 
     for (uint32_t i = 0; i < P->num_edges(); ++i) {
         Phi::CEdge edge = P->get_edge(i);
 
-        MachineLabel* label = m_func->get_label(edge.pred->position());
-        assert(label);
+        MachineLabel* mc_edge = m_blocks.at(m_func).at(edge.pred);
+        assert(mc_edge);
 
-        MachineOperand source = to_operand(edge.value);
+        // If the predecessor isn't empty, find the last non-terminating
+        // instruction in it as the insertion point.
+        MachineOp* ins = mc_edge->get_head();
+        if (mc_edge->size() == 1) {
+            // The target label has only one op, so check if it's a terminator
+            // to decide whether to insert the move before/after.
 
-        MachineOp* move = new MachineOp(get_move_op(type), { source, dReg });
-        move->add_comment(stringify_inst(P));
+            const MachineOperand source = to_operand(edge.value);
 
-        MachineOp* ins = label->get_tail(); 
-        for (; ins; ins = ins->get_prev()) {
-            if (ins->is_intrinsic() || !is_terminator(static_cast<AMD64_Op>(ins->op())))
-                break;
+            MachineOp* move = new MachineOp(get_move_op(type), { source, dReg });
+
+            MachineOp* op = mc_edge->get_head();
+            if (!op->is_intrinsic() && is_terminator(static_cast<AMD64_Op>(op->op()))) {
+                move->insertBefore(op);
+            } else {
+                mc_edge->append(op);
+            }
+
+            continue;
+        } else while (ins) {
+            if (ins->has_next()) {
+                MachineOp* next = ins->get_next();
+                if (!next->is_intrinsic() && is_terminator(static_cast<AMD64_Op>(next->op())))
+                    break;
+            }
+
+            ins = ins->get_next();
         }
 
+        const MachineOperand source = to_operand(edge.value);
+
+        MachineOp* move = new MachineOp(get_move_op(type), { source, dReg });
         if (ins) {
             move->insertAfter(ins);
         } else {
-            label->prepend(move);
+            mc_edge->append(move);
         }
     }
 
-    m_insert = curr;
+    m_insert = prev_insert;
 }
 
 void AMD64LoweringPass::lower_unop(const Unop* U) {
@@ -911,10 +912,9 @@ void AMD64LoweringPass::lower_unop(const Unop* U) {
 
             MachineRegister dReg = get_vreg_from_def(U);
 
-            emit(get_move_op(value->get_type()), { source, dReg })
-                .add_comment(stringify_inst(U));
-
+            emit(get_move_op(value->get_type()), { source, dReg });
             emit(getOpNot(value->get_type()), { dReg });
+
             break;
         }
         case Unop::Op::INeg: {
@@ -922,10 +922,9 @@ void AMD64LoweringPass::lower_unop(const Unop* U) {
 
             MachineRegister dReg = get_vreg_from_def(U);
 
-            emit(get_move_op(value->get_type()), { source, dReg })
-                .add_comment(stringify_inst(U));
-
+            emit(get_move_op(value->get_type()), { source, dReg });
             emit(getOpINeg(value->get_type()), { dReg });
+
             break;
         }
         case Unop::Op::FNeg: {
@@ -954,9 +953,7 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
                 rhs = tmp;
             }
 
-            emit(getOpIAdd(type), { lhs, rhs })
-                .add_comment(stringify_inst(B));
-
+            emit(getOpIAdd(type), { lhs, rhs });
             emit(get_move_op(type), { rhs, dReg });
 
             break;
@@ -964,14 +961,10 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
 
         case Binop::Op::ISub: {
             if (lhs.is_imm()) {
-                emit(get_move_op(type), { lhs, dReg })
-                    .add_comment(stringify_inst(B));
-
+                emit(get_move_op(type), { lhs, dReg });
                 emit(getOpISub(type), { rhs, dReg });
             } else {
-                emit(getOpISub(type), { rhs, lhs })
-                    .add_comment(stringify_inst(B));
-
+                emit(getOpISub(type), { rhs, lhs });
                 emit(get_move_op(type), { lhs, dReg });
             }
             
@@ -985,9 +978,7 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
                 rhs = tmp;
             }
 
-            emit(get_move_op(type), { lhs, dReg })
-                .add_comment(stringify_inst(B));
-
+            emit(get_move_op(type), { lhs, dReg });
             emit(getOpIMul(type), { rhs, dReg });
             
             break;
@@ -999,8 +990,7 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
         case Binop::Op::UMod: {
             emit(get_move_op(type), { lhs })
                 // RAX is explicitly defined by the move.
-                .add_reg({ RAX, get_subreg_byte(type), true })
-                .add_comment(stringify_inst(B));
+                .add_reg({ RAX, get_subreg_byte(type), true });
 
             emit(get_move_op(type), { rhs, dReg });
 
@@ -1065,9 +1055,7 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
                 rhs = tmp;
             }
 
-            emit(getOpFAdd(type), { lhs, rhs })
-                .add_comment(stringify_inst(B));
-
+            emit(getOpFAdd(type), { lhs, rhs });
             emit(get_move_op(type), { rhs, dReg });
 
             break;
@@ -1075,14 +1063,10 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
 
         case Binop::Op::FSub: {
             if (lhs.is_imm()) {
-                emit(get_move_op(type), { lhs, dReg })
-                    .add_comment(stringify_inst(B));
-
+                emit(get_move_op(type), { lhs, dReg });
                 emit(getOpFSub(type), { rhs, dReg });
             } else {
-                emit(getOpFSub(type), { rhs, lhs })
-                    .add_comment(stringify_inst(B));
-
+                emit(getOpFSub(type), { rhs, lhs });
                 emit(get_move_op(type), { lhs, dReg });
             }
             
@@ -1091,14 +1075,10 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
 
         case Binop::Op::FMul: {
             if (lhs.is_imm()) {
-                emit(get_move_op(type), { lhs, dReg })
-                    .add_comment(stringify_inst(B));
-
+                emit(get_move_op(type), { lhs, dReg });
                 emit(getOpFMul(type), { rhs, dReg });
             } else {
-                emit(getOpFMul(type), { rhs, lhs })
-                    .add_comment(stringify_inst(B));
-
+                emit(getOpFMul(type), { rhs, lhs });
                 emit(get_move_op(type), { lhs, dReg });
             }
 
@@ -1107,14 +1087,10 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
 
         case Binop::Op::FDiv: {
             if (lhs.is_imm()) {
-                emit(get_move_op(type), { lhs, dReg })
-                    .add_comment(stringify_inst(B));
-
+                emit(get_move_op(type), { lhs, dReg });
                 emit(getOpFDiv(type), { rhs, dReg });
             } else {
-                emit(getOpFDiv(type), { rhs, lhs })
-                    .add_comment(stringify_inst(B));
-
+                emit(getOpFDiv(type), { rhs, lhs });
                 emit(get_move_op(type), { lhs, dReg });
             }
 
@@ -1128,9 +1104,7 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
                 rhs = tmp;
             }
 
-            emit(getOpAnd(type), { lhs, rhs })
-                .add_comment(stringify_inst(B));
-
+            emit(getOpAnd(type), { lhs, rhs });
             emit(get_move_op(type), { rhs, dReg });
 
             break;
@@ -1143,9 +1117,7 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
                 rhs = tmp;
             }
 
-            emit(getOpOr(type), { lhs, rhs })
-                .add_comment(stringify_inst(B));
-
+            emit(getOpOr(type), { lhs, rhs });
             emit(get_move_op(type), { rhs, dReg });
 
             break;
@@ -1158,9 +1130,7 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
                 rhs = tmp;
             }
 
-            emit(getOpXor(type), { lhs, rhs })
-                .add_comment(stringify_inst(B));
-
+            emit(getOpXor(type), { lhs, rhs });
             emit(get_move_op(type), { rhs, dReg });
 
             break;
@@ -1178,8 +1148,7 @@ void AMD64LoweringPass::lower_binop(const Binop* B) {
                 op = getOpSar(type);
             }
 
-            emit(get_move_op(type), { lhs, dReg })
-                .add_comment(stringify_inst(B));
+            emit(get_move_op(type), { lhs, dReg });
 
             if (rhs.is_imm()) {
                 emit(op, { rhs, dReg });
@@ -1221,8 +1190,7 @@ void AMD64LoweringPass::lower_cast(const Cast* C) {
                 op = AMD64_MOVSX;
             }
             
-            emit(op, { source, dReg })
-                .add_comment(stringify_inst(C));
+            emit(op, { source, dReg });
 
             break;
         }
@@ -1241,102 +1209,77 @@ void AMD64LoweringPass::lower_cast(const Cast* C) {
                 op = AMD64_MOVSX;
             }
 
-            emit(op, { source, dReg })
-                .add_comment(stringify_inst(C));
+            emit(op, { source, dReg });
 
             break;
         }
 
-        case Cast::Kind::FExt: {
-            emit(AMD64_CVTSS2SD, { source, dReg })
-                .add_comment(stringify_inst(C));
-                
+        case Cast::Kind::FExt:
+            emit(AMD64_CVTSS2SD, { source, dReg });
             break;
-        }
 
-        case Cast::Kind::ITrunc: {
+        case Cast::Kind::ITrunc:
             if (source.is_reg())
                 source.reg().setSubreg(get_subreg_byte(C->get_type()));
 
-            emit(AMD64_MOV, { source, dReg })
-                .add_comment(stringify_inst(C));
-
+            emit(AMD64_MOV, { source, dReg });
             break;
-        }
 
-        case Cast::Kind::FTrunc: {
-            emit(AMD64_CVTSD2SS, { source, dReg })
-                .add_comment(stringify_inst(C));
-
+        case Cast::Kind::FTrunc:
+            emit(AMD64_CVTSD2SS, { source, dReg });
             break;
-        }
 
         case Cast::Kind::S2F: {
             AMD64_Op op;
-
             if (C->get_type()->is_float_type(32)) {
                 op = AMD64_CVTSI2SS;
             } else if (C->get_type()->is_float_type(64)) {
                 op = AMD64_CVTSI2SD;
             }
 
-            emit(op, { source, dReg })
-                .add_comment(stringify_inst(C));
-
+            emit(op, { source, dReg });
             break;
         }
 
         case Cast::Kind::U2F: {
             AMD64_Op op;
-
             if (C->get_type()->is_float_type(32)) {
                 op = AMD64_VCVTUSI2SS;
             } else if (C->get_type()->is_float_type(64)) {
                 op = AMD64_VCVTUSI2SD;
             }
 
-            emit(op, { source, dReg })
-                .add_comment(stringify_inst(C));
-
+            emit(op, { source, dReg });
             break;
         }
 
         case Cast::Kind::F2S: {
             AMD64_Op op;
-
             if (value->get_type()->is_float_type(32)) {
                 op = getOpSS2SI(C->get_type());
             } else if (value->get_type()->is_float_type(64)) {
                 op = getOpSD2SI(C->get_type());
             }
 
-            emit(op, { source, dReg })
-                .add_comment(stringify_inst(C));
-
+            emit(op, { source, dReg });
             break;
         }
 
         case Cast::Kind::F2U: {
             AMD64_Op op;
-
             if (value->get_type()->is_float_type(32)) {
                 op = getOpSS2UI(C->get_type());
             } else if (value->get_type()->is_float_type(64)) {
                 op = getOpSD2UI(C->get_type());
             }
 
-            emit(op, { source, dReg })
-                .add_comment(stringify_inst(C));
-
+            emit(op, { source, dReg });
             break;
         } 
 
-        case Cast::Kind::I2P: {
-            emit(get_move_op(value->get_type()), { source, dReg })
-                .add_comment(stringify_inst(C));
-
+        case Cast::Kind::I2P:
+            emit(get_move_op(value->get_type()), { source, dReg });
             break;
-        }
 
         case Cast::Kind::P2I:
         case Cast::Kind::Reint: {
@@ -1347,9 +1290,7 @@ void AMD64LoweringPass::lower_cast(const Cast* C) {
                 op = AMD64_MOV64;
             }
 
-            emit(op, { source, dReg })
-                .add_comment(stringify_inst(C));
-
+            emit(op, { source, dReg });
             break;
         }
     }
@@ -1372,9 +1313,7 @@ void AMD64LoweringPass::lower_cmp(const Cmp* C) {
         SETcc = flip_setcc(SETcc);
     }
 
-    emit(get_cmp_op(C->get_lhs()->get_type()), { left, right })
-        .add_comment(stringify_inst(C));
-
+    emit(get_cmp_op(C->get_lhs()->get_type()), { left, right });
     emit(SETcc)
         .add_reg(MachineRegister { get_vreg_from_def(C), 1 });
 }

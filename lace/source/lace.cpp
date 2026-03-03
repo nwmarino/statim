@@ -48,7 +48,7 @@ using namespace std::chrono;
 
 using Timestamp = time_point<high_resolution_clock>;
 
-static std::string g_standard = "/root/lace/stl";
+static std::string g_standard = "/home/nwm/lace/stl";
 
 static const char* g_help = R"(usage: ./lace [options] file...
 
@@ -79,7 +79,7 @@ static inline Timestamp get_time() {
 int32_t main(int32_t argc, char* argv[]) {
     Options options = {};
     options.output = "main";
-    options.opt = Options::OptLevel::Aggressive;
+    options.opt = Options::OptLevel::Default;
     options.stop = Options::StopPoint::Link;
     options.threads = 1;
 
@@ -93,7 +93,7 @@ int32_t main(int32_t argc, char* argv[]) {
     log::direct(std::cout);
 
     std::vector<std::string> files = {
-        "/root/lace/samples/logic.lace",
+        "/home/nwm/lace/samples/logic.lace",
     };
 
     for (int32_t i = 1; i < argc; ++i) {

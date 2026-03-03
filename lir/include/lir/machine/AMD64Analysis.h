@@ -15,6 +15,8 @@ namespace lir {
 class AMD64Analysis final {
     const Machine& m_mach;
     MachineObject& m_obj;
+    
+    MachineFunction* m_func;
 
 public:
     AMD64Analysis(const Machine& mach, MachineObject& obj);
@@ -37,6 +39,8 @@ private:
     bool is_redundant_move(MachineOp* op) const;
 
     bool is_redundant_move(MachineOp* first, MachineOp* second) const;
+
+    bool is_redundant_jump(MachineOp* op) const;
 };
 
 } // namespace lir

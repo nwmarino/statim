@@ -21,21 +21,36 @@ void AMD64Analysis::run() {
 }
 
 void AMD64Analysis::process(MachineFunction* func) {
+    m_func = func;
+
     for (uint32_t i = 0; i < func->num_labels(); ++i) {
         MachineLabel* label = func->get_label(i);
 
-        for (MachineOp* op = label->get_head(); op; op = op->get_next()) {
-            if (is_redundant_move(op)) {
+        for (MachineOp* op = label->get_head(); op; ) {
+            if (op->is_intrinsic()) {
+                op = op->get_next();
+                continue;
+            }
+
+            if (is_redundant_move(op) || is_redundant_jump(op)) {
                 MachineOp* tmp = op;
                 op = op->get_prev();
+
                 tmp->detach();
-            } else if (op->get_next() && is_redundant_move(op, op->get_next())) {
+                delete tmp;
+            } else if (op->has_next() && is_redundant_move(op, op->get_next())) {
                 MachineOp* tmp = op;
                 op = op->get_prev();
+
                 tmp->detach();
+                delete tmp;
+            } else {
+                op = op->get_next();
             }
         }
     }
+
+    m_func = nullptr;
 }
 
 bool AMD64Analysis::is_basic_move(AMD64_Op op) const {
@@ -69,5 +84,31 @@ bool AMD64Analysis::is_redundant_move(MachineOp* first, MachineOp* second) const
     // becomes
     //
     // movq %rax, %r8
+    return false;
+}
+
+bool AMD64Analysis::is_redundant_jump(MachineOp* op) const {
+    if (static_cast<AMD64_Op>(op->op()) != AMD64_JMP)
+        return false;
+
+    if (op->has_next())
+        return false;
+
+    assert(op->get_operand(0).is_label());
+    MachineLabel* dest = op->get_operand(0).label();
+
+    for (uint32_t i = 0, e = m_func->num_labels(); i < e; ++i) {
+        MachineLabel* label = m_func->get_label(i);
+        
+        if (label == op->get_parent()) {
+            if (i + 1 == e)
+                return false;
+
+            MachineLabel* next = m_func->get_label(i + 1);
+            if (dest == next)
+                return true;
+        }
+    }
+
     return false;
 }

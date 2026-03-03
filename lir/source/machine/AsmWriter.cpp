@@ -903,7 +903,7 @@ void AsmWriter::writeOperand(std::ostream& os, const MachineOperand& operand) {
 
 void AsmWriter::writeOp(std::ostream& os, const MachineOp& op) {
     if (op.has_comment())
-        os << std::format("#\t> {}", op.get_comment());
+        os << std::format("#\t{}", op.get_comment());
 
     if (op.is_intrinsic()) {
         switch (static_cast<Intrinsic>(op.op())) 

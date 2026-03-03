@@ -7,6 +7,7 @@
 #define LIR_AMD64_LOWERING_PASS_H_
 
 #include "lir/analysis/LoweringPass.h"
+#include "lir/graph/BasicBlock.h"
 #include "lir/machine/AMD64.h"
 #include "lir/machine/MachineOp.h"
 
@@ -16,11 +17,18 @@
 namespace lir {
 
 class AMD64LoweringPass final : public LoweringPass {
+    using BlockTable = std::unordered_map<MachineFunction*, 
+        std::unordered_map<const BasicBlock*, MachineLabel*>>;
+    using FuncTable = std::unordered_map<const Function*, MachineFunction*>;
     using LocalTable = std::unordered_map<const Local*, MachineLocal*>;
     using DefTable = std::unordered_map<uint32_t, Register>;
 
-    MachineFunction *m_func = nullptr;
-    MachineLabel *m_insert = nullptr;
+    MachineFunction* m_func = nullptr;
+    MachineLabel* m_insert = nullptr;
+
+    BlockTable m_blocks = {};
+
+    FuncTable m_funcs = {};
 
     /// A table from LIR Locals -> MIR stack locals.
     LocalTable m_locals = {};
@@ -100,7 +108,7 @@ private:
 
     /// Emit a new instruction to the back of the current label with the given 
     /// |op| and |operands|.
-    MachineOp &emit(uint32_t op, const MachineOp::Operands &operands = {});
+    MachineOp& emit(uint32_t op, const MachineOp::Operands& operands = {});
 
     /// Construct the stack frame for the given |func|.
     void construct_stack_frame(const Function *func);
