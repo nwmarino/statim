@@ -83,7 +83,7 @@ int32_t main(int32_t argc, char* argv[]) {
     options.stop = Options::StopPoint::Link;
     options.threads = 1;
 
-    options.debug = false;
+    options.debug = true;
     options.multithread = true;
     options.verbose = false;
     options.dump_ast = false;
@@ -93,11 +93,7 @@ int32_t main(int32_t argc, char* argv[]) {
     log::direct(std::cout);
 
     std::vector<std::string> files = {
-        "/home/nwm/lace/stl/index.lace",
-        "/home/nwm/lace/stl/string.lace",
-        "/home/nwm/lace/stl/linux.lace",
-        "/home/nwm/lace/stl/mem.lace",
-        "/home/nwm/lace/stl/io.lace",
+        "/home/nwm/lace/samples/math.lace",
     };
 
     for (int32_t i = 1; i < argc; ++i) {

@@ -10,6 +10,7 @@
 #include "lace/tree/Expr.h"
 #include "lace/tree/Type.h"
 
+#include "lace/types/SourceLocation.h"
 #include "lir/graph/CFG.h"
 #include "lir/graph/Global.h"
 #include "lir/graph/Type.h"
@@ -20,7 +21,21 @@
 using namespace lace;
 
 Codegen::Codegen(Context& context, lir::CFG& graph, lir::Machine& mach)
-  : VisitorBase(context), m_graph(graph), m_mach(mach), m_builder(graph) {}
+  : VisitorBase(context), m_graph(graph), m_mach(mach), m_builder(graph),
+    m_dbuilder(graph) {}
+
+void Codegen::visit(Rib& rib) {
+    if (m_context.options().debug) {
+        std::size_t slug = rib.path().find_last_of('/');
+
+        const std::string path = rib.path().substr(0, slug);
+        const std::string file = rib.path().substr(slug);
+
+        m_dfile = m_dbuilder.build_file(path, file);
+    }
+
+    VisitorBase::visit(rib);
+}
 
 void Codegen::visit(FunctionDefn& node) {
     lir::Function* func = fetch(&node);
@@ -174,6 +189,8 @@ void Codegen::visit(AdapterStmt& node) {
 }
 
 void Codegen::visit(IfStmt& node) {
+    update_dloc(node.span().start);
+
     m_vc = Valued;
     node.condition()->accept(*this);
     assert(m_temp);
@@ -220,6 +237,8 @@ void Codegen::visit(IfStmt& node) {
 }
 
 void Codegen::visit(RestartStmt& node) {
+    update_dloc(node.span().start);
+
     if (!m_builder.get_insert()->terminates()) {
         assert(m_cond && "no condition block to restart to!");
         m_builder.build_jump(m_cond);
@@ -229,6 +248,8 @@ void Codegen::visit(RestartStmt& node) {
 }
 
 void Codegen::visit(RetStmt& node) {
+    update_dloc(node.span().start);
+
     if (!node.has_expr()) {
         m_builder.build_ret();
         m_temp = nullptr;
@@ -267,6 +288,8 @@ void Codegen::visit(RetStmt& node) {
 }
 
 void Codegen::visit(RuneStmt& node) {
+    update_dloc(node.span().start);
+
     switch (node.rune()->kind()) 
     {
     case Rune::Kind::Abort: {
@@ -293,6 +316,8 @@ void Codegen::visit(RuneStmt& node) {
 }
 
 void Codegen::visit(StopStmt& node) {
+    update_dloc(node.span().start);
+
     if (!m_builder.get_insert()->terminates()) {
         assert(m_merge && "no merge block to stop to!");
         m_builder.build_jump(m_merge);
@@ -302,6 +327,8 @@ void Codegen::visit(StopStmt& node) {
 }
 
 void Codegen::visit(UntilStmt& node) {
+    update_dloc(node.span().start);
+
     lir::BasicBlock* cond_bb = lir::BasicBlock::create(m_func);
     lir::BasicBlock* body_bb = nullptr;
     lir::BasicBlock* merge_bb = lir::BasicBlock::create();
@@ -344,6 +371,8 @@ void Codegen::visit(UntilStmt& node) {
 void Codegen::visit(BoolLiteral& node) {
     assert(m_vc == Valued);
 
+    update_dloc(node.span().start);
+
     m_temp = lir::Integer::get(
         m_graph, lir
         ::IntegerType::get(m_graph, 8), 
@@ -354,11 +383,15 @@ void Codegen::visit(BoolLiteral& node) {
 void Codegen::visit(IntegerLiteral& node) {
     assert(m_vc == Valued);
 
+    update_dloc(node.span().start);
+
     m_temp = lir::Integer::get(m_graph, fetch(node.type()), node.get_value());
 }
 
 void Codegen::visit(CharLiteral& node) {
     assert(m_vc == Valued);
+
+    update_dloc(node.span().start);
 
     m_temp = lir::Integer::get(
         m_graph, 
@@ -370,6 +403,8 @@ void Codegen::visit(CharLiteral& node) {
 void Codegen::visit(FloatLiteral& node) {
     assert(m_vc == Valued);
 
+    update_dloc(node.span().start);
+
     m_temp = m_builder.build_const(lir::Float::get(
         m_graph, 
         fetch(node.type()), 
@@ -379,6 +414,8 @@ void Codegen::visit(FloatLiteral& node) {
 
 void Codegen::visit(NullLiteral& node) {
     assert(m_vc == Valued);
+
+    update_dloc(node.span().start);
     
     m_temp = lir::Null::get(m_graph, fetch(node.type()));
 }
@@ -386,12 +423,16 @@ void Codegen::visit(NullLiteral& node) {
 void Codegen::visit(StringLiteral& node) {
     assert(m_vc == Valued);
 
+    update_dloc(node.span().start);
+
     node.value() += '\0';
 
     m_temp = m_builder.build_string(lir::String::get(m_graph, node.value()));
 }
 
 void Codegen::visit(BinaryOp& node) {
+    update_dloc(node.span().start);
+
     switch (node.op())
     {
     case BinaryOp::Assign:
@@ -428,6 +469,8 @@ void Codegen::visit(BinaryOp& node) {
 }
 
 void Codegen::visit(UnaryOp& node) {
+    update_dloc(node.span().start);
+
     switch (node.op())
     {
     case UnaryOp::Negate:
@@ -446,6 +489,8 @@ void Codegen::visit(UnaryOp& node) {
 }
 
 void Codegen::visit(AccessExpr& node) {
+    update_dloc(node.span().start);
+
     ValueContext vc = m_vc;
 
     lir::Value* ptr = nullptr;
@@ -486,6 +531,8 @@ void Codegen::visit(AccessExpr& node) {
 }
 
 void Codegen::visit(CallExpr& node) {
+    update_dloc(node.span().start);
+
     m_vc = Addressed;
     node.callee()->accept(*this);
     lir::Value* callee = m_temp;
@@ -550,6 +597,8 @@ void Codegen::visit(CallExpr& node) {
 
 void Codegen::visit(CastExpr& node) {
     assert(m_vc == Valued);
+
+    update_dloc(node.span().start);
 
     node.expr()->accept(*this);
     assert(m_temp);
@@ -689,6 +738,8 @@ void Codegen::visit(ParenExpr& node) {
 void Codegen::visit(RefExpr& node) {
     assert(node.is_resolved());
 
+    update_dloc(node.span().start);
+
     if (FunctionDefn* fd = dynamic_cast<FunctionDefn*>(node.defn())) {
         m_temp = fetch(fd);
         assert(m_temp);
@@ -726,6 +777,8 @@ void Codegen::visit(RefExpr& node) {
 void Codegen::visit(SizeofExpr& node) {
     assert(m_vc == Valued);
 
+    update_dloc(node.span().start);
+
     m_temp = lir::Integer::get(
         m_graph,
         fetch(node.type()),
@@ -735,6 +788,8 @@ void Codegen::visit(SizeofExpr& node) {
 
 void Codegen::visit(StructInitExpr& node) {
     assert(m_vc == Addressed);
+
+    update_dloc(node.span().start);
 
     lir::Value* dest = nullptr;
     lir::Type* type = fetch(node.type());
@@ -812,6 +867,8 @@ void Codegen::visit(StructInitExpr& node) {
 }
 
 void Codegen::visit(SubscriptExpr& node) {
+    update_dloc(node.span().start);
+    
     ValueContext vc = m_vc;
 
     lir::Value* ptr = nullptr;
@@ -1014,6 +1071,14 @@ lir::Function* Codegen::get_rtf_copy() {
         lir::PointerType::get(m_graph, lir::VoidType::get(m_graph)),
         lir::IntegerType::get(m_graph, 64),
     });
+}
+
+void Codegen::update_dloc(const SourceLocation loc) {
+    if (m_context.options().debug) {
+        m_builder.set_debug_location(
+            m_dbuilder.build_loc(m_dfile, loc.line, loc.col)
+        );
+    }
 }
 
 void Codegen::lower(FunctionDefn* defn) {

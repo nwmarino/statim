@@ -10,6 +10,7 @@
 #include "lace/tree/VisitorBase.h"
 
 #include "lir/graph/Builder.h"
+#include "lir/graph/Debug.h"
 #include "lir/graph/Function.h"
 #include "lir/graph/Global.h"
 #include "lir/graph/Type.h"
@@ -39,6 +40,7 @@ class Codegen final : public VisitorBase {
     lir::CFG& m_graph;
     lir::Machine& m_mach;
     lir::Builder m_builder;
+    lir::DebugBuilder m_dbuilder;
 
     ValueContext m_vc = Valued;
     lir::Value* m_temp = nullptr;
@@ -46,6 +48,8 @@ class Codegen final : public VisitorBase {
     lir::Function* m_func = nullptr;
     lir::BasicBlock* m_cond = nullptr;
     lir::BasicBlock* m_merge = nullptr;
+
+    lir::DebugFile* m_dfile = nullptr;
 
     std::unordered_map<const StructType*, lir::StructType*> m_structs = {};
     std::unordered_map<const VariableDefn*, GlobalInfo> m_globals = {};
@@ -61,6 +65,8 @@ public:
 
     Codegen(Codegen&&) noexcept = delete;
     void operator=(Codegen&&) noexcept = delete;
+
+    void visit(Rib& rib) override;
 
     void visit(FunctionDefn& node) override;
 
@@ -147,6 +153,9 @@ private:
 
     /// Returns the runtime `__copy` function.
     lir::Function* get_rtf_copy();
+
+    /// Update the current debug location with the given source location |loc|.
+    void update_dloc(const SourceLocation loc);
 
     /// Lower the given function |defn| to an empty IR function.
     void lower(FunctionDefn* defn);

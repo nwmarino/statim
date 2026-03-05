@@ -7,6 +7,7 @@
 #define LIR_INSTRUCTION_H_
 
 #include "lir/graph/Constant.h"
+#include "lir/graph/Debug.h"
 #include "lir/graph/User.h"
 #include "lir/graph/Value.h"
 
@@ -25,10 +26,11 @@ protected:
     BasicBlock *m_parent;
     Instruction *m_prev = nullptr;
     Instruction *m_next = nullptr;
+    DebugLoc* m_loc = nullptr;
     uint32_t m_def;
 
     Instruction(Type *type, BasicBlock *parent, uint32_t def = 0, 
-                const Operands &ops = {});
+                const Operands &ops = {}, DebugLoc* loc = nullptr);
 
 public:
     virtual ~Instruction() = default;
@@ -58,6 +60,20 @@ public:
         assert(i < num_operands() && "index out of bounds!");
         return m_operands.at(i)->get_value();
     }
+
+    /// Set the debug location of this instruction to |loc|.
+    void set_location(DebugLoc* loc) { m_loc = loc; }
+
+    /// Clear the debug location of this instruction, if it has one.
+    void clear_location() { m_loc = nullptr; }
+
+    /// Returns the debug location of this instruction if it has one, and null
+    /// otherwise.
+    const DebugLoc* get_location() const { return m_loc; }
+    DebugLoc* get_location() { return m_loc; }
+
+    /// Test if this instruction has a debug location.
+    bool has_location() const { return m_loc != nullptr; }
 
     void set_parent(BasicBlock *block) { m_parent = block; }
     const BasicBlock *get_parent() const { return m_parent; }
