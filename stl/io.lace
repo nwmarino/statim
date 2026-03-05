@@ -53,13 +53,18 @@ close (f: *File) :: () -> void {
 }
 
 $public
-read (f: *File) :: (n: u64, s: *stl::string::string) -> u64 {
+read (f: *File) :: (n: u64) -> stl::string::string {
+    let s: stl::string::string = stl::string::string {};
+
     if !f.is_open {
-        ret 0;
+        ret s;
     }
 
     s.reserve(n);
-    ret stl::linux::read(f.fd, s.str(), n);
+
+    let read: s64 = stl::linux::read(f.fd, s.str(), n);
+    s.len = read;
+    ret s;
 }
 
 $public
@@ -89,4 +94,14 @@ size (f: *File) :: () -> s64 {
 $public
 print :: (s: stl::string::string) -> void {
     stl::linux::write(1, s.str(), s.size());
+}
+
+$public
+put :: (s: *char) -> void {
+    let len: u64 = 0;
+    until s[len] == '\0' {
+        len = len + 1;
+    }
+
+    stl::linux::write(1, s, len);
 }

@@ -553,6 +553,7 @@ MachineOperand AMD64LoweringPass::as_valued_operand(const Value* value) {
                 cls = RegisterClass::FloatingPoint;
 
             MachineRegister tmp = create_vreg(cls);
+            tmp.setSubreg(get_subreg_byte(value->get_type()));
 
             emit(get_move_op(param->get_type()))
                 .add_mem(BP, loc.offset + 16)
@@ -567,12 +568,13 @@ MachineOperand AMD64LoweringPass::as_valued_operand(const Value* value) {
         assert(MD && "global not lowered!");
 
         RegisterClass cls = RegisterClass::GeneralPurpose;
-        if (param->get_type()->is_float_type())
+        if (global->get_type()->is_float_type())
             cls = RegisterClass::FloatingPoint;
 
         MachineRegister tmp = create_vreg(cls);
+        tmp.setSubreg(8);
 
-        emit(get_move_op(param->get_type()))
+        emit(AMD64_LEA64)
             .add_data(MD)
             .add_reg(tmp);
 
@@ -582,12 +584,13 @@ MachineOperand AMD64LoweringPass::as_valued_operand(const Value* value) {
         assert(it != m_locals.end() && "local not lowered!");
 
         RegisterClass cls = RegisterClass::GeneralPurpose;
-        if (param->get_type()->is_float_type())
+        if (local->get_type()->is_float_type())
             cls = RegisterClass::FloatingPoint;
 
         MachineRegister tmp = create_vreg(cls);
+        tmp.setSubreg(8);
 
-        emit(get_move_op(param->get_type()))
+        emit(AMD64_LEA64)
             .add_local(it->second)
             .add_reg(tmp);
 
@@ -739,7 +742,7 @@ void AMD64LoweringPass::lower_access(const Access* A) {
 
 void AMD64LoweringPass::lower_offptr(const Offptr *O) {
     const MachineOperand base = as_address_operand(O->get_base());
-    const MachineOperand index = as_valued_operand(O->get_index());
+    MachineOperand index = as_valued_operand(O->get_index());
     const MachineOperand dst = as_valued_operand(O);
 
     emit(AMD64_MOV64, { base, dst });
@@ -755,9 +758,16 @@ void AMD64LoweringPass::lower_offptr(const Offptr *O) {
         emit(AMD64_ADD64)
             .add_imm(static_cast<int64_t>(bytes) * index.imm())
             .add_operand(dst);
-    } else if (bytes != 1) {
+    } else {
         // Index is dynamic, so we have to multiply it at runtime by the size 
         // of the underlying.
+
+        if (index.is_reg()) {
+            index.reg().setSubreg(8);
+        } else {
+            assert(false);
+        }
+
         emit(AMD64_IMUL64, { bytes, index });
         emit(AMD64_ADD64, { index, dst });
     }
@@ -787,7 +797,7 @@ void AMD64LoweringPass::lower_call(const Call* C) {
 
         const Value* arg = C->get_arg(i);
         const MachineOperand src = as_valued_operand(arg);
-        
+    
         emit(get_move_op(arg->get_type()), { src })
             .add_mem(SP, loc.offset);
     }

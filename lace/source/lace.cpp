@@ -65,7 +65,7 @@ options:
     -v          display version
 
     -j <n>      use at most n threads
-    -o <str>    compile to an executable named "str"
+    -o <str>    specify output name
 
     -dump-ast   dump the abstract syntax tree
     -dump-lir   dump the lace IR
@@ -93,7 +93,11 @@ int32_t main(int32_t argc, char* argv[]) {
     log::direct(std::cout);
 
     std::vector<std::string> files = {
-        "/home/nwm/lace/samples/loops.lace"
+        "/home/nwm/lace/stl/index.lace",
+        "/home/nwm/lace/stl/string.lace",
+        "/home/nwm/lace/stl/linux.lace",
+        "/home/nwm/lace/stl/mem.lace",
+        "/home/nwm/lace/stl/io.lace",
     };
 
     for (int32_t i = 1; i < argc; ++i) {
@@ -339,8 +343,8 @@ int32_t main(int32_t argc, char* argv[]) {
         if (context.options().opt == Options::OptLevel::Aggressive) {
             const Timestamp ostart = get_time();
 
-            lir::SSARewritePass ssa(graph);
-            ssa.run();
+            //lir::SSARewritePass ssa(graph);
+            //ssa.run();
 
             lir::ConstantFolding cf(graph);
             cf.run();

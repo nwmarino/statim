@@ -77,10 +77,13 @@ reserve (s: *string) :: (n: u32) -> void {
         ret;
     }
 
-    // Copy all bytes incl. null terminator.
-    stl::mem::copy(data, s.data, s.len + 1);
+    if s.data {
+        stl::mem::copy(data, s.data, s.len);
+    }
+    
+    data[s.len] = '\0';
 
-    s.destroy();
+    stl::mem::free(s.data);
 
     s.data = data;
     s.cap = n;

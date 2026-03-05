@@ -386,6 +386,8 @@ void Codegen::visit(NullLiteral& node) {
 void Codegen::visit(StringLiteral& node) {
     assert(m_vc == Valued);
 
+    node.value() += '\0';
+
     m_temp = m_builder.build_string(lir::String::get(m_graph, node.value()));
 }
 

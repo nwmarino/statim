@@ -82,7 +82,7 @@ copy :: (dst: *void, src: *void, n: u64) -> void {
     let s: *char = cast<*char>(src);
     let i: u64 = 0;
 
-    until i > n {
+    until i >= n {
         d[i] = s[i];
         i = i + 1;
     }

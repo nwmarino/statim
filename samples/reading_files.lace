@@ -5,16 +5,6 @@ use stl::io;
 
 $public
 main :: () -> s64 {
-    let s: stl::string::string = stl::string::string {};
-
-    stl::io::put("1\n");
-
-    s.from("Hello world!\n");
-
-    stl::io::print(s);
-
-    s.destroy();
-
     let f: stl::io::File;
     if !f.open("test.txt", stl::io::FILE_FLAGS_READ_WRITE) {
         ret 42;
