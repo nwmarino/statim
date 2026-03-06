@@ -1,6 +1,1 @@
-*.ast
-*.lir
-*.s
-*.mir
-*.rmir
 !rt.s

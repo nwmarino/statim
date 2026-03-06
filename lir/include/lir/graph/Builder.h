@@ -8,6 +8,7 @@
 
 #include "lir/graph/BasicBlock.h"
 #include "lir/graph/Constant.h"
+#include "lir/graph/Debug.h"
 #include "lir/graph/Instruction.h"
 #include "lir/graph/Type.h"
 
@@ -24,8 +25,9 @@ public:
     };
 
 private:
-    CFG &m_cfg;
-    BasicBlock *m_insert = nullptr;
+    CFG& m_cfg;
+    BasicBlock* m_insert = nullptr;
+    DebugLoc* m_dloc = nullptr;
     InsertMode m_mode = InsertMode::Append;
 
 public:
@@ -35,6 +37,11 @@ public:
     void clear_insert() { m_insert = nullptr; }
     const BasicBlock *get_insert() const { return m_insert; }
     BasicBlock *get_insert() { return m_insert; }
+
+    void set_debug_location(DebugLoc* dloc) { m_dloc = dloc; }
+    void clear_debug_location() { m_dloc = nullptr; }
+    const DebugLoc* get_debug_location() const { return m_dloc; }
+    DebugLoc* get_debug_location() { return m_dloc; }
 
     void set_mode(InsertMode mode) { m_mode = mode; }
     InsertMode get_mode() const { return m_mode; }

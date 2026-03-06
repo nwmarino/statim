@@ -5,7 +5,7 @@
 
 #include "lace/lexer/Lexer.h"
 #include "lace/parser/Parser.h"
-#include "lace/tree/AST.h"
+#include "lace/tree/Rib.h"
 #include "lace/tree/Defn.h"
 #include "lace/tree/SemanticAnalysis.h"
 #include "lace/tree/SymbolAnalysis.h"
@@ -17,11 +17,13 @@ namespace lace::test {
 class SemanticAnalysisTests : public ::testing::Test {
 protected:
     Options opts;
-    AST* ast;
+    Context context;
+    Rib* rib;
 
     void SetUp() override {
         opts = Options();
-        ast = nullptr;
+        context = Context(opts);
+        rib = nullptr;
     }
 
     void TearDown() override {
@@ -40,7 +42,7 @@ TEST_F(SemanticAnalysisTests, MainCheck_ReturnType_Positive) {
     Parser parser(stream);
     ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
-    SymbolAnalysis syma(opts);
+    SymbolAnalysis syma(context);
     ASSERT_NO_FATAL_FAILURE(ast->accept(syma));
 
     SemanticAnalysis sema(opts);
@@ -55,7 +57,7 @@ TEST_F(SemanticAnalysisTests, MainCheck_ReturnType_Negative) {
     Parser parser(stream);
     ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
-    SymbolAnalysis syma(opts);
+    SymbolAnalysis syma(context);
     ASSERT_NO_FATAL_FAILURE(ast->accept(syma));
 
     SemanticAnalysis sema(opts);
@@ -70,7 +72,7 @@ TEST_F(SemanticAnalysisTests, ConditionCheck_IfCondition_Positive) {
     Parser parser(stream);
     ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
-    SymbolAnalysis syma(opts);
+    SymbolAnalysis syma(context);
     ASSERT_NO_FATAL_FAILURE(ast->accept(syma));
 
     SemanticAnalysis sema(opts);
@@ -85,7 +87,7 @@ TEST_F(SemanticAnalysisTests, ConditionCheck_IfCondition_Negative) {
     Parser parser(stream);
     ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
-    SymbolAnalysis syma(opts);
+    SymbolAnalysis syma(context);
     ASSERT_NO_FATAL_FAILURE(ast->accept(syma));
 
     SemanticAnalysis sema(opts);
@@ -100,7 +102,7 @@ TEST_F(SemanticAnalysisTests, ConditionCheck_UntilCondition_Positive) {
     Parser parser(stream);
     ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
-    SymbolAnalysis syma(opts);
+    SymbolAnalysis syma(context);
     ASSERT_NO_FATAL_FAILURE(ast->accept(syma));
 
     SemanticAnalysis sema(opts);
@@ -115,7 +117,7 @@ TEST_F(SemanticAnalysisTests, ConditionCheck_UntilCondition_Negative) {
     Parser parser(stream);
     ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
-    SymbolAnalysis syma(opts);
+    SymbolAnalysis syma(context);
     ASSERT_NO_FATAL_FAILURE(ast->accept(syma));
 
     SemanticAnalysis sema(opts);
@@ -130,7 +132,7 @@ TEST_F(SemanticAnalysisTests, ControlCheck_StopInLoop_Positive) {
     Parser parser(stream);
     ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
-    SymbolAnalysis syma(opts);
+    SymbolAnalysis syma(context);
     ASSERT_NO_FATAL_FAILURE(ast->accept(syma));
 
     SemanticAnalysis sema(opts);
@@ -145,7 +147,7 @@ TEST_F(SemanticAnalysisTests, ControlCheck_StopInLoop_Negative) {
     Parser parser(stream);
     ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
-    SymbolAnalysis syma(opts);
+    SymbolAnalysis syma(context);
     ASSERT_NO_FATAL_FAILURE(ast->accept(syma));
 
     SemanticAnalysis sema(opts);
@@ -160,7 +162,7 @@ TEST_F(SemanticAnalysisTests, ControlCheck_RestartInLoop_Positive) {
     Parser parser(stream);
     ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
-    SymbolAnalysis syma(opts);
+    SymbolAnalysis syma(context);
     ASSERT_NO_FATAL_FAILURE(ast->accept(syma));
 
     SemanticAnalysis sema(opts);
@@ -175,7 +177,7 @@ TEST_F(SemanticAnalysisTests, ControlCheck_RestartInLoop_Negative) {
     Parser parser(stream);
     ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
-    SymbolAnalysis syma(opts);
+    SymbolAnalysis syma(context);
     ASSERT_NO_FATAL_FAILURE(ast->accept(syma));
 
     SemanticAnalysis sema(opts);
@@ -190,7 +192,7 @@ TEST_F(SemanticAnalysisTests, TypeCheck_VariableInitializer_Positive) {
     Parser parser(stream);
     ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
-    SymbolAnalysis syma(opts);
+    SymbolAnalysis syma(context);
     ASSERT_NO_FATAL_FAILURE(ast->accept(syma));
 
     SemanticAnalysis sema(opts);
@@ -205,7 +207,7 @@ TEST_F(SemanticAnalysisTests, TypeCheck_VariableInitializer_Negative) {
     Parser parser(stream);
     ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
-    SymbolAnalysis syma(opts);
+    SymbolAnalysis syma(context);
     ASSERT_NO_FATAL_FAILURE(ast->accept(syma));
 
     SemanticAnalysis sema(opts);
@@ -220,7 +222,7 @@ TEST_F(SemanticAnalysisTests, TypeCheck_VoidReturn_Positive) {
     Parser parser(stream);
     ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
-    SymbolAnalysis syma(opts);
+    SymbolAnalysis syma(context);
     ASSERT_NO_FATAL_FAILURE(ast->accept(syma));
 
     SemanticAnalysis sema(opts);
@@ -235,7 +237,7 @@ TEST_F(SemanticAnalysisTests, TypeCheck_VoidReturn_Negative) {
     Parser parser(stream);
     ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
-    SymbolAnalysis syma(opts);
+    SymbolAnalysis syma(context);
     ASSERT_NO_FATAL_FAILURE(ast->accept(syma));
 
     SemanticAnalysis sema(opts);
@@ -250,7 +252,7 @@ TEST_F(SemanticAnalysisTests, TypeCheck_Return_Positive) {
     Parser parser(stream);
     ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
-    SymbolAnalysis syma(opts);
+    SymbolAnalysis syma(context);
     ASSERT_NO_FATAL_FAILURE(ast->accept(syma));
 
     SemanticAnalysis sema(opts);
@@ -265,7 +267,7 @@ TEST_F(SemanticAnalysisTests, TypeCheck_Return_Negative) {
     Parser parser(stream);
     ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
-    SymbolAnalysis syma(opts);
+    SymbolAnalysis syma(context);
     ASSERT_NO_FATAL_FAILURE(ast->accept(syma));
 
     SemanticAnalysis sema(opts);
@@ -280,7 +282,7 @@ TEST_F(SemanticAnalysisTests, TypeCheck_CastReturn_Positive) {
     Parser parser(stream);
     ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
 
-    SymbolAnalysis syma(opts);
+    SymbolAnalysis syma(context);
     ASSERT_NO_FATAL_FAILURE(ast->accept(syma));
 
     SemanticAnalysis sema(opts);

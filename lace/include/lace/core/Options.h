@@ -25,14 +25,19 @@ struct Options final {
         Space,      //< (-0s) Optimizations for minimizing binary size.
     };
 
+    enum class StopPoint : uint32_t {
+        Assembly = 0,   //< (-S) If the compiler should stop after assembly emission.
+        Object = 1,     //< (-c) If the compiler should stop after the assembler call.
+        Link = 2,       //< default: If the compiler should stop after linking.
+    };
+
     std::string output; //< (-o) The name of the output file.
     OptLevel opt;       //< (-Od/-Oa/-Os) The optimization level.
+    StopPoint stop;     //< (-S/-c) The stopping point.
     uint32_t threads;   //< (-j) Number of threads to use. 
 
     bool debug;         //< (-g) If debugging symbols should be added.
-    bool link;          //< (-l) If the compiler should link.
     bool multithread;   //< (-st) If multithreading should be used.
-    bool stl;           //< (-stl/-no-stl) If the STL should be linked.
     bool verbose;       //< (-b) If extra notes should be logged.
     bool version;       //< (-v) If the version should be printed.
 

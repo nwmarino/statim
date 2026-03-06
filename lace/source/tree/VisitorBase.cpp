@@ -3,7 +3,7 @@
 //  All rights reserved.
 //
 
-#include "lace/tree/AST.h"
+#include "lace/tree/Rib.h"
 #include "lace/tree/Defn.h"
 #include "lace/tree/Expr.h"
 #include "lace/tree/Stmt.h"
@@ -11,11 +11,10 @@
 
 using namespace lace;
 
-void VisitorBase::visit(AST& node) {
-    m_ast = &node;
-    m_scope = node.scope();
+void VisitorBase::visit(Rib& rib) {
+    m_rib = &rib;
 
-    for (Defn* defn : node.defns())
+    for (Defn* defn : rib.defns())
         defn->accept(*this);
 }
 
@@ -29,12 +28,11 @@ void VisitorBase::visit(EnumDefn& node) {
 }
 
 void VisitorBase::visit(FieldDefn& node) {
-
+    if (node.has_init())
+        node.init()->accept(*this);
 }
 
 void VisitorBase::visit(FunctionDefn& node) {
-    m_scope = node.scope();
-
     if (node.has_receiver())
         node.receiver()->accept(*this);
 
@@ -43,35 +41,19 @@ void VisitorBase::visit(FunctionDefn& node) {
 
     if (node.has_body())
         node.body()->accept(*this);
-
-    m_scope = m_scope->parent();
-}
-
-void VisitorBase::visit(LoadDefn& node) {
-
 }
 
 void VisitorBase::visit(ParameterDefn& node) {
 
 }
 
-void VisitorBase::visit(SpaceDefn& node) {
-    m_namespaces.push_back(&node);
-    m_scope = node.scope();
-
-    for (NamedDefn* defn : node.defns()) {
-        // Only pass over definitions defined in the same file.
-        if (defn->origin() == node.origin())
-            defn->accept(*this);
-    }
-
-    m_scope = m_scope->parent();
-    m_namespaces.pop_back();
-}
-
 void VisitorBase::visit(StructDefn& node) {
     for (FieldDefn* field : node.fields())
         field->accept(*this);
+}
+
+void VisitorBase::visit(UseDefn& node) {
+    
 }
 
 void VisitorBase::visit(VariableDefn& node) {
@@ -96,12 +78,8 @@ void VisitorBase::visit(AdapterStmt& node) {
 }
 
 void VisitorBase::visit(BlockStmt& node) {
-    m_scope = node.scope();
-
     for (Stmt* stmt : node.stmts())
         stmt->accept(*this);
-
-    m_scope = m_scope->parent();
 }
 
 void VisitorBase::visit(IfStmt& node) {
@@ -184,6 +162,10 @@ void VisitorBase::visit(CastExpr& node) {
     node.expr()->accept(*this);
 }
 
+void VisitorBase::visit(FieldInitExpr& node) {
+    node.expr()->accept(*this);
+}
+
 void VisitorBase::visit(ParenExpr& node) {
     node.expr()->accept(*this);
 }
@@ -197,8 +179,8 @@ void VisitorBase::visit(SizeofExpr& node) {
 }
 
 void VisitorBase::visit(StructInitExpr& node) {
-    for (auto& [field, expr] : node.fields())
-        expr->accept(*this);
+    for (FieldInitExpr* field : node.fields())
+        field->accept(*this);
 }
 
 void VisitorBase::visit(SubscriptExpr& node) {
@@ -206,50 +188,15 @@ void VisitorBase::visit(SubscriptExpr& node) {
     node.index()->accept(*this);
 }
 
-Type* VisitorBase::resolve_type(Type* type) const {
-    if (auto deferred = dynamic_cast<DeferredType*>(type)) {
-        NamedDefn* named_defn = m_scope->get(deferred->name()); 
-        if (!named_defn)
-            return nullptr;
+bool VisitorBase::uses_rib(Rib* target) const {
+    for (Defn* defn : m_rib->defns()) {
+        UseDefn* use = dynamic_cast<UseDefn*>(defn);
+        if (!use)
+            continue;
 
-        TypeDefn* type_defn = dynamic_cast<TypeDefn*>(named_defn);
-        if (!type_defn)
-            return nullptr;
-
-        return type_defn->type();
-    } else if (auto enumeration = dynamic_cast<EnumType*>(type)) {
-        Type* underlying = resolve_type(enumeration->underlying());
-        if (underlying != enumeration->underlying())
-            enumeration->set_underlying(underlying);
-
-        return enumeration;
-    } else if (auto func = dynamic_cast<FunctionType*>(type)) {
-        Type* result = resolve_type(func->result());
-        if (!result)
-            return nullptr;
-
-        std::vector<Type*> params = {};
-        params.reserve(func->num_params());
-
-        for (Type* param : func->params()) {
-            Type* res = resolve_type(param);
-            if (!res)
-                return nullptr;
-
-            params.push_back(res);
-        }
-
-        return FunctionType::get(*m_ast, result, params);
-    } else if (auto ptr = dynamic_cast<PointerType*>(type)) {
-        Type* pointee = resolve_type(ptr->pointee());
-        if (!pointee)
-            return nullptr;
-
-        if (pointee != ptr->pointee())
-            ptr->set_pointee(pointee);
-
-        return ptr;
+        if (use->target() == target)
+            return true;
     }
 
-    return type;
+    return false;
 }

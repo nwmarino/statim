@@ -13,6 +13,7 @@
 
 #include "lir/graph/Instruction.h"
 
+#include <algorithm>
 #include <cassert>
 #include <vector>
 
@@ -151,6 +152,14 @@ public:
         m_preds.push_back(block);
     }
 
+    /// Remove the given |block| from this blocks' predecessor list, if it is a
+    /// predecessor.
+    void remove_pred(BasicBlock* block) {
+        auto it = std::find(m_preds.begin(), m_preds.end(), block);
+        if (it != m_preds.end())
+            m_preds.erase(it);
+    }
+
     /// Returns the list of blocks that are successors to this one.
     const Preds &get_succs() const { return m_succs; }
     Preds &get_succs() { return m_succs; }
@@ -176,6 +185,14 @@ public:
     void add_succ(BasicBlock *block) {
         // @Todo: Check that the block isn't already a successor?
         m_succs.push_back(block);
+    }
+
+    /// Remove the given |block| from this blocks' successor list, if it is a
+    /// successor.
+    void remove_succ(BasicBlock* block) {
+        auto it = std::find(m_succs.begin(), m_succs.end(), block);
+        if (it != m_succs.end())
+            m_succs.erase(it);
     }
 
     /// Test if this basic block contains a terminating instruction.

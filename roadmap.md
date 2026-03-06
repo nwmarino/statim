@@ -1,14 +1,8 @@
-- Default field inits.
-- Strings
-- $print
-- File I/O
-- $write
-
 - Match statement
-- For statement
+- Loop statement
 - Defer statement
 - Union definition
-- Multiple return types
+- Multiple function results
 - Templates
 - CTFE
 - Build system

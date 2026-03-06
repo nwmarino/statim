@@ -226,6 +226,8 @@ enum AMD64_Op : uint32_t {
 const char* to_string(AMD64_Op op);
 const char* to_string(AMD64_Register reg, uint8_t subreg = 0);
 
+bool is_terminator(AMD64_Op op);
+
 } // namespace lir
 
 #endif // LIR_AMD64_H_

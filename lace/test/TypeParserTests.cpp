@@ -5,7 +5,7 @@
 
 #include "lace/lexer/Lexer.h"
 #include "lace/parser/Parser.h"
-#include "lace/tree/AST.h"
+#include "lace/tree/Rib.h"
 #include "lace/tree/Defn.h"
 #include "lace/tree/Type.h"
 
@@ -15,17 +15,17 @@ namespace lace::test {
 
 class TypeParserTests : public ::testing::Test {
 protected:
-    AST* ast;
+    Rib* rib;
 
     void SetUp() override {
-        ast = nullptr;
+        rib = nullptr;
     }
 
     void TearDown() override {
-        if (ast) { 
-            delete ast;
-            ast = nullptr;
-        }
+        if (rib)
+            delete rib;
+
+        rib = nullptr;
     }
 };
 
@@ -35,11 +35,11 @@ TEST_F(TypeParserTests, BuiltinType) {
     ASSERT_TRUE(lexer.lex(stream));
 
     Parser parser(stream);
-    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
+    ASSERT_NO_FATAL_FAILURE(rib = parser.parse());
 
-    EXPECT_EQ(ast->num_defns(), 1);
+    EXPECT_EQ(rib->num_defns(), 1);
 
-    FunctionDefn* FD = dynamic_cast<FunctionDefn*>(ast->get_defn(0));
+    FunctionDefn* FD = dynamic_cast<FunctionDefn*>(rib->get_defn(0));
     EXPECT_NE(FD, nullptr);
 
     const BuiltinType* BT = dynamic_cast<const BuiltinType*>(FD->get_return_type());
@@ -53,11 +53,11 @@ TEST_F(TypeParserTests, PointerType) {
     ASSERT_TRUE(lexer.lex(stream));
 
     Parser parser(stream);
-    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
+    ASSERT_NO_FATAL_FAILURE(rib = parser.parse());
 
-    EXPECT_EQ(ast->num_defns(), 1);
+    EXPECT_EQ(rib->num_defns(), 1);
 
-    FunctionDefn* FD = dynamic_cast<FunctionDefn*>(ast->get_defn(0));
+    FunctionDefn* FD = dynamic_cast<FunctionDefn*>(rib->get_defn(0));
     EXPECT_NE(FD, nullptr);
 
     const PointerType* PT = dynamic_cast<const PointerType*>(FD->get_return_type());

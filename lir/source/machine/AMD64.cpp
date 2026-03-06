@@ -484,3 +484,27 @@ const char* lir::to_string(AMD64_Register reg, uint8_t subreg) {
             assert(false && "invalid register!");
     }
 }
+
+bool lir::is_terminator(AMD64_Op op) {
+    switch (op)
+    {
+    case AMD64_JMP:
+    case AMD64_RET32:
+    case AMD64_RET64:
+    case AMD64_JE:
+    case AMD64_JNE:
+    case AMD64_JZ:
+    case AMD64_JNZ:
+    case AMD64_JL:
+    case AMD64_JLE:
+    case AMD64_JG:
+    case AMD64_JGE:
+    case AMD64_JA:
+    case AMD64_JAE:
+    case AMD64_JB:
+    case AMD64_JBE:
+        return true;
+    default:
+        return false;
+    }
+}

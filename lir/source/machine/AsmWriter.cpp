@@ -4,6 +4,7 @@
 //
 
 #include "lir/machine/AsmWriter.h"
+#include "lir/graph/Debug.h"
 #include "lir/machine/MachineConstant.h"
 #include "lir/machine/MachineFunction.h"
 #include "lir/machine/MachineObject.h"
@@ -19,6 +20,15 @@ using namespace lir;
 AsmWriter::AsmWriter(const MachineObject& obj) : m_obj(obj) {}
 
 void AsmWriter::run(std::ostream& os) {
+    for (const DebugNode* node : m_obj.graph().debug()) {
+        const DebugFile* dfile = dynamic_cast<const DebugFile*>(node);
+        if (!dfile)
+            continue;
+
+        os << std::format("\t.file {} \"{}\" \"{}\"\n", 
+                          dfile->fid(), dfile->path(), dfile->file());
+    }
+
     for (const auto& [name, data] : m_obj.get_globals()) {
         writeData(os, *data);
     }
@@ -903,7 +913,7 @@ void AsmWriter::writeOperand(std::ostream& os, const MachineOperand& operand) {
 
 void AsmWriter::writeOp(std::ostream& os, const MachineOp& op) {
     if (op.has_comment())
-        os << std::format("#\t> {}", op.get_comment());
+        os << std::format("#\t{}", op.get_comment());
 
     if (op.is_intrinsic()) {
         switch (static_cast<Intrinsic>(op.op())) 
@@ -935,6 +945,14 @@ void AsmWriter::writeOp(std::ostream& os, const MachineOp& op) {
 
         case Intrinsic::Callsite_End:
             os << "#\tCALLSITE_END\n";
+            return;
+
+        case Intrinsic::Debug_Loc:
+            assert(op.num_operands() == 3);
+            os << std::format("\t.loc {} {} {}\n", 
+                op.get_operand(0).imm(), 
+                op.get_operand(1).imm(), 
+                op.get_operand(2).imm());
             return;
         }
     }
@@ -972,12 +990,14 @@ void AsmWriter::writeFunction(std::ostream& os, const MachineFunction& func) {
         writeData(os, *data);
     }
 
+    os << "\t.text\n";
+
     const std::string& name = func.get_name();
 
     if (func.isGlobal())
         os << std::format("\t.global\t{}\n", name);
 
-    os << std::format("\t.text\n\t.type\t{}, @function\n{}:\n", name, name);
+    os << std::format("\t.type\t{}, @function\n{}:\n", name, name);
     
     for (uint32_t i = 0; i < func.num_labels(); ++i)
         writeLabel(os, *func.get_label(i));

@@ -5,7 +5,7 @@
 
 #include "lace/lexer/Lexer.h"
 #include "lace/parser/Parser.h"
-#include "lace/tree/AST.h"
+#include "lace/tree/Rib.h"
 #include "lace/tree/SymbolAnalysis.h"
 
 #include "gtest/gtest.h"
@@ -15,18 +15,19 @@ namespace lace::test {
 class SymbolAnalysisTests : public ::testing::Test {
 protected:
     Options opts;
-    AST* ast;
+    Context context;
+    Rib* rib;
 
     void SetUp() override {
         opts = {};
-        ast = nullptr;
+        rib = nullptr;
     }
 
     void TearDown() override {
-        if (ast)
-            delete ast;
+        if (rib)
+            delete rib;
             
-        ast = nullptr;
+        rib = nullptr;
     }
 };
 
@@ -36,10 +37,10 @@ TEST_F(SymbolAnalysisTests, VariableRef_Positive) {
     ASSERT_TRUE(lexer.lex(stream));
 
     Parser parser(stream);
-    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
+    ASSERT_NO_FATAL_FAILURE(rib = parser.parse());
 
-    SymbolAnalysis syma(opts);
-    EXPECT_NO_FATAL_FAILURE(ast->accept(syma));
+    SymbolAnalysis syma(context);
+    EXPECT_NO_FATAL_FAILURE(rib->accept(syma));
 }
 
 TEST_F(SymbolAnalysisTests, VariableRef_Negative) {
@@ -48,10 +49,10 @@ TEST_F(SymbolAnalysisTests, VariableRef_Negative) {
     ASSERT_TRUE(lexer.lex(stream));
 
     Parser parser(stream);
-    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
+    ASSERT_NO_FATAL_FAILURE(rib = parser.parse());
 
-    SymbolAnalysis syma(opts);
-    EXPECT_DEATH(ast->accept(syma), "");
+    SymbolAnalysis syma(context);
+    EXPECT_DEATH(rib->accept(syma), "");
 }
 
 TEST_F(SymbolAnalysisTests, CalleeRef_Positive) {
@@ -60,10 +61,10 @@ TEST_F(SymbolAnalysisTests, CalleeRef_Positive) {
     ASSERT_TRUE(lexer.lex(stream));
 
     Parser parser(stream);
-    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
+    ASSERT_NO_FATAL_FAILURE(rib = parser.parse());
 
-    SymbolAnalysis syma(opts);
-    EXPECT_NO_FATAL_FAILURE(ast->accept(syma));
+    SymbolAnalysis syma(context);
+    EXPECT_NO_FATAL_FAILURE(rib->accept(syma));
 }
 
 TEST_F(SymbolAnalysisTests, ParamRef_Positive) {
@@ -72,10 +73,10 @@ TEST_F(SymbolAnalysisTests, ParamRef_Positive) {
     ASSERT_TRUE(lexer.lex(stream));
 
     Parser parser(stream);
-    ASSERT_NO_FATAL_FAILURE(ast = parser.parse());
+    ASSERT_NO_FATAL_FAILURE(rib = parser.parse());
 
-    SymbolAnalysis syma(opts);
-    EXPECT_NO_FATAL_FAILURE(ast->accept(syma));
+    SymbolAnalysis syma(context);
+    EXPECT_NO_FATAL_FAILURE(rib->accept(syma));
 }
 
 } // namespace lace::test

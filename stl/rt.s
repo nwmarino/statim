@@ -1,29 +1,19 @@
+#
 #   Copyright (c) 2025-2026 Nicholas Marino
-#  
+#   All rights reserved.
+#
 #   All runtime functions defined here assume the lace pure-stack ABI.
+#
 
     .text
     .global _start
     .type   _start, @function
 _start:
-    callq   __rt_init
-    callq   main@PLT
+    callq   index.main@PLT
     movq    %rax, %rdi
     movq    $60, %rax   # exit syscall
     syscall
     ud2                 # unreachable
-
-    .text
-    .type   __rt_init, @function
-__rt_init:
-#   call    __fmt_arena_init@PLT
-    retq
-
-    .text
-    .type   __rt_shutdown, @function
-__rt_shutdown:
-#   call    __fmt_arena_destroy@PLT
-    retq
 
 # __copy :: (*void, *void, s64) -> void
     .text
@@ -58,7 +48,7 @@ __abort:
     movq    $0, %rdi    # pid 0
     movq    $0, %rsi    # signal 6 (SIGABRT)
     syscall             # kill syscall
-    callq   __unreachable 
+    ud2                 # unreachable
 
 # __unreachable :: () -> void
     .text
@@ -67,11 +57,11 @@ __abort:
 __unreachable:
     ud2
 
-# exit :: (s64) -> void
+# stl.linux.exit :: (s64) -> void
     .text
-    .global exit
-    .type   exit, @function
-exit:
+    .global stl.linux.exit
+    .type   stl.linux.exit, @function
+stl.linux.exit:
     pushq	%rbp
 	movq	%rsp, %rbp
     movq    16(%rbp), %rdi
@@ -79,11 +69,11 @@ exit:
     syscall
     ud2
 
-# open :: (*char, s64, s64) -> s64
+# stl.linux.open :: (*char, s64, s64) -> s64
     .text
-    .global open
-    .type   open, @function
-open: 
+    .global stl.linux.open
+    .type   stl.linux.open, @function
+stl.linux.open: 
     pushq	%rbp
 	movq	%rsp, %rbp
     movq    16(%rbp), %rdi
@@ -95,11 +85,11 @@ open:
 	popq	%rbp
     retq
 
-# close :: (s64) -> s64
+# stl.linux.close :: (s64) -> s64
     .text
-    .global close
-    .type   close, @function
-close:
+    .global stl.linux.close
+    .type   stl.linux.close, @function
+stl.linux.close:
     pushq	%rbp
 	movq	%rsp, %rbp
     movq    16(%rbp), %rdi
@@ -109,11 +99,27 @@ close:
 	popq	%rbp
     retq
 
-# read :: (s64, *char, s64) -> s64
+# stl.linux.lseek :: (s64, s64, s64) -> s64
     .text
-    .global read
-    .type   read, @function
-read:
+    .global stl.linux.lseek
+    .type   stl.linux.lseek, @function
+stl.linux.lseek:
+    pushq   %rbp
+    movq    %rsp, %rbp
+    movq    16(%rbp), %rdi
+    movq    24(%rbp), %rsi
+    movq    32(%rbp), %rdx
+    movq    $8, %rax
+    syscall
+    movq	%rbp, %rsp
+	popq	%rbp
+    retq
+
+# stl.linux.read :: (s64, *char, s64) -> s64
+    .text
+    .global stl.linux.read
+    .type   stl.linux.read, @function
+stl.linux.read:
     pushq	%rbp
 	movq	%rsp, %rbp
     movq    16(%rbp), %rdi
@@ -125,11 +131,11 @@ read:
 	popq	%rbp
     retq
 
-# write :: (s64, *mut char, s64) -> s64
+# stl.linux.write :: (s64, *mut char, s64) -> s64
     .text
-    .global write
-    .type   write, @function
-write:
+    .global stl.linux.write
+    .type   stl.linux.write, @function
+stl.linux.write:
     pushq	%rbp
 	movq	%rsp, %rbp
     movq    16(%rbp), %rdi
@@ -141,11 +147,11 @@ write:
 	popq	%rbp
     retq
 
-# brk :: (u64) -> *void
+# stl.linux.brk :: (u64) -> *void
     .text
-    .global brk
-    .type   brk, @function
-brk:
+    .global stl.linux.brk
+    .type   stl.linux.brk, @function
+stl.linux.brk:
     pushq	%rbp
 	movq	%rsp, %rbp
     movq    16(%rbp), %rdi

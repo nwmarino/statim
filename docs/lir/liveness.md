@@ -24,17 +24,17 @@ these live ranges exist. Take for example the following,
 ```s
 foo:
     ...
-    mul %rbx            #    4| %rax is implicitly defined here
-    movq %rax, -8(%rbp) #    5| %rax is used, but also killed (never used again for the mul result)
+    mulq %rbx           #    4| %rax is implicitly defined here
+    movq %rax, -8(%rbp) #    5| %rax is used, but expires immediately (never used again for the mul result)
     ...                 # 6-11|
-    movq $1, %rax       #   12| %rax is defined again here, for different reasons
-    ret
+    movq $1, %rax       #   12| %rax is defined again here, for a different reason
+    retq
 ```
 
 to ensure that `%rax` is not considered live over the range 6-11, it needs to
-be considered killed at 5 so that its live range gets split at the next
-definition (see 12). This is one of many scenarios which supports the need
-for context on physical register operands.
+be considered "expired" at 5 so that its live range gets split at the next
+definition (see 12). This is one of many scenarios which supports the need for 
+context on physical register operands.
 
 ## Def 
 
@@ -71,31 +71,20 @@ mul rbx  # rdx:rax = rax * rbx
 
 `%rax` is implicitly used as an operand to the operation.
 
-## Kill
+## Expired
 
-The `kill` flag on a used register marks the death of the value in it, ending 
-its live range at that location.
+The `expired` flag on a used register indicates that the value in it will never
+be used again, effectively ending its live range at that location.
 
-The integer division instructions `idiv` and `div` perform `RDX:RAX / op` and
-store the quotient into `rax` and the remainder into `%rdx`. This means that
-the instructions (implicitly) use `%rax` and `%rdx`, but also kill them in the
-process.
-
-## Dead 
-
-The `dead` flag marks the result of a `def` as unused.
-
-For example, if we are trying to get the remainder of some integer division
-`idiv` or `div`, it definites the quotient into `%rax`, but it's never used,
-so it's dead.
-
-* *It is not considered a kill because its a definition, and a kill implies the 
-existence of a range.*
+As an example, the integer division instructions `idiv` and `div` perform 
+`RDX:RAX / op` and store the quotient into `rax` and remainder into `%rdx`. 
+This means that the instructions (implicitly) use `%rax` and `%rdx`, but also 
+cause them to expire in the process.
 
 ## Extra
 
-* Every register operand must be atleast a `use` or a `def`. Even if an operand 
-kills a value, it has still technically used it.
+* Every register operand must be atleast a `use` or a `def`. Even if an register
+immediately expires, it's value still technically existed.
 
 * The `implicit` flag acts as both a modifier to the operand visibility as well
 as the explicitness of its `use` or `def` flag. This means machine instructions

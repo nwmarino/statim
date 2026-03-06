@@ -90,10 +90,8 @@ void log::reset() {
 void log::flush() {
     std::lock_guard<std::mutex> lock(g_mutex);
 
-    if (g_errors) {
+    if (g_errors == true)
         log::fatal("unrecoverable errors found, stopping");
-        std::exit(1);
-    }
 
     if (g_out)
         g_out->flush();
@@ -196,10 +194,8 @@ void log::error(const std::string& msg, const Span& span) {
 void log::fatal(const std::string& msg) {
     std::lock_guard<std::mutex> lock(g_mutex);
 
-    if (g_out) {
-        *g_out << (g_color ? "\033[1;31mx\033[0m " : "fatal: ") << msg 
-               << '\n';
-    }
+    if (g_out)
+        *g_out << (g_color ? "\033[1;31mx\033[0m " : "fatal: ") << msg << '\n';
 
     std::exit(1);
 }

@@ -3,6 +3,7 @@
 //  All rights reserved.
 //
 
+#include "lace/core/Context.h"
 #include "lace/core/Diagnostics.h"
 #include "lace/core/ThreadPool.h"
 #include "lace/core/Options.h"
@@ -10,15 +11,19 @@
 #include "lace/lexer/TokenStream.h"
 #include "lace/parser/Parser.h"
 #include "lace/tools/Files.h"
-#include "lace/tree/AST.h"
+#include "lace/tree/NameResolution.h"
+#include "lace/tree/Rib.h"
 #include "lace/tree/Defn.h"
-#include "lace/tree/LIRCodegen.h"
+#include "lace/tree/Codegen.h"
 #include "lace/tree/Printer.h"
 #include "lace/tree/SemanticAnalysis.h"
 #include "lace/tree/SymbolAnalysis.h"
-#include "lace/tree/TypeResolution.h"
 
 #include "lir/analysis/AMD64LoweringPass.h"
+#include "lir/analysis/ConstantFolding.h"
+#include "lir/analysis/SSARewritePass.h"
+#include "lir/analysis/TrivialDCEPass.h"
+#include "lir/machine/AMD64Analysis.h"
 #include "lir/machine/AsmWriter.h"
 #include "lir/machine/Machine.h"
 #include "lir/machine/Printer.h"
@@ -28,331 +33,84 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
-#include <functional>
 #include <string>
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
-#define LACE_VERSION_MAJOR 1
-#define LACE_VERSION_MINOR 0
+#define LACE_VERSION_MAJOR 0
+#define LACE_VERSION_MINOR 1
 
 using namespace lace;
 
 using namespace std::chrono;
-using namespace std::filesystem;
-
-using Asts = std::unordered_set<AST*>;
-using DepTable = std::unordered_map<AST*, Asts>;
-using FileTable = std::unordered_map<std::string, AST*>;
 
 using Timestamp = time_point<high_resolution_clock>;
 
-struct InputFile final {
-    std::string file;
-    AST* ast;
+static std::string g_standard = "/home/lace/stl";
 
-    InputFile(const std::string& file, AST* ast = nullptr) 
-      : file(file), ast(ast) {}
-};
+static const char* g_help = R"(usage: ./lace [options] file...
 
-/// A mapping between the absolute path of an input file and its parsed AST.
-static FileTable g_files = {};
-static std::string g_STL = "/home/lovelace/stl";
+options:
+    -b          use verbose logging
+    -c          stop after assembler
+    -g          include basic debugging symbols
+    -h          display this message
+    -Od         use default optimizations
+    -Oa         use aggressive optimizations
+    -Os         use binary size optimizations
+    -st         force single thread execution
+    -S          stop after assembly
+    -v          display version
+
+    -j <n>      use at most n threads
+    -o <str>    specify output name
+
+    -dump-ast   dump the abstract syntax tree
+    -dump-lir   dump the lace IR
+    -dump-mir   dump the lace MachIR
+)";
 
 static inline Timestamp get_time() {
     return high_resolution_clock::now();
-}
-
-/// Setup |g_files| based on the set of given |asts| and their respective
-/// input files.
-void setup_file_table(const Asts& asts) {
-    g_files.reserve(asts.size());
-    for (AST* ast : asts) {
-        g_files.emplace(
-            std::filesystem::absolute(ast->get_file()).string(), ast); 
-    }
-}
-
-/// Compute the dependency order and a dependency table for each file in the 
-/// list of |asts|.
-///
-/// This function produces an ordering of the files without cycles to 
-/// |ordering|, s.t. any given file relies on only the ones which come 
-/// before it in the set. This means the result is a valid ordering in which to 
-/// sequentially perform name analysis on each syntax tree.
-///
-/// Moreover, as it computes dependencies, it saves them to |deps|.
-void computeDependencies(const Asts& asts, Asts& ordering, DepTable& deps) {
-    for (AST* ast : asts) {
-        path parent = absolute(ast->get_file()).parent_path();
-    
-        for (Defn* defn : ast->defns()) {
-            LoadDefn* load = dynamic_cast<LoadDefn*>(defn);
-            if (!load)
-                continue;
-
-            // Find the canonical path for the target file.
-            path target = parent / load->path();
-            target = weakly_canonical(target);
-
-            auto it = g_files.find(target.string());
-            if (it != g_files.end()) {
-                deps[ast].insert(it->second);
-                load->set_path(target.string());
-            } else {
-                log::fatal("unresolved file: " + target.string(), 
-                    log::Span(ast->get_file(), load->span()));
-            }
-        }
-    }
-
-    Asts visited = {};
-    Asts visiting = {};
-
-    std::function<void(AST*)> dfs = [&](AST* ast) {
-        if (visited.count(ast)) 
-            return;
-
-        if (visiting.count(ast))
-            log::fatal("cyclic dependency found", 
-                log::Location(ast->get_file(), { 1, 1 }));
-        
-        visiting.insert(ast);
-        
-        for (AST* dep : deps[ast])
-            dfs(dep);
-
-        visiting.erase(ast);
-        visited.insert(ast);
-        ordering.insert(ast);
-    };
-
-    for (AST* ast : asts)
-        dfs(ast);
-}
-
-void merge_namespace(AST* ast, Scope* dest, SpaceDefn* incoming) {
-    // Check for an existing namespace in the |dest| scope with the same name.
-    SpaceDefn* existing = dest->get_namespace(incoming->name());
-    if (!existing) {
-        // If an existing namespace does not exist, just try to add the 
-        // namespace as is.
-        if (!dest->add(incoming)) {
-            log::fatal("failed to load namespace, name already exists: " 
-                + incoming->name(), log::Location(ast->get_file(), { 1, 1 }));
-        }
-        
-        return;
-    }
-
-    // An existing namespace with the same name as |incoming| exists.
-    // So, we must recursively merge all definitions in |incoming| with 
-    // whatever may exist in the |dest| scope.
-
-    for (auto& [name, defn] : incoming->scope()->defns()) {
-        // Skip private definitions.
-        if (!defn->has_rune(Rune::Kind::Public))
-            continue;
-
-        if (defn->origin() != incoming->origin())
-            continue;
-
-        if (SpaceDefn* nspace = dynamic_cast<SpaceDefn*>(defn)) {
-            // If we have to import a nested namespace, then merge it too.
-            merge_namespace(ast, existing->scope(), nspace);
-        } else if (!existing->scope()->add(defn)) {
-            log::fatal("name-wise conflict during load: " + name,
-                log::Location(ast->get_file(), { 1, 1 }));
-        }
-    }
-}
-
-/// Resolve the dependent symbols for each tree in |asts|, based on their
-/// dependencies defined in |deps|. 
-/// Assumes that |asts| contains syntax trees in their dependency order.
-void resolveDependencies(Options& options, const Asts& asts, const DepTable& deps) {
-    for (AST* ast : asts) {
-        Asts dep_list = deps.at(ast);
-        std::vector<NamedDefn*> symbols = {};
-
-        // For each dependency, fetch all of its public, named definitions.
-        for (AST* dep : dep_list) {
-            for (Defn* defn : dep->defns()) {
-                NamedDefn* symbol = dynamic_cast<NamedDefn*>(defn);
-                if (symbol && symbol->has_rune(Rune::Kind::Public))
-                    symbols.push_back(symbol);
-            }
-        }
-
-        Scope* scope = ast->scope();
-        for (NamedDefn* symbol : symbols) {
-            if (SpaceDefn* nspace = dynamic_cast<SpaceDefn*>(symbol)) {
-                merge_namespace(ast, ast->scope(), nspace);
-            } else {
-                bool res = scope->add(symbol);
-                if (!res) {
-                    log::fatal("name-wise conflict with an existing definition: " 
-                        + symbol->name(), log::Location(ast->get_file(), { 1, 1 }));
-                }
-            }
-
-            ast->defns().push_back(symbol);
-        }
-
-        const Timestamp time_namea_start = get_time();
-
-        TypeResolution type_res(options);
-        ast->accept(type_res);
-
-        if (options.verbose) {
-            duration<double> dur = get_time() - time_namea_start;
-            std::cout << std::format("{}: Finished type resolution\n-- took {}\n",
-                ast->get_file(), dur);
-        }
-    }
-}
-
-void drive_lir_backend(const Options &options, const Asts &asts) {
-    lir::Machine mach(lir::Machine::Linux);
-
-    for (AST *ast : asts) {
-        Timestamp time_cgn_start = get_time();
-
-        lir::CFG cfg(mach, ast->get_file());        
-
-        LIRCodegen codegen(options, ast, cfg);
-        codegen.run();
-
-        Timestamp time_cgn_end = get_time();
-        if (options.verbose) {
-            duration<double> dur = time_cgn_end - time_cgn_start;
-            std::cout << std::format("{}: Finished code generation\n-- took {}\n", 
-                ast->get_file(), dur);
-        }
-
-        if (options.dump_lir) {
-            std::ofstream file(ast->get_file() + ".lir");
-            if (!file || !file.is_open())
-                log::fatal("failed to open: " + ast->get_file() + ".s");
-            
-            cfg.print(file);
-            file.close();
-        }
-
-        Timestamp time_lower_start = get_time();
-
-        lir::MachineObject obj(mach);
-
-        lir::AMD64LoweringPass lowering(cfg, obj);
-        lowering.run();
-
-        Timestamp time_lower_end = get_time();
-        if (options.verbose) {
-            duration<double> dur = time_lower_end - time_lower_start;
-            std::cout << std::format("{}: Finished lowering\n-- took {}\n", 
-                ast->get_file(), dur);
-        }
-
-        if (options.dump_mir) {
-            std::ofstream mir(ast->get_file() + ".mir");
-            if (!mir || !mir.is_open())
-                log::fatal("failed to open: " + ast->get_file() + ".mir");
-
-            lir::Printer printer(obj);
-            printer.run(mir);
-            mir.close();
-        }
-
-        Timestamp time_rega_start = get_time();
-
-        lir::RegisterAnalysis rega(obj);
-        rega.run();
-
-        Timestamp time_rega_end = get_time();
-        if (options.verbose) {
-            duration<double> dur = time_rega_end - time_rega_start;
-            std::cout << std::format("{}: Finished register analysis\n-- took {}\n", 
-                ast->get_file(), dur);
-        }
-
-        if (options.dump_mir) {
-            std::ofstream rmir(ast->get_file() + ".rmir");
-            if (!rmir || !rmir.is_open())
-                log::fatal("failed to open: " + ast->get_file() + ".rmir");
-
-            lir::Printer printer(obj);
-            printer.run(rmir);
-            rmir.close();
-        }
-
-        std::ofstream as(ast->get_file() + ".s");
-        if (!as || !as.is_open())
-            log::fatal("failed to open: " + ast->get_file() + ".s");
-
-        lir::AsmWriter writer(obj);
-        writer.run(as);
-        as.close();
-
-        const std::string assembler = std::format(
-            "as {}.s -o {}.o", 
-            ast->get_file(), 
-            ast->get_file()
-        );
-
-        std::system(assembler.c_str());
-    }
-
-    if (options.link) {
-        std::string linker = std::format("ld -o {} ", options.output);
-
-        for (AST* ast : asts)
-            linker += std::format("{}.o ", ast->get_file());
-        
-        if (options.stl)
-            linker += std::format("{}/rt.o", g_STL);
-
-        std::system(linker.c_str());
-    }
 }
 
 int32_t main(int32_t argc, char* argv[]) {
     Options options = {};
     options.output = "main";
     options.opt = Options::OptLevel::Default;
+    options.stop = Options::StopPoint::Link;
     options.threads = 1;
 
-    options.debug = true;
-    options.link = true;
+    options.debug = false;
     options.multithread = true;
-    options.stl = true;
-    options.verbose = true;
-    options.version = true;
-    options.dump_ast = true;
-    options.dump_lir = true;
-    options.dump_mir = true;
+    options.verbose = false;
+    options.dump_ast = false;
+    options.dump_lir = false;
+    options.dump_mir = false;
 
     log::direct(std::cout);
 
-    std::vector<InputFile> files = {
-        InputFile("/home/lovelace/stl/string.lace"),
-        InputFile("/home/lovelace/stl/mem.lace"),
-        InputFile("/home/lovelace/stl/linux.lace"),
-    };
+    std::vector<std::string> files = {};
 
     for (int32_t i = 1; i < argc; ++i) {
         std::string arg = argv[i];
 
         if (arg == "-b") {
             options.verbose = true;
+        } else if (arg == "-c") {
+            options.stop = Options::StopPoint::Object;
         } else if (arg == "-g") {
             options.debug = true;
-        } else if (arg == "-l") {
-            options.link = true;
+        } else if (arg == "-h") {
+            std::cout << std::format("{}\n", g_help);
+            return EXIT_SUCCESS;
+        } else if (arg == "-S") {
+            options.stop = Options::StopPoint::Assembly;
         } else if (arg == "-v") {
-            log::note("version: " + std::to_string(LACE_VERSION_MAJOR) + "." + 
-                std::to_string(LACE_VERSION_MINOR));
+            std::cout << std::format("lace version: {}.{}\n", LACE_VERSION_MAJOR, LACE_VERSION_MINOR);
+            return EXIT_SUCCESS;
         } else if (arg == "-Od") {
             options.opt = Options::OptLevel::Default;
         } else if (arg == "-Oa") {
@@ -361,10 +119,6 @@ int32_t main(int32_t argc, char* argv[]) {
             options.opt = Options::OptLevel::Space;
         } else if (arg == "-st") {
             options.multithread = false;
-        } else if (arg == "-stl") {
-            options.stl = true;
-        } else if (arg == "-no-stl") {
-            options.stl = false;
         } else if (arg == "-dump-ast") {
             options.dump_ast = true;
         } else if (arg == "-dump-lir") {
@@ -377,8 +131,7 @@ int32_t main(int32_t argc, char* argv[]) {
 
             int32_t threads = std::stoi(argv[++i]);
             if (threads <= 0)
-                log::fatal("thread count must be a positive number, got " 
-                    + std::to_string(threads));
+                log::fatal("thread count must be a positive number, got " + std::to_string(threads));
 
             options.threads = static_cast<uint32_t>(threads);
         } else if (arg == "-o") {
@@ -388,12 +141,14 @@ int32_t main(int32_t argc, char* argv[]) {
             options.output = argv[++i];
         } else {
             if (arg.size() < 4 || arg.substr(arg.size() - 5) != ".lace")
-                log::error("expected source file ending with \".lace\", got " + arg);
+                log::fatal("expected source file ending with \".lace\", got " + arg);
 
+            // Check if the source file has already been recorded so we can
+            // skip dupes.
             bool dupe = false;
-            std::string path = absolute(arg).string();
-            for (const InputFile& f : files) {
-                if (f.file == path) {
+            std::string path = std::filesystem::absolute(arg).string();
+            for (const std::string& file : files) {
+                if (file == path) {
                     dupe = true;
                     break;
                 }
@@ -407,165 +162,280 @@ int32_t main(int32_t argc, char* argv[]) {
     if (files.empty())
         log::fatal("no input files");
 
-    log::flush();
+    const Timestamp start = get_time();
 
-    Timestamp start = get_time();
+    Context context(options);
 
-    if (options.multithread) {
+    // If using multi-threading, resolve the best number of threads we can use.
+    if (context.options().multithread) {
         const uint32_t supported_threads = std::thread::hardware_concurrency(); 
 
-        if (options.threads == 1) {
+        if (context.options().threads == 1) {
             // If no -j was provided, then take the larger of 1 and the 
             // detected thread count.
-            options.threads = std::max(1u, supported_threads);
+            context.options().threads = std::max(1u, supported_threads);
         } else {
             // A -j was provided, but if it's larger than the number of threads 
             // supported, then use only what's available.
-            options.threads = std::min(options.threads, supported_threads);
+            context.options().threads = std::min(
+                context.options().threads, supported_threads);
         }
 
         // No point in us using more threads than there are files.
-        options.threads = std::min(options.threads, 
+        context.options().threads = std::min(context.options().threads, 
             static_cast<uint32_t>(files.size()));
+
+        // Skip multithreading if we only have 1 thread available to us.
+        if (context.options().threads == 1)
+            context.options().multithread = false;
     }
 
-    ThreadPool *pool = nullptr;
-    if (options.multithread) {
-        pool = new ThreadPool(options.threads);
-        assert(pool);
+    ThreadPool* tpool = nullptr;
+    if (context.options().multithread) {
+        tpool = new ThreadPool(context.options().threads);
+        assert(tpool);
     }
 
-    if (options.multithread && options.threads > 1) {
-        assert(pool);
-
-        for (InputFile &f : files) {
-            pool->push([&f, options] {
-                Timestamp parse_start = get_time();
-
-                std::string contents;
-                if (!read_file(f.file, contents))
-                    log::flush();
-
-                TokenStream stream;
-                Lexer lexer(contents, f.file);
-                if (!lexer.lex(stream))
-                    log::flush();
-
-                Parser parser(stream, f.file);
-                f.ast = parser.parse();
-                assert(f.ast);
-
-                if (options.verbose) {
-                    duration<double> dur = get_time() - parse_start;
-
-                    std::stringstream ss;
-                    ss << std::format("{}: Finished parsing\n-- took {}\n", 
-                        f.file, dur);
-                    
-                    std::cout << ss.str();
-                }
-            });
-        }
-
-        pool->wait();
-    } else for (InputFile &f : files) {
-        Timestamp parse_start = get_time();
+    const auto parse_file = [&context](const std::string& file) {
+        const Timestamp pstart = get_time();
 
         std::string contents;
-        if (!read_file(f.file, contents))
+        if (!read_file(file, contents))
             log::flush();
 
-        TokenStream stream;
-        Lexer lexer(contents, f.file);
-        if (!lexer.lex(stream))
+        TokenStream tstream;
+        Lexer lexer(contents, file);
+        if (!lexer.lex(tstream))
             log::flush();
 
-        Parser parser(stream, f.file);
-        f.ast = parser.parse();
-        assert(f.ast);
-        
-        if (options.verbose) {
-            duration<double> dur = get_time() - parse_start;
+        Parser parser(tstream, file);
+        Rib* rib = parser.parse();
+        assert(rib);
+
+        if (!context.add_rib(rib))
+            log::error("rib '" + rib->name() + "' has multiple definitions");
+
+        if (context.options().verbose) {
+            const duration<double> dur = get_time() - pstart;
 
             std::stringstream ss;
-            ss << std::format("{}: Finished parsing\n-- took {}\n", f.file, dur);
+            ss << std::format("{}: Finished parsing\n-- took {}\n", 
+                file, dur);
             
             std::cout << ss.str();
         }
+    };
+
+    if (context.options().multithread) {
+        for (const std::string& file : files) {
+            tpool->push([&file, &context, &parse_file] { 
+                parse_file(file); 
+            });
+        }
+
+        tpool->wait();
+    } else for (const std::string& file : files) {
+        parse_file(file);
     }
 
     log::flush();
 
-    Asts asts = {};
-    asts.reserve(files.size());
-    for (InputFile &f : files)
-        asts.insert(f.ast);
+    for (const auto& [name, rib] : context.ribs()) {
+        const Timestamp pstart = get_time();
 
-    setup_file_table(asts);
+        SymbolAnalysis syma(context);
+        rib->accept(syma);
 
-    Asts ordering = {};
-    DepTable deps = {};
-    ordering.reserve(asts.size());
-    deps.reserve(asts.size());
-
-    computeDependencies(asts, ordering, deps);
-    resolveDependencies(options, ordering, deps);
-
-    // Perform symbol analysis on each syntax tree.
-    for (AST* ast : asts) {
-        const Timestamp syma_start = get_time();
-
-        SymbolAnalysis symbol_analysis(options);
-        ast->accept(symbol_analysis);
-
-        if (options.verbose) {
-            duration<double> dur = get_time() - syma_start;
+        if (context.options().verbose) {
+            const duration<double> dur = get_time() - pstart;
             std::cout << std::format("{}: Finished symbol analysis\n-- took {}\n", 
-                ast->get_file(), dur);
+                rib->path(), dur);
         }
     }
 
     log::flush();
 
-    // Perform semantic analysis on each syntax tree.
-    for (AST *ast : asts) {
-        const Timestamp sema_start = get_time();
+    for (const auto& [name, rib] : context.ribs()) {
+        const Timestamp pstart = get_time();
 
-        SemanticAnalysis semantic_analysis(options);
-        ast->accept(semantic_analysis);
+        NameResolution nres(context);
+        rib->accept(nres);
 
-        if (options.verbose) {
-            duration<double> dur = get_time() - sema_start;
-            std::cout << std::format("{}: Finished semantic analysis\n-- took {}\n", 
-                ast->get_file(), dur);
+        if (context.options().verbose) {
+            const duration<double> dur = get_time() - pstart;
+            std::cout << std::format("{}: Finished name resolution\n-- took {}\n", 
+                rib->path(), dur);
         }
+    }
 
-        // AST is now considered valid, so print it if needbe.
-        if (options.dump_ast) {
-            std::ofstream out(ast->get_file() + ".ast");
+    log::flush();
+
+    for (const auto& [name, rib] : context.ribs()) {
+        const Timestamp pstart = get_time();
+
+        SemanticAnalysis sema(context);
+        rib->accept(sema);
+
+        if (context.options().verbose) {
+            const duration<double> dur = get_time() - pstart;
+            std::cout << std::format("{}: Finished semantic analysis\n-- took {}\n", 
+                rib->path(), dur);
+        }
+    }
+
+    log::flush();
+
+    if (context.options().dump_ast) {
+        for (const auto& [name, rib] : context.ribs()) {
+            std::ofstream out(rib->path() + ".ast");
             if (!out || !out.is_open())
-                log::fatal("failed to open file: " + ast->get_file() + ".ast");
+                log::fatal("failed to open file: " + rib->path() + ".ast");
 
-            Printer printer(options, out);
-            ast->accept(printer);
+            Printer printer(context, out);
+            rib->accept(printer);
+
             out.close();
         }
+
+        log::flush();
     }
 
-    log::flush();
+    // Collect all ribs under their root identifiers. 
+    std::unordered_map<std::string, std::unordered_set<Rib*>> translations = {};
+    for (const auto& [name, rib] : context.ribs()) {
+        // Determine the root of the rib name. This is the name before the 
+        // first path '::' delimiter, if there is one.
+        std::size_t dpos = name.find_first_of("::");
+        std::string root = name;
+        if (dpos != std::string::npos)
+            root = name.substr(0, dpos);
 
-    drive_lir_backend(options, asts);
+        if (translations.contains(root)) {
+            translations[root].insert(rib);
+        } else {
+            translations.emplace(root, std::unordered_set<Rib*>({ rib }));
+        }
+    }
 
-    for (AST* ast : asts)
-        delete ast;
+    lir::Machine mach(lir::Machine::Linux);
 
-    asts.clear();
-    files.clear();
+    for (const auto& [root, ribs] : translations) {
+        const Timestamp cstart = get_time();
 
-    if (options.verbose) {
-        duration<double> dur = get_time() - start;
+        lir::CFG graph(mach, "");
+
+        Codegen codegen(context, graph, mach);
+        
+        for (Rib* rib : ribs)
+            rib->accept(codegen);
+
+        if (context.options().verbose) {
+            const duration<double> dur = get_time() - cstart;
+            std::cout << std::format("{}: Finished code generation\n-- took {}\n", root, dur);
+        }
+
+        if (context.options().opt == Options::OptLevel::Aggressive) {
+            const Timestamp ostart = get_time();
+
+            //lir::SSARewritePass ssa(graph);
+            //ssa.run();
+
+            lir::ConstantFolding cf(graph);
+            cf.run();
+            
+            lir::TrivialDCEPass dce(graph);
+            dce.run();
+
+            if (context.options().verbose) {
+                const duration<double> dur = get_time() - ostart;
+                std::cout << std::format("{}: Finished LIR optimizations\n-- took {}\n", root, dur);
+            }
+        }
+
+        if (context.options().dump_lir) {
+            std::ofstream file(root + ".lir");
+            if (!file || !file.is_open())
+                log::fatal("failed to open: " + root + ".s");
+            
+            graph.print(file);
+            file.close();
+        }
+
+        const Timestamp lstart = get_time();
+
+        lir::MachineObject mobj(graph);
+        lir::AMD64LoweringPass lowering(graph, mobj);
+        lowering.run();
+
+        if (context.options().verbose) {
+            const duration<double> dur = get_time() - lstart;
+            std::cout << std::format("{}: Finished lowering\n-- took {}\n", root, dur);
+        }
+
+        if (context.options().dump_mir) {
+            std::ofstream mir(root + ".mir");
+            if (!mir || !mir.is_open())
+                log::fatal("failed to open: " + root + ".mir");
+
+            lir::Printer printer(mobj);
+            printer.run(mir);
+            mir.close();
+        }
+
+        const Timestamp rstart = get_time();
+
+        lir::RegisterAnalysis rega(mobj);
+        rega.run();
+
+        if (context.options().verbose) {
+            const duration<double> dur = get_time() - rstart;
+            std::cout << std::format("{}: Finished register analysis\n-- took {}\n", root, dur);
+        }
+
+        const Timestamp mostart = get_time();
+
+        lir::AMD64Analysis aa(mach, mobj);
+        aa.run();
+
+        if (context.options().verbose) {
+            const duration<double> dur = get_time() - mostart;
+            std::cout << std::format("{}: Finished machine optimizations\n-- took {}\n", root, dur);
+        }
+
+        std::ofstream as(root + ".s");
+        if (!as || !as.is_open())
+            log::fatal("failed to open: " + root + ".s");
+
+        lir::AsmWriter writer(mobj);
+        writer.run(as);
+        as.close();
+
+        if (context.options().stop > Options::StopPoint::Assembly) {
+            const std::string assembler = std::format("as {}.s -o {}.o", root, root);
+            std::system(assembler.c_str());
+        }
+    }
+
+    if (context.options().stop > Options::StopPoint::Object) {
+        std::string linker = std::format("ld -o {} ", context.options().output);
+
+        for (const auto& [root, ribs] : translations)
+            linker += std::format("{}.o ", root);
+        
+        linker += std::format("{}/rt.o", g_standard);
+
+        std::system(linker.c_str());
+    }
+
+    if (context.options().multithread) {
+        assert(tpool);
+        delete tpool;
+    }
+
+    if (context.options().verbose) {
+        const duration<double> dur = get_time() - start;
         std::cout << std::format("Finished all compilation procedures.\n-- took {}\n", dur);
     }
 
-    return 0;
+    return EXIT_SUCCESS;
 }

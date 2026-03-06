@@ -6,6 +6,7 @@
 #include "lir/graph/CFG.h"
 #include "lir/graph/Constant.h"
 #include "lir/graph/Type.h"
+#include "lir/graph/Value.h"
 
 #include <format>
 
@@ -212,5 +213,12 @@ void CFG::print(std::ostream &os) const {
         // Don't print double empty lines at the end of a graph print.
         if (++i != e)
             os << '\n';
+    }
+
+    if (!m_functions.empty())
+        os << '\n';
+
+    for (const DebugNode* node : m_debug) {
+        node->print(os, PrintPolicy::Def);
     }
 }

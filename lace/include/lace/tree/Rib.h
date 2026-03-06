@@ -3,15 +3,12 @@
 //  All rights reserved.
 //
 
-#ifndef LACE_AST_H_
-#define LACE_AST_H_
+#ifndef LACE_RIB_H_
+#define LACE_RIB_H_
 
 //
-//  This header file declares the AST type, which represents the root of an
-//  abstract syntax tree parsed from a source file.
-//
-//  It also includes the nested Context class, which is used as a manager for
-//  frontend type ownership.
+//  This header file declares the Rib type, which represents a set of files 
+//  in a source program, and their top-level symbols.
 //
 
 #include "lace/tree/Type.h"
@@ -28,10 +25,8 @@ namespace lace {
 class Defn;
 class Scope;
 
-class AST final {
-    friend class SymbolAnalysis;
+class Rib final {
     friend class AliasType;
-    friend class ArrayType;
     friend class BuiltinType;
     friend class DeferredType;
     friend class EnumType;
@@ -47,9 +42,17 @@ class AST final {
     using PointerTypePool = std::vector<PointerType*>;
     using StructTypePool = std::unordered_map<std::string, StructType*>;
 
-    std::string m_file;
+    /// The name of this rib, e.g. `stl::io`.
+    std::string m_name;
+
+    /// The path of the original file which defined this rib.
+    std::string m_path;
+
+    /// The global scope of this rib.
+    Scope* m_scope;
+
+    /// The top-level definitions of this rib.
     std::vector<Defn*> m_defns = {};
-    Scope* m_scope = nullptr;
 
     struct {
         AliasTypePool aliases = {};
@@ -61,32 +64,37 @@ class AST final {
         StructTypePool structs = {};
     } m_types;
 
-    AST(const std::string& file);
+    Rib(const std::string& name, const std::string& path);
 
 public:
-    /// Create a new abstract syntax tree representing the given |file|.
     [[nodiscard]] 
-    static AST* create(const std::string& file);
+    static Rib* create(const std::string& name, const std::string& path);
 
-    ~AST();
+    ~Rib();
 
-    AST(const AST&) = delete;
-    void operator=(const AST&) = delete;
+    Rib(const Rib&) = delete;
+    void operator=(const Rib&) = delete;
 
-    AST(AST&&) noexcept = delete;
-    void operator=(AST&&) noexcept = delete;
+    Rib(Rib&&) noexcept = delete;
+    void operator=(Rib&&) noexcept = delete;
 
     void accept(VisitorBase& visitor) { visitor.visit(*this); }
 
-    /// Returns the path of the file which this syntax tree represents.
-    const std::string& get_file() const { return m_file; }
+    /// Returns the name of this rib.
+    const std::string& name() const { return m_name; }
 
-    /// Returns the definitions which are defined in the file represented by
-    /// this syntax tree.
+    /// Returns the path of the file which originally defined this rib.
+    const std::string& path() const { return m_path; }
+
+    /// Returns the scope of this rib.
+    const Scope* scope() const { return m_scope; }
+    Scope* scope() { return m_scope; }
+
+    /// Returns the definition list of this rib.
     const std::vector<Defn*>& defns() const { return m_defns; }
     std::vector<Defn*>& defns() { return m_defns; }
 
-    /// Returns the |i|-th definition in this syntax tree.
+    /// Returns the |i|-th definition in this rib.
     const Defn* get_defn(uint32_t i) const {
         assert(i <= m_defns.size() && "index out of bounds!");
         return m_defns[i];
@@ -97,17 +105,16 @@ public:
         return m_defns[i];
     }
 
-    /// Returns the number of definitions in this syntax tree.
+    /// Returns the number of definitions in this rib.
     uint32_t num_defns() const { return m_defns.size(); }
 
-    /// Test if this syntax tree has any definitions.
+    /// Test if this rib has any definitions.
     bool has_defns() const { return !m_defns.empty(); }
 
-    /// Returns the global scope of this syntax tree.
-    const Scope* scope() const { return m_scope; }
-    Scope* scope() { return m_scope; }
+    /// Test if this rib is empty i.e. contains no definitions.
+    [[nodiscard]] bool empty() const { return m_defns.empty(); }
 };
 
 } // namespace lace
 
-#endif // LACE_AST_H_
+#endif // LACE_RIB_H_

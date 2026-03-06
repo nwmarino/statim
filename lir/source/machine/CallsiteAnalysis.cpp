@@ -51,6 +51,19 @@ void CallsiteAnalysis::run() {
                         spill.push_back(alloc);
                 }
 
+                if (!spill.empty()) {
+                    MachineOp* reserve = new MachineOp(AMD64_SUB64, {});
+                    reserve->add_imm(spill.size() * 8);
+                    reserve->add_reg({ RSP, 8 });
+                    
+                    MachineOp* restore = new MachineOp(AMD64_ADD64, {});
+                    restore->add_imm(spill.size() * 8);
+                    restore->add_reg({ RSP, 8 });
+
+                    reserve->insertAfter(set);
+                    restore->insertBefore(end);
+                }
+
                 for (int32_t i = spill.size() - 1; i >= 0; --i) {
                     const Register& reg = spill[i];
 

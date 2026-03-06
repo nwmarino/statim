@@ -39,7 +39,7 @@ void Global::print(std::ostream &os, PrintPolicy policy) const {
 		if (is_mutable())
 			os << "mut ";
 		
-		os << m_type->to_string();
+		os << std::format("<{}>", m_type->to_string());
 
 		if (has_initializer()) {
 			os << ' ';

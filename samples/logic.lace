@@ -1,3 +1,5 @@
+rib index;
+
 $public
 main :: () -> s64 {
     let a: bool = true;
@@ -13,6 +15,5 @@ main :: () -> s64 {
     // a, !b  => true
     // !a, b  => true
     // a, b   => true
-    let c: bool = a ^ b;
-    ret c; 
+    ret a ^ b; 
 }

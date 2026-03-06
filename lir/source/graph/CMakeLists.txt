@@ -3,6 +3,7 @@ set(GRAPH_SOURCES
     Builder.cpp
     CFG.cpp
     Constant.cpp
+    Debug.cpp
     Function.cpp
     Global.cpp
     Instruction.cpp

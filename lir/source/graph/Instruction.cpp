@@ -5,6 +5,7 @@
 
 #include "lir/graph/BasicBlock.h"
 #include "lir/graph/Constant.h"
+#include "lir/graph/Debug.h"
 #include "lir/graph/Value.h"
 #include "lir/graph/Instruction.h"
 
@@ -16,8 +17,9 @@ using namespace lir;
 //                          Instruction Implementation
 //>==---------------------------------------------------------------------------
 
-Instruction::Instruction(Type *type, BasicBlock *parent, uint32_t def, const Operands &ops)
-  : User(type, ops), m_parent(parent), m_def(def) {}
+Instruction::Instruction(Type *type, BasicBlock *parent, uint32_t def, 
+                         const Operands &ops, DebugLoc* loc)
+  : User(type, ops), m_parent(parent), m_def(def), m_loc(loc) {}
 
 void Instruction::detach() {
     assert(m_parent && "instruction does not belong to a basic block!");
@@ -64,8 +66,7 @@ void Instruction::insert_after(Instruction *inst) {
 }
 
 bool Instruction::is_trivially_dead() const {
-    return false; // @Todo: Implement formally.
-
+    // @Todo: reconsider loads, right now don't need to care.
     if (!is_def() || Value::used())
         return false;
 
@@ -82,6 +83,12 @@ void Const::print(std::ostream &os, PrintPolicy policy) const {
     } else if (policy == PrintPolicy::Def) {
         os << std::format("%{} := const <{}> ", m_def, get_type()->to_string());
         get_value()->print(os, PrintPolicy::Use);
+
+        if (has_location()) {
+            os << ", ";
+            get_location()->print(os, PrintPolicy::Use);
+        }
+
         os << '\n';
     }
 }
@@ -96,7 +103,14 @@ void Load::print(std::ostream &os, PrintPolicy policy) const {
     } else if (policy == PrintPolicy::Def) {
         os << std::format("%{} := load <{}> ", m_def, get_type()->to_string());
         get_addr()->print(os, PrintPolicy::Use);
-        os << std::format(" [{}]\n", m_align);
+        os << std::format(" [{}]", m_align);
+
+        if (has_location()) {
+            os << ", ";
+            get_location()->print(os, PrintPolicy::Use);
+        }
+
+        os << '\n';
     }
 }
 
@@ -112,7 +126,14 @@ void Store::print(std::ostream &os, PrintPolicy policy) const {
         get_value()->print(os, PrintPolicy::Use);
         os << ", ";
         get_addr()->print(os, PrintPolicy::Use);
-        os << std::format(" [{}]\n", get_align());
+        os << std::format(" [{}]", get_align());
+
+        if (has_location()) {
+            os << ", ";
+            get_location()->print(os, PrintPolicy::Use);
+        }
+
+        os << '\n';
     }
 }
 
@@ -128,6 +149,12 @@ void Access::print(std::ostream &os, PrintPolicy policy) const {
         get_base()->print(os, PrintPolicy::Use);
         os << ", ";
         get_index()->print(os, PrintPolicy::Use);
+        
+        if (has_location()) {
+            os << ", ";
+            get_location()->print(os, PrintPolicy::Use);
+        }
+
         os << '\n';
     }
 }
@@ -144,6 +171,12 @@ void Offptr::print(std::ostream &os, PrintPolicy policy) const {
         get_base()->print(os, PrintPolicy::Use);
         os << ", ";
         get_index()->print(os, PrintPolicy::Use);
+        
+        if (has_location()) {
+            os << ", ";
+            get_location()->print(os, PrintPolicy::Use);
+        }
+
         os << '\n';
     }
 }
@@ -171,7 +204,14 @@ void Call::print(std::ostream &os, PrintPolicy policy) const {
                 os << ", ";
         }
 
-        os << ")\n";
+        os << ")";
+
+        if (has_location()) {
+            os << ", ";
+            get_location()->print(os, PrintPolicy::Use);
+        }
+
+        os << '\n';
     }
 }
 
@@ -188,6 +228,11 @@ void Ret::print(std::ostream &os, PrintPolicy policy) const {
         if (has_value()) {
             os << ' ';
             get_value()->print(os, PrintPolicy::Use);
+        }
+
+        if (has_location()) {
+            os << ", ";
+            get_location()->print(os, PrintPolicy::Use);
         }
 
         os << '\n';
@@ -209,7 +254,14 @@ void Jump::print(std::ostream &os, PrintPolicy policy) const {
     assert(policy != PrintPolicy::Use && "jump does not define a value!");
 
     if (policy == PrintPolicy::Def) {
-        os << std::format("jump bb{}\n", get_dest()->position());
+        os << std::format("jump bb{}", get_dest()->position());
+
+        if (has_location()) {
+            os << ", ";
+            get_location()->print(os, PrintPolicy::Use);
+        }
+
+        os << '\n';
     }
 }
 
@@ -237,8 +289,15 @@ void Brif::print(std::ostream &os, PrintPolicy policy) const {
     if (policy == PrintPolicy::Def) {
         os << "brif ";
         get_cond()->print(os, PrintPolicy::Use);
-        os << std::format(" bb{} else bb{}\n", 
+        os << std::format(" bb{} else bb{}", 
             get_true_dest()->position(), get_false_dest()->position());
+
+        if (has_location()) {
+            os << ", ";
+            get_location()->print(os, PrintPolicy::Use);
+        }
+
+        os << '\n';
     }
 }
 
@@ -271,7 +330,12 @@ void Phi::print(std::ostream &os, PrintPolicy policy) const {
                 os << ", ";
         }
         
-        os << "\n";
+        if (has_location()) {
+            os << ", ";
+            get_location()->print(os, PrintPolicy::Use);
+        }
+
+        os << '\n';
     }
 }
 
@@ -285,20 +349,27 @@ void Unop::print(std::ostream &os, PrintPolicy policy) const {
     } else if (policy == PrintPolicy::Def) {
         os << std::format("%{} := ", def());
 
-        switch (op()) {
-            case Op::Not:
-                os << "not";
-                break;
-            case Op::INeg:
-                os << "ineg";
-                break;
-            case Op::FNeg:
-                os << "fneg";
-                break;
+        switch (op()) 
+        {
+        case Op::Not:
+            os << "not";
+            break;
+        case Op::INeg:
+            os << "ineg";
+            break;
+        case Op::FNeg:
+            os << "fneg";
+            break;
         }
 
         os << std::format(" <{}> ", get_type()->to_string());
         get_value()->print(os, PrintPolicy::Use);
+        
+        if (has_location()) {
+            os << ", ";
+            get_location()->print(os, PrintPolicy::Use);
+        }
+
         os << '\n';
     }
 }
@@ -313,64 +384,71 @@ void Binop::print(std::ostream &os, PrintPolicy policy) const {
     } else if (policy == PrintPolicy::Def) {
         os << std::format("%{} := ", def());
 
-        switch (op()) {
-            case Op::IAdd:
-                os << "iadd";
-                break;
-            case Op::FAdd:
-                os << "fadd";
-                break;
-            case Op::ISub:
-                os << "isub";
-                break;
-            case Op::FSub:
-                os << "fsub";
-                break;
-            case Op::IMul:
-                os << "imul";
-                break;
-            case Op::FMul:
-                os << "fmul";
-                break;
-            case Op::SDiv:
-                os << "sdiv";
-                break;
-            case Op::UDiv:
-                os << "udiv";
-                break;
-            case Op::FDiv:
-                os << "fdiv";
-                break;
-            case Op::SMod:
-                os << "smod";
-                break;
-            case Op::UMod:
-                os << "umod";
-                break;
-            case Op::And:
-                os << "and";
-                break;
-            case Op::Or:
-                os << "or";
-                break;
-            case Op::Xor:
-                os << "xor";
-                break;
-            case Op::Shl:
-                os << "shl";
-                break;
-            case Op::Shr:
-                os << "shr";
-                break;
-            case Op::Sar:
-                os << "sar";
-                break;
+        switch (op()) 
+        {
+        case Op::IAdd:
+            os << "iadd";
+            break;
+        case Op::FAdd:
+            os << "fadd";
+            break;
+        case Op::ISub:
+            os << "isub";
+            break;
+        case Op::FSub:
+            os << "fsub";
+            break;
+        case Op::IMul:
+            os << "imul";
+            break;
+        case Op::FMul:
+            os << "fmul";
+            break;
+        case Op::SDiv:
+            os << "sdiv";
+            break;
+        case Op::UDiv:
+            os << "udiv";
+            break;
+        case Op::FDiv:
+            os << "fdiv";
+            break;
+        case Op::SMod:
+            os << "smod";
+            break;
+        case Op::UMod:
+            os << "umod";
+            break;
+        case Op::And:
+            os << "and";
+            break;
+        case Op::Or:
+            os << "or";
+            break;
+        case Op::Xor:
+            os << "xor";
+            break;
+        case Op::Shl:
+            os << "shl";
+            break;
+        case Op::Shr:
+            os << "shr";
+            break;
+        case Op::Sar:
+            os << "sar";
+            break;
         }
 
         os << std::format(" <{}> ", m_type->to_string());
         get_lhs()->print(os, PrintPolicy::Use);
         os << ", ";
         get_rhs()->print(os, PrintPolicy::Use);
+        
+        if (has_location()) {
+            os << ", ";
+            get_location()->print(os, PrintPolicy::Use);
+        }
+
         os << '\n';
     }
 }
@@ -385,47 +463,54 @@ void Cast::print(std::ostream &os, PrintPolicy policy) const {
     } else if (policy == PrintPolicy::Def) {
         os << std::format("%{} := ", m_def);
 
-        switch (kind()) {
-            case Kind::SExt:
-                os << "sext";
-                break;
-            case Kind::ZExt:
-                os << "zext";
-                break;
-            case Kind::FExt:
-                os << "fext";
-                break;
-            case Kind::ITrunc:
-                os << "itrunc";
-                break;
-            case Kind::FTrunc:
-                os << "ftrunc";
-                break;
-            case Kind::S2F:
-                os << "s2f";
-                break;
-            case Kind::U2F:
-                os << "u2f";
-                break;
-            case Kind::F2S:
-                os << "f2s";
-                break;
-            case Kind::F2U:
-                os << "f2u";
-                break;
-            case Kind::P2I:
-                os << "p2i";
-                break;
-            case Kind::I2P:
-                os << "i2p";
-                break;
-            case Kind::Reint:
-                os << "reint";
-                break;
+        switch (kind()) 
+        {
+        case Kind::SExt:
+            os << "sext";
+            break;
+        case Kind::ZExt:
+            os << "zext";
+            break;
+        case Kind::FExt:
+            os << "fext";
+            break;
+        case Kind::ITrunc:
+            os << "itrunc";
+            break;
+        case Kind::FTrunc:
+            os << "ftrunc";
+            break;
+        case Kind::S2F:
+            os << "s2f";
+            break;
+        case Kind::U2F:
+            os << "u2f";
+            break;
+        case Kind::F2S:
+            os << "f2s";
+            break;
+        case Kind::F2U:
+            os << "f2u";
+            break;
+        case Kind::P2I:
+            os << "p2i";
+            break;
+        case Kind::I2P:
+            os << "i2p";
+            break;
+        case Kind::Reint:
+            os << "reint";
+            break;
         }
 
         os << std::format(" <{}> ", m_type->to_string());
         get_value()->print(os, PrintPolicy::Use);
+        
+        if (has_location()) {
+            os << ", ";
+            get_location()->print(os, PrintPolicy::Use);
+        }
+
         os << '\n';
     }
 }
@@ -440,61 +525,68 @@ void Cmp::print(std::ostream &os, PrintPolicy policy) const {
     } else if (policy == PrintPolicy::Def) {
         os << std::format("%{} := ", m_def);
 
-        switch (pred()) {
-            case Predicate::IEq:
-                os << "ieq";
-                break;
-            case Predicate::FEq:
-                os << "feq";
-                break;
-            case Predicate::INe:
-                os << "ine";
-                break;
-            case Predicate::FNe:
-                os << "fne";
-                break;
-            case Predicate::Slt:
-                os << "slt";
-                break;
-            case Predicate::Ult:
-                os << "ult";
-                break;
-            case Predicate::Flt:
-                os << "flt";
-                break;
-            case Predicate::Sle:
-                os << "sle";
-                break;
-            case Predicate::Ule:
-                os << "ule";
-                break;
-            case Predicate::Fle:
-                os << "fle";
-                break;
-            case Predicate::Sgt:
-                os << "sgt";
-                break;
-            case Predicate::Ugt:
-                os << "ugt";
-                break;
-            case Predicate::Fgt:
-                os << "fgt";
-                break;
-            case Predicate::Sge:
-                os << "sge";
-                break;
-            case Predicate::Uge:
-                os << "uge";
-                break;
-            case Predicate::Fge:
-                os << "fge";
-                break;
+        switch (pred()) 
+        {
+        case Predicate::IEq:
+            os << "ieq";
+            break;
+        case Predicate::FEq:
+            os << "feq";
+            break;
+        case Predicate::INe:
+            os << "ine";
+            break;
+        case Predicate::FNe:
+            os << "fne";
+            break;
+        case Predicate::Slt:
+            os << "slt";
+            break;
+        case Predicate::Ult:
+            os << "ult";
+            break;
+        case Predicate::Flt:
+            os << "flt";
+            break;
+        case Predicate::Sle:
+            os << "sle";
+            break;
+        case Predicate::Ule:
+            os << "ule";
+            break;
+        case Predicate::Fle:
+            os << "fle";
+            break;
+        case Predicate::Sgt:
+            os << "sgt";
+            break;
+        case Predicate::Ugt:
+            os << "ugt";
+            break;
+        case Predicate::Fgt:
+            os << "fgt";
+            break;
+        case Predicate::Sge:
+            os << "sge";
+            break;
+        case Predicate::Uge:
+            os << "uge";
+            break;
+        case Predicate::Fge:
+            os << "fge";
+            break;
         }
 
         os << std::format(" <{}> ", get_type()->to_string());
         get_lhs()->print(os, PrintPolicy::Use);
         os << ", ";
         get_rhs()->print(os, PrintPolicy::Use);
+        
+        if (has_location()) {
+            os << ", ";
+            get_location()->print(os, PrintPolicy::Use);
+        }
+
         os << '\n';
     }
 }

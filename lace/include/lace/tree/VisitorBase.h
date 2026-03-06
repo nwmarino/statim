@@ -6,22 +6,21 @@
 #ifndef LACE_VISITOR_BASE_H_
 #define LACE_VISITOR_BASE_H_
 
-#include "lace/core/Options.h"
+#include "lace/core/Context.h"
 #include "lace/tree/Scope.h"
-#include <vector>
+#include "lace/tree/Type.h"
 
 namespace lace {
 
-class AST;
+class Rib;
 
 class AliasDefn;
 class EnumDefn;
 class FieldDefn;
 class FunctionDefn;
-class LoadDefn;
 class ParameterDefn;
-class SpaceDefn;
 class StructDefn;
+class UseDefn;
 class VariableDefn;
 class VariantDefn;
 
@@ -47,6 +46,7 @@ class UnaryOp;
 class AccessExpr;
 class CallExpr;
 class CastExpr;
+class FieldInitExpr;
 class ParenExpr;
 class RefExpr;
 class SizeofExpr;
@@ -57,12 +57,10 @@ class Type;
 
 class VisitorBase {
 protected:
-    Options& m_options;
-    AST* m_ast = nullptr;
-    Scope* m_scope = nullptr;
-    std::vector<SpaceDefn*> m_namespaces = {};
+    Context& m_context;
+    Rib* m_rib = nullptr;
 
-    VisitorBase(Options& options) : m_options(options) {}
+    VisitorBase(Context& context) : m_context(context) {}
 
 public:
     virtual ~VisitorBase() = default;
@@ -73,16 +71,15 @@ public:
     VisitorBase(VisitorBase&&) noexcept = delete;
     void operator=(VisitorBase&&) noexcept = delete;
     
-    virtual void visit(AST& node);
+    virtual void visit(Rib& rib);
 
     virtual void visit(AliasDefn& node);
     virtual void visit(EnumDefn& node);
     virtual void visit(FieldDefn& node);
     virtual void visit(FunctionDefn& node);
-    virtual void visit(LoadDefn& node);
     virtual void visit(ParameterDefn& node);
-    virtual void visit(SpaceDefn& node);
     virtual void visit(StructDefn& node);
+    virtual void visit(UseDefn& node);
     virtual void visit(VariableDefn& node);
     virtual void visit(VariantDefn& node);
 
@@ -108,6 +105,7 @@ public:
     virtual void visit(AccessExpr& node);
     virtual void visit(CallExpr& node);
     virtual void visit(CastExpr& node);
+    virtual void visit(FieldInitExpr& node);
     virtual void visit(ParenExpr& node);
     virtual void visit(RefExpr& node);
     virtual void visit(SizeofExpr& node);
@@ -115,12 +113,8 @@ public:
     virtual void visit(SubscriptExpr& node);
 
 protected:
-    /// Attempt to resolve any deferred types within the component(s) of the 
-    /// given |type|, and return a new, fully resolved type.
-    ///
-    /// If a component of the given |type| could not be resolved, then null is 
-    /// returned.
-    [[nodiscard]] Type* resolve_type(Type* type) const;
+    /// Test if the current rib is using the given |target| rib.
+    bool uses_rib(Rib* target) const;
 };
 
 } // namespace lace

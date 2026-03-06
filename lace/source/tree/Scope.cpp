@@ -9,43 +9,37 @@
 using namespace lace;
 
 Scope::~Scope() {
-    for (Scope* scope : m_children)
-        delete scope;
+    for (Scope* scope : m_children) {
+        if (scope)
+            delete scope;
+    }
 
+    m_parent = nullptr;
     m_children.clear();
+    m_symbols.clear();
 }
 
-bool Scope::add(NamedDefn* defn) {
-    if (get(defn->name()))
+bool Scope::add(const Symbol& symbol) {
+    if (has(symbol.name))
         return false;
 
-    m_defns.emplace(defn->name(), defn);
+    m_symbols.emplace(symbol.name, symbol);
     return true;
 }
 
-NamedDefn* Scope::get(const std::string& name) const {
-    auto it = m_defns.find(name);
-    if (it != m_defns.end())
-        return it->second;
-
-    if (m_parent)
-        return m_parent->get(name);
-
-    return nullptr;
+bool Scope::has(const std::string& name) const {
+    return m_symbols.contains(name);
 }
 
-SpaceDefn* Scope::get_namespace(const std::string& name) const {
-    auto it = m_defns.find(name);
-    if (it != m_defns.end()) {
-        NamedDefn* defn = it->second;
-        if (SpaceDefn* nspace = dynamic_cast<SpaceDefn*>(defn))
-            return nspace;
-
-        return nullptr;
+bool Scope::get(const std::string& name, Symbol& symbol) const {
+    auto it = m_symbols.find(name);
+    if (it != m_symbols.end()) {
+        symbol = it->second;
+        return true;
     }
 
-    if (m_parent)
-        return m_parent->get_namespace(name);
+    if (has_parent())
+        return m_parent->get(name, symbol);
 
-    return nullptr;
+    return false;
 }

@@ -1,3 +1,5 @@
+rib index;
+
 $public
 main :: () -> s64 {
     let a: s64 = 42;
@@ -5,5 +7,5 @@ main :: () -> s64 {
     let c: s64 = a - 21;
     let d: s64 = (a - 1) % 21;
 
-    ret b * c / d;
+    ret b * c / d; // should be 66
 }

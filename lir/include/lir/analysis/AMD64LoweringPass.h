@@ -7,6 +7,7 @@
 #define LIR_AMD64_LOWERING_PASS_H_
 
 #include "lir/analysis/LoweringPass.h"
+#include "lir/graph/BasicBlock.h"
 #include "lir/machine/AMD64.h"
 #include "lir/machine/MachineOp.h"
 
@@ -16,11 +17,18 @@
 namespace lir {
 
 class AMD64LoweringPass final : public LoweringPass {
+    using BlockTable = std::unordered_map<MachineFunction*, 
+        std::unordered_map<const BasicBlock*, MachineLabel*>>;
+    using FuncTable = std::unordered_map<const Function*, MachineFunction*>;
     using LocalTable = std::unordered_map<const Local*, MachineLocal*>;
     using DefTable = std::unordered_map<uint32_t, Register>;
 
-    MachineFunction *m_func = nullptr;
-    MachineLabel *m_insert = nullptr;
+    MachineFunction* m_func = nullptr;
+    MachineLabel* m_insert = nullptr;
+
+    BlockTable m_blocks = {};
+
+    FuncTable m_funcs = {};
 
     /// A table from LIR Locals -> MIR stack locals.
     LocalTable m_locals = {};
@@ -34,6 +42,9 @@ public:
     void run() override;
 
 private:
+    /// Test if the given |value| is coming from memory.
+    bool is_addressable(const Value* value) const;
+
     /// Returns the AMD64 register byte offset for the given scalar |type|.
     uint8_t get_subreg_byte(const Type *type) const;
 
@@ -92,12 +103,26 @@ private:
     /// Get the virtual register lowered from the given |def|.
     Register get_vreg_from_def(const Instruction *inst);
 
-    /// Convert the given |value| to a machine operand, where possible.
-    MachineOperand to_operand(const Value *value);
+    /// Lower the given |value| to a memory-addressible machine operand.
+    /// For values which may not be immediately addressable, e.g. registers,
+    /// this function will result in a memory reference with the register as a
+    /// base.
+    MachineOperand as_addressable_operand(const Value* value);
+
+    /// Lower the given |value| to a memory address machine operand.
+    /// For values which may not immediately be addresses, e.g. stack locations,
+    /// memory references, etc., this function may emit certain addressing ops 
+    /// to produce an address.
+    MachineOperand as_address_operand(const Value* value);
+
+    /// Lower the given |value| to a valued machine operand.
+    /// For memory-addressable values, this function may emit moves to 
+    /// eliminate memory references.
+    MachineOperand as_valued_operand(const Value* value);
 
     /// Emit a new instruction to the back of the current label with the given 
     /// |op| and |operands|.
-    MachineOp &emit(uint32_t op, const MachineOp::Operands &operands = {});
+    MachineOp& emit(uint32_t op, const MachineOp::Operands& operands = {});
 
     /// Construct the stack frame for the given |func|.
     void construct_stack_frame(const Function *func);

@@ -11,7 +11,7 @@
 //  language definitions in the abstract syntax tree.
 //
 
-#include "lace/tree/AST.h"
+#include "lace/tree/Rib.h"
 #include "lace/tree/Rune.h"
 #include "lace/tree/Type.h"
 #include "lace/tree/VisitorBase.h"
@@ -23,23 +23,23 @@
 
 namespace lace {
 
-class BlockStmt;
 class Expr;
+class Stmt;
+class BlockStmt;
 class Rune;
 class Scope;
-class Stmt;
 class Type;
 
 /// Base class for all definition types in the abstract syntax tree.
 class Defn {
 protected:
-    /// The parent syntax tree of this definition.
-    AST* m_origin;
+    /// The parent rib of this definition.
+    Rib* m_rib;
 
     /// The span of source code that this definition covers.
     SourceSpan m_span;
 
-    Defn(AST* origin, SourceSpan span) : m_origin(origin), m_span(span) {}
+    Defn(Rib* rib, SourceSpan span) : m_rib(rib), m_span(span) {}
 
 public:
     virtual ~Defn() = default;
@@ -52,9 +52,9 @@ public:
 
     virtual void accept(VisitorBase& visitor) = 0;
 
-    /// Returns the origin syntax tree of this definition.
-    const AST* origin() const { return m_origin; }
-    AST* origin() { return m_origin; }
+    /// Returns the originating rib of this definition.
+    const Rib* rib() const { return m_rib; }
+    Rib* rib() { return m_rib; }
 
     /// Set the span of source code which this definition covers to |defn|.
     void set_span(SourceSpan span) { m_span = span; }
@@ -64,33 +64,38 @@ public:
     SourceSpan& span() { return m_span; }
 };
 
-/// Represents a top-level load definition.
-class LoadDefn final : public Defn {
+/// Represents a top-level `use` definition.
+class UseDefn final : public Defn {
     std::string m_path;
+    Rib* m_target = nullptr;
 
-    LoadDefn(AST* origin, SourceSpan span, const std::string& path) 
-      : Defn(origin, span), m_path(path) {}
+    UseDefn(Rib* rib, SourceSpan span, const std::string& path) 
+      : Defn(rib, span), m_path(path) {}
 
 public:
     [[nodiscard]]
-    static LoadDefn* create(AST& ast, SourceSpan span, const std::string& path);
+    static UseDefn* create(Rib& rib, SourceSpan span, const std::string& trail);
 
-    ~LoadDefn() = default;
+    ~UseDefn() = default;
 
-    LoadDefn(const LoadDefn&) = delete;
-    void operator=(const LoadDefn&) = delete;
+    UseDefn(const UseDefn&) = delete;
+    void operator=(const UseDefn&) = delete;
 
-    LoadDefn(LoadDefn&&) noexcept = delete;
-    void operator=(LoadDefn&&) noexcept = delete;
+    UseDefn(UseDefn&&) noexcept = delete;
+    void operator=(UseDefn&&) noexcept = delete;
 
     void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
-    /// Set the target file path of this load to |path|.
-    void set_path(const std::string& path) { m_path = path; }
-
-    /// Returns the file path which this load targets.
+    /// Returns the rib path which this use targets.
     const std::string& path() const { return m_path; }
     std::string& path() { return m_path; }
+
+    /// Set the target rib of this use to the given |rib|.
+    void set_target(Rib* rib) { m_target = rib; }
+
+    /// Returns the target rib of this use.
+    const Rib* target() const { return m_target; }
+    Rib* target() { return m_target; }
 };
 
 /// Base class for definitions with a name and potential rune set.
@@ -102,9 +107,9 @@ protected:
     std::string m_name;
     Runes m_runes;
 
-    NamedDefn(AST* origin, SourceSpan span, const std::string& name, 
+    NamedDefn(Rib* rib, SourceSpan span, const std::string& name, 
               const Runes& runes)
-      : Defn(origin, span), m_name(name), m_runes(runes) {}
+      : Defn(rib, span), m_name(name), m_runes(runes) {}
 
 public:
     virtual ~NamedDefn() override;
@@ -177,57 +182,14 @@ public:
     bool has_runes() const { return !m_runes.empty(); }
 };
 
-class SpaceDefn final : public NamedDefn {
-    Scope* m_scope;
-    std::vector<NamedDefn*> m_defns;
-
-    SpaceDefn(AST* origin, SourceSpan span, const std::string& name, 
-              const Runes& runes, Scope* scope, 
-              const std::vector<NamedDefn*>& defns)
-      : NamedDefn(origin, span, name, runes), m_scope(scope), m_defns(defns) {}
-
-public:
-    [[nodiscard]]
-    static SpaceDefn* create(AST& ast, SourceSpan span, const std::string& name,
-                             const Runes& runes, Scope* scope,
-                             const std::vector<NamedDefn*>& defns);
-
-    ~SpaceDefn() override;
-
-    SpaceDefn(const SpaceDefn&) = delete;
-    void operator=(const SpaceDefn&) = delete;
-
-    SpaceDefn(SpaceDefn&&) noexcept = delete;
-    void operator=(SpaceDefn&&) noexcept = delete;
-
-    void accept(VisitorBase& visitor) override { visitor.visit(*this); }
-
-    /// Returns the scope of this namespace.
-    const Scope* scope() const { return m_scope; }
-    Scope* scope() { return m_scope; }
-
-    /// Returns the definitions in this namespace.
-    const std::vector<NamedDefn*>& defns() const { return m_defns; }
-    std::vector<NamedDefn*>& defns() { return m_defns; }
-
-    /// Returns the number of definitions in this namespace.
-    uint32_t num_defns() const { return m_defns.size(); }
-
-    /// Test if this namespace contains any definitions.
-    bool has_defns() const { return !m_defns.empty(); }
-
-    /// Test if this namespace is empty i.e. contains no definitions.
-    [[nodiscard]] bool empty() const { return m_defns.empty(); }
-};
-
 /// Base class for all named definitions that are typed and produce a value.
 class ValueDefn : public NamedDefn {
 protected:
     Type* m_type;
 
-    ValueDefn(AST* origin, SourceSpan span, const std::string& name, 
+    ValueDefn(Rib* rib, SourceSpan span, const std::string& name, 
               const Runes& runes, Type* type)
-      : NamedDefn(origin, span, name, runes), m_type(type) {}
+      : NamedDefn(rib, span, name, runes), m_type(type) {}
 
 public:
     virtual ~ValueDefn() = default;
@@ -256,14 +218,14 @@ class VariableDefn final : public ValueDefn {
     // If this is a global variable.
     bool m_global;
 
-    VariableDefn(AST* origin, SourceSpan span, const std::string& name, 
+    VariableDefn(Rib* rib, SourceSpan span, const std::string& name, 
                  const Runes& runes, Type* type, Expr* init, bool global)
-      : ValueDefn(origin, span, name, runes, type), m_init(init), 
+      : ValueDefn(rib, span, name, runes, type), m_init(init), 
         m_global(global) {}
 
 public:
     [[nodiscard]]
-    static VariableDefn* create(AST& ast, SourceSpan span, 
+    static VariableDefn* create(Rib& rib, SourceSpan span, 
                                 const std::string& name, const Runes& runes, 
                                 Type* type, Expr* init, bool global);
 
@@ -291,13 +253,13 @@ public:
 
 /// Represents a function parameter definition.
 class ParameterDefn final : public ValueDefn {
-    ParameterDefn(AST* origin, SourceSpan span, const std::string& name, 
+    ParameterDefn(Rib* rib, SourceSpan span, const std::string& name, 
                   const Runes& runes, Type* type)
-      : ValueDefn(origin, span, name, runes, type) {}
+      : ValueDefn(rib, span, name, runes, type) {}
 
 public:
     [[nodiscard]]
-    static ParameterDefn* create(AST& ast, SourceSpan span, 
+    static ParameterDefn* create(Rib& rib, SourceSpan span, 
                                  const std::string& name, const Runes& runes, 
                                  Type* type);
 
@@ -337,16 +299,15 @@ private:
     /// The body of the function, if it has one.
     BlockStmt* m_body;
 
-    FunctionDefn(AST* origin, SourceSpan span, const std::string& name, 
+    FunctionDefn(Rib* rib, SourceSpan span, const std::string& name, 
                  const Runes& runes, FunctionType* type, Scope* scope, 
-                 ParameterDefn* receiver, const Params& params, 
-                 BlockStmt* body)
-      : ValueDefn(origin, span, name, runes, type), m_scope(scope), 
+                 ParameterDefn* receiver, const Params& params, BlockStmt* body)
+      : ValueDefn(rib, span, name, runes, type), m_scope(scope), 
         m_receiver(receiver), m_params(params), m_body(body) {}
 
 public:
     [[nodiscard]]
-    static FunctionDefn* create(AST& ast, SourceSpan span, 
+    static FunctionDefn* create(Rib& rib, SourceSpan span, 
                                 const std::string& name, const Runes& runes, 
                                 FunctionType* type, Scope* scope, 
                                 ParameterDefn* receiver, const Params& params, 
@@ -441,19 +402,22 @@ public:
 
 /// Represents a field definition within a structure.
 class FieldDefn final : public ValueDefn {
+    friend class SemanticAnalysis;
+
+    Expr* m_init;
     uint32_t m_index;
 
-    FieldDefn(AST* origin, SourceSpan span, const std::string& name, 
-              const Runes& runes, Type* type, uint32_t index)
-      : ValueDefn(origin, span, name, runes, type), m_index(index) {}
+    FieldDefn(Rib* rib, SourceSpan span, const std::string& name, 
+              const Runes& runes, Type* type, Expr* init, uint32_t index)
+      : ValueDefn(rib, span, name, runes, type), m_init(init), m_index(index) {}
 
 public:
     [[nodiscard]]
-    static FieldDefn* create(AST& ast, SourceSpan span, 
+    static FieldDefn* create(Rib& rib, SourceSpan span, 
                              const std::string& name, const Runes& runes, 
-                             Type* type, uint32_t index);
+                             Type* type, Expr* init, uint32_t index);
 
-    ~FieldDefn() = default;
+    ~FieldDefn() override;
 
     FieldDefn(const FieldDefn&) = delete;
     void operator=(const FieldDefn&) = delete;
@@ -463,6 +427,14 @@ public:
 
     void accept(VisitorBase& visitor) override { visitor.visit(*this); }
 
+    /// Returns the default initalizer for this field, if it has one, and null
+    /// otherwise.
+    const Expr* init() const { return m_init; }
+    Expr* init() { return m_init; }
+
+    /// Test if this field has a default initializer.
+    bool has_init() const { return m_init != nullptr; }
+
     /// Returns the index of this field in its parent structure.
     uint32_t get_index() const { return m_index; }
 };
@@ -471,13 +443,13 @@ public:
 class VariantDefn final : public ValueDefn {
     int64_t m_value;
 
-    VariantDefn(AST* origin, SourceSpan span, const std::string& name, 
+    VariantDefn(Rib* rib, SourceSpan span, const std::string& name, 
                 const Runes& runes, Type* type, int64_t value)
-      : ValueDefn(origin, span, name, runes, type), m_value(value) {}
+      : ValueDefn(rib, span, name, runes, type), m_value(value) {}
 
 public:
     [[nodiscard]]
-    static VariantDefn* create(AST& ast, SourceSpan span, 
+    static VariantDefn* create(Rib& rib, SourceSpan span, 
                                const std::string& name, const Runes& runes, 
                                Type* type, int64_t value);
 
@@ -501,9 +473,9 @@ protected:
     /// The type which this definition defines.
     Type* m_type;
 
-    TypeDefn(AST* origin, SourceSpan span, const std::string& name, 
+    TypeDefn(Rib* rib, SourceSpan span, const std::string& name, 
              const Runes& runes, Type* type)
-      : NamedDefn(origin, span, name, runes), m_type(type) {}
+      : NamedDefn(rib, span, name, runes), m_type(type) {}
 
 public:
     virtual ~TypeDefn() = default;
@@ -524,13 +496,13 @@ public:
 
 /// Represents a type alias definition.
 class AliasDefn final : public TypeDefn {
-    AliasDefn(AST* origin, SourceSpan span, const std::string& name, 
+    AliasDefn(Rib* rib, SourceSpan span, const std::string& name, 
               const Runes& runes, Type* type)
-      : TypeDefn(origin, span, name, runes, type) {}
+      : TypeDefn(rib, span, name, runes, type) {}
 
 public:
     [[nodiscard]]
-    static AliasDefn* create(AST& ast, SourceSpan span, 
+    static AliasDefn* create(Rib& rib, SourceSpan span, 
                              const std::string& name, const Runes& runes, 
                              Type* type);
 
@@ -558,13 +530,13 @@ private:
     Fields m_fields = {};
     Methods m_methods = {};
 
-    StructDefn(AST* origin, SourceSpan span, const std::string& name, 
+    StructDefn(Rib* rib, SourceSpan span, const std::string& name, 
                const Runes& runes, Type* type)
-      : TypeDefn(origin, span, name, runes, type) {}
+      : TypeDefn(rib, span, name, runes, type) {}
       
 public:
     [[nodiscard]]
-    static StructDefn* create(AST& ast, SourceSpan span, 
+    static StructDefn* create(Rib& rib, SourceSpan span, 
                               const std::string& name, const Runes& runes, 
                               Type* type);
 
@@ -672,13 +644,13 @@ public:
 private:
     Variants m_variants = {};
 
-    EnumDefn(AST* origin, SourceSpan span, const std::string& name, 
+    EnumDefn(Rib* rib, SourceSpan span, const std::string& name, 
              const Runes& runes, Type* type)
-      : TypeDefn(origin, span, name, runes, type) {}
+      : TypeDefn(rib, span, name, runes, type) {}
 
 public:
     [[nodiscard]]
-    static EnumDefn* create(AST& ast, SourceSpan span, 
+    static EnumDefn* create(Rib& rib, SourceSpan span, 
                             const std::string& name, const Runes& runes, 
                             Type* type);
 

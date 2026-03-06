@@ -1,3 +1,5 @@
+rib index;
+
 foo :: (x: bool, y: bool) -> s64 {
 	if x {
 		if y {

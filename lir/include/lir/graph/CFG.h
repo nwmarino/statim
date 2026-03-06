@@ -8,6 +8,7 @@
 
 #include "lir/graph/BasicBlock.h"
 #include "lir/graph/Constant.h"
+#include "lir/graph/Debug.h"
 #include "lir/graph/Function.h"
 #include "lir/graph/Global.h"
 #include "lir/graph/Type.h"
@@ -17,6 +18,7 @@
 #include <ostream>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace lir {
 
@@ -37,6 +39,9 @@ class CFG final {
     friend class Null;
     friend class String;
     friend class Aggregate;
+
+    friend class Builder;
+    friend class DebugBuilder;
 
     using Functions = std::map<std::string, Function*>;
     using Globals = std::map<std::string, Global*>;
@@ -87,6 +92,8 @@ class CFG final {
         StringPool strings = {};
         AggregatePool aggregates = {};
     } m_constants;
+
+    std::vector<DebugNode*> m_debug = {};
 
 public:
     CFG(const Machine &mach, const std::string &filename);
@@ -141,6 +148,8 @@ public:
 
     /// Remove the given |func| from this graph, if it belongs.
     void remove_function(Function *func);
+
+    const std::vector<DebugNode*>& debug() const { return m_debug; }
 
     /// Return a new unique definition id to create an instruction with.
     uint32_t get_def_id() { return m_def_id++; }

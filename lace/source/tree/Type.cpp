@@ -3,11 +3,12 @@
 //  All rights reserved.
 //
 
-#include "lace/tree/AST.h"
+#include "lace/tree/Rib.h"
 #include "lace/tree/Defn.h"
 #include "lace/tree/Type.h"
 
 #include <cassert>
+#include <string>
 
 using namespace lace;
 
@@ -15,19 +16,19 @@ using namespace lace;
 //                          AliasType Implementation
 //>==---------------------------------------------------------------------------
 
-AliasType* AliasType::create(AST& ast, Type* aliased, AliasDefn* defn) {
+AliasType* AliasType::create(Rib& rib, Type* aliased, AliasDefn* defn) {
     assert(defn && "defn cannot be null!");
     
     AliasType* type = new AliasType(aliased, defn);
     assert(type);
 
-    ast.m_types.aliases.emplace(defn->name(), type);
+    rib.m_types.aliases.emplace(defn->name(), type);
     return type;
 }
 
-AliasType* AliasType::get(AST& ast, const std::string &name) {
-    auto it = ast.m_types.aliases.find(name);
-    if (it != ast.m_types.aliases.end())
+AliasType* AliasType::get(Rib& rib, const std::string &name) {
+    auto it = rib.m_types.aliases.find(name);
+    if (it != rib.m_types.aliases.end())
         return it->second;
 
     return nullptr;
@@ -49,8 +50,8 @@ bool AliasType::can_cast(const Type* other, bool implicit) const {
 //                          BuiltinType Implementation
 //>==---------------------------------------------------------------------------
 
-BuiltinType* BuiltinType::get(AST& ast, Kind kind) {
-    return ast.m_types.builtins[static_cast<uint32_t>(kind)];
+BuiltinType* BuiltinType::get(Rib& rib, Kind kind) {
+    return rib.m_types.builtins[static_cast<uint32_t>(kind)];
 }
 
 std::string BuiltinType::string() const {
@@ -118,11 +119,16 @@ bool BuiltinType::can_cast(const Type* other, bool implicit) const {
     }
 }
 
-DeferredType* DeferredType::get(AST& ast, const std::string& name) {
-    DeferredType* type = new DeferredType(name);
+//>==---------------------------------------------------------------------------
+//                          DeferredType Implementation
+//>==---------------------------------------------------------------------------
+
+DeferredType* DeferredType::get(Rib& rib, const std::string& name, 
+                                const std::string& spec) {
+    DeferredType* type = new DeferredType(name, spec);
     assert(type);
 
-    ast.m_types.deferred.push_back(type);
+    rib.m_types.deferred.push_back(type);
     return type;
 }
 
@@ -130,23 +136,23 @@ DeferredType* DeferredType::get(AST& ast, const std::string& name) {
 //                          EnumType Implementation
 //>==---------------------------------------------------------------------------
 
-EnumType* EnumType::create(AST& ast, Type* underlying, EnumDefn* defn) {
+EnumType* EnumType::create(Rib& rib, Type* underlying, EnumDefn* defn) {
     assert(defn && "definition cannot be null!");
 
-    auto it = ast.m_types.enums.find(defn->name());
-    if (it != ast.m_types.enums.end())
+    auto it = rib.m_types.enums.find(defn->name());
+    if (it != rib.m_types.enums.end())
         return nullptr;
 
     EnumType* type = new EnumType(underlying, defn);
     assert(type);
 
-    ast.m_types.enums.emplace(defn->name(), type);
+    rib.m_types.enums.emplace(defn->name(), type);
     return type;
 }
 
-EnumType* EnumType::get(AST& ast, const std::string& name) {
-    auto it = ast.m_types.enums.find(name);
-    if (it != ast.m_types.enums.end())
+EnumType* EnumType::get(Rib& rib, const std::string& name) {
+    auto it = rib.m_types.enums.find(name);
+    if (it != rib.m_types.enums.end())
         return it->second;
 
     return nullptr;
@@ -168,12 +174,12 @@ bool EnumType::can_cast(const Type* other, bool implicit) const {
 //                          FunctionType Implementation
 //>==---------------------------------------------------------------------------
 
-FunctionType* FunctionType::get(AST& ast, Type* result, 
+FunctionType* FunctionType::get(Rib& rib, Type* result, 
                                 const std::vector<Type*>& params) {
     FunctionType* type = new FunctionType(result, params);
     assert(type);
     
-    ast.m_types.functions.push_back(type);
+    rib.m_types.functions.push_back(type);
     return type;
 }
 
@@ -192,11 +198,11 @@ std::string FunctionType::string() const {
 //                          PointerType Implementation
 //>==---------------------------------------------------------------------------
 
-PointerType* PointerType::get(AST& ast, Type* pointee) {
+PointerType* PointerType::get(Rib& rib, Type* pointee) {
     PointerType* type = new PointerType(pointee);
     assert(type);
 
-    ast.m_types.pointers.push_back(type);
+    rib.m_types.pointers.push_back(type);
     return type;
 }
 
@@ -235,23 +241,23 @@ bool PointerType::can_cast(const Type* other, bool implicit) const {
 //                          StructType Implementation
 //>==---------------------------------------------------------------------------
 
-StructType* StructType::create(AST& ast, StructDefn* defn) {
+StructType* StructType::create(Rib& rib, StructDefn* defn) {
     assert(defn && "definition cannot be null!");
     
-    auto it = ast.m_types.structs.find(defn->name());
-    if (it != ast.m_types.structs.end())
+    auto it = rib.m_types.structs.find(defn->name());
+    if (it != rib.m_types.structs.end())
         return nullptr;
 
     StructType* type = new StructType(defn);
     assert(type);
 
-    ast.m_types.structs.emplace(defn->name(), type);
+    rib.m_types.structs.emplace(defn->name(), type);
     return type;
 }
 
-StructType* StructType::get(AST& ast, const std::string& name) {
-    auto it = ast.m_types.structs.find(name);
-    if (it != ast.m_types.structs.end())
+StructType* StructType::get(Rib& rib, const std::string& name) {
+    auto it = rib.m_types.structs.find(name);
+    if (it != rib.m_types.structs.end())
         return it->second;
 
     return nullptr;

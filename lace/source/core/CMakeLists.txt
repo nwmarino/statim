@@ -1,4 +1,5 @@
 set(CORE_SOURCES
+    Context.cpp
     Diagnostics.cpp
     ThreadPool.cpp
 )

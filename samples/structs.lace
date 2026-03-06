@@ -1,3 +1,5 @@
+rib index;
+
 vec3 :: struct {
     x: f64,
     y: f64,

@@ -56,48 +56,82 @@ SemanticAnalysis::TypeCheckResult SemanticAnalysis::type_check(
     }
 }
 
-SemanticAnalysis::SemanticAnalysis(Options& options) : VisitorBase(options) {}
+SemanticAnalysis::SemanticAnalysis(Context& context) : VisitorBase(context) {}
 
 void SemanticAnalysis::visit(VariableDefn& node) {
-    if (node.has_init()) {
-        Expr* init = node.init();
-        init->accept(*this);
+    const log::Span span = { m_rib->path(), node.span() };
+    
+    VisitorBase::visit(node);
 
-        const log::Span span = { m_ast->get_file(), node.span() };
-        if (node.is_global() && !init->is_constant())
-            log::fatal("globals cannot be initialized with non-constants", span);
+    if (!node.has_init())
+        return;
 
-        const Type* actual = init->type();
-        const Type* expected = node.type();
+    Expr* init = node.init();
 
-        TypeCheckResult res = type_check(actual, expected);
-        if (res == TypeCheckResult::Mismatch) {
-            log::fatal("initializer type mismatch; got " + actual->string() 
-                + ", but expected " + expected->string(), span);
-        } else if (res == TypeCheckResult::Cast) {
-            node.m_init = CastExpr::create(
-                *m_ast, 
-                init->get_span(), 
-                node.type(), 
-                init
-            );
-        }
+    if (node.is_global() && !init->is_constant()) {
+        // Unrecoverable error, but not detrimental to pass continuation.
+        log::error("globals cannot be initialized with non-constants", span);
+    }
+
+    Type* actual = init->type();
+    Type* expected = node.type();
+
+    const TypeCheckResult res = type_check(actual, expected);
+    if (res == Cast) {
+        node.m_init = CastExpr::create(
+            *m_rib,
+            init->span(), 
+            node.type(), 
+            init
+        );
+    } else if (res == Mismatch) {
+        log::error("initializer type mismatch; got '" + actual->string() + "', but expected '" + expected->string() + "'", span);
+    }
+}
+
+void SemanticAnalysis::visit(FieldDefn& node) {
+    VisitorBase::visit(node);
+    
+    if (!node.has_init())
+        return;
+
+    const log::Span span = { m_rib->path(), node.span() };
+
+    Expr* init = node.init();
+
+    if (!init->is_constant())
+        log::error("fields cannot be initialized with non-constants", span);
+
+    Type* actual = init->type();
+    Type* expected = node.type();
+
+    const TypeCheckResult res = type_check(actual, expected);
+    if (res == Cast) {
+        node.m_init = CastExpr::create(
+            *m_rib,
+            init->span(), 
+            node.type(), 
+            init
+        );
+    } else if (res == Mismatch) {
+        log::error("initializer type mismatch; got '" + actual->string() + "', but expected '" + expected->string() + "'", span);
     }
 }
 
 void SemanticAnalysis::visit(FunctionDefn& node) {
     m_func = &node;
 
-    const log::Span span = { m_ast->get_file(), node.span() };
+    const log::Span span = { m_rib->path(), node.span() };
 
     if (node.is_main()) {
         if (!node.has_rune(Rune::Kind::Public))
-            log::error("'main' must be marked with $public", span);
+            log::error("'main' function must be marked with '$public'", span);
 
         const Type* result = node.get_return_type();
-        const Type* s64 = BuiltinType::get(*m_ast, BuiltinType::Kind::Int64);
+        const Type* s64 = BuiltinType::get(*m_rib, BuiltinType::Kind::Int64);
+        
         if (!result->compare(s64))
-            log::error("'main' must return 's64'", span);
+            log::error("'main' function must return a 's64'", span);
     }
     
     VisitorBase::visit(node);
@@ -106,111 +140,116 @@ void SemanticAnalysis::visit(FunctionDefn& node) {
 }
 
 void SemanticAnalysis::visit(IfStmt& node) {
-    const log::Span span = { m_ast->get_file(), node.get_span() };
+    const log::Span span = { m_rib->path(), node.span() };
 
     VisitorBase::visit(node);
 
     // Check that the if condition can be evaluated to a boolean.
     if (!is_boolean_evaluable(node.condition()->type()))
-        log::fatal("'if' condition must be a boolean", span);
+        log::error("'if' condition must be a boolean", span);
 }
 
 void SemanticAnalysis::visit(RestartStmt& node) {
-    const log::Span span = { m_ast->get_file(), node.get_span() };
+    const log::Span span = { m_rib->path(), node.span() };
 
     // Check that restart statements are inside loop bodies.
     if (m_loop == None)
-        log::fatal("'restart' outside of loop", span);
+        log::error("'restart' statement outside of loop", span);
 }
 
 void SemanticAnalysis::visit(RetStmt& node) {
-    const log::Span span = { m_ast->get_file(), node.get_span() };
+    const log::Span span = { m_rib->path(), node.span() };
 
     VisitorBase::visit(node);
 
-    if (!m_func)
-        log::fatal("'ret' outside of function", span);
- 
+    if (!m_func) {
+        log::error("'ret' statement outside of function", span);
+        return;
+    }
+
     if (!node.has_expr()) {
         if (!m_func->get_return_type()->is_void())
-            log::fatal("function does not return 'void'", span);
+            log::error("'ret' has no value, function does not return 'void'", span);
 
         return;
     }
 
     Expr* expr = node.expr();
+    Type* actual = expr->type();
+    Type* expected = m_func->get_return_type();
 
-    const Type* actual = expr->type();
-    const Type* expected = m_func->get_return_type();
-
-    TypeCheckResult res = type_check(actual, expected);
-    if (res == TypeCheckResult::Mismatch) {
-        log::fatal("return type mismatch; got " + actual->string(), span);
-    } else if (res == TypeCheckResult::Cast) {
+    const TypeCheckResult res = type_check(actual, expected);
+    if (res == TypeCheckResult::Cast) {
         node.m_expr = CastExpr::create(
-            *m_ast, 
-            expr->get_span(), 
-            m_func->get_return_type(), 
+            *m_rib, 
+            expr->span(), 
+            expected, 
             expr
         );
+    } else if (res == TypeCheckResult::Mismatch) {
+        log::error("return type mismatch; got '" + actual->string() + "', but expected '" + expected->string() + "'", span);
     }
 }
 
 void SemanticAnalysis::visit(StopStmt& node) {
-    const log::Span span = { m_ast->get_file(), node.get_span() };
+    const log::Span span = { m_rib->path(), node.span() };
 
     // Check that stop statements are inside loop bodies.
     if (m_loop == None)
-        log::fatal("'stop' outside of loop", span);
+        log::error("'stop' statement outside of loop", span);
 }
 
 void SemanticAnalysis::visit(UntilStmt& node) {
-    const log::Span span = { m_ast->get_file(), node.get_span() };
+    const log::Span span = { m_rib->path(), node.span() };
 
     Expr* cond = node.condition();
     cond->accept(*this);
 
     // Check that the while condition can be evaluated to a boolean.
     if (!is_boolean_evaluable(cond->type()))
-        log::fatal("'until' condition must be a boolean", span);
+        log::error("'until' condition must be a boolean", span);
 
-    if (node.has_body()) {
-        Loop prev_loop = m_loop;
+    if (!node.has_body())
+        return;
 
-        m_loop = Until;
-        node.body()->accept(*this);
+    Loop prev_loop = m_loop;
 
-        m_loop = prev_loop;
-    }
+    m_loop = Until;
+    node.body()->accept(*this);
+
+    m_loop = prev_loop;
 }
 
 void SemanticAnalysis::visit(BinaryOp& node) {
     VisitorBase::visit(node);
 
-    const log::Span span = { m_ast->get_file(), node.get_span() };
+    const log::Span span = { m_rib->path(), node.span() };
 
     Expr* lhs = node.lhs();
     Expr* rhs = node.rhs();
-
-    const Type* lhs_type = lhs->type();
-    const Type* rhs_type = rhs->type();
+    Type* lhs_type = lhs->type();
+    Type* rhs_type = rhs->type();
 
     BinaryOp::Operator op = node.op();
     bool supports_ptr_arith = op == BinaryOp::Add || op == BinaryOp::Sub;
 
-    TypeCheckMode mode = supports_ptr_arith ? Loose : AllowImplicit;
-    TypeCheckResult res = type_check(rhs_type, lhs_type, mode);
-    if (res == TypeCheckResult::Mismatch) {
-        log::fatal("operand type mismatch; got " + rhs_type->string(), span);
-    } else if (res == TypeCheckResult::Cast) {
+    const TypeCheckMode mode = supports_ptr_arith ? Loose : AllowImplicit;
+    const TypeCheckResult res = type_check(rhs_type, lhs_type, mode);
+    if (res == TypeCheckResult::Cast) {
         node.m_rhs = CastExpr::create(
-            *m_ast, rhs->get_span(), lhs->type(), rhs);
+            *m_rib, 
+            rhs->span(), 
+            lhs_type, 
+            rhs
+        );
+    } else if (res == TypeCheckResult::Mismatch) {
+        log::error("operand type mismatch; got '" + rhs_type->string() + "', but expected '" + lhs_type->string() + "'", span);
     }
 
     // Set the resulting type of the operator to a 'bool' if the operator is
     // a boolean comparison.
     if (BinaryOp::is_comparison(op)) {
-        node.set_type(BuiltinType::get(*m_ast, BuiltinType::Kind::Bool));
+        node.set_type(BuiltinType::get(*m_rib, BuiltinType::Kind::Bool));
         return;
     } else {
         // Default the type of the operator to the LHS type.
@@ -219,7 +258,7 @@ void SemanticAnalysis::visit(BinaryOp& node) {
 
     // Check that left hand operands of assignments are lvalues.
     if (BinaryOp::is_assignment(op) && !lhs->is_lvalue())
-        log::fatal("left hand operand must be an lvalue", span);
+        log::error("left hand operand must be an lvalue", span);
 }
 
 void SemanticAnalysis::visit(UnaryOp& node) {
@@ -227,64 +266,75 @@ void SemanticAnalysis::visit(UnaryOp& node) {
 
     node.set_type(node.expr()->type());
 
-    const log::Span span = { m_ast->get_file(), node.get_span() };
-    const Type* type = node.type();
+    const log::Span span = { m_rib->path(), node.span() };
+
+    Expr* expr = node.expr();
+    Type* type = expr->type();
 
     switch (node.op()) 
     {
     case UnaryOp::Negate:
         // Check operator type compatibility (numerics only).
         if (!(type->is_integer() || type->is_floating_point()))
-            log::fatal("'-' operator incompatible with " + type->string(), span);
+            log::error("'-' operator incompatible with '" + type->string() + "'", span);
 
-        node.set_type(node.type());
+        node.set_type(type);
         break;
 
     case UnaryOp::Not:
         // Check operator type compatibility (integers only).
         if (!type->is_integer())
-            log::fatal("'~' operator incompatible with " + type->string(), span);
+            log::error("'~' operator incompatible with '" + type->string() + "'", span);
 
-        node.set_type(node.type());
+        node.set_type(type);
         break;
 
     case UnaryOp::LogicNot:
         // Check operator type compatibility (scalar only).
         if (!type->is_integer() && !type->is_floating_point() && !dynamic_cast<const PointerType*>(type))
-            log::fatal("'!' operator incompatible with " + type->string(), span);
+            log::fatal("'!' operator incompatible with '" + type->string() + "'", span);
 
-        node.set_type(node.type());
+        node.set_type(type);
         break;
 
     case UnaryOp::AddressOf: {
         if (!node.expr()->is_lvalue())
             log::fatal("'&' base must be an lvalue", span);
 
-        node.set_type(PointerType::get(*m_ast, node.type()));
+        node.set_type(PointerType::get(*m_rib, type));
         break;
     }
 
     case UnaryOp::Dereference: {
-        auto ptr = dynamic_cast<PointerType*>(node.type());
-        if (!ptr)
-            log::fatal("'*' operator incompatible with " + type->string(), span);
+        PointerType* pt = dynamic_cast<PointerType*>(type);
+        if (!pt)
+            log::error("'*' operator incompatible with '" + type->string() + "'", span);
 
-        node.set_type(ptr->pointee());
+        node.set_type(pt->pointee());
         break;
     }
 
     case UnaryOp::Unknown:
-        log::fatal("unknown unary operator", span);
+        log::error("unknown unary operator", span);
     }
 }
 
 void SemanticAnalysis::visit(CastExpr& node) {
     VisitorBase::visit(node);
 
-    const log::Span span = { m_ast->get_file(), node.get_span() };
+    const log::Span span = { m_rib->path(), node.span() };
 
-    if (!node.expr()->type()->can_cast(node.type()))
-        log::fatal("unsupported cast", span);
+    Type* castee = node.expr()->type();
+    Type* target = node.type();
+
+    if (!castee->can_cast(target))
+        log::error("unsupported cast: '" + castee->string() + "' to '" + target->string() + "'", span);
+}
+
+void SemanticAnalysis::visit(FieldInitExpr& node) {
+    VisitorBase::visit(node);
+
+    node.set_type(node.expr()->type());
 }
 
 void SemanticAnalysis::visit(ParenExpr& node) {
@@ -296,50 +346,106 @@ void SemanticAnalysis::visit(ParenExpr& node) {
 void SemanticAnalysis::visit(AccessExpr& node) {
     VisitorBase::visit(node);
 
-    ValueDefn* field = node.field();
-    assert(field);
+    const log::Span span = { m_rib->path(), node.span() };
 
-    node.set_type(field->type());
+    Type* bt = node.base()->type();
+    if (PointerType* ptr = dynamic_cast<PointerType*>(bt))
+        bt = ptr->pointee();
+
+    StructType* st = dynamic_cast<StructType*>(bt);
+    if (!st) {
+        log::error("'.' base must be a struct or a pointer to one; got '" + node.base()->type()->string() + "'", span);
+        return;
+    }
+
+    StructDefn* sd = st->defn();
+    assert(sd);
+
+    FieldDefn* field = sd->get_field(node.name());
+    if (field) {
+        node.set_field(field);
+        node.set_type(field->type());
+        return;
+    }
+
+    FunctionDefn* method = sd->get_method(node.name());
+    if (!method) {
+        log::error("no field or method '" + node.name() + "' in '" + sd->name() + "'", span);  
+        return;
+    }
+
+    // Since methods are attached to their target structures, and not parent
+    // ribs, we must verify that the method is visible to the current rib.
+    Rib* morigin = method->rib();
+    if (morigin != m_rib) {
+        // Method was defined elsewhere, check that it is public first.
+        if (!method->has_rune(Rune::Kind::Public)) {
+            log::error("method '" + method->name() + "' exists in '" + morigin->name() + "', but is private", span);
+            return;
+        }
+
+        // Method is public, so check that the rib it was defined in is being
+        // used by the current rib.
+        if (!uses_rib(morigin)) {
+            log::error("method '" + method->name() + "' exists in '" + morigin->name() + "', but is not used", span);
+            return;
+        }
+    }
+
+    node.set_field(method);
+    node.set_type(method->type());    
 }
 
 void SemanticAnalysis::visit(RefExpr& node) {
-    ValueDefn* defn = node.defn();
-    assert(defn);
+    VisitorBase::visit(node);
 
-    node.set_type(defn->type());
+    ValueDefn* vd = node.defn();
+    assert(vd);
+
+    node.set_type(vd->type());
 }
 
 void SemanticAnalysis::visit(CallExpr& node) {
     Expr* callee = node.callee();
     callee->accept(*this);
 
-    const log::Span span = { m_ast->get_file(), node.get_span() };
+    // If the callee of this call is a field access, then it is likely a call
+    // to a function with a receiver.
+    if (AccessExpr* access = dynamic_cast<AccessExpr*>(node.callee()))
+        node.set_receiver(access->base());
 
-    FunctionType* sig = dynamic_cast<FunctionType*>(node.callee()->type());
-    if (!sig)
-        log::fatal("callee is not a function", span);
+    const log::Span span = { m_rib->path(), node.span() };
 
-    node.set_type(sig->result());
+    FunctionType* ft = dynamic_cast<FunctionType*>(node.callee()->type());
+    if (!ft) {
+        log::error("callee is not a valid function; got type '" + node.callee()->type()->string() + "'", span);
+        return;
+    }
+
+    // Call expression type is the result type of the callee.
+    node.set_type(ft->result());
 
     // Check that the number of call arguments are the same as the number of
     // expected parameters.
     uint32_t num_args = node.num_args();
-    uint32_t num_params = sig->num_params();
+    uint32_t num_params = ft->num_params();
 
     // If the call has a receiver, i.e. is a method call, so there is 
     // technically an extra argument.
     if (node.has_receiver())
         num_args += 1;
 
-    if (num_args != num_params)
-        log::fatal("argument count mismatch, expected " + std::to_string(num_params), span);
+    if (num_args != num_params) {
+        log::error("argument count mismatch, expected " + std::to_string(num_params) + ", got " + std::to_string(num_args), span);
+        return;
+    }
 
     if (node.has_receiver()) {
         // Check that the receiver has the same type as the first argument.
         Expr* receiver = node.receiver();
         assert(receiver);
 
-        Type* expected = sig->get_param(0);
+        Type* expected = ft->get_param(0);
         assert(dynamic_cast<PointerType*>(expected));
 
         // The type of the receiver must either be 'expected' or '*expected'.
@@ -349,12 +455,11 @@ void SemanticAnalysis::visit(CallExpr& node) {
             // receiver on the call didn't match. If the call receiver had type
             // T, then we can wrap it in a pointer and double check.
 
-            PointerType* ptr = PointerType::get(*m_ast, receiver->type());
+            PointerType* pt = PointerType::get(*m_rib, receiver->type());
 
-            res = type_check(ptr, expected);
+            res = type_check(pt, expected);
             if (res != Match) {
-                log::fatal("receiver type mismatch; got '" 
-                    + receiver->type()->string(), span);
+                log::error("receiver type mismatch; got '" + receiver->type()->string() + "'", span);
             }
         }
     }
@@ -369,21 +474,21 @@ void SemanticAnalysis::visit(CallExpr& node) {
         Type* expected;
 
         if (node.has_receiver()) {
-            expected = sig->get_param(i + 1);
+            expected = ft->get_param(i + 1);
         } else {
-            expected = sig->get_param(i);
+            expected = ft->get_param(i);
         }
 
-        TypeCheckResult res = type_check(actual, expected);
-        if (res == TypeCheckResult::Mismatch) {
-            log::fatal("argument type mismatch; got " + actual->string(), span);
-        } else if (res == TypeCheckResult::Cast) {
+        const TypeCheckResult res = type_check(actual, expected);
+        if (res == TypeCheckResult::Cast) {
             node.m_args[i] = CastExpr::create(
-                *m_ast, 
-                arg->get_span(), 
+                *m_rib, 
+                arg->span(), 
                 expected, 
                 arg
             );
+        } else if (res == TypeCheckResult::Mismatch) {
+            log::error("argument type mismatch; got '" + actual->string() + "', but expected '" + expected->string() + "'", span);
         }
     }
 }
@@ -391,27 +496,34 @@ void SemanticAnalysis::visit(CallExpr& node) {
 void SemanticAnalysis::visit(StructInitExpr& node) {
     VisitorBase::visit(node);
 
-    const log::Span span = log::Span(m_ast->get_file(), node.get_span());
+    const log::Span span = { m_rib->path(), node.span() };
 
-    StructType* type = dynamic_cast<StructType*>(node.type());
-    assert(type);
-
-    StructDefn* defn = type->defn();
-
-    for (auto& [field_name, expr] : node.fields()) {
-        FieldDefn* field = defn->get_field(field_name);
+    for (uint32_t i = 0; i < node.num_fields(); ++i) {
+        FieldInitExpr* fi = node.get_field(i);
+        FieldDefn* field = fi->field();
         assert(field);
 
-        TypeCheckResult res = type_check(expr->type(), field->type());
-        if (res == TypeCheckResult::Mismatch) {
-            log::fatal("argument type mismatch, got " + expr->type()->string(), span);
-        } else if (res == TypeCheckResult::Cast) {
-            node.fields()[field_name] = CastExpr::create(
-                *m_ast, 
-                expr->get_span(), 
-                field->type(), 
-                expr
+        // Check for duplicate fields.
+        for (uint32_t j = i + 1; j < node.num_fields(); ++j) {
+            if (node.get_field(j)->name() == fi->name()) {
+                log::error("struct field initialized more than once: '" + fi->name() + "'", span);
+                return;
+            }
+        }
+
+        Type* actual = fi->type();
+        Type* expected = field->type();
+
+        const TypeCheckResult res = type_check(actual, expected);
+        if (res == TypeCheckResult::Cast) {
+            fi->m_expr = CastExpr::create(
+                *m_rib, 
+                fi->expr()->span(), 
+                expected,
+                fi->expr()
             );
+        } else if (res == TypeCheckResult::Mismatch) {
+            log::error("argument type mismatch; got '" + actual->string() + "', but expected '" + expected->string() + "'", span);
         }
     }
 }
@@ -419,15 +531,14 @@ void SemanticAnalysis::visit(StructInitExpr& node) {
 void SemanticAnalysis::visit(SubscriptExpr& node) {
     VisitorBase::visit(node);
 
-    const log::Span span = { m_ast->get_file(), node.get_span() };
+    const log::Span span = { m_rib->path(), node.span() };
 
     Expr* base = node.base();
     Expr* index = node.index();
 
-    if (auto ptr = dynamic_cast<PointerType*>(base->type())) {
-        node.set_type(ptr->pointee());
+    if (PointerType* pt = dynamic_cast<PointerType*>(base->type())) {
+        node.set_type(pt->pointee());
     } else {
-        log::fatal("invalid argument type to '[]' operator: " 
-            + base->type()->string(), span);
+        log::error("'[]' operator incompatible with '" + base->type()->string() + "'", span);
     }
 }

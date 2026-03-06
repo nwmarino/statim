@@ -1,3 +1,5 @@
+rib stl::linux;
+
 $public
 exit :: (_: s64) -> void;
 
@@ -6,6 +8,13 @@ open :: (_: *char, _: s64, _: s64) -> s64;
 
 $public
 close :: (_: s64) -> s64;
+
+// lseek(2) - syscall 8
+$public
+lseek :: (_: s64, _: s64, _: s64) -> s64;
+
+$public
+read :: (_: s64, _: *char, _: s64) -> s64;
 
 $public
 write :: (_: s64, _: *char, _: s64) -> s64;

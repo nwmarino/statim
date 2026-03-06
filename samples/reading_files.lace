@@ -1,0 +1,21 @@
+rib index;
+
+use stl::string;
+use stl::io;
+
+$public
+main :: () -> s64 {
+    let f: stl::io::File;
+    if !f.open("test.txt", stl::io::FILE_FLAGS_READ_WRITE) {
+        ret 42;
+    }
+
+    let buf: stl::string::string = f.read(f.size());
+    f.close();
+
+    stl::io::print(buf);
+
+    buf.destroy();
+
+    ret 0;
+}

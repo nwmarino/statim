@@ -1,27 +1,21 @@
-# lovelace
+# lace
 
-lovelace is an imperative language meant for systems that takes major 
-inspiration from the philosophies of your favorite langs. It is, however, most 
-similar in nature to C by way of what is possible out of the box.
+Lace is an imperative systems language meant that takes major inspiration from 
+the language philosophies of old. It is, however, most similar in nature to C 
+by way of what is possible right now.
 
-The project is split down the middle, with an x86-64 backend theoretically 
-modular enough to be carved out and made to work with other frontends. 
+The project is modularized about the lace frontend and an AMD64 backend 
+isolated enough to be carved out and made to work with other frontends in the
+future.
 
-### lace
+### Lace Intermediate Representation (LIR)
 
-lace is the frontend for the language, and in particular, handles the process
-of turning source code into a "valid" syntax tree, which is used to represent
-input programs. Later, a code generation pass turns the syntax tree into a 
-target agnostic intermediate representation (LIR).
-
-### LIR
-
-The lovelace intermediate representation (LIR) handles target-specific jobs 
-like ABI control, register allocation, and SSA-based optimizations. The IR is 
-capable of true SSA form through an optional rewrite pass based on algorithms 
-described by [Braun et al.](https://link.springer.com/chapter/10.1007/978-3-642-37051-9_6)
-Since the IR is based on a control-flow graph, it can cleanly translate into 
-similarly structured representation like LLVM IR.
+The LIR handles target-specific jobs like ABI control, register allocation, and 
+SSA-based optimizations. The IR is capable of SSA form through an optional 
+rewrite pass based on algorithms described by 
+[Braun et al.](https://link.springer.com/chapter/10.1007/978-3-642-37051-9_6)
+Since the IR is based on a control-flow graph, it can theoretically translate 
+into similar representations like LLVM IR.
 
 ## Building
 
@@ -43,4 +37,16 @@ cmake --build build/
 
 # for tests, optionally
 ctest --test-dir build/
+```
+
+## Usage
+
+The minimal runtime and STL only support modern Linux and x86_64 assembly.
+
+The runtime library, which maintains the `_start` routine and some other 
+important functionality should be assembled first:
+
+```sh
+cd stl/
+as rt.s -o rt.o
 ```

@@ -27,6 +27,7 @@ enum class Intrinsic : uint32_t {
     Stack_Restore,
     Callsite_Set,
     Callsite_End,
+    Debug_Loc,
 };
 
 class MachineOp final {

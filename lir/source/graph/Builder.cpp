@@ -11,6 +11,9 @@
 using namespace lir;
 
 void Builder::insert(Instruction *inst) {
+    if (m_dloc)
+        inst->set_location(m_dloc);
+
     if (!m_insert)
         return;
 

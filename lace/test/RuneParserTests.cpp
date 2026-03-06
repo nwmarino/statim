@@ -3,7 +3,7 @@
 //  All rights reserved.
 //
 
-#include "lace/tree/AST.h"
+#include "lace/tree/Rib.h"
 
 #include "gtest/gtest.h"
 
@@ -11,17 +11,17 @@ namespace lace::test {
 
 class RuneParserTests : public ::testing::Test {
 protected:
-    AST* ast;
+    Rib* rib;
 
     void SetUp() override {
-        ast = nullptr;
+        rib = nullptr;
     }
 
     void TearDown() override {
-        if (ast) 
-            delete ast;
+        if (rib)
+            delete rib;
 
-        ast = nullptr;
+        rib = nullptr;
     }
 };
 
