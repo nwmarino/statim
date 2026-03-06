@@ -92,9 +92,7 @@ int32_t main(int32_t argc, char* argv[]) {
 
     log::direct(std::cout);
 
-    std::vector<std::string> files = {
-        "/home/lace/samples/math.lace",
-    };
+    std::vector<std::string> files = {};
 
     for (int32_t i = 1; i < argc; ++i) {
         std::string arg = argv[i];
