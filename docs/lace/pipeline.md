@@ -14,31 +14,25 @@ Parse each `TokenStream` into a `Rib` via the `Parser` interface.
 
 *pass IIa: `NameResolution`*
 
-- Shallowly traverse the topologically sorted packages, "completing" top-level
-definitions and their type signatures.
-  - Must be sequential, and in topological order of package dependencies.
+- Resolve names and deferred types of nodes with only scope information, and 
+no type information.
 
 *pass IIb: `SemanticAnalysis`*
 
-- Deeply traverse the packages, resolving names and types of nested values, and
-semantically validating the representation.
-  - Resolve symbols using the pre-established scope trees. If an external 
-    symbol is used, but it's respective package isn't used and/or it is private,
-    then resolution fails.
-  - Can be parallelized, since top-level symbols become read-only.
+- Finish any name resolution which may depend on type information, and 
+semantically validate the syntax tree.
 
 *pass III: `Codegen`*
 
-- Traverse the representation, generating LIR code into a singular `CFG`.
-  - Since we use one compilation unit, this is generally sequential but deep
-    bodies can be parallelized.
+- Traverse the representation, generating LIR code into a `CFG` for each 
+compilation unit, or top-level rib.
 
 (optional) **SSA Rewrite.**
 
-The `CFG` may optionally be rewritten into a truer Static Single-Assignment 
+The `CFG` may optionally be rewritten into a "truer" Static Single-Assignment 
 form (SSA), replacing instances of the `Load` and `Store` instructions to/from 
-`Local`s with `Phi` nodes; replacing memory accesses with values conditional 
-upon control flow.
+`Local`s with `Phi` nodes. In other words, replacing memory accesses with 
+values conditional upon control flow.
 
 **Lowering.**
 
@@ -57,7 +51,7 @@ Subsequently, callsites require the ABI-designated caller-saved registers to be
 spilled to the stack, and this analysis is conducted by the `CallsiteAnalysis` 
 pass.
 
-(optional) **MachIR Analysis.**
+(optional) **Architecture Analysis.**
 
 Optional target-specific optimizations can be performed, like peephole opts,
 redundancy elimination, etc.

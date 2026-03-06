@@ -1,11 +1,8 @@
-- Strings
-- File I/O
-
 - Match statement
-- For statement
+- Loop statement
 - Defer statement
 - Union definition
-- Multiple return types
+- Multiple function results
 - Templates
 - CTFE
 - Build system

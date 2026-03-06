@@ -48,7 +48,7 @@ using namespace std::chrono;
 
 using Timestamp = time_point<high_resolution_clock>;
 
-static std::string g_standard = "/home/nwm/lace/stl";
+static std::string g_standard = "/home/lace/stl";
 
 static const char* g_help = R"(usage: ./lace [options] file...
 
@@ -83,7 +83,7 @@ int32_t main(int32_t argc, char* argv[]) {
     options.stop = Options::StopPoint::Link;
     options.threads = 1;
 
-    options.debug = true;
+    options.debug = false;
     options.multithread = true;
     options.verbose = false;
     options.dump_ast = false;
@@ -93,7 +93,7 @@ int32_t main(int32_t argc, char* argv[]) {
     log::direct(std::cout);
 
     std::vector<std::string> files = {
-        "/home/nwm/lace/samples/math.lace",
+        "/home/lace/samples/math.lace",
     };
 
     for (int32_t i = 1; i < argc; ++i) {
