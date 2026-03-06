@@ -126,6 +126,9 @@ void Printer::print_op(std::ostream &os, const MachineOp &op) {
         case Intrinsic::Callsite_End:
             opstr = "CALLSITE_END";
             break;
+        case Intrinsic::Debug_Loc:
+            opstr = "DEBUG_LOC";
+            break;
     } else {
         opstr = to_string(static_cast<AMD64_Op>(op.op()));
     }

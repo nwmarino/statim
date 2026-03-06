@@ -34,7 +34,13 @@ DebugBuilder::DebugBuilder(CFG& graph) : m_graph(graph),
 
 DebugFile* DebugBuilder::build_file(const std::string& path, 
                                     const std::string& file) {
-    DebugFile* node = new DebugFile(m_symbols.size(), path, file);
+    uint32_t fid = 0;
+    for (DebugNode* node : m_symbols) {
+        if (dynamic_cast<DebugFile*>(node))
+            fid++;
+    }
+
+    DebugFile* node = new DebugFile(m_symbols.size(), fid, path, file);
     assert(node);
 
     m_symbols.push_back(node);

@@ -365,7 +365,7 @@ int32_t main(int32_t argc, char* argv[]) {
 
         const Timestamp lstart = get_time();
 
-        lir::MachineObject mobj(mach);
+        lir::MachineObject mobj(graph);
         lir::AMD64LoweringPass lowering(graph, mobj);
         lowering.run();
 

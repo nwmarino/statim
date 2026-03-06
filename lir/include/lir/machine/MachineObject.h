@@ -6,6 +6,7 @@
 #ifndef LIR_MACHINE_OBJECT_H_
 #define LIR_MACHINE_OBJECT_H_
 
+#include "lir/graph/CFG.h"
 #include "lir/machine/Machine.h"
 #include "lir/machine/MachineData.h"
 #include "lir/machine/MachineOperand.h"
@@ -21,13 +22,12 @@ public:
     using Functions = std::unordered_map<std::string, MachineFunction*>;
 
 private:
-    const Machine &m_mach;
-
+    CFG& m_graph;
     Globals m_globals = {};
     Functions m_functions = {};
 
 public:
-    MachineObject(const Machine &mach) : m_mach(mach) {}
+    MachineObject(CFG& graph) : m_graph(graph) {}
 
     ~MachineObject();
 
@@ -37,7 +37,9 @@ public:
     MachineObject(MachineObject&&) noexcept = delete;
     void operator=(MachineObject&&) noexcept = delete;
 
-    const Machine &get_machine() const { return m_mach; }
+    const CFG& graph() const { return m_graph; }
+
+    const Machine &get_machine() const { return m_graph.get_machine(); }
 
     const Globals &get_globals() const { return m_globals; }
     Globals &get_globals() { return m_globals; }

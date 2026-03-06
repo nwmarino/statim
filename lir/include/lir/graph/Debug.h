@@ -42,11 +42,13 @@ public:
 class DebugFile final : public DebugNode {
     friend class DebugBuilder;
 
+    uint32_t m_fid;
     std::string m_path;
     std::string m_file;
 
-    DebugFile(uint32_t id, const std::string& path, const std::string& file)
-      : DebugNode(id), m_path(path), m_file(file) {}
+    DebugFile(uint32_t id, uint32_t fid, const std::string& path, 
+              const std::string& file)
+      : DebugNode(id), m_fid(fid), m_path(path), m_file(file) {}
 
 public:
     ~DebugFile() override = default;
@@ -56,6 +58,9 @@ public:
 
     DebugFile(DebugFile&&) noexcept = delete;
     void operator=(DebugFile&&) noexcept = delete;
+
+    /// Returns the special file id for this debug file.
+    uint32_t fid() const { return m_fid; }
 
     /// Returns the absolute path of this debug file.
     const std::string& path() const { return m_path; }

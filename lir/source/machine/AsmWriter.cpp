@@ -4,6 +4,7 @@
 //
 
 #include "lir/machine/AsmWriter.h"
+#include "lir/graph/Debug.h"
 #include "lir/machine/MachineConstant.h"
 #include "lir/machine/MachineFunction.h"
 #include "lir/machine/MachineObject.h"
@@ -19,6 +20,15 @@ using namespace lir;
 AsmWriter::AsmWriter(const MachineObject& obj) : m_obj(obj) {}
 
 void AsmWriter::run(std::ostream& os) {
+    for (const DebugNode* node : m_obj.graph().debug()) {
+        const DebugFile* dfile = dynamic_cast<const DebugFile*>(node);
+        if (!dfile)
+            continue;
+
+        os << std::format("\t.file {} \"{}\" \"{}\"\n", 
+                          dfile->fid(), dfile->path(), dfile->file());
+    }
+
     for (const auto& [name, data] : m_obj.get_globals()) {
         writeData(os, *data);
     }
@@ -935,6 +945,14 @@ void AsmWriter::writeOp(std::ostream& os, const MachineOp& op) {
 
         case Intrinsic::Callsite_End:
             os << "#\tCALLSITE_END\n";
+            return;
+
+        case Intrinsic::Debug_Loc:
+            assert(op.num_operands() == 3);
+            os << std::format("\t.loc {} {} {}\n", 
+                op.get_operand(0).imm(), 
+                op.get_operand(1).imm(), 
+                op.get_operand(2).imm());
             return;
         }
     }

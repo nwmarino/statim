@@ -6,6 +6,7 @@
 #include "lir/analysis/AMD64LoweringPass.h"
 #include "lir/graph/BasicBlock.h"
 #include "lir/graph/Constant.h"
+#include "lir/graph/Debug.h"
 #include "lir/graph/Function.h"
 #include "lir/graph/Global.h"
 #include "lir/graph/Instruction.h"
@@ -627,6 +628,15 @@ void AMD64LoweringPass::construct_stack_frame(const Function *func) {
 
 void AMD64LoweringPass::lower_inst(const Instruction *inst) {
     assert(inst && "inst cannot be null!");
+
+    if (inst->has_location()) {
+        const DebugLoc* dloc = inst->get_location();
+
+        emit(static_cast<uint32_t>(Intrinsic::Debug_Loc))
+            .add_imm(dloc->file()->fid())
+            .add_imm(dloc->line())
+            .add_imm(dloc->col());
+    }
 
     if (auto C = dynamic_cast<const Const*>(inst)) {
         lower_const(C);

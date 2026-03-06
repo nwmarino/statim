@@ -29,7 +29,7 @@ void Codegen::visit(Rib& rib) {
         std::size_t slug = rib.path().find_last_of('/');
 
         const std::string path = rib.path().substr(0, slug);
-        const std::string file = rib.path().substr(slug);
+        const std::string file = rib.path().substr(slug + 1);
 
         m_dfile = m_dbuilder.build_file(path, file);
     }

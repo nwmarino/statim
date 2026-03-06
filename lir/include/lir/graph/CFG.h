@@ -149,6 +149,8 @@ public:
     /// Remove the given |func| from this graph, if it belongs.
     void remove_function(Function *func);
 
+    const std::vector<DebugNode*>& debug() const { return m_debug; }
+
     /// Return a new unique definition id to create an instruction with.
     uint32_t get_def_id() { return m_def_id++; }
 
